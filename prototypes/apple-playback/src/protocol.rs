@@ -38,8 +38,18 @@ impl PlaybackItem {
             return Err("Expected a catalog song ID or an i.* library song ID.".into());
         }
         if let Some(params) = &self.play_params {
-            if !params.is_object() || params.get("id").and_then(Value::as_str) != Some(&self.id) {
-                return Err("Playback parameters must retain the selected item's ID.".into());
+            let playback_id = params.get("id").and_then(Value::as_str);
+            if !params.is_object()
+                || playback_id.is_none_or(|id| {
+                    id.is_empty()
+                        || id.len() > 128
+                        || match self.kind {
+                            ItemKind::Library => id != self.id,
+                            ItemKind::Catalog => !id.bytes().all(|byte| byte.is_ascii_digit()),
+                        }
+                })
+            {
+                return Err("Playback parameters must retain a library ID or a valid Apple catalog playback ID.".into());
             }
             if matches!(self.kind, ItemKind::Library)
                 && params.get("isLibrary").and_then(Value::as_bool) != Some(true)
@@ -61,6 +71,10 @@ pub enum Command {
     Authorize,
     Library {
         next: Option<String>,
+    },
+    Request {
+        id: u64,
+        path: String,
     },
     Play {
         items: Vec<PlaybackItem>,
@@ -102,6 +116,7 @@ impl Command {
                         Self::Intent { .. }
                             | Self::Authorize
                             | Self::Library { .. }
+                            | Self::Request { .. }
                             | Self::SignOut
                             | Self::Shutdown
                     )
@@ -111,9 +126,12 @@ impl Command {
                 command.validate()
             }
             Self::Library { next: Some(next) }
-                if next.len() > 2048 || !next.starts_with("/v1/me/library/songs?") =>
+                if !valid_read_path(next) || !next.starts_with("/v1/me/library/songs?") =>
             {
                 Err("Only a next-page path for the song library is accepted.".into())
+            }
+            Self::Request { id, path } if *id > 9_007_199_254_740_991 || !valid_read_path(path) => {
+                Err("Only an Apple Music catalog or library read is accepted.".into())
             }
             Self::Play {
                 items,
@@ -138,6 +156,52 @@ impl Command {
             _ => Ok(()),
         }
     }
+}
+
+/// Restrict MusicKit reads to known collections, never external URLs or credentials.
+pub fn valid_read_path(path: &str) -> bool {
+    if path.len() > 2048 || !path.starts_with("/v1/") || path.contains(['\\', '#']) {
+        return false;
+    }
+    let bare = path.split('?').next().unwrap_or_default();
+    let parts: Vec<_> = bare.trim_start_matches('/').split('/').collect();
+    if parts.iter().any(|part| {
+        part.is_empty()
+            || *part == "."
+            || *part == ".."
+            || !part
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
+    }) {
+        return false;
+    }
+    let resources = ["songs", "albums", "artists", "playlists", "search"];
+    let valid = match parts.as_slice() {
+        ["v1", "me", "library", resource, tail @ ..] => {
+            resources.contains(resource)
+                && tail.len() <= 2
+                && tail.last().is_none_or(|item| {
+                    tail.len() < 2 || ["tracks", "albums", "artists"].contains(item)
+                })
+        }
+        ["v1", "catalog", storefront, resource, tail @ ..] => {
+            storefront.len() == 2
+                && storefront.bytes().all(|byte| byte.is_ascii_lowercase())
+                && resources.contains(resource)
+                && (tail.len() <= 2
+                    && tail.last().is_none_or(|item| {
+                        tail.len() < 2 || ["tracks", "albums", "artists"].contains(item)
+                    })
+                    || matches!(tail, [_, "view", "top-songs"]))
+        }
+        _ => false,
+    };
+    valid
+        && path.split_once('?').is_none_or(|(_, query)| {
+            url::form_urlencoded::parse(query.as_bytes()).all(|(key, _)| {
+                ["limit", "offset", "term", "types", "include"].contains(&key.as_ref())
+            })
+        })
 }
 
 pub fn validate_developer_token(token: &str) -> Result<(), String> {
@@ -209,6 +273,28 @@ fn validate_token_at(token: &str, now: u64) -> Result<(), String> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn reads_reject_external_paths_and_credential_parameters() {
+        for path in [
+            "https://example.com/v1/me/library/songs",
+            "/v1/me/library/albums/../songs",
+            "/v1/me/library/albums/%2e%2e/songs",
+            "/v1/me/library/songs?token=secret",
+            "/v1/me/library/songs#fragment",
+            "/v1/catalog/us/artists/id/anything",
+        ] {
+            assert!(!valid_read_path(path), "{path}");
+        }
+        for path in [
+            "/v1/me/library/playlists?limit=100",
+            "/v1/me/library/playlists/p.1/tracks?offset=100",
+            "/v1/catalog/us/artists/123/view/top-songs?limit=20",
+            "/v1/catalog/us/search?term=Some%20song&types=songs,albums",
+        ] {
+            assert!(valid_read_path(path), "{path}");
+        }
+    }
 
     #[test]
     fn uploaded_ids_and_duplicate_occurrences_are_retained() {

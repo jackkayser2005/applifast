@@ -110,6 +110,7 @@ fn sanitized_event(value: &Value) -> Option<Value> {
         ],
         "signedOut" => &[],
         "library" => &["next"],
+        "response" => &["id", "error"],
         _ => return None,
     };
     let mut result = json!({"type":kind,"session":value.get("session")?.as_u64()?});
@@ -118,7 +119,7 @@ fn sanitized_event(value: &Value) -> Option<Value> {
             let valid = match *field {
                 "drm" | "authorized" | "secureContext" => data.is_boolean(),
                 "status" | "position" | "actualPosition" | "duration" | "index" | "queueLength"
-                | "requestGeneration" => data.is_number(),
+                | "requestGeneration" | "id" => data.is_number(),
                 "next" => {
                     data.is_null()
                         || data.as_str().is_some_and(|path| {
@@ -135,6 +136,11 @@ fn sanitized_event(value: &Value) -> Option<Value> {
                 result[*field] = data.clone();
             }
         }
+    }
+    if kind == "response"
+        && let Some(data) = value.get("data")
+    {
+        result["data"] = safe_music_data(data, 0);
     }
     if kind == "library" {
         result["items"] = Value::Array(
@@ -153,6 +159,9 @@ fn sanitized_event(value: &Value) -> Option<Value> {
                         "album",
                         "durationMs",
                         "catalogId",
+                        "artwork",
+                        "albumId",
+                        "artistId",
                     ] {
                         if let Some(data) = item.get(field)
                             && (data.is_string()
@@ -183,6 +192,76 @@ fn sanitized_event(value: &Value) -> Option<Value> {
         );
     }
     Some(result)
+}
+
+fn safe_music_data(value: &Value, depth: usize) -> Value {
+    if depth > 12 {
+        return Value::Null;
+    }
+    match value {
+        Value::Object(object) => Value::Object(
+            object
+                .iter()
+                .filter(|(key, _)| {
+                    [
+                        "data",
+                        "next",
+                        "meta",
+                        "total",
+                        "results",
+                        "songs",
+                        "library-songs",
+                        "albums",
+                        "library-albums",
+                        "artists",
+                        "library-artists",
+                        "playlists",
+                        "library-playlists",
+                        "tracks",
+                        "id",
+                        "type",
+                        "attributes",
+                        "relationships",
+                        "name",
+                        "artistName",
+                        "albumName",
+                        "durationInMillis",
+                        "playParams",
+                        "kind",
+                        "isLibrary",
+                        "catalogId",
+                        "artwork",
+                        "url",
+                        "width",
+                        "height",
+                        "description",
+                        "standard",
+                        "short",
+                        "trackCount",
+                        "releaseDate",
+                        "genreNames",
+                        "curatorName",
+                        "isCompilation",
+                        "isSingle",
+                        "discNumber",
+                        "trackNumber",
+                        "contentRating",
+                    ]
+                    .contains(&key.as_str())
+                })
+                .map(|(key, value)| (key.clone(), safe_music_data(value, depth + 1)))
+                .collect(),
+        ),
+        Value::Array(array) => Value::Array(
+            array
+                .iter()
+                .take(1000)
+                .map(|value| safe_music_data(value, depth + 1))
+                .collect(),
+        ),
+        Value::String(text) if text.len() > 8192 => Value::Null,
+        _ => value.clone(),
+    }
 }
 fn secret_entry(name: &str) -> Result<keyring_core::Entry, String> {
     windows_native_keyring_store::Store::new()
@@ -462,7 +541,16 @@ fn serve(
                         {
                             write_secret("music-user-token", token)?;
                             clear_revocation_marker()?;
-                            report(json!({"type":"authorized","session":epoch}));
+                            let storefront = value["storefront"]
+                                .as_str()
+                                .filter(|value| {
+                                    value.len() == 2
+                                        && value.bytes().all(|byte| byte.is_ascii_lowercase())
+                                })
+                                .unwrap_or_default();
+                            report(
+                                json!({"type":"authorized","session":epoch,"storefront":storefront}),
+                            );
                         }
                     }
                     Some("error") => {
@@ -481,7 +569,10 @@ fn serve(
                         }
                         report(event);
                     }
-                    Some("ready" | "library" | "state" | "probe" | "report" | "signedOut") => {
+                    Some(
+                        "ready" | "library" | "state" | "probe" | "report" | "signedOut"
+                        | "response",
+                    ) => {
                         if let Some(value) = sanitized_event(&value) {
                             report(value);
                         }
@@ -1083,6 +1174,9 @@ mod tests {
         )
         .unwrap();
         assert!(value["items"][0]["playParams"].is_null());
+        let value=sanitized_event(&json!({"type":"response","session":1,"id":4,"data":{"data":[{"id":"i.1","type":"library-songs","attributes":{"name":"Song","token":"SECRET","playParams":{"id":"i.1","isLibrary":true,"token":"SECRET"}}}],"token":"SECRET"}})).unwrap();
+        assert_eq!(value["data"]["data"][0]["attributes"]["name"], "Song");
+        assert!(!value.to_string().contains("SECRET"));
     }
     #[test]
     fn page_commands_use_the_validated_native_command_path() {

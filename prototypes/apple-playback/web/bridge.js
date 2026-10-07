@@ -37,8 +37,8 @@
         !(library ? /^i\.[\w.-]+$/ : /^\d+$/).test(item.id) || item.id.length > 128) {
       throw new Error('invalidItem');
     }
-    if (item.playParams && (item.playParams.id !== item.id ||
-        (library && item.playParams.isLibrary !== true))) throw new Error('invalidItem');
+    if (item.playParams && (typeof item.playParams.id !== 'string' || item.playParams.id.length > 128 ||
+        (library ? item.playParams.id !== item.id || item.playParams.isLibrary !== true : !/^\d+$/.test(item.playParams.id)))) throw new Error('invalidItem');
     // Pass Apple's original playback parameters; never replace a library ID with catalogId.
     return item.playParams ? { ...item.playParams } : {
       id: item.id, kind: 'song', ...(library ? { isLibrary: true } : {})
@@ -86,7 +86,7 @@
       const token = await music.authorize();
       if (generation !== session) { music.musicUserToken = ''; return; }
       if (typeof token !== 'string' || !token) throw new Error('authorization');
-      send('authorized', { token }, generation); // Native host consumes this; never renders/logs it.
+      send('authorized', { token, storefront: String(music.storefrontId || '') }, generation); // Native consumes the token; never renders/logs it.
     } catch { error('authorization', generation); }
     finally { authorizing = false; }
   }
@@ -97,8 +97,14 @@
         requestGeneration = command.generation;
         return perform(command.command, generation);
       case 'authorize': return authorize(generation);
+      case 'request': {
+        // The native boundary validates the relative path before it reaches MusicKit.
+        const response = await music.api.music(command.path);
+        send('response', { id: command.id, data: response.data }, generation);
+        return;
+      }
       case 'library': {
-        const route = command.next || '/v1/me/library/songs?limit=100';
+        const route = command.next || '/v1/me/library/songs?limit=100&include=albums,artists';
         if (typeof route !== 'string' || !route.startsWith('/v1/me/library/songs?') || route.length > 2048) {
           throw new Error('pagination');
         }
@@ -110,6 +116,9 @@
           const a = resource.attributes || {}, p = a.playParams || null;
           return { kind: 'library', id: resource.id, title: a.name || '', artist: a.artistName || '',
             album: a.albumName || '', durationMs: number(a.durationInMillis), playParams: p,
+            artwork: a.artwork?.url?.replace('{w}', '640').replace('{h}', '640') || null,
+            albumId: resource.relationships?.albums?.data?.[0]?.id ? `library.${resource.relationships.albums.data[0].id}` : null,
+            artistId: resource.relationships?.artists?.data?.[0]?.id ? `library.${resource.relationships.artists.data[0].id}` : null,
             catalogId: p && p.catalogId || null };
         });
         const next = page.next || null;
@@ -175,6 +184,10 @@
       return result;
     }
     const generation = session;
+    if (command.type === 'request') {
+      return Promise.resolve(initializing).then(() => perform(command, generation))
+        .catch(() => send('response', { id: command.id, error: 'Apple Music could not load this page. Check sign-in and connection, then retry.' }, generation));
+    }
     chain = chain.then(() => initializing).then(() => perform(command, generation))
       .catch(() => error(command.type, generation));
     return chain;

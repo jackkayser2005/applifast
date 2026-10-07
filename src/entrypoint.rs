@@ -543,6 +543,26 @@ pub(crate) fn run() -> eframe::Result<()> {
                 _ => {}
             }
         }
+        app.local = apple.local.clone();
+        app.local_ready = apple.authorized;
+        app.library.liked.items = apple
+            .songs
+            .iter()
+            .map(|song| spotifast::api::models::SavedTrack {
+                added_at: None,
+                track: song.track(),
+            })
+            .collect();
+        app.library.liked.loading = apple.loading;
+        app.library.liked.revision += 1;
+        for saved in &app.library.liked.items {
+            if let Some(id) = &saved.track.id {
+                app.track_cache.insert(id.clone(), saved.track.clone());
+            }
+        }
+        if let Some(error) = &apple.error {
+            app.toast_error(error.clone());
+        }
         app.apple = Some(apple);
     }
     #[cfg(feature = "demo")]

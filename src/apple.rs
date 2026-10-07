@@ -6,6 +6,22 @@ use serde_json::{Value, json};
 
 use crate::player::{LocalState, LocalTrack, Playback};
 use applifast_playback_probe::protocol::PlaybackItem;
+pub mod models;
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Read {
+    Playlists,
+    Albums,
+    Artists,
+    Album(String),
+    AlbumTracks(String),
+    Playlist(String),
+    PlaylistTracks(String),
+    Artist(String),
+    ArtistAlbums(String),
+    ArtistSongs(String),
+    Search { serial: u64, library: bool },
+}
 
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -17,29 +33,76 @@ pub struct Song {
     pub album: String,
     pub duration_ms: u32,
     pub catalog_id: Option<String>,
+    #[serde(default)]
+    pub artwork: Option<String>,
+    #[serde(default)]
+    pub album_id: Option<String>,
+    #[serde(default)]
+    pub artist_id: Option<String>,
 }
 
 impl Song {
+    pub fn uri(&self) -> String {
+        format!(
+            "apple:track:{}.{}",
+            match self.item.kind {
+                applifast_playback_probe::protocol::ItemKind::Library => "library",
+                applifast_playback_probe::protocol::ItemKind::Catalog => "catalog",
+            },
+            self.item.id
+        )
+    }
+    pub fn track(&self) -> crate::api::models::Track {
+        use crate::api::models::{Album, ArtistRef, Image, Track};
+        let artists = vec![ArtistRef {
+            name: self.artist.clone(),
+            id: self.artist_id.clone(),
+            uri: self
+                .artist_id
+                .as_ref()
+                .map(|id| format!("apple:artist:{id}")),
+        }];
+        Track {
+            id: Some(self.uri().trim_start_matches("apple:track:").to_owned()),
+            uri: self.uri(),
+            name: self.title.clone(),
+            duration_ms: self.duration_ms,
+            artists: artists.clone(),
+            is_playable: Some(self.available()),
+            album: Some(Album {
+                id: self.album_id.clone().unwrap_or_default(),
+                uri: self
+                    .album_id
+                    .as_ref()
+                    .map_or_else(String::new, |id| format!("apple:album:{id}")),
+                name: self.album.clone(),
+                artists,
+                images: self
+                    .artwork
+                    .iter()
+                    .map(|url| Image {
+                        url: url.clone(),
+                        width: Some(640),
+                        height: Some(640),
+                    })
+                    .collect(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
     pub fn available(&self) -> bool {
         self.item.play_params.is_some()
     }
     fn local_track(&self) -> LocalTrack {
         LocalTrack {
-            uri: format!(
-                "apple:{}-song:{}",
-                match self.item.kind {
-                    applifast_playback_probe::protocol::ItemKind::Library => "library",
-                    applifast_playback_probe::protocol::ItemKind::Catalog => "catalog",
-                },
-                self.item.id
-            ),
+            uri: self.uri(),
             title: self.title.clone(),
-            artists: vec![crate::api::models::ArtistRef {
-                name: self.artist.clone(),
-                ..Default::default()
-            }],
+            artists: self.track().artists,
             album: self.album.clone(),
             duration_ms: self.duration_ms,
+            art_url: self.artwork.clone(),
+            art_small_url: self.artwork.clone(),
             ..Default::default()
         }
     }
@@ -57,6 +120,12 @@ pub struct State {
     pub token_path: String,
     pub filter: String,
     pub queue: Vec<Song>,
+    pub known_songs: std::collections::HashMap<String, Song>,
+    pub storefront: String,
+    pub reads: std::collections::HashMap<u64, (Read, u32)>,
+    pub next_reads: std::collections::HashMap<Read, (String, u32)>,
+    pub pending_play: Option<crate::model::Action>,
+    read_serial: u64,
     pub index: Option<usize>,
     pub local: LocalState,
     pending_index: Option<usize>,
@@ -78,6 +147,12 @@ impl Default for State {
             token_path: String::new(),
             filter: String::new(),
             queue: Vec::new(),
+            known_songs: Default::default(),
+            storefront: String::new(),
+            reads: Default::default(),
+            next_reads: Default::default(),
+            pending_play: None,
+            read_serial: 0,
             index: None,
             local: LocalState::default(),
             pending_index: None,
@@ -99,6 +174,10 @@ impl State {
         self.authorized = false;
         self.loading = false;
         self.songs.clear();
+        self.known_songs.clear();
+        self.reads.clear();
+        self.next_reads.clear();
+        self.pending_play = None;
         self.queue.clear();
         self.next = None;
         self.index = None;
@@ -109,25 +188,33 @@ impl State {
         self.request_generation = 0;
     }
     pub fn play(&mut self, index: usize) -> Option<Value> {
-        let selected = self.songs.get(index)?;
+        let uris = self.songs.iter().map(Song::uri).collect::<Vec<_>>();
+        self.play_uris(&uris, index)
+    }
+    pub fn play_uris(&mut self, uris: &[String], index: usize) -> Option<Value> {
+        self.pending_play = None;
+        let Some(selected) = uris.get(index).and_then(|uri| self.find_song(uri)) else {
+            self.error=Some("This song has not been loaded from Apple Music. Open its collection and try again.".into());
+            return None;
+        };
         if !selected.available() {
             self.error = Some("Apple supplied no playback parameters for this song. Try it in Apple Music; cloud-only uploads are not guaranteed yet.".into());
             return None;
         }
-        if self.songs.iter().filter(|song| song.available()).count() > 1000 {
+        if uris.len() > 1000 {
             self.error = Some("This first listening slice supports contexts of at most 1,000 songs. Restart to reload the first page; larger queues arrive in the queue integration slice.".into());
             return None;
         }
-        self.queue = self
-            .songs
+        let queue: Option<Vec<_>> = uris
             .iter()
-            .filter(|song| song.available())
-            .cloned()
+            .map(|uri| self.find_song(uri).cloned())
             .collect();
-        let position = self.songs[..index]
-            .iter()
-            .filter(|song| song.available())
-            .count();
+        let Some(queue) = queue else {
+            self.error = Some("This song has not been loaded from Apple Music. Open its collection and try again.".into());
+            return None;
+        };
+        self.queue = queue;
+        let position = index;
         self.pending_index = Some(position);
         self.pending_playback = None;
         self.select(position);
@@ -139,6 +226,16 @@ impl State {
             json!({"type":"play","items":self.queue.iter().map(|song| &song.item).collect::<Vec<_>>(),"index":position,"generation":self.request_generation}),
         )
     }
+    pub fn find_song(&self, uri: &str) -> Option<&Song> {
+        self.known_songs
+            .get(uri)
+            .or_else(|| self.songs.iter().find(|song| song.uri() == uri))
+    }
+    pub fn read(&mut self, target: Read, path: String, offset: u32) -> Value {
+        self.read_serial += 1;
+        self.reads.insert(self.read_serial, (target, offset));
+        json!({"type":"request","id":self.read_serial,"path":path})
+    }
     fn select(&mut self, index: usize) {
         if let Some(song) = self.queue.get(index) {
             if self.index != Some(index) {
@@ -149,8 +246,15 @@ impl State {
         }
     }
     pub fn skip(&mut self, direction: i32) {
+        if self.local.shuffle {
+            self.pending_index = None;
+            return;
+        }
         let Some(index) = self.index else { return };
-        let next = index as i64 + i64::from(direction);
+        let mut next = index as i64 + i64::from(direction);
+        if self.local.repeat == crate::player::RepeatMode::Context && !self.queue.is_empty() {
+            next = next.rem_euclid(self.queue.len() as i64);
+        }
         if next >= 0 && (next as usize) < self.queue.len() {
             let paused = self.local.playback == Playback::Paused;
             self.pending_index = Some(next as usize);
@@ -198,6 +302,13 @@ impl State {
         }
         match event.get("type").and_then(Value::as_str) {
             Some("ready") => {
+                self.storefront = event["storefront"]
+                    .as_str()
+                    .filter(|value| {
+                        value.len() == 2 && value.bytes().all(|byte| byte.is_ascii_lowercase())
+                    })
+                    .unwrap_or_default()
+                    .to_owned();
                 self.ready = true;
                 self.loading = false;
                 self.authorized = event["authorized"] == true;
@@ -208,6 +319,11 @@ impl State {
                 }
             }
             Some("authorized") => {
+                if let Some(storefront) = event["storefront"].as_str().filter(|value| {
+                    value.len() == 2 && value.bytes().all(|byte| byte.is_ascii_lowercase())
+                }) {
+                    self.storefront = storefront.to_owned();
+                }
                 self.authorized = true;
                 self.local.connected = true;
                 self.loading = true;
@@ -316,9 +432,19 @@ impl State {
                     .map_or_else(String::new, |album| album.name.clone()),
                 duration_ms: saved.track.duration_ms,
                 catalog_id: None,
+                artwork: saved.track.album.as_ref().and_then(|album| {
+                    crate::api::models::pick_image(&album.images, 640).map(str::to_owned)
+                }),
+                album_id: saved.track.album.as_ref().map(|album| album.id.clone()),
+                artist_id: saved
+                    .track
+                    .artists
+                    .first()
+                    .and_then(|artist| artist.id.clone()),
             });
         }
         state.local.volume = 32768;
+        state.local.connected = true;
         state.local.repeat = crate::player::RepeatMode::Off;
         if !state.songs.is_empty() {
             state.play(0);
@@ -366,6 +492,37 @@ mod tests {
             host.send(json!({"type":"library","next":null}).to_string());
             let page = await_event("library", &|_| true);
             let songs: Vec<Song> = serde_json::from_value(page["items"].clone()).unwrap();
+            let mut details = Vec::new();
+            for (id,path) in [(10,"/v1/me/library/playlists?limit=10".to_owned()),(11,"/v1/me/library/albums?limit=10".to_owned()),(12,"/v1/me/library/artists?limit=10".to_owned()),(13,"/v1/me/library/search?term=music&types=library-songs,library-albums,library-artists,library-playlists&limit=10".to_owned()),(14,format!("/v1/catalog/{}/search?term=Bonobo&types=songs,albums,artists,playlists&limit=10",ready["storefront"].as_str().unwrap_or_default()))] {
+                host.send(json!({"type":"request","id":id,"path":path}).to_string());
+                let response=await_event("response",&|value| value["id"]==id);
+                assert!(response["error"].is_null(),"{}",response["error"]);
+                assert!(response["data"].is_object());
+                if (10..=12).contains(&id) {
+                    assert!(response["data"]["data"].is_array());
+                    if let Some(resource)=response["data"]["data"].as_array().and_then(|rows|rows.first()) {
+                        let kind=match id {10=>"playlists",11=>"albums",_=>"artists"};
+                        let route=format!("/v1/me/library/{kind}/{}",resource["id"].as_str().unwrap());
+                        details.push(route.clone());details.push(format!("{route}/{}?limit=100",if id==12 {"albums"}else{"tracks"}));
+                    }
+                } else {assert!(response["data"]["results"].is_object());}
+                if id==14 {
+                    let resource=response["data"]["results"]["artists"]["data"].as_array().and_then(|rows|rows.first()).expect("Catalog artist search returned no rows");
+                    details.push(format!("/v1/catalog/{}/artists/{}/view/top-songs?limit=20",ready["storefront"].as_str().unwrap(),resource["id"].as_str().unwrap()));
+                }
+            }
+            for (index, path) in details.iter().enumerate() {
+                let id = 20 + index;
+                host.send(json!({"type":"request","id":id,"path":path}).to_string());
+                let response = await_event("response", &|value| value["id"] == id);
+                assert!(
+                    response["error"].is_null(),
+                    "detail read {}: {}",
+                    index,
+                    response["error"]
+                );
+                assert!(response["data"]["data"].is_array());
+            }
             let song = songs
                 .iter()
                 .find(|song| song.available())
@@ -394,7 +551,7 @@ mod tests {
                 event["requestGeneration"] == 3 && event["status"] == 3
             });
             eprintln!(
-                "Embedded Windows host: restored authorization; {} library rows; real playback, seek and pause passed.",
+                "Embedded Windows host: restored authorization; {} library rows; real library shelves, library/catalog search, playback, seek and pause passed.",
                 songs.len()
             );
         };

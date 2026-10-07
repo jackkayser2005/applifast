@@ -90,6 +90,17 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(calls.length, failedCalls); // Failure cannot silently skip to catalog.
   assert(!JSON.stringify(messages).includes('secret SDK response'));
+  await app.dispatch({type:'play',items:[{kind:'catalog',id:'123',playParams:{id:'456',kind:'song'}}],index:0});
+  assert.equal(calls.at(-1).items[0].id,'456'); // Apple's own catalog playback ID can differ from its resource ID.
+
+  let resolveRead;
+  music.api.music = () => new Promise(resolve => {resolveRead=resolve;});
+  const pendingRead=app.dispatch({type:'request',id:42,path:'/v1/me/library/albums?limit=100'});
+  while (!resolveRead) await new Promise(resolve => setImmediate(resolve));
+  await Promise.race([app.dispatch({type:'pause'}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Page read blocked pause')),250))]);
+  resolveRead({data:{data:[]}});
+  await pendingRead;
+  assert.equal(messages.filter(event=>event.type==='response').at(-1).id,42);
 
   const pendingAuthorization = app.dispatch({ type: 'authorize' });
   while (!authorization) await new Promise(resolve => setImmediate(resolve));

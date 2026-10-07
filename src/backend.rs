@@ -1740,6 +1740,8 @@ impl Worker {
                         "Local playback isn't set up on this computer yet".into(),
                     )),
                 },
+                // Apple mode must never send a legacy screen's request to Spotify.
+                Command::Api(_) if self.apple.is_some() => {}
                 Command::Api(ApiRequest::Search { query, serial }) => self.search(query, serial),
                 Command::Api(request) => {
                     self.dispatch(request);

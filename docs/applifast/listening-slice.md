@@ -1,6 +1,6 @@
 # First Windows listening slice
 
-Applifast starts a Rust/egui Songs view and an independent MusicKit JS v3 host.
+Applifast reuses the original Rust/egui interface and an independent MusicKit JS v3 host.
 The host uses the installed Evergreen WebView2 runtime on its own COM STA thread
 with a message pump. Commands and sanitized events cross channels through the
 existing asynchronous backend. Closing an egui window does not own or destroy
@@ -22,9 +22,17 @@ new one. Authorization errors retain an explicit retry action.
 
 ## Supported now
 
+- Reuse the original sidebar, tables, artwork, search, account menu and player bar.
+  Apple authorization occupies the existing sign-in card. No replacement app shell
+  or palette redesign is included. The synced song shelf is called **Songs**.
 - Load synced library songs in validated 100-song pages and filter loaded rows.
+- Browse library albums, artists and playlists, including collection detail pages
+  and paginated tracks. Catalog and library search share the existing search view;
+  library and catalog resources retain distinct identities. Catalog artist pages
+  request Apple's top-songs view; library artists show their library albums.
 - Double-click a playable song to start the loaded-song context; play/pause,
-  seek, volume, next and previous use the same action path as desktop media keys.
+  seek, volume, mute, next, previous, shuffle and repeat use the same action path
+  as desktop media keys. Collection cards load their songs before starting playback.
 - Preserve original library IDs and Apple's playback parameters, separately
   from catalog IDs. Duplicate occurrences remain distinct in the playback queue.
 - Keep unavailable songs visible. A playback failure retains the queue and
@@ -33,13 +41,18 @@ new one. Authorization errors retain an explicit retry action.
   Sign-out invalidates pending account responses, clears in-memory account data,
   deletes the saved user token, and requests browser-profile clearing.
 
-The first context contains at most 1,000 playable loaded songs, the host's
-validated queue limit. Catalog browsing/search, albums, playlists, artist pages,
-manual queue additions, shuffle, queue/session restoration, and the mini player
-are follow-up integration slices. The engine accepts catalog descriptors, but
-this Songs view only presents the synced library. Cloud-only upload playback
+The first context contains at most 1,000 loaded songs, the host's validated queue
+limit. Collection playback currently uses the loaded prefix; complete context
+loading and streaming pagination need the queue slice. The existing queue view
+shows upcoming occurrences. Manual queue additions/reordering, queue/session
+restoration, Home/discovery/recommendations, favorites and playlist writes remain
+follow-up integration work. Controls for pending writes report that limitation.
+The existing mini player uses the same playback actions, but its window lifecycle
+still needs real runtime acceptance. Cloud-only upload playback
 remains unverified; no upload is silently replaced with a catalog match.
-MilkDrop, spectrum and EQ are absent because this engine does not expose PCM.
+The player bar omits Spotify Connect, favorites and lyrics controls until supported.
+MilkDrop, spectrum and EQ are not supported because this engine does not expose PCM;
+their remaining legacy settings and mini-player controls still need capability cleanup.
 Non-Windows builds report unsupported Apple playback.
 
 ## Storage and network
@@ -54,7 +67,10 @@ The separate browser profile and embedded playback assets live under
 profile. The app never needs the `.p8` file at runtime.
 
 MusicKit loads from Apple's v3 CDN and talks to Apple's authentication, library,
-media and license services. There is no hosted Applifast backend, app telemetry,
+catalog/search, media and license services. Reads use validated relative paths
+for known library/catalog collections and artist views. They run independently
+of playback commands and never expose credential fields. Legacy Spotify API,
+auth and playback answers cannot overwrite Apple state. There is no hosted Applifast backend, app telemetry,
 or decrypted-media persistence. SDK/runtime behavior remains governed by Apple
 and Microsoft. Upstream update checks are disabled; the update configuration
 points to this fork, so it cannot select an upstream Spotifast release.
@@ -82,12 +98,17 @@ credentials. Bridge regressions run with
 uses the same song metadata as the retained legacy view; add `--demo-show legacy`
 for Before and `--demo-show light` for light theme.
 
-Windows validation on 2026-10-07 passed: strict default/demo Clippy, 955 library
+Windows validation on 2026-10-07 passed: strict default/demo Clippy, 957 library
 tests plus the binary/integration suites, both isolated native credential-store
-round trips, six host protocol/origin tests, Node token/bridge checks, and the
+round trips, seven host protocol/origin tests, Node token/bridge checks, and the
 ignored real-account integrated-host test with 100 library rows. That host test
 checked real advancing playback, the SDK's actual playhead after seeking, and
-Pause issued during seeking. A pending SDK seek promise cannot block later
+Pause issued during seeking. Real library shelves and catalog/library searches
+also returned successfully. Available library album, playlist and artist details,
+their track/album relationships, and a catalog artist's top-songs view passed
+the expanded account check. Final default/demo verification passed with one
+compiler job after Windows exhausted memory during parallel linking.
+A pending SDK seek promise cannot block later
 controls; a late seek completion must preserve the requested pause.
 The profile's disk cache is cleared at host startup so embedded bridge updates
 are applied without clearing saved authorization.

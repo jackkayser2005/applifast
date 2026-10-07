@@ -1867,7 +1867,11 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
     } else {
         song_count(locale, total)
     };
-    let liked_title = gettext(locale, "Liked Songs");
+    let liked_title = if app.apple.is_some() {
+        gettext(locale, "Songs")
+    } else {
+        gettext(locale, "Liked Songs")
+    };
     hero(
         app,
         ui,
@@ -1881,10 +1885,7 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
             round: false,
         },
     );
-    let collection_uri = app
-        .user
-        .as_ref()
-        .map(|user| format!("spotify:user:{}:collection", user.id));
+    let collection_uri = app.songs_context_uri();
     let filter_id = egui::Id::new("liked-filter");
     let mut filter = ui
         .data(|data| data.get_temp::<String>(filter_id))

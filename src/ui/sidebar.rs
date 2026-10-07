@@ -50,9 +50,7 @@ impl Entry {
 /// account's collection instead.
 fn entry_play_uri(app: &App, entry: &Entry) -> Option<String> {
     if entry.liked {
-        app.user
-            .as_ref()
-            .map(|user| format!("spotify:user:{}:collection", user.id))
+        app.songs_context_uri()
     } else if entry.uri.is_empty() {
         None
     } else {
@@ -307,7 +305,15 @@ fn liked_entry(app: &App) -> Entry {
     Entry {
         image: None,
         grid_image: None,
-        name: gettext(app.locale, "Liked Songs").into_owned(),
+        name: gettext(
+            app.locale,
+            if app.apple.is_some() {
+                "Songs"
+            } else {
+                "Liked Songs"
+            },
+        )
+        .into_owned(),
         subtitle,
         grid_subtitle,
         page: Page::LikedSongs,

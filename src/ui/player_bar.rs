@@ -81,7 +81,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             } else {
                 empty
             };
-            if empty.clicked() {
+            if empty.clicked() && app.apple.is_none() {
                 app.actions.push(Action::CyclePlayerBarVis);
             }
             ui.painter().hline(
@@ -529,7 +529,7 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
         }
     }
 
-    if !now.is_episode {
+    if !now.is_episode && app.apple.is_none() {
         let saved = app.is_saved(&now.uri).unwrap_or(false);
         let (icon, color, tooltip) = if saved {
             (
@@ -871,24 +871,26 @@ fn extras(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>) {
         ));
     }
     ui.add_space(4.0);
-    let remote = now.is_some_and(|now| !now.local);
-    let devices = theme::icon_button(
-        ui,
-        Icon::Speaker,
-        18.0,
-        if remote {
-            palette.accent
-        } else {
-            palette.secondary
-        },
-        palette.text,
-        &gettext(app.locale, "Connect to a device"),
-    );
-    ui.ctx().data_mut(|data| {
-        data.insert_temp(egui::Id::new(super::devices::BUTTON_RECT_ID), devices.rect)
-    });
-    if devices.clicked() {
-        app.actions.push(Action::ToggleDevicesPopup);
+    if app.apple.is_none() {
+        let remote = now.is_some_and(|now| !now.local);
+        let devices = theme::icon_button(
+            ui,
+            Icon::Speaker,
+            18.0,
+            if remote {
+                palette.accent
+            } else {
+                palette.secondary
+            },
+            palette.text,
+            &gettext(app.locale, "Connect to a device"),
+        );
+        ui.ctx().data_mut(|data| {
+            data.insert_temp(egui::Id::new(super::devices::BUTTON_RECT_ID), devices.rect)
+        });
+        if devices.clicked() {
+            app.actions.push(Action::ToggleDevicesPopup);
+        }
     }
     let queue_open = app.show_queue_panel || matches!(app.page(), Page::Queue);
     let queue_button = theme::icon_button(
@@ -917,19 +919,20 @@ fn extras(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>) {
                 .collect(),
         });
     }
-    if theme::icon_button(
-        ui,
-        Icon::Mic,
-        18.0,
-        if app.show_lyrics_panel {
-            palette.accent
-        } else {
-            palette.secondary
-        },
-        palette.text,
-        &gettext(app.locale, "Lyrics"),
-    )
-    .clicked()
+    if app.apple.is_none()
+        && theme::icon_button(
+            ui,
+            Icon::Mic,
+            18.0,
+            if app.show_lyrics_panel {
+                palette.accent
+            } else {
+                palette.secondary
+            },
+            palette.text,
+            &gettext(app.locale, "Lyrics"),
+        )
+        .clicked()
     {
         app.actions.push(Action::ToggleLyricsPanel);
     }

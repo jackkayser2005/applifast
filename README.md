@@ -1,5 +1,6 @@
 > This checkout is the **Applifast** development fork. Its Windows Apple Music
-> client now has an initial native Songs view backed by MusicKit in WebView2.
+> client now feeds Apple library, album, playlist and search data into the original
+> native interface, with MusicKit playback in an independent WebView2 host.
 > See [local setup, supported controls, and remaining checks](docs/applifast/listening-slice.md).
 > This development slice is not a release or feature-parity claim. The original
 > Spotifast documentation below describes upstream capabilities. Upstream credit

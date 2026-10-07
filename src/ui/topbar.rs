@@ -371,7 +371,13 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                             pick_image(&user.images, 64).map(str::to_string),
                         )
                     })
-                    .unwrap_or_default();
+                    .unwrap_or_else(|| {
+                        if app.apple.is_some() {
+                            ("Apple Music".into(), None)
+                        } else {
+                            Default::default()
+                        }
+                    });
                 let (rect, response) =
                     ui.allocate_exact_size(Vec2::splat(AVATAR_SIZE), Sense::click());
                 if ui.is_rect_visible(rect) {

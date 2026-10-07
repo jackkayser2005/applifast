@@ -661,7 +661,6 @@ impl App {
         let apple_mode = options.restore_sign_in && !cfg!(test);
         if apple_mode {
             settings.check_for_updates = false;
-            settings.winamp_window = false;
         }
         // The legacy password file has no endpoint of its own. Keep the old
         // settings beside it until migration binds that password in the store.
@@ -956,6 +955,8 @@ impl App {
         };
         app.local.volume = app.settings.volume;
         if let Some(apple) = &mut app.apple {
+            app.history = vec![Page::LikedSongs];
+            app.history_index = 0;
             apple.local.volume = app.settings.volume;
             app.backend.send(Command::AppleStart {
                 generation: apple.generation,
@@ -1091,7 +1092,27 @@ impl App {
     }
 
     pub fn is_connected(&self) -> bool {
-        matches!(self.auth, AuthStatus::Connected { .. })
+        self.apple.as_ref().map_or_else(
+            || matches!(self.auth, AuthStatus::Connected { .. }),
+            |apple| apple.authorized,
+        )
+    }
+
+    pub fn account_ready(&self) -> bool {
+        self.apple.as_ref().map_or_else(
+            || self.is_connected() && self.user.is_some(),
+            |apple| apple.authorized,
+        )
+    }
+
+    pub fn songs_context_uri(&self) -> Option<String> {
+        if self.apple.is_some() {
+            Some("apple:collection:library".into())
+        } else {
+            self.user
+                .as_ref()
+                .map(|user| format!("spotify:user:{}:collection", user.id))
+        }
     }
 
     pub fn user_id(&self) -> Option<&str> {
@@ -1838,11 +1859,48 @@ impl App {
                 continue;
             }
             match event {
+                Event::Auth(_) | Event::Playback(_) | Event::Local(_) | Event::Api(_)
+                    if self.apple.is_some() => {}
                 Event::Apple { generation, value } => {
+                    if self.apple.as_ref().is_none_or(|apple| {
+                        apple.generation != generation
+                            || value
+                                .get("session")
+                                .and_then(serde_json::Value::as_u64)
+                                .is_some_and(|session| session != apple.session)
+                    }) {
+                        continue;
+                    }
+                    if value["type"] == "response" {
+                        self.apple_response(&value);
+                        self.apple_finish_pending_play();
+                        continue;
+                    }
                     if let Some(apple) = &mut self.apple {
                         let request = apple.event(generation, &value);
                         self.local = apple.local.clone();
                         self.local_ready = apple.authorized;
+                        if value["type"] == "library" {
+                            self.library.liked.items = apple
+                                .songs
+                                .iter()
+                                .map(|song| crate::api::models::SavedTrack {
+                                    added_at: None,
+                                    track: song.track(),
+                                })
+                                .collect();
+                            self.library.liked.loaded_once = true;
+                            self.library.liked.loading = apple.loading;
+                            self.library.liked.total = Some(apple.songs.len() as u32);
+                            self.library.liked.next_offset =
+                                apple.next.as_ref().map(|_| apple.songs.len() as u32);
+                            self.library.liked.revision += 1;
+                            for saved in &self.library.liked.items {
+                                if let Some(id) = &saved.track.id {
+                                    self.track_cache.insert(id.clone(), saved.track.clone());
+                                }
+                            }
+                        }
                         if let Some(request) = request {
                             if matches!(value["type"].as_str(), Some("ready" | "authorized")) {
                                 apple.local.volume = self.settings.volume;
@@ -1851,6 +1909,18 @@ impl App {
                             }
                             self.backend.send(Command::AppleSend(request.to_string()));
                         }
+                    }
+                    if matches!(value["type"].as_str(), Some("ready" | "authorized")) {
+                        self.apple_ensure_loaded(self.page().clone());
+                    }
+                    self.sync_apple_queue();
+                    if value["type"] == "error" && self.account_ready() {
+                        self.toast_error(
+                            value["message"]
+                                .as_str()
+                                .unwrap_or("Apple playback failed. Try this song again.")
+                                .to_owned(),
+                        );
                     }
                 }
                 Event::PlaylistCoverChecked {
@@ -2789,12 +2859,12 @@ impl App {
             self.check_for_updates(false);
         }
 
-        if self.is_connected() && !self.offline {
+        if self.apple.is_none() && self.is_connected() && !self.offline {
             self.request_resume_track();
             self.ensure_resume_context_loaded();
         }
 
-        if self.is_connected() && !self.offline {
+        if self.apple.is_none() && self.is_connected() && !self.offline {
             let interval = match self.target() {
                 Target::Local if self.local.is_active() => REMOTE_POLL_IDLE,
                 _ => REMOTE_POLL_ACTIVE,
@@ -3643,6 +3713,10 @@ impl App {
     }
 
     pub fn ensure_loaded(&mut self, page: Page) {
+        if self.apple.is_some() {
+            self.apple_ensure_loaded(page);
+            return;
+        }
         if !self.is_connected() {
             return;
         }
@@ -3758,6 +3832,10 @@ impl App {
     }
 
     fn load_artist_albums(&mut self, id: &str, filter: DiscographyFilter) {
+        if self.apple.is_some() {
+            self.apple_artist_filters(id);
+            return;
+        }
         let Some(page) = self.artist_pages.get_mut(id) else {
             return;
         };
@@ -3911,6 +3989,17 @@ impl App {
     }
 
     pub fn load_more(&mut self, page: Page) {
+        if let Some(apple) = &mut self.apple {
+            if page == Page::LikedSongs && !apple.loading && apple.next.is_some() {
+                apple.loading = true;
+                self.library.liked.loading = true;
+                self.backend.send(Command::AppleSend(
+                    serde_json::json!({"type":"library","next":apple.next}).to_string(),
+                ));
+            }
+            self.apple_load_more(page);
+            return;
+        }
         match page {
             Page::LikedSongs => {
                 if !self.liked_songs.cache_checked {
@@ -4035,6 +4124,10 @@ impl App {
     }
 
     fn load_window(&mut self, page: Page, position: u32) {
+        if self.apple.is_some() {
+            self.load_more(page);
+            return;
+        }
         match page {
             Page::Playlist(id) => {
                 let Some(page) = self.playlist_pages.get_mut(&id) else {
@@ -4137,6 +4230,61 @@ impl App {
     }
 
     fn reload(&mut self, page: Page) {
+        if self.apple.is_some() {
+            match &page {
+                Page::LikedSongs => {
+                    if let Some(apple) = &mut self.apple {
+                        if apple.loading {
+                            return;
+                        }
+                        apple.songs.clear();
+                        apple.next = None;
+                        apple.loading = true;
+                        self.library.liked.loading = true;
+                        self.backend.send(Command::AppleSend(
+                            serde_json::json!({"type":"library","next":null}).to_string(),
+                        ));
+                    }
+                    return;
+                }
+                Page::Albums => self.library.albums.reset(),
+                Page::Artists => self.library.artists.reset(),
+                Page::Album(id) => {
+                    self.album_pages.remove(id);
+                }
+                Page::Playlist(id) => {
+                    self.playlist_pages.remove(id);
+                }
+                Page::Artist(id) => {
+                    self.artist_pages.remove(id);
+                }
+                _ => {}
+            }
+            if let Some(apple) = &mut self.apple {
+                apple.reads.retain(|_, (target, _)| match (&page, target) {
+                    (
+                        Page::Album(id),
+                        crate::apple::Read::Album(held) | crate::apple::Read::AlbumTracks(held),
+                    )
+                    | (
+                        Page::Playlist(id),
+                        crate::apple::Read::Playlist(held)
+                        | crate::apple::Read::PlaylistTracks(held),
+                    )
+                    | (
+                        Page::Artist(id),
+                        crate::apple::Read::Artist(held)
+                        | crate::apple::Read::ArtistAlbums(held)
+                        | crate::apple::Read::ArtistSongs(held),
+                    ) => id != held,
+                    (Page::Albums, crate::apple::Read::Albums)
+                    | (Page::Artists, crate::apple::Read::Artists) => false,
+                    _ => true,
+                });
+            }
+            self.apple_ensure_loaded(page);
+            return;
+        }
         match &page {
             Page::Home => self.load_home(true),
             Page::TopSongs => self.load_top_songs(true),
@@ -4598,6 +4746,10 @@ impl App {
         } else {
             Loadable::Loading
         };
+        if self.apple.is_some() {
+            self.apple_search(&query);
+            return;
+        }
         // An empty query also cancels requests waiting on Spotify's quota.
         self.backend.api(ApiRequest::Search {
             query,
@@ -4666,6 +4818,9 @@ impl App {
     }
 
     pub fn request_contains(&mut self, uris: Vec<String>) {
+        if self.apple.is_some() {
+            return;
+        }
         let mut batch = Vec::new();
         for uri in uris {
             if uri.is_empty()
@@ -6502,6 +6657,7 @@ impl App {
         }
         let current = self.page().clone();
         self.retain_table_rows(&current);
+        self.apple_evict_songs();
     }
 
     // ---- playback --------------------------------------------------------------
@@ -8251,10 +8407,114 @@ impl App {
 
     fn apply_apple_action(&mut self, action: &Action) -> bool {
         use serde_json::json;
+        if let Action::PlayContext { uri, .. } | Action::ShufflePlay(uri) = action
+            && self.apple_context_uris(uri).is_empty()
+            && let Some(page) = Page::from_uri(uri)
+        {
+            self.apple_ensure_loaded(page.clone());
+            if self.apple.as_ref().is_some_and(|apple| {
+                apple
+                    .reads
+                    .values()
+                    .any(|(target, _)| apple::read_for_page(target, &page))
+            }) {
+                self.apple.as_mut().unwrap().pending_play = Some(action.clone());
+            } else {
+                self.toast_error(
+                    "Apple returned no playable songs for this collection. Open it and retry.",
+                );
+            }
+            return true;
+        }
+        if let Action::ShufflePlay(uri) = action {
+            self.apply_apple_action(&Action::SetShuffle(true));
+            let len = self.apple_context_uris(uri).len();
+            return self.apply_apple_action(&Action::PlayContext {
+                uri: uri.clone(),
+                offset_uri: None,
+                offset_index: (len > 0).then(|| rand::random_range(0..len) as u32),
+            });
+        }
+        match action {
+            Action::RefreshQueue => {
+                self.sync_apple_queue();
+                return true;
+            }
+            Action::LoadMoreArtistAlbums(id) => {
+                self.apple_load_more(Page::Artist(id.clone()));
+                return true;
+            }
+            Action::ToggleSaved(_)
+            | Action::SetSavedMany { .. }
+            | Action::AddToQueue { .. }
+            | Action::QueueMany { .. }
+            | Action::InsertInQueue { .. }
+            | Action::MoveInQueue { .. }
+            | Action::ClearQueue
+            | Action::AddToPlaylist { .. }
+            | Action::InsertInPlaylist { .. }
+            | Action::ConfirmAddToPlaylist { .. }
+            | Action::RemoveFromPlaylist { .. }
+            | Action::MoveInPlaylist { .. }
+            | Action::CreatePlaylist { .. }
+            | Action::ChoosePlaylistCover(_)
+            | Action::UploadPlaylistCover(_)
+            | Action::UpdatePlaylist { .. }
+            | Action::DeletePlaylist(_)
+            | Action::SaveQueueAsPlaylist
+            | Action::Transfer(_)
+            | Action::ActivateReceiver(_)
+            | Action::RefreshDevices
+            | Action::ToggleDevicesPopup
+            | Action::RestartEngine
+            | Action::ConfigurePersonalWebApp => {
+                self.toast_error("This Apple Music control is still being integrated.");
+                return true;
+            }
+            _ => {}
+        }
+        let context_uri = match action {
+            Action::PlayContext { uri, .. } | Action::ShufflePlay(uri) => Some(uri.clone()),
+            Action::PlayFromRow {
+                context:
+                    RowContext::Context { uri, .. }
+                    | RowContext::View {
+                        context_uri: uri, ..
+                    },
+                ..
+            } => Some(uri.clone()),
+            _ => None,
+        };
+        let context_uris = context_uri.as_ref().map(|uri| self.apple_context_uris(uri));
+        if matches!(
+            action,
+            Action::SignOut | Action::CancelSignIn | Action::AppleImportToken(_)
+        ) {
+            self.reset_data();
+            self.track_cache.clear();
+            self.manual_queue.clear();
+            self.recent_contexts.clear();
+            self.resume_queue.clear();
+            self.resume_track = None;
+            self.resume_context = None;
+            self.intent_track = None;
+            self.assumed_context = None;
+            self.remote = None;
+            self.session_dirty = true;
+        }
         let Some(apple) = &mut self.apple else {
             return false;
         };
         let request = match action {
+            Action::SignIn => {
+                apple.loading = true;
+                json!({"type":"authorize"})
+            }
+            Action::CancelSignIn => {
+                apple.session += 1;
+                apple.clear_account();
+                json!({"type":"signOut"})
+            }
             Action::AppleImportToken(path) => {
                 apple.reset_host();
                 self.local = LocalState::default();
@@ -8273,6 +8533,59 @@ impl App {
             }
             Action::ApplePlaySong(index) => {
                 let Some(request) = apple.play(*index) else {
+                    return true;
+                };
+                request
+            }
+            Action::PlayUris { uris, index } => {
+                let Some(request) = apple.play_uris(uris, *index as usize) else {
+                    return true;
+                };
+                request
+            }
+            Action::PlayFromRow {
+                context,
+                uri,
+                index,
+            } => {
+                let uris = match context {
+                    RowContext::Uris(uris) | RowContext::View { uris, .. } => uris.to_vec(),
+                    RowContext::Context { .. } => context_uris.clone().unwrap_or_default(),
+                    RowContext::Queue => apple
+                        .queue
+                        .iter()
+                        .skip(apple.index.map_or(0, |index| index + 1))
+                        .map(crate::apple::Song::uri)
+                        .collect(),
+                };
+                let index = if uris.get(*index as usize) == Some(uri) {
+                    *index as usize
+                } else {
+                    uris.iter().position(|item| item == uri).unwrap_or(0)
+                };
+                let Some(request) = apple.play_uris(&uris, index) else {
+                    return true;
+                };
+                request
+            }
+            Action::PlayContext {
+                uri: _,
+                offset_uri,
+                offset_index,
+            } => {
+                let uris = context_uris.clone().unwrap_or_default();
+                if uris.is_empty() {
+                    apple.error = Some(
+                        "Open this collection and wait for its songs to load before playing."
+                            .into(),
+                    );
+                    return true;
+                }
+                let index = offset_uri
+                    .as_ref()
+                    .and_then(|uri| uris.iter().position(|item| item == uri))
+                    .unwrap_or(offset_index.unwrap_or(0) as usize);
+                let Some(request) = apple.play_uris(&uris, index) else {
                     return true;
                 };
                 request
@@ -8305,17 +8618,50 @@ impl App {
                 apple.seek(position.min(i64::from(u32::MAX)) as u32);
                 json!({"type":"seek","seconds":position as f64/1000.0})
             }
-            Action::SetVolume(percent) => {
+            Action::SetVolume(percent) | Action::PreviewVolume(percent) => {
                 apple.local.volume = (u32::from(*percent) * 65535 / 100) as u16;
                 self.settings.volume = apple.local.volume;
                 self.settings_dirty = true;
                 json!({"type":"volume","value":f64::from(*percent)/100.0})
             }
-            // Queue editing and shuffle arrive with the library/queue slice.
-            Action::ToggleShuffle => return true,
+            Action::VolumeBy(delta) => {
+                let percent = (i16::from(volume_to_percent(apple.local.volume)) + i16::from(*delta))
+                    .clamp(0, 100) as u8;
+                apple.local.volume = (u32::from(percent) * 65535 / 100) as u16;
+                self.settings.volume = apple.local.volume;
+                self.settings_dirty = true;
+                json!({"type":"volume","value":f64::from(percent)/100.0})
+            }
+            Action::ToggleMute => {
+                let percent = volume_to_percent(apple.local.volume);
+                let next = if percent == 0 {
+                    self.volume_before_mute.take().unwrap_or(50).max(5)
+                } else {
+                    self.volume_before_mute = Some(percent);
+                    0
+                };
+                apple.local.volume = (u32::from(next) * 65535 / 100) as u16;
+                self.settings.volume = apple.local.volume;
+                self.settings_dirty = true;
+                json!({"type":"volume","value":f64::from(next)/100.0})
+            }
+            // MusicKit chooses the next shuffled occurrence. Do not guess a sequential index.
+            Action::ToggleShuffle | Action::SetShuffle(_) => {
+                self.shuffle_wanted = if let Action::SetShuffle(value) = action {
+                    *value
+                } else {
+                    !self.shuffle_wanted
+                };
+                apple.local.shuffle = self.shuffle_wanted;
+                json!({"type":"shuffle","enabled":self.shuffle_wanted})
+            }
             Action::CycleRepeat => {
                 apple.local.repeat = apple.local.repeat.next();
                 json!({"type":"repeat","mode":match apple.local.repeat { RepeatMode::Off => 0, RepeatMode::Track => 1, RepeatMode::Context => 2 }})
+            }
+            Action::SetRepeat(mode) => {
+                apple.local.repeat = *mode;
+                json!({"type":"repeat","mode":match mode { RepeatMode::Off=>0,RepeatMode::Track=>1,RepeatMode::Context=>2 }})
             }
             _ => return false,
         };
@@ -8327,7 +8673,13 @@ impl App {
                 | Action::Seek(_)
                 | Action::SeekBy(_)
                 | Action::SetVolume(_)
+                | Action::PreviewVolume(_)
+                | Action::VolumeBy(_)
+                | Action::ToggleMute
                 | Action::CycleRepeat
+                | Action::SetRepeat(_)
+                | Action::SetShuffle(_)
+                | Action::ToggleShuffle
         ) {
             apple.intent(request)
         } else {
@@ -8335,13 +8687,32 @@ impl App {
         };
         self.local = apple.local.clone();
         self.local_ready = apple.authorized;
+        if let Some(uri) = context_uri {
+            self.assumed_context = Some(AssumedContext {
+                uri,
+                shuffle: self.shuffle_wanted.then_some(true),
+                at: Instant::now(),
+            });
+        }
         self.backend.send(Command::AppleSend(request.to_string()));
+        self.sync_apple_queue();
         true
     }
 
     pub(crate) fn apply(&mut self, action: Action, ctx: &egui::Context) {
-        if self.apple.is_some() && self.apply_apple_action(&action) {
-            return;
+        if self.apple.is_some() {
+            let before = self.apple.as_ref().and_then(|apple| apple.error.clone());
+            if self.apply_apple_action(&action) {
+                if let Some(error) = self
+                    .apple
+                    .as_ref()
+                    .and_then(|apple| apple.error.clone())
+                    .filter(|error| Some(error) != before.as_ref())
+                {
+                    self.toast_error(error);
+                }
+                return;
+            }
         }
         if matches!(
             &action,
@@ -9984,15 +10355,14 @@ impl App {
             }
         }
         // Switch to the main window when sign-in is required.
-        let needs_sign_in = !(self.is_connected() && self.user.is_some())
-            && !matches!(self.auth, AuthStatus::Connecting | AuthStatus::Starting)
-            && !(self.is_connected() && self.user.is_none());
+        let needs_sign_in = !self.account_ready()
+            && (self.apple.is_some()
+                || !matches!(self.auth, AuthStatus::Connecting | AuthStatus::Starting)
+                    && !(self.is_connected() && self.user.is_none()));
         if self.settings.winamp_window && needs_sign_in && !self.switch_intent {
             self.actions.push(Action::ToggleWinampWindow);
         }
-        if self.apple.is_some() {
-            crate::ui::apple::show(self, ui);
-        } else if self.settings.winamp_window {
+        if self.settings.winamp_window {
             crate::ui::winamp::show(self, ui);
         } else {
             crate::ui::show(self, ui);
@@ -10574,6 +10944,7 @@ fn cover_error(locale: Locale, error: &crate::api::client::ApiError) -> String {
     }
 }
 
+mod apple;
 mod radio;
 
 #[cfg(test)]
@@ -15212,7 +15583,7 @@ mod tests {
         }
     }
 
-    fn test_app(name: &str) -> App {
+    pub(super) fn test_app(name: &str) -> App {
         let root =
             std::env::temp_dir().join(format!("spotifast-{name}-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);

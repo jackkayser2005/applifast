@@ -46,12 +46,17 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     let mut tiles: Vec<Tile> = vec![Tile {
         image: None,
-        name: gettext(app.locale, "Liked Songs").into_owned(),
+        name: gettext(
+            app.locale,
+            if app.apple.is_some() {
+                "Songs"
+            } else {
+                "Liked Songs"
+            },
+        )
+        .into_owned(),
         page: Page::LikedSongs,
-        uri: app
-            .user
-            .as_ref()
-            .map(|user| format!("spotify:user:{}:collection", user.id)),
+        uri: app.songs_context_uri(),
         liked: true,
         owned_playlist: None,
     }];
