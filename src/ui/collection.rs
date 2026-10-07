@@ -75,7 +75,11 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 24.0;
         let (rect, _) = ui.allocate_exact_size(Vec2::splat(cover_size), Sense::hover());
-        let radius = if hero.round { cover_size / 2.0 } else { 6.0 };
+        let radius = if hero.round {
+            cover_size / 2.0
+        } else {
+            f32::from(theme::RADIUS)
+        };
         widgets::paint_shadow(ui, &palette, rect, radius);
         if hero.liked {
             super::sidebar::liked_cover(ui, rect, radius);
