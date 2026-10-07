@@ -201,34 +201,42 @@ pub fn actions_row(
             let play_view = actions.view.is_some()
                 && (!app.playing_context_shuffle() || is_filtered || actions.save_radio.is_some());
             let can_start = actions.view.as_ref().is_none_or(|uris| !uris.is_empty());
-            let icon = if now_playing_here {
-                Icon::PauseFilled
+            let (icon, play_label) = if now_playing_here {
+                (Icon::PauseFilled, gettext(locale, "Pause"))
             } else {
-                Icon::PlayFilled
+                (Icon::PlayFilled, gettext(locale, "Play"))
             };
+            let shuffle_label = gettext(locale, "Shuffle");
+            let width = theme::header_button_width(
+                ui,
+                &[
+                    &gettext(locale, "Play"),
+                    &gettext(locale, "Pause"),
+                    &shuffle_label,
+                ],
+            );
+            // Room left once the icon buttons and the filter have theirs.
+            let room =
+                ui.available_width() - 3.0 * 56.0 - if filter.is_some() { 238.0 } else { 0.0 };
+            let width = if room >= width * 2.0 + 10.0 {
+                width
+            } else {
+                theme::HEADER_BUTTON_COMPACT
+            };
+            ui.spacing_mut().item_spacing.x = 10.0;
             if app.play_pending(uri) {
-                theme::circle_spinner(
+                theme::header_button(
                     ui,
-                    56.0,
-                    palette.accent,
-                    palette.on_accent,
+                    &palette,
+                    None,
+                    &play_label,
+                    width,
+                    false,
                     &gettext(locale, "Starting…"),
                 );
             } else if ui
                 .add_enabled_ui(now_playing_here || can_start, |ui| {
-                    theme::circle_button(
-                        ui,
-                        icon,
-                        56.0,
-                        palette.accent,
-                        palette.accent_hover,
-                        palette.on_accent,
-                        &if now_playing_here {
-                            gettext(locale, "Pause")
-                        } else {
-                            gettext(locale, "Play")
-                        },
-                    )
+                    theme::header_button(ui, &palette, Some(icon), &play_label, width, false, "")
                 })
                 .inner
                 .on_disabled_hover_text(gettext(locale, "No playable songs in this view").as_ref())
@@ -259,16 +267,13 @@ pub fn actions_row(
                 }
             }
             let shuffle = app.playing_context_shuffle();
-            if theme::icon_button(
+            if theme::header_button(
                 ui,
-                Icon::Shuffle,
-                26.0,
-                if shuffle {
-                    palette.accent
-                } else {
-                    palette.secondary
-                },
-                palette.text,
+                &palette,
+                Some(Icon::Shuffle),
+                &shuffle_label,
+                width,
+                shuffle,
                 &if shuffle {
                     gettext(locale, "Shuffle off")
                 } else {
@@ -279,6 +284,7 @@ pub fn actions_row(
             {
                 app.actions.push(Action::SetShuffle(!shuffle));
             }
+            ui.spacing_mut().item_spacing.x = 18.0;
         }
         if let Some((uri, saved)) = &actions.saved {
             let (icon, tooltip, color) = if *saved {
@@ -3558,6 +3564,7 @@ mod tests {
     #[test]
     fn collection_shuffle_button_changes_mode_without_starting_playback() {
         let ctx = egui::Context::default();
+        theme::install(&ctx);
         let mut app = test_app();
         let input = |events| egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
@@ -3590,7 +3597,7 @@ mod tests {
         };
 
         draw(vec![]);
-        let pos = egui::pos2(87.0, 28.0);
+        let pos = egui::pos2(170.0, 18.0);
         draw(vec![
             egui::Event::PointerMoved(pos),
             egui::Event::PointerButton {
@@ -3617,6 +3624,7 @@ mod tests {
     #[test]
     fn sorted_collection_play_button_plays_context_when_shuffling() {
         let ctx = egui::Context::default();
+        theme::install(&ctx);
         let mut app = test_app();
         app.apply(Action::SetShuffle(true), &ctx);
         app.actions.clear();
@@ -3651,7 +3659,7 @@ mod tests {
         });
         out.textures_delta.clear();
 
-        let click_pos = egui::pos2(28.0, 28.0);
+        let click_pos = egui::pos2(28.0, 18.0);
         let input_click = egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
                 egui::Pos2::ZERO,
@@ -3715,6 +3723,7 @@ mod tests {
     #[test]
     fn sorted_collection_play_button_plays_from_top_when_not_shuffling() {
         let ctx = egui::Context::default();
+        theme::install(&ctx);
         let mut app = test_app();
         app.apply(Action::SetShuffle(false), &ctx);
         app.actions.clear();
@@ -3749,7 +3758,7 @@ mod tests {
         });
         out.textures_delta.clear();
 
-        let click_pos = egui::pos2(28.0, 28.0);
+        let click_pos = egui::pos2(28.0, 18.0);
         let input_click = egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
                 egui::Pos2::ZERO,
@@ -3813,6 +3822,7 @@ mod tests {
     #[test]
     fn sorted_collection_play_button_preserves_filtered_view_when_shuffling() {
         let ctx = egui::Context::default();
+        theme::install(&ctx);
         let mut app = test_app();
         app.apply(Action::SetShuffle(true), &ctx);
         app.actions.clear();
@@ -3848,7 +3858,7 @@ mod tests {
         });
         out.textures_delta.clear();
 
-        let click_pos = egui::pos2(28.0, 28.0);
+        let click_pos = egui::pos2(28.0, 18.0);
         let input_click = egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
                 egui::Pos2::ZERO,

@@ -324,22 +324,26 @@ fn artist_actions(app: &mut App, ui: &mut egui::Ui, artist: &Artist) {
     let following = app.is_saved(&artist.uri).unwrap_or(false);
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 18.0;
+        let play = gettext(locale, "Play");
+        let width = theme::header_button_width(ui, &[&play]);
         if app.play_pending(&artist.uri) {
-            theme::circle_spinner(
+            theme::header_button(
                 ui,
-                56.0,
-                palette.accent,
-                palette.on_accent,
+                &palette,
+                None,
+                &play,
+                width,
+                false,
                 &gettext(locale, "Starting…"),
             );
-        } else if theme::circle_button(
+        } else if theme::header_button(
             ui,
-            Icon::PlayFilled,
-            56.0,
-            palette.accent,
-            palette.accent_hover,
-            palette.on_accent,
-            &gettext(locale, "Play"),
+            &palette,
+            Some(Icon::PlayFilled),
+            &play,
+            width,
+            false,
+            "",
         )
         .clicked()
         {
