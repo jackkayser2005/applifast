@@ -72,7 +72,20 @@
         pages: [["login", "Sign-in card"], ["premium", "Premium dialog"], ["personal-app", "Shared connection dialog"], ["premium-de", "Premium dialog (German)"]],
         summary: "The app calls itself Applifast in its title, sign-in card, Settings, tray, dialogs and messages. Translations carry the new name too (the German page shows one). This branch alone keeps the green accent and the old icon." },
       { id: "combined", pr: null, name: "All three together",
-        summary: "The three main-window changes applied together on main, for the overall look. Not a PR of its own." }
+        summary: "The three main-window changes applied together on main, for the overall look. Not a PR of its own." },
+      { id: "play-shuffle", pr: 12, name: "Labelled Play and Shuffle",
+        summary: "Collection, artist and podcast headers show Play (or Pause) and Shuffle as two labelled, rounded buttons of one width where the round play disc and shuffle icon were. Surface fill, accent icon, label in the text colour; an active Shuffle is tinted with the accent. Green here, since this branch alone keeps the old palette." },
+      { id: "striped-rows", pr: 9, name: "Striped song lists",
+        summary: "Album, playlist, Liked Songs and artist song lists shade every other row faintly, by the row's place in the list so the stripes stay with their songs while scrolling. Hover, focus and selection replace the shade. The queue, search and Home keep plain rows." },
+      { id: "connect-badge", pr: 10, name: "Neutral Connect badge",
+        before: "polish-before",
+        pages: [["update", "Settings with update badge"], ["album", "Album"], ["home", "Home"]],
+        summary: "The top bar's Playing on badge sits on the neutral surface with normal text and an accent speaker icon, so a red accent does not make it read as an error. The update badge keeps its accent tint." },
+      { id: "cover-corners", pr: 11, name: "Rounder covers",
+        summary: "Covers in page headers and on cards (Home shelves, library grids) use 8 px corners instead of 6 px. Artist pictures stay round; rows, quick tiles and the player bar are unchanged." },
+      { id: "polish-combined", pr: null, name: "All polish on top of #2",
+        before: "palette",
+        summary: "#9, #10, #11 and #12 applied together on top of #2's palette, compared with #2 alone, so only the polish differs. Not a PR of its own." }
     ];
     const mainPages = [
       ["home", "Home"], ["playlist", "Playlist + queue"], ["album", "Album"],
