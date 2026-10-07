@@ -20,19 +20,21 @@ type Rgb = [u8; 3];
 type Box = (i64, i64, i64, i64);
 
 // Spotifast's dark palette (src/theme.rs), so the window matches the app.
-const WINDOW: Rgb = [0x0f, 0x11, 0x14];
-const PANEL: Rgb = [0x15, 0x18, 0x1c];
-const SURFACE: Rgb = [0x1d, 0x21, 0x27];
-const SURFACE_HOVER: Rgb = [0x26, 0x2b, 0x33];
-const SURFACE_ACTIVE: Rgb = [0x2f, 0x35, 0x3f];
-const OUTLINE: Rgb = [0x2a, 0x30, 0x38];
-const TEXT: Rgb = [0xf2, 0xf4, 0xf6];
-const SECONDARY: Rgb = [0xa9, 0xb1, 0xbc];
-const DIM: Rgb = [0x6e, 0x77, 0x84];
-const ACCENT: Rgb = [0x1e, 0xd7, 0x60];
-const ON_ACCENT: Rgb = [0x0a, 0x14, 0x0e];
+const WINDOW: Rgb = [0x1c, 0x1c, 0x1e];
+const PANEL: Rgb = [0x24, 0x24, 0x26];
+const SURFACE: Rgb = [0x2c, 0x2c, 0x2e];
+const SURFACE_HOVER: Rgb = [0x3a, 0x3a, 0x3c];
+const SURFACE_ACTIVE: Rgb = [0x48, 0x48, 0x4a];
+const OUTLINE: Rgb = [0x38, 0x38, 0x3a];
+const TEXT: Rgb = [0xf5, 0xf5, 0xf7];
+const SECONDARY: Rgb = [0xa1, 0xa1, 0xa6];
+const DIM: Rgb = [0x76, 0x76, 0x7b];
+const ACCENT: Rgb = [0xfc, 0x3c, 0x44];
+const ON_ACCENT: Rgb = [0xff, 0xff, 0xff];
 /// Lamps that are off: the accent, nearly out.
-const ACCENT_DARK: Rgb = [0x14, 0x4a, 0x2a];
+const ACCENT_DARK: Rgb = [0x5a, 0x1a, 0x1f];
+/// A slider's grip at rest, light against the dark tracks.
+const KNOB: Rgb = [0xd1, 0xd1, 0xd6];
 
 /// The 5x6 bitmap font, drawn four pixels wide with a blank column after
 /// (M, V, and W take the fifth). Rows are separated by `/`; `#` is a pixel.
@@ -173,6 +175,19 @@ impl Canvas {
         self.rect(x + width - 1, y, 1, height, dark);
     }
 
+    /// Clips the box's corner pixels back to the colour behind it, so a
+    /// button or grip reads as rounded at skin scale.
+    fn round(&mut self, (x, y, width, height): Box, behind: Rgb) {
+        for (cx, cy) in [
+            (x, y),
+            (x + width - 1, y),
+            (x, y + height - 1),
+            (x + width - 1, y + height - 1),
+        ] {
+            self.set(cx, cy, behind);
+        }
+    }
+
     /// Pixel art from rows of `#` and `.`, its top left at (x, y).
     fn glyph(&mut self, x: i64, y: i64, rows: &str, color: Rgb) {
         for (dy, row) in rows.split('/').enumerate() {
@@ -274,12 +289,13 @@ fn title_lines(c: &mut Canvas, x0: i64, x1: i64, y: i64) {
 /// A raised button with pixel art on it.
 fn button(canvas: &mut Canvas, area: Box, pressed: bool, rows: &str) {
     if pressed {
-        canvas.bevel(area, SURFACE_ACTIVE, WINDOW, SURFACE_HOVER);
+        canvas.bevel(area, SURFACE_ACTIVE, OUTLINE, SURFACE_HOVER);
         canvas.glyph_centred(area, rows, ACCENT, 1);
     } else {
-        canvas.bevel(area, SURFACE, SURFACE_HOVER, WINDOW);
-        canvas.glyph_centred(area, rows, SECONDARY, 0);
+        canvas.bevel(area, SURFACE, SURFACE_HOVER, OUTLINE);
+        canvas.glyph_centred(area, rows, TEXT, 0);
     }
+    canvas.round(area, PANEL);
 }
 
 /// A raised button with a word on it, lit when on.
@@ -287,12 +303,13 @@ fn label_button(canvas: &mut Canvas, area: Box, pressed: bool, on: bool, label: 
     let color = if on { ACCENT } else { DIM };
     let (x, y, width, height) = area;
     if pressed {
-        canvas.bevel(area, SURFACE_ACTIVE, WINDOW, SURFACE_HOVER);
+        canvas.bevel(area, SURFACE_ACTIVE, OUTLINE, SURFACE_HOVER);
         canvas.text_centred((x + 1, y + 1, width, height), label, color);
     } else {
-        canvas.bevel(area, SURFACE, SURFACE_HOVER, WINDOW);
+        canvas.bevel(area, SURFACE, SURFACE_HOVER, OUTLINE);
         canvas.text_centred(area, label, color);
     }
+    canvas.round(area, PANEL);
 }
 
 /// A sunken display area.
@@ -308,11 +325,13 @@ fn thumb(canvas: &mut Canvas, area: Box, pressed: bool) {
     let (fill, light, dark, groove) = if pressed {
         (ACCENT, ACCENT, ACCENT_DARK, ON_ACCENT)
     } else {
-        (SURFACE_HOVER, SURFACE_ACTIVE, WINDOW, DIM)
+        (KNOB, TEXT, SECONDARY, SECONDARY)
     };
     canvas.bevel(area, fill, light, dark);
     canvas.rect(x + width / 2 - 2, y + 2, 1, height - 4, groove);
     canvas.rect(x + width / 2 + 1, y + 2, 1, height - 4, groove);
+    // Grips sit on tracks drawn in the window colour.
+    canvas.round(area, WINDOW);
 }
 
 fn main_sheet() -> Canvas {
@@ -325,8 +344,8 @@ fn main_sheet() -> Canvas {
     c.text(128, 43, "KBPS", DIM);
     c.text(168, 43, "KHZ", DIM);
     // The colon of the time display is part of the background.
-    c.rect(72, 29, 2, 2, ACCENT);
-    c.rect(72, 34, 2, 2, ACCENT);
+    c.rect(72, 29, 2, 2, TEXT);
+    c.rect(72, 34, 2, 2, TEXT);
     let about = layout::ABOUT;
     c.logo(
         i64::from(about.x + about.width / 2),
@@ -546,7 +565,7 @@ fn led_digit(c: &mut Canvas, x: i64, y: i64, segments: u8) {
     ];
     for (bit, (bx, by, width, height)) in bars.into_iter().enumerate() {
         if segments & (1 << bit) != 0 {
-            c.rect(x + bx, y + by, width, height, ACCENT);
+            c.rect(x + bx, y + by, width, height, TEXT);
         }
     }
 }
@@ -807,7 +826,7 @@ fn eq_ex_sheet() -> Canvas {
     c
 }
 
-const PLEDIT_TXT: &str = "[Text]\r\nNormal=#A9B1BC\r\nCurrent=#1ED760\r\nNormalBG=#0F1114\r\nSelectedBG=#2F353F\r\nFont=Inter\r\n";
+const PLEDIT_TXT: &str = "[Text]\r\nNormal=#A1A1A6\r\nCurrent=#FC3C44\r\nNormalBG=#1C1C1E\r\nSelectedBG=#3A3A3C\r\nFont=Inter\r\n";
 
 /// Background, grid, sixteen spectrum bands from the top down, the
 /// oscilloscope's five shades, and the peak marks.
