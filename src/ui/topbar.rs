@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use egui::{Align, CornerRadius, Galley, Layout, Sense, Vec2, pos2, vec2};
+use egui::{Align, Color32, CornerRadius, Galley, Layout, Sense, Vec2, pos2, vec2};
 
 use crate::api::models::pick_image;
 use crate::app::App;
@@ -110,6 +110,10 @@ fn badge_width(galley: Option<&Arc<Galley>>, padding: f32, labels: bool) -> f32 
 
 /// A pill at the right end of the bar: an icon with its label, or the icon
 /// alone once the bar is too narrow to spare the room for words.
+///
+/// A `highlighted` badge is tinted with the accent to ask for attention;
+/// otherwise it sits on the neutral surface, so a red accent never makes a
+/// status read as an error.
 fn badge(
     ui: &mut egui::Ui,
     palette: &Palette,
@@ -117,6 +121,7 @@ fn badge(
     galley: Arc<Galley>,
     padding: f32,
     labels: bool,
+    highlighted: bool,
 ) -> egui::Response {
     let height = galley.size().y + BADGE_PADDING_Y;
     let size = if labels {
@@ -133,7 +138,7 @@ fn badge(
     ui.painter().rect_filled(
         rect,
         CornerRadius::same(14),
-        palette.accent.gamma_multiply(0.16),
+        badge_fill(palette, highlighted, response.hovered()),
     );
     let icon_center = if labels {
         pos2(rect.left() + 14.0, rect.center().y)
@@ -152,6 +157,14 @@ fn badge(
         );
     }
     response
+}
+
+fn badge_fill(palette: &Palette, highlighted: bool, hovered: bool) -> Color32 {
+    match (highlighted, hovered) {
+        (true, _) => palette.accent.gamma_multiply(0.16),
+        (false, true) => palette.surface_hover,
+        (false, false) => palette.surface,
+    }
 }
 
 fn nav_button(
@@ -279,7 +292,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                     None => gettext(locale, "Playing on another device").into_owned(),
                 };
                 ui.painter()
-                    .layout_no_wrap(label, theme::medium(12.5), palette.accent)
+                    .layout_no_wrap(label, theme::medium(12.5), palette.text)
             });
             let update = app.update.clone();
             let update_galley = update.as_ref().map(|update| {
@@ -532,6 +545,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                         galley,
                         DEVICE_BADGE_PADDING,
                         fit.labels,
+                        false,
                     );
                     // Without its label the badge still has to say where
                     // playback went.
@@ -554,6 +568,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                         galley,
                         UPDATE_BADGE_PADDING,
                         fit.labels,
+                        true,
                     )
                     .on_hover_text(
                         // Translators: {version} is a version number such as 1.2.0.

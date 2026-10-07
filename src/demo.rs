@@ -9158,6 +9158,84 @@ mod tests {
         let _ = std::fs::remove_dir_all(root);
     }
 
+    /// Where playback is reads as a neutral status, whatever the accent;
+    /// only the update badge, which asks to be used, keeps the accent tint.
+    #[test]
+    fn only_the_update_badge_is_tinted_with_the_accent() {
+        for light in [false, true] {
+            let (ctx, mut app) = accessible_app("badges");
+            if light {
+                app.settings.theme = crate::settings::ThemeChoice::Light;
+                app.actions.push(Action::SettingsChanged);
+            }
+            app.update = Some(crate::updates::Release {
+                version: "0.7.1".into(),
+                url: "https://example.invalid/releases".into(),
+            });
+            accessible_frame(&ctx, &mut app, vec![]);
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    events: vec![egui::Event::PointerGone],
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            let palette = app.palette;
+            assert_eq!(palette.dark, !light);
+            let tree = output.platform_output.accesskit_update.as_ref().unwrap();
+            let fill = |prefix: &str| {
+                let bounds = tree
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| node.label().is_some_and(|label| label.starts_with(prefix)))
+                    .and_then(|(_, node)| node.bounds())
+                    .unwrap_or_else(|| panic!("missing the {prefix} badge"));
+                let badge = egui::Rect::from_min_max(
+                    egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                    egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                );
+                output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::epaint::Shape::Rect(rect)
+                            if (rect.rect.min - badge.min).length() < 0.5
+                                && (rect.rect.max - badge.max).length() < 0.5 =>
+                        {
+                            Some(rect.fill)
+                        }
+                        _ => None,
+                    })
+                    .unwrap_or_else(|| panic!("the {prefix} badge has no fill"))
+            };
+            assert_eq!(fill("Playing on"), palette.surface, "light: {light}");
+            assert_eq!(
+                fill("Update to"),
+                palette.accent.gamma_multiply(0.16),
+                "light: {light}"
+            );
+            let color = output
+                .shapes
+                .iter()
+                .find_map(|shape| match &shape.shape {
+                    egui::epaint::Shape::Text(text)
+                        if text.galley.job.text.starts_with("Playing on") =>
+                    {
+                        Some(text.galley.job.sections[0].format.color)
+                    }
+                    _ => None,
+                })
+                .expect("the device label");
+            assert_eq!(color, palette.text, "light: {light}");
+            app.backend.shutdown();
+        }
+    }
+
     /// The badges at the right end of the top bar sit in a right-to-left
     /// layout, which does not wrap and does not clip: anything that does not
     /// fit marches left over the search field. Draw the real bar and check
