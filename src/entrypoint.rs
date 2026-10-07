@@ -11,7 +11,7 @@ struct Cli {
     control: Option<Control>,
 
     /// A Spotify link to open: spotify:track:…, or an open.spotify.com
-    /// address. The running Spotifast opens it when there is one, which
+    /// address. The running Applifast opens it when there is one, which
     /// is how the desktop hands links over.
     #[arg(value_name = "LINK")]
     link: Option<String>,
@@ -228,7 +228,7 @@ fn run_control(control: Control) -> i32 {
             }
         }
         Err(error) => {
-            eprintln!("Spotifast is not running or does not support remote control: {error}");
+            eprintln!("Applifast is not running or does not support remote control: {error}");
             return 1;
         }
     };
