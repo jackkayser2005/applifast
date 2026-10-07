@@ -63,6 +63,14 @@
         before: "winamp-before", themed: false,
         pages: [["playing", "Playing (as on the website)"], ["full", "Paused"], ["shade", "Rolled up"]],
         summary: "The built-in Winamp skin takes the same greys and red as #2. The time digits turn white, slider grips are light, and buttons and grips get softly rounded corners and gentler bevels. The layout and pixel art are unchanged; the website's mini player picture is regenerated. The skin does not follow the light theme, so there is one look." },
+      { id: "icon", pr: 7, name: "Applifast icon",
+        before: "brand-before",
+        pages: [["icon", "Icon sizes"], ["login", "Sign-in card"]],
+        summary: "The green disc becomes a red rounded square, lit pink at the top left, with a white play triangle trailed by three speed lines. The icon sheet shows the macOS 1024 PNG and every Windows .ico size at 1:1. This branch alone keeps the green button and the Spotifast name, which come from #2 and #8." },
+      { id: "name", pr: 8, name: "Applifast name",
+        before: "brand-before",
+        pages: [["login", "Sign-in card"], ["premium", "Premium dialog"], ["personal-app", "Shared connection dialog"], ["premium-de", "Premium dialog (German)"]],
+        summary: "The app calls itself Applifast in its title, sign-in card, Settings, tray, dialogs and messages. Translations carry the new name too (the German page shows one). This branch alone keeps the green accent and the old icon." },
       { id: "combined", pr: null, name: "All three together",
         summary: "The three main-window changes applied together on main, for the overall look. Not a PR of its own." }
     ];
