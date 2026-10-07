@@ -108,3 +108,8 @@ The attempted all-feature Clippy check failed because
 `VCPKG_INSTALLATION_ROOT` is unset. Packaging/site checks are blocked by missing
 Ruby/Bundler and Unix shell tooling; Nix is absent locally. These checks are
 pending, not passing.
+The draft PR has no GitHub checks: Actions permissions report enabled, but the
+fork's workflow inventory is empty and activating `ci.yml` returns HTTP 404
+despite that file existing on `main`. CI has not run. This repository workflow
+registration must be resolved before relying on hosted checks or refreshing the
+Nix vendor hash from its build result.
