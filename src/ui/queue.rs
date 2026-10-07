@@ -282,6 +282,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, compact: bool) {
                 shift: 0.0,
                 picked: false,
                 picked_songs: &[],
+                striped: false,
             },
         );
         ui.add_space(SECTION_GAP);
@@ -540,6 +541,7 @@ fn recents_contents(app: &mut App, ui: &mut egui::Ui) {
                 shift: 0.0,
                 picked: false,
                 picked_songs: &[],
+                striped: false,
             },
         );
     });
@@ -602,6 +604,7 @@ fn queue_row(app: &mut App, ui: &mut egui::Ui, index: usize, compact: bool, shif
             shift,
             picked: false,
             picked_songs: &[],
+            striped: false,
         },
     );
 }
