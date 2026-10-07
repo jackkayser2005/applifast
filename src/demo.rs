@@ -1496,6 +1496,92 @@ mod tests {
         app.backend.shutdown();
     }
 
+    /// A collection header offers Play and Shuffle as a pair of labelled
+    /// buttons of one width, and each still does its job.
+    #[test]
+    fn collection_header_has_labelled_play_and_shuffle_buttons() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        let (ctx, mut app) = accessible_app("header-buttons");
+        app.open(Page::Album("alb0".into()));
+        let frame = |ctx: &egui::Context, app: &mut App, events| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            output
+        };
+        let header = |tree: &egui::accesskit::TreeUpdate, labels: &[&str]| {
+            tree.nodes
+                .iter()
+                .find(|(_, node)| {
+                    node.role() == Role::Button
+                        && node.label().is_some_and(|label| labels.contains(&label))
+                        // The player bar's own Play sits at the bottom.
+                        && node.bounds().is_some_and(|bounds| bounds.y1 < 600.0)
+                })
+                .map(|(id, node)| {
+                    let bounds = node.bounds().unwrap();
+                    (
+                        *id,
+                        egui::Rect::from_min_max(
+                            egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                            egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                        ),
+                    )
+                })
+                .unwrap_or_else(|| panic!("missing header button {labels:?}"))
+        };
+        frame(&ctx, &mut app, vec![]);
+        let output = frame(&ctx, &mut app, vec![]);
+        let painted = menu_text(&output);
+        let tree = output.platform_output.accesskit_update.unwrap();
+        let (_, play) = header(&tree, &["Play", "Pause"]);
+        let (shuffle_id, shuffle) = header(&tree, &["Shuffle", "Shuffle off"]);
+        assert_eq!(play.size(), shuffle.size(), "the pair shares one width");
+        assert!(play.width() > play.height() * 2.0, "{play:?} is not a pill");
+        assert!(shuffle.left() > play.right(), "Shuffle follows Play");
+        for (label, rect) in [("Play", play), ("Shuffle", shuffle)] {
+            assert!(
+                painted
+                    .iter()
+                    .any(|(text, at)| text == label && rect.contains_rect(*at)),
+                "{label} is written on its button"
+            );
+        }
+
+        let before = app.playing_context_shuffle();
+        frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(shuffle_id, AccessibleAction::Click, None)],
+        );
+        assert_eq!(app.playing_context_shuffle(), !before);
+
+        let tree = frame(&ctx, &mut app, vec![])
+            .platform_output
+            .accesskit_update
+            .unwrap();
+        let (play_id, _) = header(&tree, &["Play"]);
+        frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(play_id, AccessibleAction::Click, None)],
+        );
+        assert_eq!(
+            app.playing_context_uri().as_deref(),
+            Some("spotify:album:alb0")
+        );
+        app.backend.shutdown();
+    }
+
     #[test]
     fn translated_sidebar_keeps_keyboard_navigation_and_accessible_names() {
         use crate::i18n::{Locale, gettext};

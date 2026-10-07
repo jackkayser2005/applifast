@@ -652,6 +652,125 @@ pub fn circle_spinner(
     }
 }
 
+const HEADER_BUTTON_ICON: f32 = 16.0;
+const HEADER_BUTTON_GAP: f32 = 8.0;
+const HEADER_BUTTON_PADDING: f32 = 18.0;
+/// The width of an icon-only [`header_button`], for rows without room.
+pub const HEADER_BUTTON_COMPACT: f32 = 44.0;
+
+/// The width that fits the widest of `labels` in a [`header_button`], so a
+/// pair of them can share one width and a label change never moves a
+/// neighbour.
+pub fn header_button_width(ui: &egui::Ui, labels: &[&str]) -> f32 {
+    let text = labels
+        .iter()
+        .map(|label| {
+            crate::bidi::layout_line(ui.painter(), *label, semibold(14.0), Color32::WHITE)
+                .size()
+                .x
+        })
+        .fold(0.0, f32::max);
+    (text + HEADER_BUTTON_ICON + HEADER_BUTTON_GAP + HEADER_BUTTON_PADDING * 2.0).max(112.0)
+}
+
+/// A rounded-rectangle header action with an accent icon beside a label,
+/// like the Play and Shuffle pair on Apple Music's album pages.
+///
+/// The label keeps the text colour: the accent on `surface` measures under
+/// 4.5:1 as text in both default themes, but clears 3:1 as an icon. An
+/// `active` button is tinted with the accent. Without an icon the button is
+/// busy: a spinner takes the icon's place and it stops taking clicks. A
+/// button narrower than its label, such as [`HEADER_BUTTON_COMPACT`], shows
+/// only its icon.
+pub fn header_button(
+    ui: &mut egui::Ui,
+    palette: &Palette,
+    icon: Option<Icon>,
+    label: &str,
+    width: f32,
+    active: bool,
+    tooltip: &str,
+) -> Response {
+    let busy = icon.is_none();
+    let (rect, response) = ui.allocate_exact_size(
+        Vec2::new(width, 36.0),
+        if busy { Sense::hover() } else { Sense::click() },
+    );
+    let name = if tooltip.is_empty() { label } else { tooltip };
+    response.widget_info(|| {
+        let kind = if busy {
+            egui::WidgetType::ProgressIndicator
+        } else {
+            egui::WidgetType::Button
+        };
+        egui::WidgetInfo::labeled(kind, ui.is_enabled(), name)
+    });
+    if ui.is_rect_visible(rect) {
+        let hovered = !busy && (response.hovered() || response.has_focus());
+        let radius = CornerRadius::same(8);
+        let fill = if hovered {
+            palette.surface_hover
+        } else {
+            palette.surface
+        };
+        ui.painter().rect_filled(rect, radius, fill);
+        if active {
+            ui.painter()
+                .rect_filled(rect, radius, palette.accent.gamma_multiply(0.15));
+        }
+        let galley = crate::bidi::layout_line(ui.painter(), label, semibold(14.0), palette.text);
+        let content = HEADER_BUTTON_ICON + HEADER_BUTTON_GAP + galley.size().x;
+        let labelled = width >= content + 16.0;
+        let icon_rect = egui::Rect::from_center_size(
+            if labelled {
+                egui::pos2(
+                    rect.center().x - content / 2.0 + HEADER_BUTTON_ICON / 2.0,
+                    rect.center().y,
+                )
+            } else {
+                rect.center()
+            },
+            Vec2::splat(HEADER_BUTTON_ICON),
+        );
+        let scale = if response.is_pointer_button_down_on() {
+            0.92
+        } else {
+            1.0
+        };
+        match icon {
+            Some(icon) => paint_icon(
+                ui,
+                icon,
+                icon_rect,
+                HEADER_BUTTON_ICON * scale,
+                palette.accent,
+            ),
+            None => {
+                let mut child = ui.new_child(egui::UiBuilder::new().max_rect(icon_rect).layout(
+                    egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
+                ));
+                spinner(&mut child, HEADER_BUTTON_ICON + 2.0, palette.accent);
+            }
+        }
+        if labelled {
+            ui.painter().galley(
+                egui::pos2(
+                    icon_rect.right() + HEADER_BUTTON_GAP,
+                    rect.center().y - galley.size().y / 2.0,
+                ),
+                galley,
+                palette.text,
+            );
+        }
+    }
+    focus_ring(ui, &response);
+    if tooltip.is_empty() {
+        response.on_hover_text(label)
+    } else {
+        response.on_hover_text(tooltip)
+    }
+}
+
 /// A pill-shaped text button: filled for the primary action, outlined otherwise.
 pub fn pill_button(ui: &mut egui::Ui, palette: &Palette, label: &str, primary: bool) -> Response {
     let font = semibold(13.0);

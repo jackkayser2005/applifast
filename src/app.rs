@@ -20728,7 +20728,8 @@ mod tests {
         app: &mut App,
         uri: &str,
         events: Vec<egui::Event>,
-    ) {
+    ) -> egui::accesskit::TreeUpdate {
+        ctx.enable_accesskit();
         let mut output = ctx.run_ui(
             egui::RawInput {
                 screen_rect: Some(egui::Rect::from_min_size(
@@ -20762,14 +20763,31 @@ mod tests {
         );
         output.textures_delta.clear();
         app.apply_actions(ctx);
+        output
+            .platform_output
+            .accesskit_update
+            .expect("screen-reader tree")
     }
 
-    fn click_collection_action(
-        ctx: &egui::Context,
-        app: &mut App,
-        uri: &str,
-        position: egui::Pos2,
-    ) {
+    const HEADER_PLAY: &[&str] = &["Play", "Pause"];
+    const HEADER_SHUFFLE: &[&str] = &["Shuffle", "Shuffle off"];
+
+    /// Clicks the header button whose accessible name is one of `labels`.
+    fn click_collection_action(ctx: &egui::Context, app: &mut App, uri: &str, labels: &[&str]) {
+        let tree = draw_collection_actions(ctx, app, uri, vec![]);
+        let bounds = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| {
+                node.role() == egui::accesskit::Role::Button
+                    && node.label().is_some_and(|label| labels.contains(&label))
+            })
+            .and_then(|(_, node)| node.bounds())
+            .unwrap_or_else(|| panic!("missing header button {labels:?}"));
+        let position = egui::pos2(
+            ((bounds.x0 + bounds.x1) / 2.0) as f32,
+            ((bounds.y0 + bounds.y1) / 2.0) as f32,
+        );
         let click = vec![
             egui::Event::PointerMoved(position),
             egui::Event::PointerButton {
@@ -20785,7 +20803,6 @@ mod tests {
                 modifiers: egui::Modifiers::NONE,
             },
         ];
-        draw_collection_actions(ctx, app, uri, vec![]);
         draw_collection_actions(ctx, app, uri, click);
     }
 
@@ -20804,12 +20821,7 @@ mod tests {
         app.shuffle_wanted = false;
         assert!(matches!(app.target(), Target::Remote(None)));
 
-        click_collection_action(
-            &ctx,
-            &mut app,
-            "spotify:playlist:pl0",
-            egui::pos2(87.0, 28.0),
-        );
+        click_collection_action(&ctx, &mut app, "spotify:playlist:pl0", HEADER_SHUFFLE);
         assert!(app.playing_context_shuffle());
         assert!(app.remote.is_none(), "Shuffle must not start playback");
         assert!(app.backend.take_remote_play_requests().is_empty());
@@ -20831,12 +20843,7 @@ mod tests {
             .clone();
         assert_ne!(playing_context, "spotify:playlist:pl0");
         app.remote = Some(remote);
-        click_collection_action(
-            &ctx,
-            &mut app,
-            "spotify:playlist:pl0",
-            egui::pos2(28.0, 28.0),
-        );
+        click_collection_action(&ctx, &mut app, "spotify:playlist:pl0", HEADER_PLAY);
 
         let requests = app.backend.take_remote_play_requests();
         assert!(matches!(
@@ -20886,12 +20893,7 @@ mod tests {
         app.shuffle_wanted = false;
         assert!(app.now_playing().is_none());
 
-        click_collection_action(
-            &ctx,
-            &mut app,
-            "spotify:playlist:pl0",
-            egui::pos2(87.0, 28.0),
-        );
+        click_collection_action(&ctx, &mut app, "spotify:playlist:pl0", HEADER_SHUFFLE);
         assert!(app.playing_context_shuffle());
 
         draw_player_bar(&ctx, &mut app, Vec::new());
@@ -20946,12 +20948,7 @@ mod tests {
             .id = None;
         assert!(matches!(app.target(), Target::Remote(None)));
 
-        click_collection_action(
-            &ctx,
-            &mut app,
-            "spotify:playlist:pl0",
-            egui::pos2(87.0, 28.0),
-        );
+        click_collection_action(&ctx, &mut app, "spotify:playlist:pl0", HEADER_SHUFFLE);
         assert!(matches!(
             app.backend.take_remote_shuffle_requests().as_slice(),
             [ApiRequest::Remote {
@@ -21010,7 +21007,7 @@ mod tests {
         assert_ne!(playing_context, other_collection);
         app.open(Page::Playlist("pl0".into()));
 
-        click_collection_action(&ctx, &mut app, other_collection, egui::pos2(87.0, 28.0));
+        click_collection_action(&ctx, &mut app, other_collection, HEADER_SHUFFLE);
         assert!(!app.playing_context_shuffle());
         assert_eq!(
             app.playing_context_uri().as_deref(),
@@ -21021,7 +21018,7 @@ mod tests {
             "changing the global mode must not start the viewed collection"
         );
 
-        click_collection_action(&ctx, &mut app, other_collection, egui::pos2(28.0, 28.0));
+        click_collection_action(&ctx, &mut app, other_collection, HEADER_PLAY);
         let requests = app.backend.take_remote_play_requests();
         assert!(matches!(
             requests.as_slice(),
