@@ -2385,7 +2385,11 @@ pub fn card(
             );
         }
         let image_rect = Rect::from_min_size(rect.min + vec2(PAD, PAD), Vec2::splat(image_size));
-        let radius = if circular { image_size / 2.0 } else { 6.0 };
+        let radius = if circular {
+            image_size / 2.0
+        } else {
+            f32::from(theme::RADIUS)
+        };
         paint_shadow(ui, &palette, image_rect, radius);
         paint_cover(
             ui,
