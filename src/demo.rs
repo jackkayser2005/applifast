@@ -1259,6 +1259,39 @@ mod tests {
         (ctx, app)
     }
 
+    /// The open page's sidebar row sits on a rounded highlight, so the
+    /// place is shown by a fill rather than by dimming the other rows.
+    #[test]
+    fn the_open_pages_sidebar_row_is_highlighted() {
+        let (ctx, mut app) = accessible_app("sidebar-nav-highlight");
+        app.open(Page::Home);
+        let view = crate::ui::sidebar::show;
+        view_frame(&ctx, &mut app, vec![], view);
+        let painted = view_frame(&ctx, &mut app, vec![], view);
+        let home = sidebar_text(&painted, "Home").center();
+        let search = sidebar_text(&painted, "Search").center();
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(1280.0, 800.0),
+                )),
+                ..Default::default()
+            },
+            |ui| view(&mut app, ui),
+        );
+        output.textures_delta.clear();
+        let highlighted = |at: egui::Pos2| {
+            output.shapes.iter().any(|clipped| {
+                matches!(&clipped.shape, egui::epaint::Shape::Rect(rect)
+                    if rect.fill == app.palette.surface_active && rect.rect.contains(at))
+            })
+        };
+        assert!(highlighted(home), "the open page's row has no highlight");
+        assert!(!highlighted(search), "a closed page's row is highlighted");
+        app.backend.shutdown();
+    }
+
     /// #576: the Library heading never runs under the header's buttons. It
     /// shrinks a little for a long translation and gives way entirely in
     /// the narrowest sidebar, but stays where there is room.
