@@ -136,7 +136,7 @@ current-track pickup.
   archive, Windows installer, or universal macOS DMG. Spotifast checks the published SHA-256 digest
   and the portable executable's reported version before offering a restart.
   Automatic downloads are optional; installation always waits for your click.
-  Checks and downloads do not open the update popup. The green update pill opens
+  Checks and downloads do not open the update popup. The update pill in the top bar opens
   it on request; closing the popup does not cancel a download.
   No Spotify credential is sent. These are GitHub-hosted checksums, not a
   separate publisher signature.

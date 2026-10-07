@@ -288,7 +288,7 @@ random token). Use the command rather than the channel itself.
 ## Updates
 
 The Windows installer, Mac app, and portable Windows and Linux downloads
-update from inside Spotifast. Click the green update button to download a
+update from inside Spotifast. Click the update button in the top bar to download a
 release, then choose when to restart and install it. Settings can enable
 automatic background downloads; restarting always waits for your click.
 Closing the update window keeps a download running. You can also check for a
