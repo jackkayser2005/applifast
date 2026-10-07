@@ -2,7 +2,8 @@
 
 This standalone Windows probe tests MusicKit JS v3 in Evergreen WebView2 before
 changing the Rust/egui application. It is not the converted Apple Music client.
-No engine has passed the real-account or resource gates yet. See the
+Catalog audio has passed a full-track account check; the remaining playback and
+resource gates are pending. See the
 [evidence report](../../docs/applifast/playback-evidence.md).
 
 ## Local developer setup
@@ -49,7 +50,9 @@ The developer and returned user tokens go into Windows Credential Manager under
 
 Load library pages and select a song. Rows without a catalog ID remain visible;
 that alone does not prove a song is an unmatched upload. Verify the representative
-upload independently in the subscriber's library. Enter a catalog song ID to
+upload independently in the subscriber's library when testing that capability.
+Guaranteed cloud-only upload support is a follow-up capability, rather than a
+first-version selection gate. Enter a catalog song ID to
 test a catalog song followed by the selected library song twice. Listen through
 every track completely and test seek. The local occurrence queue sends one
 original song descriptor to MusicKit at a time, avoiding bulk-loader ID
@@ -57,7 +60,10 @@ deduplication. Unavailable playback stops with an error and retains the queue.
 This probe does not yet persist a queue or implement the app's context queue rules.
 
 Closing the diagnostic window hides it; the STA playback host continues running.
-Type `hide` or `show` to hide/reopen it. Type `{"type":"shutdown"}` to exit.
+Type `hide` or `show` to hide/reopen it. A hidden WebView requests the runtime's
+low memory target; showing it restores the normal target. Start playback visibly
+before measuring minimized operation, since a hidden cold start stalled in the
+account test. Type `{"type":"shutdown"}` to exit.
 EOF also exits. Other console commands are JSON, for example:
 
 ```json

@@ -25,6 +25,8 @@ const PAGE: &str = "https://applifast.invalid/index.html";
 const SERVICE: &str = "local.applifast.playback-probe";
 const WAKE: u32 = WM_APP + 1;
 const AUTH_CLOSED: u32 = WM_APP + 2;
+const AUTH_DISMISSED: u32 = WM_APP + 3;
+const VIEW_CHANGED: u32 = WM_APP + 4;
 const MAX_MESSAGE: usize = 1024 * 1024;
 
 enum Output {
@@ -473,6 +475,16 @@ unsafe fn com_string(
     Ok(CoTaskMemPWSTR::from(value).to_string())
 }
 unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
+    if msg == WM_SIZE {
+        unsafe {
+            let _ = PostThreadMessageW(
+                GetCurrentThreadId(),
+                VIEW_CHANGED,
+                WPARAM(hwnd.0 as usize),
+                LPARAM((wp.0 != SIZE_MINIMIZED as usize) as isize),
+            );
+        }
+    }
     if msg == WM_CLOSE {
         unsafe {
             let _ = ShowWindow(hwnd, SW_HIDE);
@@ -542,6 +554,23 @@ fn controller(
         controller.SetIsVisible(true)?;
     }
     Ok(controller)
+}
+
+fn set_view_visibility(
+    controller: &ICoreWebView2Controller,
+    webview: &ICoreWebView2,
+    visible: bool,
+) -> windows::core::Result<()> {
+    unsafe {
+        controller.SetIsVisible(visible)?;
+        webview
+            .cast::<ICoreWebView2_19>()?
+            .SetMemoryUsageTargetLevel(if visible {
+                COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL
+            } else {
+                COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW
+            })
+    }
 }
 
 fn restrict(webview: &ICoreWebView2, auth: bool) -> windows::core::Result<()> {
@@ -636,6 +665,7 @@ fn host_loop(
     let hwnd = unsafe { create_window()? };
     let main_controller = controller(&environment, hwnd)?;
     let webview = unsafe { main_controller.CoreWebView2()? };
+    set_view_visibility(&main_controller, &webview, false)?;
     if revoked {
         let (clear_tx, clear_rx) = mpsc::channel();
         unsafe {
@@ -776,7 +806,7 @@ fn host_loop(
                                 &WindowCloseRequestedEventHandler::create(Box::new(move |_, _| {
                                     let _ = PostThreadMessageW(
                                         GetCurrentThreadId(),
-                                        AUTH_CLOSED,
+                                        AUTH_DISMISSED,
                                         WPARAM(popup.0 as usize),
                                         LPARAM(0),
                                     );
@@ -831,7 +861,13 @@ fn host_loop(
             if result == 0 {
                 break;
             }
-            if message.message == AUTH_CLOSED {
+            if message.message == VIEW_CHANGED && message.wParam.0 == hwnd.0 as usize {
+                let visible = message.lParam.0 != 0 && IsWindowVisible(hwnd).as_bool();
+                set_view_visibility(&main_controller, &webview, visible)?;
+                let mut bounds = RECT::default();
+                GetClientRect(hwnd, &mut bounds)?;
+                main_controller.SetBounds(bounds)?;
+            } else if matches!(message.message, AUTH_CLOSED | AUTH_DISMISSED) {
                 let mut windows = popups.borrow_mut();
                 if let Some(index) = windows
                     .iter()
@@ -841,9 +877,13 @@ fn host_loop(
                     let _ = controller.Close();
                     let _ = DestroyWindow(window);
                     authorized_popup.set(false);
-                    let _ = output.send(Output::Bridge(
-                        json!({"type":"error","session":generation.get(),"code":"AUTH_CLOSED"}),
-                    ));
+                    if message.message == AUTH_CLOSED {
+                        let _ = output.send(Output::Bridge(
+                            json!({"type":"error","session":generation.get(),"code":"AUTH_CLOSED"}),
+                        ));
+                    }
+                } else if message.wParam.0 == hwnd.0 as usize {
+                    set_view_visibility(&main_controller, &webview, false)?;
                 }
             } else if message.message == WAKE {
                 let mut commands = if page_ready.get() {
@@ -856,6 +896,7 @@ fn host_loop(
                     match command {
                         HostCommand::Shutdown => break 'pump,
                         HostCommand::Show(show) => {
+                            set_view_visibility(&main_controller, &webview, show)?;
                             let _ = ShowWindow(hwnd, if show { SW_SHOW } else { SW_HIDE });
                         }
                         HostCommand::Dispatch(command) => {

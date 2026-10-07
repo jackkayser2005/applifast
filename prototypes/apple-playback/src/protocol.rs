@@ -55,16 +55,29 @@ impl PlaybackItem {
 #[serde(tag = "type", rename_all = "camelCase", deny_unknown_fields)]
 pub enum Command {
     Authorize,
-    Library { next: Option<String> },
-    Play { items: Vec<PlaybackItem>, index: usize },
+    Library {
+        next: Option<String>,
+    },
+    Play {
+        items: Vec<PlaybackItem>,
+        index: usize,
+    },
     Pause,
     Resume,
     Next,
     Previous,
-    Seek { seconds: f64 },
-    Volume { value: f64 },
-    Shuffle { enabled: bool },
-    Repeat { mode: u8 },
+    Seek {
+        seconds: f64,
+    },
+    Volume {
+        value: f64,
+    },
+    Shuffle {
+        enabled: bool,
+    },
+    Repeat {
+        mode: u8,
+    },
     SignOut,
     Probe,
     Shutdown,
@@ -122,14 +135,26 @@ fn validate_token_at(token: &str, now: u64) -> Result<(), String> {
     let claims = decode(parts[1])?;
     let signature = URL_SAFE_NO_PAD.decode(parts[2]).map_err(|_| invalid())?;
     if header.get("alg").and_then(Value::as_str) != Some("ES256")
-        || header.get("kid").and_then(Value::as_str).is_none_or(str::is_empty)
-        || claims.get("iss").and_then(Value::as_str).is_none_or(str::is_empty)
+        || header
+            .get("kid")
+            .and_then(Value::as_str)
+            .is_none_or(str::is_empty)
+        || claims
+            .get("iss")
+            .and_then(Value::as_str)
+            .is_none_or(str::is_empty)
         || signature.len() != 64
     {
         return Err(invalid());
     }
-    let expires = claims.get("exp").and_then(Value::as_u64).ok_or_else(invalid)?;
-    let issued = claims.get("iat").and_then(Value::as_u64).ok_or_else(invalid)?;
+    let expires = claims
+        .get("exp")
+        .and_then(Value::as_u64)
+        .ok_or_else(invalid)?;
+    let issued = claims
+        .get("iat")
+        .and_then(Value::as_u64)
+        .ok_or_else(invalid)?;
     if issued > now.saturating_add(300) || expires <= issued || expires - issued > 15_777_000 {
         return Err("Developer token dates are invalid. Check the signing machine's clock.".into());
     }
@@ -139,9 +164,9 @@ fn validate_token_at(token: &str, now: u64) -> Result<(), String> {
     if let Some(origins) = claims.get("origin") {
         let expected = "https://applifast.invalid";
         let permits_probe = origins.as_str() == Some(expected)
-            || origins.as_array().is_some_and(|values| {
-                values.iter().any(|value| value.as_str() == Some(expected))
-            });
+            || origins
+                .as_array()
+                .is_some_and(|values| values.iter().any(|value| value.as_str() == Some(expected)));
         if !permits_probe {
             return Err("Developer token's origin must permit https://applifast.invalid.".into());
         }
@@ -162,12 +187,14 @@ mod tests {
                 {"kind": "catalog", "id": "123", "playParams": null},
                 {"kind": "library", "id": "i.upload", "playParams": null}
             ]
-        })).unwrap();
+        }))
+        .unwrap();
         command.validate().unwrap();
         let encoded = serde_json::to_value(command).unwrap();
         assert_eq!(encoded["items"][0]["id"], encoded["items"][2]["id"]);
         let item = PlaybackItem {
-            kind: ItemKind::Library, id: "i.upload".into(),
+            kind: ItemKind::Library,
+            id: "i.upload".into(),
             play_params: Some(json!({"id":"123", "isLibrary":true})),
         };
         assert!(item.validate().is_err());
@@ -175,16 +202,36 @@ mod tests {
 
     #[test]
     fn rejects_external_pagination_and_invalid_controls() {
-        assert!(Command::Library { next: Some("https://evil.example".into()) }.validate().is_err());
-        assert!(Command::Library { next: Some("/v1/me/library/songs?offset=100".into()) }.validate().is_ok());
+        assert!(
+            Command::Library {
+                next: Some("https://evil.example".into())
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            Command::Library {
+                next: Some("/v1/me/library/songs?offset=100".into())
+            }
+            .validate()
+            .is_ok()
+        );
         assert!(Command::Seek { seconds: f64::NAN }.validate().is_err());
         assert!(Command::Volume { value: 1.1 }.validate().is_err());
-        assert!(Command::Play { items: vec![], index: 0 }.validate().is_err());
+        assert!(
+            Command::Play {
+                items: vec![],
+                index: 0
+            }
+            .validate()
+            .is_err()
+        );
     }
 
     fn token(expires: u64) -> String {
         let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"ES256","kid":"TEST"}"#);
-        let claims = URL_SAFE_NO_PAD.encode(json!({"iss":"TEST", "iat":10,"exp":expires}).to_string());
+        let claims =
+            URL_SAFE_NO_PAD.encode(json!({"iss":"TEST", "iat":10,"exp":expires}).to_string());
         format!("{header}.{claims}.{}", URL_SAFE_NO_PAD.encode([0u8; 64]))
     }
 

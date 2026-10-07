@@ -97,7 +97,24 @@ public static class ApplifastProcessSnapshot {
 }
 
 function Read-Inventory {
-    foreach ($link in [ApplifastProcessSnapshot]::Read()) {
+    param([int]$RootId, [hashtable]$Known)
+    $links = [ApplifastProcessSnapshot]::Read()
+    # Read counters only for possible members. System-wide counter reads made
+    # the sampler itself exceed its interval on busy Windows desktops.
+    $possible = @{ $RootId = $true }
+    foreach ($knownId in $Known.Keys) { $possible[$knownId] = $true }
+    do {
+        $added = $false
+        foreach ($link in $links) {
+            if (-not $possible.ContainsKey($link.ProcessId) -and
+                $possible.ContainsKey($link.ParentProcessId)) {
+                $possible[$link.ProcessId] = $true
+                $added = $true
+            }
+        }
+    } while ($added)
+    foreach ($link in $links) {
+        if (-not $possible.ContainsKey($link.ProcessId)) { continue }
         $process = $null
         $ticks = $null
         $cpu = $null
@@ -153,7 +170,7 @@ $lastSampleElapsed = 0.0
 while ($true) {
     $elapsed = $clock.Elapsed.TotalSeconds
     try {
-        $inventory = @(Read-Inventory)
+        $inventory = @(Read-Inventory $RootProcessId $known)
         $selected = @(Select-ProcessTree $inventory $RootProcessId $known)
     } catch {
         [void]$failures.Add('inventory_failed')
