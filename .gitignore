@@ -13,3 +13,7 @@ docs/.bundle/
 /.cache/
 
 /dist/
+
+# Local Apple Music setup. Tokens and signing keys must never be committed.
+/.secrets/
+*.p8
