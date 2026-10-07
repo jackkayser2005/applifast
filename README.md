@@ -1,8 +1,9 @@
 > This checkout is the **Applifast** development fork. Its Windows Apple Music
-> playback route is being tested in an [isolated probe](prototypes/apple-playback/README.md).
-> The desktop application below is still upstream Spotifast. Apple Music playback
-> and the gaming resource budget have not passed acceptance. Upstream credit and
-> the MIT license are preserved.
+> client now has an initial native Songs view backed by MusicKit in WebView2.
+> See [local setup, supported controls, and remaining checks](docs/applifast/listening-slice.md).
+> This development slice is not a release or feature-parity claim. The original
+> Spotifast documentation below describes upstream capabilities. Upstream credit
+> and the MIT license are preserved.
 
 <p align="center">
   <img src="docs/assets/images/logo.svg" alt="Spotifast logo" width="88" height="88">

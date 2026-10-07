@@ -1,11 +1,6 @@
-#[cfg(windows)]
-mod protocol;
-#[cfg(windows)]
-mod windows;
-
 fn main() {
     #[cfg(windows)]
-    if let Err(error) = windows::run() {
+    if let Err(error) = applifast_playback_probe::windows::run() {
         eprintln!("{error}");
         std::process::exit(1);
     }

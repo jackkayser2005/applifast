@@ -919,6 +919,9 @@ pub struct Toast {
 /// Actions emitted while drawing and applied afterward to avoid borrow conflicts.
 #[derive(Clone, Debug)]
 pub enum Action {
+    AppleImportToken(std::path::PathBuf),
+    AppleSend(serde_json::Value),
+    ApplePlaySong(usize),
     Open(Page),
     /// Opens the radio of a song shown in a list, after caching the row's
     /// song so the page has its name and cover (#644).

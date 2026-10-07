@@ -54,6 +54,10 @@ impl PlaybackItem {
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase", deny_unknown_fields)]
 pub enum Command {
+    Intent {
+        generation: u64,
+        command: Box<Command>,
+    },
     Authorize,
     Library {
         next: Option<String>,
@@ -61,6 +65,8 @@ pub enum Command {
     Play {
         items: Vec<PlaybackItem>,
         index: usize,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        generation: Option<u64>,
     },
     Pause,
     Resume,
@@ -86,12 +92,37 @@ pub enum Command {
 impl Command {
     pub fn validate(&self) -> Result<(), String> {
         match self {
+            Self::Intent {
+                generation,
+                command,
+            } => {
+                if *generation > 9_007_199_254_740_991
+                    || matches!(
+                        **command,
+                        Self::Intent { .. }
+                            | Self::Authorize
+                            | Self::Library { .. }
+                            | Self::SignOut
+                            | Self::Shutdown
+                    )
+                {
+                    return Err("Invalid playback intent.".into());
+                }
+                command.validate()
+            }
             Self::Library { next: Some(next) }
                 if next.len() > 2048 || !next.starts_with("/v1/me/library/songs?") =>
             {
                 Err("Only a next-page path for the song library is accepted.".into())
             }
-            Self::Play { items, index } => {
+            Self::Play {
+                items,
+                index,
+                generation,
+            } => {
+                if generation.is_some_and(|value| value > 9_007_199_254_740_991) {
+                    return Err("Playback generation exceeds the JavaScript integer range.".into());
+                }
                 if items.is_empty() || items.len() > 1000 || *index >= items.len() {
                     return Err("Choose an existing row in a queue of 1 to 1000 songs.".into());
                 }
@@ -221,7 +252,8 @@ mod tests {
         assert!(
             Command::Play {
                 items: vec![],
-                index: 0
+                index: 0,
+                generation: None,
             }
             .validate()
             .is_err()

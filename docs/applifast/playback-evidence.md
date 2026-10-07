@@ -1,14 +1,15 @@
 # Apple Music playback evidence
 
 Research and account testing date: 2026-10-07. Catalog playback is audible and
-complete in the standalone probe. The application conversion remains gated on
-the remaining playback checks and resource measurements below.
+complete in the standalone probe. The user-approved integration follow-up at
+the end records the revised scope; the original measurements remain below.
 
 The user narrowed the first usable version to catalog music and playable synced
 iCloud library songs. Guaranteed playback of genuinely cloud-only uploads is
 no longer a prerequisite for porting the interface. Such songs remain visible,
 retain their library identities, and must report unavailable playback clearly.
-The resource budget remains unchanged.
+The original resource budget was later revised explicitly by the user after
+seeing the measured footprint, as recorded in the integration follow-up.
 
 ## Route decision
 
@@ -152,9 +153,9 @@ the temporary controller; final measurements must include the integrated egui
 application and its helpers. No production footprint is inferred by subtracting
 the controller. The one-hour gaming soak has not been run.
 
-The focused route-selection cycle therefore ends without a selected engine:
+At the original budget, the focused route-selection cycle ended without a selected engine:
 native component rights are unresolved and WebView2 exceeds the memory budget.
-The listening slice is incomplete. Further memory experiments need a concrete
+The listening slice was incomplete. Further memory experiments need a concrete
 new hypothesis; repeating the same sample cannot change that decision.
 
 Apple's successful popup close initially emitted the same warning as a manual
@@ -226,3 +227,13 @@ process IDs, total CPU normalization, memory samples and pass/fail results.
 Failure cannot silently relax a threshold. Mock data, compile success and an
 initialized WebView are not playback evidence. No engine is selected until all
 applicable gates pass; retain actionable blockers if neither passes.
+
+## User-approved integration follow-up
+
+After reviewing these measurements, the user explicitly accepted the measured
+memory footprint and prioritized a usable Windows client with synced iCloud
+library playback. WebView2/MusicKit is therefore selected for the first
+[integration slice](listening-slice.md) under that revised constraint. The
+failed 250 MiB result above is retained unchanged. Guaranteed cloud-only uploads
+remain a follow-up, as previously agreed. No native DRM component or third-party
+developer credentials are introduced.

@@ -19,6 +19,8 @@ name = "spotifast"
 path = "src/spotifast.rs"
 
 [dependencies]
+# The tested MusicKit boundary is shared with the diagnostic CLI; it owns its STA.
+applifast-playback-probe = { path = "prototypes/apple-playback" }
 anyhow = "1"
 thiserror = "2"
 clap = { version = "4.5", features = ["derive"] }
@@ -202,7 +204,9 @@ tokio = { version = "1", features = ["test-util"] }
 winresource = "0.1"
 
 [features]
-default = ["milkdrop"]
+# MusicKit does not expose the PCM tap used by MilkDrop. The listening build
+# leaves that optional upstream renderer out rather than implying it works.
+default = []
 # Sample data and screenshot flags; never part of a release build.
 demo = []
 # MilkDrop, through libprojectM: a C++ library that CMake builds into the

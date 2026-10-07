@@ -8,6 +8,7 @@ use std::{
     io::{self, BufRead, Read},
     path::PathBuf,
     rc::Rc,
+    sync::Arc,
     sync::mpsc,
     thread,
 };
@@ -30,6 +31,7 @@ const VIEW_CHANGED: u32 = WM_APP + 4;
 const MAX_MESSAGE: usize = 1024 * 1024;
 
 enum Output {
+    Diagnostic(Value),
     Ready(u32),
     Bridge(Value),
     Error(&'static str),
@@ -97,7 +99,15 @@ fn sanitized_event(value: &Value) -> Option<Value> {
             "storefront",
             "secureContext",
         ],
-        "state" => &["status", "position", "duration", "index", "queueLength"],
+        "state" => &[
+            "status",
+            "position",
+            "actualPosition",
+            "duration",
+            "index",
+            "queueLength",
+            "requestGeneration",
+        ],
         "signedOut" => &[],
         "library" => &["next"],
         _ => return None,
@@ -107,7 +117,8 @@ fn sanitized_event(value: &Value) -> Option<Value> {
         if let Some(data) = value.get(field) {
             let valid = match *field {
                 "drm" | "authorized" | "secureContext" => data.is_boolean(),
-                "status" | "position" | "duration" | "index" | "queueLength" => data.is_number(),
+                "status" | "position" | "actualPosition" | "duration" | "index" | "queueLength"
+                | "requestGeneration" => data.is_number(),
                 "next" => {
                     data.is_null()
                         || data.as_str().is_some_and(|path| {
@@ -251,6 +262,41 @@ pub fn run() -> Result<(), String> {
             }
         }
     }
+    serve(imported, self_check, None, Arc::new(report))
+}
+
+/// Runs the same validated boundary without a console or a visible browser UI.
+pub fn attach(
+    token_file: Option<PathBuf>,
+    input: mpsc::Receiver<String>,
+    emit: impl Fn(Value) + Send + Sync + 'static,
+) -> Result<(), String> {
+    let imported = token_file
+        .map(|path| {
+            let file =
+                std::fs::File::open(path).map_err(|_| "Cannot open developer token file.")?;
+            let mut bytes = Vec::new();
+            file.take(32769)
+                .read_to_end(&mut bytes)
+                .map_err(|_| "Cannot read developer token file.")?;
+            if bytes.len() > 32768 {
+                return Err("Developer token file exceeds 32 KiB.".to_owned());
+            }
+            let token = String::from_utf8(bytes).map_err(|_| "Developer token must be UTF-8.")?;
+            validate_developer_token(token.trim())?;
+            Ok(token.trim().to_owned())
+        })
+        .transpose()?;
+    serve(imported, false, Some(input), Arc::new(emit))
+}
+
+fn serve(
+    imported: Option<String>,
+    self_check: bool,
+    mut input: Option<mpsc::Receiver<String>>,
+    report: Arc<dyn Fn(Value) + Send + Sync>,
+) -> Result<(), String> {
+    let embedded = input.is_some();
     let revoked = !self_check
         && revocation_marker()?
             .try_exists()
@@ -277,8 +323,15 @@ pub fn run() -> Result<(), String> {
     let (cmd_tx, cmd_rx) = mpsc::channel();
     let sta_tx = out_tx.clone();
     let host = thread::spawn(move || {
-        if let Err(error) = host_loop(cmd_rx, sta_tx.clone(), developer, user, self_check, revoked)
-        {
+        if let Err(error) = host_loop(
+            cmd_rx,
+            sta_tx.clone(),
+            developer,
+            user,
+            self_check,
+            revoked,
+            embedded,
+        ) {
             let code = error
                 .downcast_ref::<windows::core::Error>()
                 .map(|error| error.code().0)
@@ -291,7 +344,9 @@ pub fn run() -> Result<(), String> {
                         })
                 });
             if let Some(code) = code {
-                report(json!({"type":"hostErrorCode","hresult":format!("0x{:08X}", code as u32)}));
+                let _ = sta_tx.send(Output::Diagnostic(
+                    json!({"type":"hostErrorCode","hresult":format!("0x{:08X}", code as u32)}),
+                ));
             }
             let _ = sta_tx.send(Output::Error(
                 "WebView2 host failed. Install or repair the Evergreen runtime.",
@@ -304,10 +359,22 @@ pub fn run() -> Result<(), String> {
     let mut host_failed = false;
     for event in out_rx {
         match event {
+            Output::Diagnostic(value) => report(value),
             Output::Ready(id) => {
                 thread_id = Some(id);
                 report(json!({"type":"hostReady","pid":std::process::id(),"selfCheck":self_check}));
                 let input_tx = out_tx.clone();
+                if let Some(input) = input.take() {
+                    thread::spawn(move || {
+                        for line in input {
+                            if input_tx.send(Output::Input(line)).is_err() {
+                                return;
+                            }
+                        }
+                        let _ = input_tx.send(Output::Eof);
+                    });
+                    continue;
+                }
                 thread::spawn(move || {
                     let mut input = io::stdin().lock();
                     loop {
@@ -406,7 +473,13 @@ pub fn run() -> Result<(), String> {
                         } else {
                             "MusicKit rejected an operation. Check authorization, subscription, connection, or the selected item."
                         };
-                        report(json!({"type":"error","session":epoch,"message":message}));
+                        let mut event = json!({"type":"error","session":epoch,"message":message});
+                        if let Some(generation) =
+                            value.get("requestGeneration").and_then(Value::as_u64)
+                        {
+                            event["requestGeneration"] = json!(generation);
+                        }
+                        report(event);
                     }
                     Some("ready" | "library" | "state" | "probe" | "report" | "signedOut") => {
                         if let Some(value) = sanitized_event(&value) {
@@ -637,6 +710,7 @@ fn host_loop(
     user: Option<String>,
     self_check: bool,
     revoked: bool,
+    embedded: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     unsafe {
         CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok()?;
@@ -665,29 +739,35 @@ fn host_loop(
     let hwnd = unsafe { create_window()? };
     let main_controller = controller(&environment, hwnd)?;
     let webview = unsafe { main_controller.CoreWebView2()? };
-    set_view_visibility(&main_controller, &webview, false)?;
-    if revoked {
+    set_view_visibility(&main_controller, &webview, embedded)?;
+    {
         let (clear_tx, clear_rx) = mpsc::channel();
         unsafe {
-            webview
+            let profile = webview
                 .cast::<ICoreWebView2_13>()?
                 .Profile()?
-                .cast::<ICoreWebView2Profile2>()?
-                .ClearBrowsingDataAll(&ClearBrowsingDataCompletedHandler::create(Box::new(
-                    move |result| {
-                        let _ = clear_tx.send(result);
-                        Ok(())
-                    },
-                )))?;
+                .cast::<ICoreWebView2Profile2>()?;
+            let completed = ClearBrowsingDataCompletedHandler::create(Box::new(move |result| {
+                let _ = clear_tx.send(result);
+                Ok(())
+            }));
+            if revoked {
+                profile.ClearBrowsingDataAll(&completed)?;
+            } else {
+                // The persisted profile must not run a cached bridge from an older build.
+                profile
+                    .ClearBrowsingData(COREWEBVIEW2_BROWSING_DATA_KINDS_DISK_CACHE, &completed)?;
+            }
         }
         webview2_com::wait_with_pump(clear_rx)??;
     }
     restrict(&webview, false)?;
-    let folder = wide(
-        &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("web")
-            .to_string_lossy(),
-    );
+    let assets = data.join("assets");
+    std::fs::create_dir_all(&assets)?;
+    // Embedded assets keep installed builds independent of the source checkout.
+    std::fs::write(assets.join("index.html"), include_str!("../web/index.html"))?;
+    std::fs::write(assets.join("bridge.js"), include_str!("../web/bridge.js"))?;
+    let folder = wide(&assets.to_string_lossy());
     if !self_check {
         unsafe {
             webview
@@ -843,7 +923,9 @@ fn host_loop(
         )?;
         if self_check {
             let browser = com_string(|out| environment.BrowserVersionString(out))?;
-            report(json!({"type":"runtime","version":browser,"pid":std::process::id()}));
+            output.send(Output::Diagnostic(
+                json!({"type":"runtime","version":browser,"pid":std::process::id()}),
+            ))?;
         } else {
             webview.Navigate(w!("https://applifast.invalid/index.html"))?;
         }
@@ -862,7 +944,9 @@ fn host_loop(
                 break;
             }
             if message.message == VIEW_CHANGED && message.wParam.0 == hwnd.0 as usize {
-                let visible = message.lParam.0 != 0 && IsWindowVisible(hwnd).as_bool();
+                // The app's host has no visible window; keep its renderer active.
+                let visible =
+                    embedded || (message.lParam.0 != 0 && IsWindowVisible(hwnd).as_bool());
                 set_view_visibility(&main_controller, &webview, visible)?;
                 let mut bounds = RECT::default();
                 GetClientRect(hwnd, &mut bounds)?;
@@ -883,7 +967,7 @@ fn host_loop(
                         ));
                     }
                 } else if message.wParam.0 == hwnd.0 as usize {
-                    set_view_visibility(&main_controller, &webview, false)?;
+                    set_view_visibility(&main_controller, &webview, embedded)?;
                 }
             } else if message.message == WAKE {
                 let mut commands = if page_ready.get() {
@@ -922,10 +1006,11 @@ fn host_loop(
                                     .cast::<ICoreWebView2_13>()?
                                     .Profile()?
                                     .cast::<ICoreWebView2Profile2>()?;
+                                let diagnostics = output.clone();
                                 profile.ClearBrowsingDataAll(
                                     &ClearBrowsingDataCompletedHandler::create(Box::new(
-                                        |result| {
-                                            report(json!({"type":"profileCleared","success":result.is_ok()}));
+                                        move |result| {
+                                            let _ = diagnostics.send(Output::Diagnostic(json!({"type":"profileCleared","success":result.is_ok()})));
                                             result
                                         },
                                     )),

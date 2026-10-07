@@ -25,7 +25,7 @@ const eventNames = ['playbackTimeDidChange', 'playbackStateDidChange', 'nowPlayi
 const sandbox = {
   window: { MusicKit: { configure: async () => music, version: 'test',
     Events: Object.fromEntries(eventNames.map(name => [name, name])),
-    PlaybackMode: { FULL_PLAYBACK_ONLY: 2 }, PlaybackStates: { ended: 10 } },
+    PlaybackMode: { FULL_PLAYBACK_ONLY: 2 }, PlaybackStates: { ended: 10, playing: 2 } },
     chrome: { webview: { postMessage: event => messages.push(event) } }, isSecureContext: true },
   document: { addEventListener: () => {}, dispatchEvent: () => {} },
   CustomEvent: class { constructor(name, properties) { Object.assign(this, properties); } },
@@ -49,6 +49,25 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   assert.equal(calls[0].items[0].isLibrary, true);
   assert.equal(lastState().queueLength, 3);
   assert.equal(lastState().index, 2);
+  await app.dispatch({ type: 'intent', generation: 7, command: { type: 'seek', seconds: 30 } });
+  assert.equal(lastState().requestGeneration, 7);
+  music.seekToTime = () => new Promise(() => {});
+  let paused = false;
+  music.pause = async () => { paused = true; };
+  await Promise.race([
+    app.dispatch({ type: 'intent', generation: 8, command: { type: 'seek', seconds: 60 } })
+      .then(() => app.dispatch({ type: 'intent', generation: 9, command: { type: 'pause' } })),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Seek blocked pause')), 250))
+  ]);
+  assert(paused);
+  paused = false;
+  emit('playbackStateDidChange');
+  assert(paused); // A late seek completion must honor the user's pause.
+  assert.equal(lastState().requestGeneration, 9);
+  let played = false;
+  music.play = async () => { played = true; };
+  await app.dispatch({ type: 'previous' });
+  assert(!played); // Previous keeps paused playback paused.
 
   libraryReply = { data: { data: [{ id: 'i.upload', attributes: { name: 'Upload' } }],
     next: '/v1/me/library/songs?offset=100' } };

@@ -562,6 +562,11 @@ struct PlaylistCacheWrite {
 }
 
 pub enum Command {
+    AppleStart {
+        generation: u64,
+        token_file: Option<std::path::PathBuf>,
+    },
+    AppleSend(String),
     OpenThemesFolder,
     ProxyRestored {
         lease: CredentialLease,
@@ -747,6 +752,10 @@ pub struct LyricsRequest {
 }
 
 pub enum Event {
+    Apple {
+        generation: u64,
+        value: serde_json::Value,
+    },
     ProxyRestored {
         config: ProxyConfig,
         password: Option<crate::credentials::ProxyPassword>,
@@ -1312,6 +1321,7 @@ impl AlbumTypeLookup {
 }
 
 struct Worker {
+    apple: Option<crate::player::AppleHost>,
     dirs: AppDirs,
     credentials: CredentialStore,
     web_tokens: [Option<Arc<WebTokens>>; 2],
@@ -1387,6 +1397,7 @@ impl Worker {
             credentials: CredentialStore::new(dirs.clone()),
             #[cfg(test)]
             credentials: CredentialStore::in_memory(dirs.clone()),
+            apple: None,
             web_tokens: [None, None],
             playback_grant: None,
             restore_pending: [false; 3],
@@ -1587,6 +1598,25 @@ impl Worker {
                 continue;
             }
             match command {
+                Command::AppleStart {
+                    generation,
+                    token_file,
+                } => {
+                    if let Some(host) = self.apple.take() {
+                        let _ = tokio::task::spawn_blocking(move || host.shutdown()).await;
+                    }
+                    let events = self.events.clone();
+                    let waker = self.waker.clone();
+                    self.apple = Some(crate::player::AppleHost::start(token_file, move |value| {
+                        let _ = events.send(Event::Apple { generation, value });
+                        waker.wake();
+                    }));
+                }
+                Command::AppleSend(command) => {
+                    if let Some(host) = &self.apple {
+                        host.send(command);
+                    }
+                }
                 Command::OpenThemesFolder => {
                     let directory = self.dirs.config.join("themes");
                     let events = self.events.clone();
@@ -1665,7 +1695,12 @@ impl Worker {
                         waker.wake();
                     });
                 }
-                Command::Shutdown => break,
+                Command::Shutdown => {
+                    if let Some(host) = self.apple.take() {
+                        let _ = tokio::task::spawn_blocking(move || host.shutdown()).await;
+                    }
+                    break;
+                }
                 Command::SignIn { request, config } => self.change_proxy(request, config, true),
                 Command::CancelSignIn => {
                     self.authorization_attempt += 1;

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast first listening slice comparison</title>
+<style>
+  body { font: 16px system-ui; margin: 24px; color: #eee; background: #181a1d; }
+  button, select { font: inherit; padding: 8px; margin: 4px; }
+  button[aria-pressed=true] { background: #fff; color: #111; }
+  img { display: block; max-width: 100%; height: auto; border: 1px solid #666; }
+  p { max-width: 1000px; line-height: 1.5; }
+</style>
+<h1>Applifast first listening slice</h1>
+<p>Windows captures from the feature branch. Before uses the retained upstream
+  Liked Songs renderer; After uses the Apple Songs renderer. Both use the same
+  14 song titles, artists, albums, current song, volume, theme and window size.
+  This is a new minimal listening view: sidebar, artwork and Spotify-specific
+  controls are absent. Palette, typography and mini-player redesign PRs are
+  separate and have not been merged into this comparison.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<button id="before" aria-pressed="false">Before</button>
+<button id="after" aria-pressed="true">After</button>
+<p id="description"></p>
+<img id="capture" alt="Selected native application capture">
+<h2>Additional Apple interaction states</h2>
+<label>State <select id="state"><option value="signed-out">Signed out</option><option value="connecting">Connecting</option><option value="collection-loading">Library loading</option><option value="apple-error">Playback error with retained queue</option></select></label>
+<img id="interaction" alt="Apple interaction state at narrow width">
+<p>These additional states use deterministic demo data; they are visual evidence,
+  not real authorization or playback acceptance. Integrated resource measurement,
+  gaming soak, window recreation and cross-platform checks remain pending.
+  <a href="../listening-slice.md">Scope and validation notes</a>.</p>
+<script>
+  let version = 'after';
+  const theme = document.getElementById('theme'), size = document.getElementById('size');
+  const state = document.getElementById('state');
+  function render() {
+    document.getElementById('capture').src = `${version}-${theme.value}-${size.value}.png`;
+    document.getElementById('description').textContent = `${version === 'before' ? 'Before: retained upstream renderer' : 'After: Apple listening renderer'} · ${theme.value} · ${size.value}`;
+    for (const name of ['before', 'after']) document.getElementById(name).setAttribute('aria-pressed', name === version);
+    document.getElementById('interaction').src = `state-${state.value}-${theme.value}.png`;
+  }
+  theme.onchange = size.onchange = state.onchange = render;
+  for (const name of ['before', 'after']) document.getElementById(name).onclick = () => { version = name; render(); };
+  render();
+</script>
+</html>

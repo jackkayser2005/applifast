@@ -222,6 +222,7 @@ struct Listening {
 }
 
 pub struct App {
+    pub apple: Option<crate::apple::State>,
     pub dirs: AppDirs,
     pub settings: Settings,
     /// Proxy policy actually handed to network workers. Manual form edits are
@@ -578,9 +579,7 @@ const RECENTS_PAGE: u32 = 50;
 /// Who the desktop's media controls belong to. Links to Spotify, as
 /// `spotify:` URIs or web addresses, are what they may ask Spotifast to open.
 fn media_app() -> fastframe_now_playing::App {
-    let mut app = fastframe_now_playing::App::new("spotifast", "Spotifast");
-    app.uri_schemes = vec!["spotify".into(), "https".into(), "http".into()];
-    app
+    fastframe_now_playing::App::new("applifast", "Applifast")
 }
 
 const TRAY_SHOW: &str = "show";
@@ -639,14 +638,14 @@ fn play_pause_label(playing: bool) -> &'static str {
 fn tray_config() -> fastframe_tray::Config {
     use fastframe_tray::MenuItem;
     fastframe_tray::Config {
-        id: "spotifast",
-        title: "Spotifast".into(),
+        id: "applifast",
+        title: "Applifast".into(),
         icon: util::app_icon_rgba,
         template_icon: Some(util::tray_template_rgba),
         themed_icon: true,
         menu_on_click: false,
         menu: vec![
-            MenuItem::action(TRAY_SHOW, "Show or hide Spotifast"),
+            MenuItem::action(TRAY_SHOW, "Show or hide Applifast"),
             MenuItem::Separator,
             MenuItem::action(TRAY_PLAY_PAUSE, play_pause_label(false)),
             MenuItem::action(TRAY_NEXT, "Next"),
@@ -659,6 +658,11 @@ fn tray_config() -> fastframe_tray::Config {
 
 impl App {
     pub fn new(waker: &Waker, dirs: AppDirs, mut settings: Settings, options: AppOptions) -> Self {
+        let apple_mode = options.restore_sign_in && !cfg!(test);
+        if apple_mode {
+            settings.check_for_updates = false;
+            settings.winamp_window = false;
+        }
         // The legacy password file has no endpoint of its own. Keep the old
         // settings beside it until migration binds that password in the store.
         settings.proxy_password_legacy |= dirs.proxy_secret_file().try_exists().unwrap_or(true);
@@ -685,10 +689,10 @@ impl App {
             engine_config,
             settings.web_client_id.clone(),
             waker.clone(),
-            options.restore_sign_in,
+            options.restore_sign_in && !apple_mode,
         );
         let locale = settings.language.resolve();
-        let applied_proxy = if options.restore_sign_in {
+        let applied_proxy = if options.restore_sign_in && !apple_mode {
             crate::settings::ProxyConfig::Invalid(
                 gettext(locale, "Restoring proxy settings").into_owned(),
             )
@@ -735,6 +739,7 @@ impl App {
 
         let palette = settings.cached_palette().unwrap_or_else(Palette::dark);
         let mut app = Self {
+            apple: apple_mode.then(crate::apple::State::default),
             custom_themes: theme::Catalog::default(),
             dirs,
             settings,
@@ -950,6 +955,13 @@ impl App {
             player_bar_analyser: crate::vis::WideAnalyser::default(),
         };
         app.local.volume = app.settings.volume;
+        if let Some(apple) = &mut app.apple {
+            apple.local.volume = app.settings.volume;
+            app.backend.send(Command::AppleStart {
+                generation: apple.generation,
+                token_file: None,
+            });
+        }
         // What was played here is on disk and needs nothing from the
         // network, so the tab has rows before Spotify has answered.
         app.rebuild_recents();
@@ -1826,6 +1838,21 @@ impl App {
                 continue;
             }
             match event {
+                Event::Apple { generation, value } => {
+                    if let Some(apple) = &mut self.apple {
+                        let request = apple.event(generation, &value);
+                        self.local = apple.local.clone();
+                        self.local_ready = apple.authorized;
+                        if let Some(request) = request {
+                            if matches!(value["type"].as_str(), Some("ready" | "authorized")) {
+                                apple.local.volume = self.settings.volume;
+                                self.local.volume = self.settings.volume;
+                                self.backend.send(Command::AppleSend(serde_json::json!({"type":"volume","value":f64::from(self.settings.volume)/65535.0}).to_string()));
+                            }
+                            self.backend.send(Command::AppleSend(request.to_string()));
+                        }
+                    }
+                }
                 Event::PlaylistCoverChecked {
                     id,
                     request,
@@ -8222,7 +8249,100 @@ impl App {
         }
     }
 
+    fn apply_apple_action(&mut self, action: &Action) -> bool {
+        use serde_json::json;
+        let Some(apple) = &mut self.apple else {
+            return false;
+        };
+        let request = match action {
+            Action::AppleImportToken(path) => {
+                apple.reset_host();
+                self.local = LocalState::default();
+                self.local_ready = false;
+                self.backend.send(Command::AppleStart {
+                    generation: apple.generation,
+                    token_file: Some(path.clone()),
+                });
+                return true;
+            }
+            Action::AppleSend(request) => {
+                if request["type"] == "library" {
+                    apple.loading = true;
+                }
+                request.clone()
+            }
+            Action::ApplePlaySong(index) => {
+                let Some(request) = apple.play(*index) else {
+                    return true;
+                };
+                request
+            }
+            Action::SignOut => {
+                apple.session += 1;
+                apple.clear_account();
+                json!({"type":"signOut"})
+            }
+            Action::TogglePlay => apple.toggle_play(),
+            Action::Next => {
+                apple.skip(1);
+                json!({"type":"next"})
+            }
+            Action::Previous => {
+                if apple.local.position_now() > 3000 {
+                    apple.seek(0);
+                    json!({"type":"seek","seconds":0})
+                } else {
+                    apple.skip(-1);
+                    json!({"type":"previous"})
+                }
+            }
+            Action::Seek(ms) => {
+                apple.seek(*ms);
+                json!({"type":"seek","seconds":f64::from(*ms)/1000.0})
+            }
+            Action::SeekBy(ms) => {
+                let position = (i64::from(apple.local.position_now()) + ms).max(0);
+                apple.seek(position.min(i64::from(u32::MAX)) as u32);
+                json!({"type":"seek","seconds":position as f64/1000.0})
+            }
+            Action::SetVolume(percent) => {
+                apple.local.volume = (u32::from(*percent) * 65535 / 100) as u16;
+                self.settings.volume = apple.local.volume;
+                self.settings_dirty = true;
+                json!({"type":"volume","value":f64::from(*percent)/100.0})
+            }
+            // Queue editing and shuffle arrive with the library/queue slice.
+            Action::ToggleShuffle => return true,
+            Action::CycleRepeat => {
+                apple.local.repeat = apple.local.repeat.next();
+                json!({"type":"repeat","mode":match apple.local.repeat { RepeatMode::Off => 0, RepeatMode::Track => 1, RepeatMode::Context => 2 }})
+            }
+            _ => return false,
+        };
+        let request = if matches!(
+            action,
+            Action::TogglePlay
+                | Action::Next
+                | Action::Previous
+                | Action::Seek(_)
+                | Action::SeekBy(_)
+                | Action::SetVolume(_)
+                | Action::CycleRepeat
+        ) {
+            apple.intent(request)
+        } else {
+            request
+        };
+        self.local = apple.local.clone();
+        self.local_ready = apple.authorized;
+        self.backend.send(Command::AppleSend(request.to_string()));
+        true
+    }
+
     pub(crate) fn apply(&mut self, action: Action, ctx: &egui::Context) {
+        if self.apple.is_some() && self.apply_apple_action(&action) {
+            return;
+        }
         if matches!(
             &action,
             Action::Open(_)
@@ -8239,6 +8359,7 @@ impl App {
             self.leave_lyrics_fullscreen(ctx);
         }
         match action {
+            Action::AppleImportToken(_) | Action::AppleSend(_) | Action::ApplePlaySong(_) => {}
             Action::Open(page) => self.open(page),
             Action::OpenSongRadio { uri, track } => self.open_song_radio(&uri, &track),
             Action::PrepareTint(url) => {
@@ -9817,9 +9938,9 @@ impl App {
     /// Keeps the current track in the window and taskbar title (#94).
     fn sync_window_title(&mut self, ctx: &egui::Context) {
         let title = match self.now_playing().filter(|now| now.playing) {
-            Some(now) if now.subtitle.is_empty() => format!("{} - Spotifast", now.title),
+            Some(now) if now.subtitle.is_empty() => format!("{} - Applifast", now.title),
             Some(now) => format!("{} - {}", now.subtitle, now.title),
-            None => "Spotifast".to_string(),
+            None => "Applifast".to_string(),
         };
         if title != self.window_title {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
@@ -9869,7 +9990,9 @@ impl App {
         if self.settings.winamp_window && needs_sign_in && !self.switch_intent {
             self.actions.push(Action::ToggleWinampWindow);
         }
-        if self.settings.winamp_window {
+        if self.apple.is_some() {
+            crate::ui::apple::show(self, ui);
+        } else if self.settings.winamp_window {
             crate::ui::winamp::show(self, ui);
         } else {
             crate::ui::show(self, ui);

@@ -4,6 +4,9 @@
   let music, session = 1, queue = [], index = -1, repeat = 0, shuffle = false;
   let chain = Promise.resolve(), initializing, signingOut = false, authorizing = false;
   let transitioning = false, playbackFailed = false;
+  let requestGeneration = 0;
+  let seekTarget = null;
+  let desiredPlaying = false;
   const sdkLoaded = new Promise(resolve => {
     if (window.MusicKit) resolve();
     else document.addEventListener('musickitloaded', resolve, { once: true });
@@ -14,14 +17,19 @@
     window.chrome.webview.postMessage(event);
     document.dispatchEvent(new CustomEvent('applifast-event', { detail: event }));
   };
-  const error = (code, generation) => send('error', {
-    code, message: 'Operation failed. Check authorization, subscription, connection, or song availability.'
+  const error = (code, generation, intent = requestGeneration) => send('error', {
+    code, ...(['intent', 'play', 'next', 'previous', 'pause', 'resume', 'seek', 'volume', 'repeat', 'playback'].includes(code) ? { requestGeneration: intent } : {}),
+    message: 'Operation failed. Check authorization, subscription, connection, or song availability.'
   }, generation);
   const number = value => Number.isFinite(value) ? value : 0;
-  const state = () => send('state', {
-    status: number(music.playbackState), position: number(music.currentPlaybackTime),
-    duration: number(music.currentPlaybackDuration), index, queueLength: queue.length
-  });
+  const state = () => {
+    const position = number(music.currentPlaybackTime);
+    if (seekTarget !== null && Math.abs(position - seekTarget) <= 1) seekTarget = null;
+    send('state', {
+    status: transitioning ? 1 : number(music.playbackState), position: transitioning ? 0 : (seekTarget ?? position),
+    duration: number(music.currentPlaybackDuration), actualPosition: position, index, queueLength: queue.length,
+    requestGeneration
+  }); };
   function song(item) {
     if (!item) throw new Error('invalidItem');
     const library = item.kind === 'library';
@@ -36,11 +44,12 @@
       id: item.id, kind: 'song', ...(library ? { isLibrary: true } : {})
     };
   }
-  async function playAt(position, generation) {
+  async function playAt(position, generation, startPlaying = true) {
     if (generation !== session || signingOut) return;
     if (position < 0 || position >= queue.length) return;
     const descriptor = song(queue[position]);
     index = position;
+    seekTarget = null;
     transitioning = true;
     playbackFailed = false;
     state();
@@ -49,13 +58,16 @@
       await music.setQueue({ items: [descriptor], startWith: 0, startPlaying: false });
       if (generation !== session) return;
       if (music.queue && music.queue.length !== 1) throw new Error('unavailableItem');
-      await music.play();
+      desiredPlaying = startPlaying;
+      if (startPlaying) await music.play();
+      else await music.pause();
       if (generation === session) state();
     } catch (failure) {
       playbackFailed = true;
+      desiredPlaying = false;
       await music.pause();
       throw failure;
-    } finally { transitioning = false; }
+    } finally { transitioning = false; if (generation === session) state(); }
   }
   function nextPosition(direction, ended = false) {
     if (ended && repeat === 1) return index;
@@ -81,6 +93,9 @@
   async function perform(command, generation) {
     if (generation !== session || signingOut) return;
     switch (command.type) {
+      case 'intent':
+        requestGeneration = command.generation;
+        return perform(command.command, generation);
       case 'authorize': return authorize(generation);
       case 'library': {
         const route = command.next || '/v1/me/library/songs?limit=100';
@@ -105,6 +120,7 @@
         return;
       }
       case 'play':
+        requestGeneration = command.generation ?? requestGeneration;
         if (!Array.isArray(command.items) || !command.items.length || command.items.length > 1000 ||
             !Number.isInteger(command.index) || command.index < 0 || command.index >= command.items.length) {
           throw new Error('queue');
@@ -112,13 +128,19 @@
         command.items.forEach(song);
         queue = structuredClone(command.items);
         return playAt(command.index, generation);
-      case 'next': return playAt(nextPosition(1), generation);
-      case 'previous': return playAt(nextPosition(-1), generation);
-      case 'pause': await music.pause(); break;
-      case 'resume': await music.play(); break;
-      case 'seek':
+      case 'next': return playAt(nextPosition(1), generation, desiredPlaying);
+      case 'previous': return playAt(nextPosition(-1), generation, desiredPlaying);
+      case 'pause': desiredPlaying = false; await music.pause(); break;
+      case 'resume': desiredPlaying = true; await music.play(); break;
+      case 'seek': {
         if (!Number.isFinite(command.seconds) || command.seconds < 0) throw new Error('seek');
-        await music.seekToTime(command.seconds); break;
+        seekTarget = command.seconds;
+        // The SDK can report a completed seek while its promise remains pending.
+        // Do not let that promise block later pause, next or sign-out commands.
+        const intent = requestGeneration;
+        void Promise.resolve(music.seekToTime(command.seconds)).catch(() => error('seek', generation, intent));
+        break;
+      }
       case 'volume':
         if (!Number.isFinite(command.value) || command.value < 0 || command.value > 1) throw new Error('volume');
         music.volume = command.value; break;
@@ -139,6 +161,7 @@
       const pending = chain;
       const generation = ++session;
       signingOut = true;
+      desiredPlaying = false;
       queue = []; index = -1;
       const result = (async () => {
         await initializing;
@@ -171,11 +194,14 @@
       const events = window.MusicKit.Events;
       for (const name of ['playbackTimeDidChange', 'playbackStateDidChange', 'nowPlayingItemDidChange']) {
         music.addEventListener(events[name], () => {
+          // Seeking may finish by resuming audio after an earlier pause request.
+          if (!signingOut && !desiredPlaying && music.playbackState === window.MusicKit.PlaybackStates.playing) void music.pause();
           if (!signingOut && index >= 0) state();
         });
       }
       music.addEventListener(events.mediaPlaybackError, () => {
         playbackFailed = true;
+        desiredPlaying = false;
         void music.pause();
         error('playback', session); // Queue/index stay visible. Do not skip an unavailable song.
       });
