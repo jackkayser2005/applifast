@@ -554,12 +554,12 @@ pub fn play_glyph_offset(icon: Icon, icon_size: f32) -> Vec2 {
     }
 }
 
-/// The app's mark, the same picture as the app icon: the polished green
-/// disc with the play triangle, rasterised once per size by
+/// The app's mark, the same picture as the app icon: the red rounded
+/// square with the white play mark, rasterised once per size by
 /// `util::app_icon_rgba` and drawn wherever the app shows its logo.
 pub fn logo(ui: &egui::Ui, center: egui::Pos2, diameter: f32) {
     let ppp = ui.ctx().pixels_per_point();
-    // The raster keeps two pixels of margin on each side of the disc.
+    // The raster keeps two pixels of margin on each side of the tile.
     let pixels = (diameter * ppp).round() as usize + 4;
     let id = egui::Id::new(("spotifast-logo", pixels));
     let texture = ui
@@ -900,7 +900,7 @@ mod tests {
     use super::*;
 
     /// The logo drawn in the app is the app icon's own picture, not a
-    /// disc in the theme's accent colour: it uploads the icon's pixels.
+    /// shape in the theme's accent colour: it uploads the icon's pixels.
     #[test]
     fn the_logo_in_the_app_is_the_app_icon() {
         // #given the logo drawn 40 points wide at twice the pixel density
