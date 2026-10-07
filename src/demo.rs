@@ -1404,6 +1404,44 @@ mod tests {
         }
     }
 
+    /// Home's lower shelves run past the bottom of the window; debug builds
+    /// painted an ID clash over them until each shelf's autoscroll
+    /// background had its own ID.
+    #[test]
+    fn home_shelves_below_the_window_have_no_id_clash() {
+        fn warnings(shape: &egui::Shape, out: &mut Vec<String>) {
+            match shape {
+                egui::Shape::Text(text) if text.galley.text().contains("use of widget ID") => {
+                    out.push(text.galley.text().to_owned());
+                }
+                egui::Shape::Vec(shapes) => shapes.iter().for_each(|s| warnings(s, out)),
+                _ => {}
+            }
+        }
+        let (ctx, mut app) = accessible_app("home-id-clash");
+        ctx.options_mut(|options| options.warn_on_id_clash = true);
+        app.open(Page::Home);
+        let mut found = Vec::new();
+        for _ in 0..4 {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            found.clear();
+            for clipped in &output.shapes {
+                warnings(&clipped.shape, &mut found);
+            }
+        }
+        assert_eq!(found, Vec::<String>::new());
+    }
+
     fn accessible_frame(
         ctx: &egui::Context,
         app: &mut App,
