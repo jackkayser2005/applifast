@@ -1566,6 +1566,117 @@ mod tests {
         }
     }
 
+    /// Every other song in a list is shaded by its place in the list, so a
+    /// song keeps its shade while the virtual rows scroll past.
+    #[test]
+    fn song_list_stripes_follow_the_songs_when_scrolling() {
+        let (ctx, mut app) = accessible_app("striped-rows");
+        app.open(Page::Playlist("pl1".into()));
+        let stripe = crate::ui::widgets::stripe_fill(&app.palette);
+        let frame = |ctx: &egui::Context, app: &mut App, events| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            output
+        };
+        // Each song row clear of the player bar: its top edge and whether
+        // it is shaded.
+        let rows = |output: &egui::FullOutput| {
+            let stripes: Vec<egui::Rect> = output
+                .shapes
+                .iter()
+                .filter_map(|shape| match &shape.shape {
+                    egui::epaint::Shape::Rect(rect) if rect.fill == stripe => Some(rect.rect),
+                    _ => None,
+                })
+                .collect();
+            let tree = output.platform_output.accesskit_update.as_ref().unwrap();
+            fn label(node: &egui::accesskit::Node) -> Option<&str> {
+                node.label().filter(|label| label.starts_with("Play "))
+            }
+            // A song the playlist holds twice cannot say which copy it is.
+            let once = |wanted: &str| {
+                tree.nodes
+                    .iter()
+                    .filter(|(_, node)| label(node) == Some(wanted))
+                    .count()
+                    == 1
+            };
+            tree.nodes
+                .iter()
+                .filter(|(_, node)| label(node).is_some_and(once))
+                .filter_map(|(_, node)| {
+                    let bounds = node.bounds()?;
+                    let rect = egui::Rect::from_min_max(
+                        egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                        egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                    );
+                    let clear = rect.top() > 0.0 && rect.bottom() < 700.0;
+                    (rect.height() >= crate::theme::THIN_ROW_HEIGHT && clear).then(|| {
+                        let shaded = stripes
+                            .iter()
+                            .any(|stripe| (stripe.top() - rect.top()).abs() < 0.5);
+                        (node.label().unwrap().to_owned(), (rect.top(), shaded))
+                    })
+                })
+                .collect::<std::collections::BTreeMap<_, _>>()
+        };
+        frame(&ctx, &mut app, vec![]);
+        let before = rows(&frame(&ctx, &mut app, vec![egui::Event::PointerGone]));
+        let shaded = before.values().filter(|(_, shaded)| *shaded).count();
+        assert!(
+            shaded > 0 && shaded < before.len(),
+            "some rows are shaded, not all: {before:?}"
+        );
+
+        let over_list = egui::pos2(700.0, 600.0);
+        frame(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(over_list),
+                egui::Event::MouseWheel {
+                    unit: egui::MouseWheelUnit::Point,
+                    delta: egui::vec2(0.0, -150.0),
+                    modifiers: egui::Modifiers::NONE,
+                    phase: egui::TouchPhase::Move,
+                },
+            ],
+        );
+        let mut after = Default::default();
+        for _ in 0..30 {
+            after = rows(&frame(&ctx, &mut app, vec![egui::Event::PointerGone]));
+        }
+        let mut compared = 0;
+        for (song, (top, shaded)) in &after {
+            if let Some((was, was_shaded)) = before.get(song) {
+                assert!(*top < *was, "{song} moved up as the list scrolled");
+                assert_eq!(shaded, was_shaded, "{song} kept its shade");
+                compared += 1;
+            }
+        }
+        let distances: std::collections::BTreeSet<i32> = after
+            .iter()
+            .filter_map(|(song, (top, _))| Some((before.get(song)?.0 - top).round() as i32))
+            .collect();
+        assert_eq!(
+            distances.len(),
+            1,
+            "one scroll for every row: {distances:?}"
+        );
+        assert!(compared >= 2, "{before:?} then {after:?}");
+        app.backend.shutdown();
+    }
+
     #[test]
     fn translated_player_bar_keeps_control_identity_and_keyboard_actions() {
         use crate::i18n::{Locale, gettext};
@@ -3293,6 +3404,7 @@ mod tests {
                                 shift: 0.0,
                                 picked: false,
                                 picked_songs: &[],
+                                striped: false,
                             },
                         );
                     }
@@ -3398,6 +3510,7 @@ mod tests {
                                     shift: 0.0,
                                     picked: false,
                                     picked_songs: &[],
+                                    striped: false,
                                 },
                             );
                         });
@@ -3518,6 +3631,7 @@ mod tests {
                                 shift: 0.0,
                                 picked: false,
                                 picked_songs: &[],
+                                striped: false,
                             },
                         );
                     }
@@ -4306,6 +4420,7 @@ mod tests {
                         shift: 0.0,
                         picked: false,
                         picked_songs: &[],
+                        striped: false,
                     },
                 );
             }

@@ -61,6 +61,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, id: &str) {
                                 shift: 0.0,
                                 picked: false,
                                 picked_songs: &[],
+                                striped: index % 2 == 1,
                             },
                         );
                     }
