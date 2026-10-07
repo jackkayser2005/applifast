@@ -279,8 +279,8 @@ msgid "Mute"
 msgstr "靜音"
 
 #: src/ui/player_bar.rs:869
-msgid "This device's volume can't be changed from Spotifast"
-msgstr "無法從 Spotifast 變更此裝置的音量"
+msgid "This device's volume can't be changed from Applifast"
+msgstr "無法從 Applifast 變更此裝置的音量"
 
 #: src/ui/player_bar.rs:884 src/ui/devices.rs:193
 msgid "Connect to a device"
@@ -641,12 +641,12 @@ msgstr "{error}原始設定檔保持不變，變更的偏好設定尚未儲存�
 #. Translators: {version} is a version number such as 1.4.0.
 #: src/app.rs:2002
 #, rust-format
-msgid "Spotifast {version} is available"
-msgstr "Spotifast {version} 現已推出"
+msgid "Applifast {version} is available"
+msgstr "Applifast {version} 現已推出"
 
 #: src/app.rs:2019
-msgid "Spotifast is up to date"
-msgstr "Spotifast 已是最新版本"
+msgid "Applifast is up to date"
+msgstr "Applifast 已是最新版本"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:2027
@@ -857,8 +857,8 @@ msgid "This song's album is not on Spotify"
 msgstr "這首歌曲所屬的專輯不在 Spotify 上"
 
 #: src/app.rs:6324
-msgid "Spotifast cannot open this kind of Spotify link"
-msgstr "Spotifast 無法開啟這類 Spotify 連結"
+msgid "Applifast cannot open this kind of Spotify link"
+msgstr "Applifast 無法開啟這類 Spotify 連結"
 
 #: src/app.rs:6487
 msgid "Nothing is playing. Pick something first"
@@ -1272,13 +1272,13 @@ msgstr "歌曲之間不插入靜音。"
 
 #: src/ui/settings.rs:481
 msgid ""
-"Spotifast hides to the system tray. Quit from the tray menu or with Ctrl+Q."
-msgstr "Spotifast 會隱藏到系統匣。可從系統匣選單或按 Ctrl+Q 結束。"
+"Applifast hides to the system tray. Quit from the tray menu or with Ctrl+Q."
+msgstr "Applifast 會隱藏到系統匣。可從系統匣選單或按 Ctrl+Q 結束。"
 
 #: src/ui/settings.rs:485
 msgid ""
-"Spotifast hides to the system tray. Quit from the tray menu or with Cmd+Q."
-msgstr "Spotifast 會隱藏到系統匣。可從系統匣選單或按 Cmd+Q 結束。"
+"Applifast hides to the system tray. Quit from the tray menu or with Cmd+Q."
+msgstr "Applifast 會隱藏到系統匣。可從系統匣選單或按 Cmd+Q 結束。"
 
 #: src/ui/settings.rs:492
 msgid "Checks GitHub once a day. No personal data is sent."
@@ -1433,9 +1433,9 @@ msgstr ""
 
 #: src/ui/settings.rs:874
 msgid ""
-"Draw Spotifast's own title bar and window buttons instead of the standard "
+"Draw Applifast's own title bar and window buttons instead of the standard "
 "Windows ones."
-msgstr "使用 Spotifast 自己的標題列和視窗按鈕，而不是 Windows 的標準樣式。"
+msgstr "使用 Applifast 自己的標題列和視窗按鈕，而不是 Windows 的標準樣式。"
 
 #: src/ui/settings.rs:882
 msgid ""
@@ -1607,34 +1607,34 @@ msgstr "預設集"
 #: src/ui/settings.rs:1486
 #, rust-format
 msgid ""
-"None yet in {folder}. Add .milk files here. Spotifast downloads presets when "
+"None yet in {folder}. Add .milk files here. Applifast downloads presets when "
 "MilkDrop first opens with an empty folder."
 msgstr ""
 "{folder} 中還沒有預設集。請將 .milk 檔案加入這裡。第一次開啟 MilkDrop 時若資"
-"料夾是空的，Spotifast 會下載預設集。"
+"料夾是空的，Applifast 會下載預設集。"
 
 #. Translators: {folder} is the path of the MilkDrop presets folder.
 #: src/ui/settings.rs:1492
 #, rust-format
 msgid ""
-"One preset in {folder}. Add .milk files here. Spotifast downloads presets "
+"One preset in {folder}. Add .milk files here. Applifast downloads presets "
 "when MilkDrop first opens with an empty folder."
 msgstr ""
 "{folder} 中有 1 個預設集。請將 .milk 檔案加入這裡。第一次開啟 MilkDrop 時若資"
-"料夾是空的，Spotifast 會下載預設集。"
+"料夾是空的，Applifast 會下載預設集。"
 
 #. Translators: {count} is the number of presets, {folder} the path of the MilkDrop presets folder.
 #: src/ui/settings.rs:1498
 #, rust-format
 msgid ""
-"{count} preset in {folder}. Add .milk files here. Spotifast downloads "
+"{count} preset in {folder}. Add .milk files here. Applifast downloads "
 "presets when MilkDrop first opens with an empty folder."
 msgid_plural ""
-"{count} presets in {folder}. Add .milk files here. Spotifast downloads "
+"{count} presets in {folder}. Add .milk files here. Applifast downloads "
 "presets when MilkDrop first opens with an empty folder."
 msgstr[0] ""
 "{folder} 中有 {count} 個預設集。請將 .milk 檔案加入這裡。第一次開啟 MilkDrop "
-"時若資料夾是空的，Spotifast 會下載預設集。"
+"時若資料夾是空的，Applifast 會下載預設集。"
 
 #: src/ui/settings.rs:1507
 msgid "Time per preset"
@@ -2080,11 +2080,11 @@ msgstr "減少等待 Spotify 的時間"
 
 #: src/ui/dialogs.rs:41
 msgid ""
-"Spotifast's default connection shares Spotify's request limit with other "
+"Applifast's default connection shares Spotify's request limit with other "
 "listeners. When it gets busy, loading music and using playback controls can "
 "take longer."
 msgstr ""
-"Spotifast 的預設連線會與其他聽眾共用 Spotify 的要求上限。繁忙時，載入音樂和使"
+"Applifast 的預設連線會與其他聽眾共用 Spotify 的要求上限。繁忙時，載入音樂和使"
 "用播放控制項可能需要更久。"
 
 #: src/ui/dialogs.rs:42
@@ -2159,9 +2159,9 @@ msgstr "這個帳戶無法在這裡播放音樂"
 #: src/ui/dialogs.rs:213
 msgid ""
 "Playback needs Spotify Premium. Free accounts can browse and search, but "
-"cannot play music through Spotifast."
+"cannot play music through Applifast."
 msgstr ""
-"播放需要 Spotify Premium。免費帳戶可以瀏覽和搜尋，但無法透過 Spotifast 播放音"
+"播放需要 Spotify Premium。免費帳戶可以瀏覽和搜尋，但無法透過 Applifast 播放音"
 "樂。"
 
 #: src/ui/dialogs.rs:222
@@ -2509,10 +2509,10 @@ msgstr "使用 Spotify 登入"
 
 #: src/ui/login.rs:134
 msgid ""
-"Sign in through your browser. Spotifast never sees your password. Local "
+"Sign in through your browser. Applifast never sees your password. Local "
 "playback needs Spotify Premium."
 msgstr ""
-"透過瀏覽器登入。Spotifast 永遠不會看到你的密碼。本機播放需要 Spotify "
+"透過瀏覽器登入。Applifast 永遠不會看到你的密碼。本機播放需要 Spotify "
 "Premium。"
 
 #: src/ui/login.rs:167
@@ -2522,8 +2522,8 @@ msgstr "Proxy 設定"
 #. Translators: {version} is the app's version number, such as 1.2.0.
 #: src/ui/login.rs:188
 #, rust-format
-msgid "Spotifast {version} • not affiliated with Spotify"
-msgstr "Spotifast {version} • 與 Spotify 無關"
+msgid "Applifast {version} • not affiliated with Spotify"
+msgstr "Applifast {version} • 與 Spotify 無關"
 
 #: src/ui/mod.rs:464
 msgid "Minimize"
@@ -2718,8 +2718,8 @@ msgid "Version {version} is available."
 msgstr "版本 {version} 現已推出。"
 
 #: src/ui/update.rs:19
-msgid "Update Spotifast"
-msgstr "更新 Spotifast"
+msgid "Update Applifast"
+msgstr "更新 Applifast"
 
 #: src/ui/update.rs:51
 msgid "Close update"
@@ -2744,8 +2744,8 @@ msgid "Ready to install"
 msgstr "可以安裝"
 
 #: src/ui/update.rs:115
-msgid "Music playing on this computer will stop when Spotifast restarts."
-msgstr "Spotifast 重新啟動時，這台電腦上正在播放的音樂將會停止。"
+msgid "Music playing on this computer will stop when Applifast restarts."
+msgstr "Applifast 重新啟動時，這台電腦上正在播放的音樂將會停止。"
 
 #: src/ui/update.rs:122
 msgid "Restart to update"
@@ -3064,12 +3064,12 @@ msgid "On Wayland, use your desktop's Keep Above shortcut or window rule."
 msgstr "在 Wayland 上，請使用桌面環境的「最上層顯示」快捷鍵或視窗規則。"
 
 #: src/window.rs:32
-msgid "Spotifast cannot open its window"
-msgstr "Spotifast 無法開啟視窗"
+msgid "Applifast cannot open its window"
+msgstr "Applifast 無法開啟視窗"
 
 #: src/window.rs:35
-msgid "On Windows on ARM, the OpenGL that Spotifast draws with comes from Microsoft's OpenCL, OpenGL & Vulkan Compatibility Pack. Open its Microsoft Store page to install or repair it?"
-msgstr "在 ARM 版 Windows 上，Spotifast 用來繪製介面的 OpenGL 由 Microsoft 的 OpenCL, OpenGL & Vulkan Compatibility Pack 提供。要開啟其 Microsoft Store 頁面以安裝或修復嗎？"
+msgid "On Windows on ARM, the OpenGL that Applifast draws with comes from Microsoft's OpenCL, OpenGL & Vulkan Compatibility Pack. Open its Microsoft Store page to install or repair it?"
+msgstr "在 ARM 版 Windows 上，Applifast 用來繪製介面的 OpenGL 由 Microsoft 的 OpenCL, OpenGL & Vulkan Compatibility Pack 提供。要開啟其 Microsoft Store 頁面以安裝或修復嗎？"
 
 #~ msgid "MacBook notch interactive widget"
 #~ msgstr "MacBook瀏海互動式小工具"

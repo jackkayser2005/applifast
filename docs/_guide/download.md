@@ -34,7 +34,7 @@ open an app downloaded from the internet, choose **Open**.
 Starting with 0.8.0, the Mac download passes Apple's security checks. You do
 not need to change security settings or run commands in Terminal to open it.
 
-Quit the old app before opening Spotifast. Your saved settings and sign-ins
+Quit the old app before opening Applifast. Your saved settings and sign-ins
 carry over. If an older version reports that its update helper exited before
 it was ready, install the DMG above manually once. The helper changes take
 effect for updates started from 0.9.1 onward.
@@ -48,7 +48,7 @@ or the ARM version if your PC uses an ARM processor:
 - [Windows installer (most PCs)]({{ base }}/spotifast-v{{ v }}-x86_64-pc-windows-msvc-setup.exe)
 - [Windows installer (ARM PCs)]({{ base }}/spotifast-v{{ v }}-aarch64-pc-windows-msvc-setup.exe)
 
-To run Spotifast without an installer, download a ZIP file, extract it, and
+To run Applifast without an installer, download a ZIP file, extract it, and
 open `spotifast.exe`.
 
 - [Windows ZIP (most PCs)]({{ base }}/spotifast-v{{ v }}-x86_64-pc-windows-msvc.zip)
@@ -57,7 +57,7 @@ open `spotifast.exe`.
 Either way, SmartScreen may warn about an unknown publisher on first run;
 choose **More info**, then **Run anyway**.
 
-Spotifast needs OpenGL 2.0 or newer, which every current Windows graphics
+Applifast needs OpenGL 2.0 or newer, which every current Windows graphics
 driver provides. In a virtual machine or remote session that only has the
 Microsoft Basic Display Adapter, it may not start; install the machine's
 graphics driver, or enable GPU acceleration for the virtual machine.
@@ -69,7 +69,7 @@ in Windows.
 
 ### Arch Linux
 
-Spotifast is in the AUR, Arch's community package collection. Installing it
+Applifast is in the AUR, Arch's community package collection. Installing it
 also adds it to your app launcher:
 
 ```sh
@@ -80,7 +80,7 @@ yay -S spotifast-git      # built from the latest commit
 
 ### Flatpak
 
-Download the [Spotifast Flatpak]({{ base }}/spotifast-v{{ v }}-x86_64.flatpak?flatpak-id=rocks.spotifast.Spotifast).
+Download the [Applifast Flatpak]({{ base }}/spotifast-v{{ v }}-x86_64.flatpak?flatpak-id=rocks.spotifast.Spotifast).
 It requires Flatpak and the Freedesktop 24.08 runtime, a set of shared
 components used by Flatpak apps:
 
@@ -112,7 +112,7 @@ chmod +x ~/Downloads/spotifast-{{ v }}-x86_64.AppImage
 The AppImage bundles no libraries: like the DEB and RPM, it needs glibc 2.39
 or newer and your desktop's own libraries. Running it needs FUSE; without
 FUSE, start it with `--appimage-extract-and-run`. It does not update itself:
-download the new file when Spotifast says a release is out.
+download the new file when Applifast says a release is out.
 
 ### Other distributions
 
@@ -145,7 +145,7 @@ environment.systemPackages = [
 
 ### nix-darwin
 
-On macOS, use the same `spotifast` package to install Spotifast as a Mac app:
+On macOS, use the same `spotifast` package to install Applifast as a Mac app:
 
 ```nix
 environment.systemPackages = [

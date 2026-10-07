@@ -8,7 +8,7 @@ nav_order: 0
 
 Linux media controls use `playerctl --player=spotifast`.
 
-Spotifast follows each platform's conventions. On Linux:
+Applifast follows each platform's conventions. On Linux:
 
 | What | Where | Safe to delete? |
 | --- | --- | --- |
@@ -55,10 +55,10 @@ used for this session, with no new plaintext fallback file.
 On upgrade, each legacy grant is written to the protected store and read back
 before its old file is removed. Valid grants migrate without signing in again.
 If Spotify rejects a saved refresh grant, only that grant is forgotten so the
-next launch cannot keep restoring it. If migration fails, Spotifast reports it and
+next launch cannot keep restoring it. If migration fails, Applifast reports it and
 keeps the original so migration can be retried. That grant can still serve the
 current session. A successfully migrated grant is never replaced by a stale
-legacy copy. Librespot's reusable grant stays in memory until Spotifast saves
+legacy copy. Librespot's reusable grant stays in memory until Applifast saves
 it through this same store. Volume and disposable audio caches are independent.
 
 Sign-out invalidates pending authorization, refresh, and playback connections,
@@ -88,13 +88,13 @@ Older proxy passwords, whether in `settings.json` or the separate state file,
 are migrated and read back before their plaintext copies are removed. If that
 fails, the originals remain available for retry. Settings changes stay in
 memory until migration succeeds, so a save cannot erase the only password or
-associate it with a different proxy address. Spotifast reports this condition.
+associate it with a different proxy address. Applifast reports this condition.
 Newly entered passwords have no plaintext fallback. Settings store the confirmed
 proxy mode, host, port, and username, never an unapplied draft or password.
 
 Progress through a playlist is periodically cached as a contiguous prefix.
 When the playlist has not changed on Spotify, reopening it resumes from that
-prefix instead of requesting the same pages again. Spotifast validates the
+prefix instead of requesting the same pages again. Applifast validates the
 cache against Spotify's playlist snapshot and reported song count before
 showing it. A cache with a mismatched count is replaced by live rows even if
 its snapshot matches, so stale cached songs cannot choose the playback order.
@@ -206,10 +206,10 @@ The running copy keeps its single-instance files in a private directory:
 directory), a `spotifast` folder in your private temporary directory
 (`$TMPDIR`) on macOS, and an `instance` folder in the state directory on
 Windows. `instance.lock` marks the running copy; the system releases it when
-Spotifast quits or crashes. `instance.sock` (Linux and macOS) is the socket
+Applifast quits or crashes. `instance.sock` (Linux and macOS) is the socket
 a second launch and the `spotifast` command reach it through, which only your
 user can open. On Windows, `instance.key` holds the loopback port and a
-random token that every request must carry. Spotifast writes them on each
+random token that every request must carry. Applifast writes them on each
 start; nothing in them needs keeping.
 
 ## settings.json
@@ -224,7 +224,7 @@ main fields are:
 | `normalisation` | `false` | Volume normalisation |
 | `autoplay` | `true` | Keep playing similar music at the end |
 | `gapless` | `true` | Gapless playback |
-| `audio_backend` | platform | `pulseaudio` or `rodio` on Linux. `rodio` is Spotifast's own output, through ALSA; librespot's separate rodio backend is no longer built in, and a backend this build lacks plays through Spotifast's own output |
+| `audio_backend` | platform | `pulseaudio` or `rodio` on Linux. `rodio` is Applifast's own output, through ALSA; librespot's separate rodio backend is no longer built in, and a backend this build lacks plays through Applifast's own output |
 | `audio_cache_mb` | `1024` | On-disk audio cache budget |
 | `theme` | `system` | Follow the system appearance by default; explicit `dark` and `light` choices remain available |
 | `language` | `system` | Since 0.10.0: the interface language. `system` follows the operating system's preferred languages and falls back to English; a tag such as `es`, `de-DE`, `pt-BR` or `zh-Hant` selects that language. An unknown tag follows the system |
@@ -243,7 +243,7 @@ main fields are:
 | `middle_click_autoscroll` | `false` | Linux only: middle-click a list to autoscroll it. Windows always autoscrolls and macOS never does |
 | `winamp_window` | `false` | The window is the Winamp mini player |
 | `winamp_show_taskbar` | `true` | Windows since 0.8.0, and Linux X11 sessions: show the Winamp window's taskbar button; the main window always keeps its button. Wayland and macOS ignore it |
-| `custom_titlebar` | `false` | Windows only, since 0.10.0: draw Spotifast's own title bar and window buttons instead of the standard Windows ones |
+| `custom_titlebar` | `false` | Windows only, since 0.10.0: draw Applifast's own title bar and window buttons instead of the standard Windows ones |
 | `skin` | none | File or folder name in the skins folder; blank uses the built-in skin |
 | `random_skin` | `false` | Since 0.11.0: pick a different skin (built-in or installed) each time the mini player opens; `skin` holds the one picked |
 | `skin_scale` | by display | Screen pixels per skin pixel, 1 to 4 |
@@ -287,7 +287,7 @@ spotifast [OPTIONS] [LINK]
   -v, --verbose         More logs from librespot and the API client
 ```
 
-A link goes to the running Spotifast when there is one, which then opens
+A link goes to the running Applifast when there is one, which then opens
 the page and brings its window forward; otherwise the app starts on it. The
 desktop's handler for `spotify:` links runs exactly this.
 
@@ -351,7 +351,7 @@ directory; the ordinary demo does not scan your real themes folder.
 ## Home shelves
 
 Since 0.8.0, you can hide **Made for you** and **Recommended for you**
-from Home independently. Quit Spotifast before editing `settings.json`, then
+from Home independently. Quit Applifast before editing `settings.json`, then
 restart it. Add this field to hide both:
 
 ```json
@@ -368,11 +368,11 @@ refresh in the background.
 
 ## Custom themes
 
-Since 0.11.0, Spotifast puts eight palettes in the `themes` folder beside
+Since 0.11.0, Applifast puts eight palettes in the `themes` folder beside
 `settings.json` the first time it starts: Catppuccin, Catppuccin Latte,
 Nord, Ristretto, Rose Pine, Rose Pine Dawn, Rose Pine Moon and Tokyo
 Night. They are ordinary palette files: read them to see how a theme is
-written, change them, or delete the ones you do not want. Spotifast never
+written, change them, or delete the ones you do not want. Applifast never
 rewrites them, and a deleted one stays deleted; `.installed-palettes` in
 the folder records which it has already put there.
 
@@ -395,7 +395,7 @@ needed and opens it in your file
 manager, using the same button style as the Winamp skins folder.
 After adding or editing a JSON file on macOS or Windows, run
 `spotifast reload-themes` to refresh the list and the selected palette without
-restarting playback. Since 0.10.2, Spotifast on Linux notices changes to the
+restarting playback. Since 0.10.2, Applifast on Linux notices changes to the
 themes folder by itself.
 Choosing a built-in theme clears the custom selection.
 Since 0.11.0, whenever the colours change (a theme picked here, Omarchy
@@ -433,7 +433,7 @@ subdirectories. Each file is limited to 64 KiB. Keep at most 128 JSON files and
 512 total entries in the themes folder; the saved selection is still checked
 when a folder exceeds these limits.
 
-Invalid files are skipped with a warning in the log. Spotifast remembers the
+Invalid files are skipped with a warning in the log. Applifast remembers the
 last accepted custom palette in `settings.json`. If the selected file is
 removed or becomes invalid, that appearance stays in place, including after
 a restart, and the Theme row explains the problem. Other preferences are
@@ -459,7 +459,7 @@ and track later theme changes. An existing explicit Dark, Light or custom
 choice stays selected. Choose **Follow system** or **Omarchy** under
 **Settings → Appearance → Theme** to follow Omarchy instead.
 
-Since 0.10.2, portable archives and Cargo builds follow Omarchy too: Spotifast
+Since 0.10.2, portable archives and Cargo builds follow Omarchy too: Applifast
 reads the palette Omarchy rendered for it, or renders the template itself from
 the current theme's colours, and picks up theme changes without the hook.
 
@@ -475,8 +475,8 @@ and a [theme-change hook](https://github.com/crmne/spotifast/blob/main/contrib/o
 Omarchy resolves its light/dark mode and colors through its
 [template system](https://omarchy.org/manual/making-your-own-theme/).
 The hook copies the result atomically into `themes/omarchy.json`, then asks a
-running Spotifast to reload it. It does not change your desktop theme or your
-Spotifast selection itself.
+running Applifast to reload it. It does not change your desktop theme or your
+Applifast selection itself.
 
 For portable or Cargo installations, install the two files from a checkout:
 
@@ -487,12 +487,12 @@ omarchy hook install theme-set contrib/omarchy/spotifast-theme
 ```
 
 Apply a theme through Omarchy's theme picker, then select **Omarchy** in
-Spotifast's **Settings → Appearance → Theme** once. Later Omarchy changes update
+Applifast's **Settings → Appearance → Theme** once. Later Omarchy changes update
 that palette while music keeps playing. Turn off album-art tinting if every
 page should keep the theme's fixed colors.
 
 The hook uses Omarchy's current theme at
-`~/.local/state/omarchy/current/theme` and Spotifast's existing
+`~/.local/state/omarchy/current/theme` and Applifast's existing
 `${XDG_CONFIG_HOME:-~/.config}/spotifast/themes` directory. The shipped hook
 is updated automatically if its contents have not been customized. A custom profile can set
 `SPOTIFAST_THEMES_DIR` in the installed hook; this example uses the native
@@ -500,7 +500,7 @@ is updated automatically if its contents have not been customized. A custom prof
 their own `spotifast.json` file. Missing or invalid palettes leave the last
 accepted appearance in place.
 
-To stop following Omarchy, choose Dark, Light or another custom theme in Spotifast.
+To stop following Omarchy, choose Dark, Light or another custom theme in Applifast.
 For a manual installation, remove only
 `~/.config/omarchy/hooks/theme-set.d/spotifast-theme` and
 `~/.config/omarchy/themed/spotifast.json.tpl`. Other hooks remain in place.
