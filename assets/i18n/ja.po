@@ -279,8 +279,8 @@ msgid "Mute"
 msgstr "ミュート"
 
 #: src/ui/player_bar.rs:869
-msgid "This device's volume can't be changed from Spotifast"
-msgstr "このデバイスの音量は Spotifast から変更できません"
+msgid "This device's volume can't be changed from Applifast"
+msgstr "このデバイスの音量は Applifast から変更できません"
 
 #: src/ui/player_bar.rs:884 src/ui/devices.rs:193
 msgid "Connect to a device"
@@ -645,12 +645,12 @@ msgstr ""
 #. Translators: {version} is a version number such as 1.4.0.
 #: src/app.rs:2002
 #, rust-format
-msgid "Spotifast {version} is available"
-msgstr "Spotifast {version}が利用可能です"
+msgid "Applifast {version} is available"
+msgstr "Applifast {version}が利用可能です"
 
 #: src/app.rs:2019
-msgid "Spotifast is up to date"
-msgstr "Spotifastは最新です"
+msgid "Applifast is up to date"
+msgstr "Applifastは最新です"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:2027
@@ -865,8 +865,8 @@ msgid "This song's album is not on Spotify"
 msgstr "この曲のアルバムはSpotifyにありません"
 
 #: src/app.rs:6324
-msgid "Spotifast cannot open this kind of Spotify link"
-msgstr "Spotifastはこの種類のSpotifyリンクを開けません"
+msgid "Applifast cannot open this kind of Spotify link"
+msgstr "Applifastはこの種類のSpotifyリンクを開けません"
 
 #: src/app.rs:6487
 msgid "Nothing is playing. Pick something first"
@@ -1294,16 +1294,16 @@ msgstr "曲と曲の間に無音を入れずに再生します。"
 
 #: src/ui/settings.rs:481
 msgid ""
-"Spotifast hides to the system tray. Quit from the tray menu or with Ctrl+Q."
+"Applifast hides to the system tray. Quit from the tray menu or with Ctrl+Q."
 msgstr ""
-"Spotifastはシステムトレイに隠れます。トレイメニューまたはCtrl+Qで終了できま"
+"Applifastはシステムトレイに隠れます。トレイメニューまたはCtrl+Qで終了できま"
 "す。"
 
 #: src/ui/settings.rs:485
 msgid ""
-"Spotifast hides to the system tray. Quit from the tray menu or with Cmd+Q."
+"Applifast hides to the system tray. Quit from the tray menu or with Cmd+Q."
 msgstr ""
-"Spotifastはシステムトレイに隠れます。トレイメニューまたはCmd+Qで終了できま"
+"Applifastはシステムトレイに隠れます。トレイメニューまたはCmd+Qで終了できま"
 "す。"
 
 #: src/ui/settings.rs:492
@@ -1466,10 +1466,10 @@ msgstr ""
 
 #: src/ui/settings.rs:874
 msgid ""
-"Draw Spotifast's own title bar and window buttons instead of the standard "
+"Draw Applifast's own title bar and window buttons instead of the standard "
 "Windows ones."
 msgstr ""
-"Windows標準のものではなく、Spotifast独自のタイトルバーとウインドウボタンを表"
+"Windows標準のものではなく、Applifast独自のタイトルバーとウインドウボタンを表"
 "示します。"
 
 #: src/ui/settings.rs:882
@@ -1653,35 +1653,35 @@ msgstr "プリセット"
 #: src/ui/settings.rs:1486
 #, rust-format
 msgid ""
-"None yet in {folder}. Add .milk files here. Spotifast downloads presets when "
+"None yet in {folder}. Add .milk files here. Applifast downloads presets when "
 "MilkDrop first opens with an empty folder."
 msgstr ""
 "{folder}にはまだありません。ここに.milkファイルを追加してください。フォルダが"
-"空の状態で初めてMilkDropを開くと、Spotifastがプリセットをダウンロードします。"
+"空の状態で初めてMilkDropを開くと、Applifastがプリセットをダウンロードします。"
 
 #. Translators: {folder} is the path of the MilkDrop presets folder.
 #: src/ui/settings.rs:1492
 #, rust-format
 msgid ""
-"One preset in {folder}. Add .milk files here. Spotifast downloads presets "
+"One preset in {folder}. Add .milk files here. Applifast downloads presets "
 "when MilkDrop first opens with an empty folder."
 msgstr ""
 "{folder}にプリセットが1個あります。ここに.milkファイルを追加してください。"
-"フォルダが空の状態で初めてMilkDropを開くと、Spotifastがプリセットをダウンロー"
+"フォルダが空の状態で初めてMilkDropを開くと、Applifastがプリセットをダウンロー"
 "ドします。"
 
 #. Translators: {count} is the number of presets, {folder} the path of the MilkDrop presets folder.
 #: src/ui/settings.rs:1498
 #, rust-format
 msgid ""
-"{count} preset in {folder}. Add .milk files here. Spotifast downloads "
+"{count} preset in {folder}. Add .milk files here. Applifast downloads "
 "presets when MilkDrop first opens with an empty folder."
 msgid_plural ""
-"{count} presets in {folder}. Add .milk files here. Spotifast downloads "
+"{count} presets in {folder}. Add .milk files here. Applifast downloads "
 "presets when MilkDrop first opens with an empty folder."
 msgstr[0] ""
 "{folder}にプリセットが{count}個あります。ここに.milkファイルを追加してくださ"
-"い。フォルダが空の状態で初めてMilkDropを開くと、Spotifastがプリセットをダウン"
+"い。フォルダが空の状態で初めてMilkDropを開くと、Applifastがプリセットをダウン"
 "ロードします。"
 
 #: src/ui/settings.rs:1507
@@ -2144,11 +2144,11 @@ msgstr "Spotifyの待ち時間を短く"
 
 #: src/ui/dialogs.rs:41
 msgid ""
-"Spotifast's default connection shares Spotify's request limit with other "
+"Applifast's default connection shares Spotify's request limit with other "
 "listeners. When it gets busy, loading music and using playback controls can "
 "take longer."
 msgstr ""
-"Spotifastの標準の接続は、Spotifyのリクエスト上限をほかのリスナーと共有してい"
+"Applifastの標準の接続は、Spotifyのリクエスト上限をほかのリスナーと共有してい"
 "ます。混雑すると、音楽の読み込みや再生操作に時間がかかることがあります。"
 
 #: src/ui/dialogs.rs:42
@@ -2224,10 +2224,10 @@ msgstr "このアカウントではここで音楽を再生できません"
 #: src/ui/dialogs.rs:213
 msgid ""
 "Playback needs Spotify Premium. Free accounts can browse and search, but "
-"cannot play music through Spotifast."
+"cannot play music through Applifast."
 msgstr ""
 "再生にはSpotify Premiumが必要です。Freeアカウントでは閲覧と検索はできますが、"
-"Spotifastで音楽を再生することはできません。"
+"Applifastで音楽を再生することはできません。"
 
 #: src/ui/dialogs.rs:222
 msgid "OK"
@@ -2576,10 +2576,10 @@ msgstr "Spotifyでログイン"
 
 #: src/ui/login.rs:134
 msgid ""
-"Sign in through your browser. Spotifast never sees your password. Local "
+"Sign in through your browser. Applifast never sees your password. Local "
 "playback needs Spotify Premium."
 msgstr ""
-"ブラウザでログインします。Spotifastがパスワードを見ることはありません。ローカ"
+"ブラウザでログインします。Applifastがパスワードを見ることはありません。ローカ"
 "ル再生にはSpotify Premiumが必要です。"
 
 #: src/ui/login.rs:167
@@ -2589,8 +2589,8 @@ msgstr "プロキシ設定"
 #. Translators: {version} is the app's version number, such as 1.2.0.
 #: src/ui/login.rs:188
 #, rust-format
-msgid "Spotifast {version} • not affiliated with Spotify"
-msgstr "Spotifast {version} • Spotifyとは関係ありません"
+msgid "Applifast {version} • not affiliated with Spotify"
+msgstr "Applifast {version} • Spotifyとは関係ありません"
 
 #: src/ui/mod.rs:464
 msgid "Minimize"
@@ -2786,8 +2786,8 @@ msgid "Version {version} is available."
 msgstr "バージョン{version}が利用可能です。"
 
 #: src/ui/update.rs:19
-msgid "Update Spotifast"
-msgstr "Spotifastをアップデート"
+msgid "Update Applifast"
+msgstr "Applifastをアップデート"
 
 #: src/ui/update.rs:51
 msgid "Close update"
@@ -2812,9 +2812,9 @@ msgid "Ready to install"
 msgstr "インストールの準備完了"
 
 #: src/ui/update.rs:115
-msgid "Music playing on this computer will stop when Spotifast restarts."
+msgid "Music playing on this computer will stop when Applifast restarts."
 msgstr ""
-"Spotifastを再起動すると、このコンピューターで再生中の音楽は停止します。"
+"Applifastを再起動すると、このコンピューターで再生中の音楽は停止します。"
 
 #: src/ui/update.rs:122
 msgid "Restart to update"
@@ -3135,12 +3135,12 @@ msgstr ""
 "を使ってください。"
 
 #: src/window.rs:32
-msgid "Spotifast cannot open its window"
-msgstr "Spotifast のウィンドウを開けません"
+msgid "Applifast cannot open its window"
+msgstr "Applifast のウィンドウを開けません"
 
 #: src/window.rs:35
-msgid "On Windows on ARM, the OpenGL that Spotifast draws with comes from Microsoft's OpenCL, OpenGL & Vulkan Compatibility Pack. Open its Microsoft Store page to install or repair it?"
-msgstr "Windows on ARM では、Spotifast の描画に使う OpenGL は Microsoft の OpenCL, OpenGL & Vulkan Compatibility Pack から提供されます。インストールまたは修復するために Microsoft Store のページを開きますか？"
+msgid "On Windows on ARM, the OpenGL that Applifast draws with comes from Microsoft's OpenCL, OpenGL & Vulkan Compatibility Pack. Open its Microsoft Store page to install or repair it?"
+msgstr "Windows on ARM では、Applifast の描画に使う OpenGL は Microsoft の OpenCL, OpenGL & Vulkan Compatibility Pack から提供されます。インストールまたは修復するために Microsoft Store のページを開きますか？"
 
 #~ msgid "MacBook notch interactive widget"
 #~ msgstr "MacBookノッチ対話型ウィジェット"
