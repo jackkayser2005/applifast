@@ -39,15 +39,8 @@
     </div>
     <p id="summary"></p>
     <div class="controls">
-      <fieldset aria-label="Page"><legend>Page</legend>
-        <button data-group="page" data-value="home">Home</button>
-        <button data-group="page" data-value="playlist">Playlist + queue</button>
-        <button data-group="page" data-value="album">Album</button>
-        <button data-group="page" data-value="artist">Artist</button>
-        <button data-group="page" data-value="liked">Liked Songs (narrow)</button>
-        <button data-group="page" data-value="settings">Settings</button>
-      </fieldset>
-      <fieldset aria-label="Theme"><legend>Theme</legend>
+      <fieldset aria-label="Page"><legend>Page</legend><span id="pages"></span></fieldset>
+      <fieldset id="themes" aria-label="Theme"><legend>Theme</legend>
         <button data-group="theme" data-value="dark">Dark</button>
         <button data-group="theme" data-value="light">Light</button>
       </fieldset>
@@ -66,8 +59,16 @@
         summary: "Album, playlist, artist, show and radio headers start their title at 40 points instead of 56; the kind label is secondary and byline links take the accent (green here, since this branch alone keeps the old palette). Section headings grow from 17 to 20 points." },
       { id: "sidebar", pr: 4, name: "Sidebar highlight and accent icons",
         summary: "Home and Search draw accent icons and full-colour labels; the open page's row sits on a rounded highlight instead of the other rows being dimmed. Row sizes are unchanged." },
+      { id: "winamp", pr: 5, name: "Mini player skin",
+        before: "winamp-before", themed: false,
+        pages: [["playing", "Playing (as on the website)"], ["full", "Paused"], ["shade", "Rolled up"]],
+        summary: "The built-in Winamp skin takes the same greys and red as #2. The time digits turn white, slider grips are light, and buttons and grips get softly rounded corners and gentler bevels. The layout and pixel art are unchanged; the website's mini player picture is regenerated. The skin does not follow the light theme, so there is one look." },
       { id: "combined", pr: null, name: "All three together",
-        summary: "The three changes applied together on main, for the overall look. Not a PR of its own." }
+        summary: "The three main-window changes applied together on main, for the overall look. Not a PR of its own." }
+    ];
+    const mainPages = [
+      ["home", "Home"], ["playlist", "Playlist + queue"], ["album", "Album"],
+      ["artist", "Artist"], ["liked", "Liked Songs (narrow)"], ["settings", "Settings"]
     ];
     const params = new URLSearchParams(location.search);
     const state = {
@@ -81,22 +82,37 @@
       button.addEventListener("click", () => { state.change = index; render(); });
       prs.append(button);
     });
-    for (const button of document.querySelectorAll("button[data-group]")) {
-      button.addEventListener("click", () => { state[button.dataset.group] = button.dataset.value; render(); });
-    }
+    document.addEventListener("click", event => {
+      const button = event.target.closest("button[data-group]");
+      if (button) { state[button.dataset.group] = button.dataset.value; render(); }
+    });
     document.querySelector("#prev").addEventListener("click", () => { state.change = (state.change + changes.length - 1) % changes.length; render(); });
     document.querySelector("#next").addEventListener("click", () => { state.change = (state.change + 1) % changes.length; render(); });
     function render() {
       const change = changes[state.change];
+      const pages = change.pages || mainPages;
+      if (!pages.some(([value]) => value === state.page)) state.page = pages[0][0];
+      const pageButtons = document.querySelector("#pages");
+      pageButtons.replaceChildren(...pages.map(([value, label]) => {
+        const button = document.createElement("button");
+        button.dataset.group = "page";
+        button.dataset.value = value;
+        button.textContent = label;
+        return button;
+      }));
+      const themed = change.themed !== false;
+      document.querySelector("#themes").hidden = !themed;
       [...prs.children].forEach((button, index) => button.setAttribute("aria-pressed", index === state.change));
       for (const button of document.querySelectorAll("button[data-group]")) {
         button.setAttribute("aria-pressed", state[button.dataset.group] === button.dataset.value);
       }
       document.querySelector("#summary").textContent = change.summary;
       document.querySelector("#direct").href = `?pr=${change.id}`;
-      const folder = state.revision === "before" ? "before" : change.id;
+      const folder = state.revision === "before" ? (change.before || "before") : change.id;
       const capture = document.querySelector("#capture");
-      capture.src = `${folder}/${state.page}-${state.theme}.png`;
+      capture.src = themed
+        ? `${folder}/${state.page}-${state.theme}.png`
+        : `${folder}/${state.page}.png`;
       capture.alt = `${change.name}: ${state.page}, ${state.theme}, ${state.revision}`;
     }
     render();
