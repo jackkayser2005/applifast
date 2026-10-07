@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Applifast redesign review</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; background: #1c1c1e; color: #f5f5f7; }
+    main { max-width: 1320px; margin: auto; padding: 24px; }
+    h1 { margin: 0 0 4px; font-size: 26px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; align-items: center; }
+    fieldset { display: flex; flex-wrap: wrap; gap: 6px; border: 1px solid #38383a; border-radius: 8px; padding: 6px; margin: 0; }
+    legend { color: #a1a1a6; font-size: 12px; padding: 0 4px; }
+    button { border: 0; border-radius: 6px; padding: 8px 14px; background: #2c2c2e; color: inherit; cursor: pointer; font: inherit; }
+    button[aria-pressed="true"] { background: #fc3c44; color: #fff; }
+    img { display: block; max-width: 100%; height: auto; border: 1px solid #38383a; border-radius: 8px; }
+    p, li { color: #c7c7cc; line-height: 1.5; }
+    a { color: #ff7a80; }
+    #summary { min-height: 3em; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Applifast redesign: colour and formatting</h1>
+    <p>
+      Baseline: <code>origin/main</code> at <code>995c768</code>. Candidates: each PR's branch
+      on its own, plus all three combined. Captured on Windows 11 with the demo build
+      (<code>--no-default-features --features demo</code>, debug), so egui's red
+      "widget ID" overlay on Home is a debug-only warning already present on
+      <code>main</code>. Home, Playlist (with the queue open), Album, Artist and Settings are
+      1280x800; Liked Songs is the narrow 900x700 window.
+    </p>
+    <div class="controls">
+      <fieldset aria-label="Change"><legend>Change</legend><span id="prs"></span></fieldset>
+      <button id="prev">Previous</button>
+      <button id="next">Next</button>
+      <a id="direct" href="#">Direct link</a>
+    </div>
+    <p id="summary"></p>
+    <div class="controls">
+      <fieldset aria-label="Page"><legend>Page</legend>
+        <button data-group="page" data-value="home">Home</button>
+        <button data-group="page" data-value="playlist">Playlist + queue</button>
+        <button data-group="page" data-value="album">Album</button>
+        <button data-group="page" data-value="artist">Artist</button>
+        <button data-group="page" data-value="liked">Liked Songs (narrow)</button>
+        <button data-group="page" data-value="settings">Settings</button>
+      </fieldset>
+      <fieldset aria-label="Theme"><legend>Theme</legend>
+        <button data-group="theme" data-value="dark">Dark</button>
+        <button data-group="theme" data-value="light">Light</button>
+      </fieldset>
+      <fieldset aria-label="Revision"><legend>Revision</legend>
+        <button data-group="revision" data-value="before">Before</button>
+        <button data-group="revision" data-value="after">After</button>
+      </fieldset>
+    </div>
+    <img id="capture" alt="">
+  </main>
+  <script>
+    const changes = [
+      { id: "palette", pr: null, name: "Recolour the default themes",
+        summary: "Neutral greys replace the blue-tinted ones and a red accent replaces the green, in both built-in themes. Layout is unchanged. Light uses a deeper red so white labels and red text on white reach 4.5:1." },
+      { id: "typography", pr: null, name: "Page-title scale headers with accent bylines",
+        summary: "Album, playlist, artist, show and radio headers start their title at 40 points instead of 56; the kind label is secondary and byline links take the accent (green here, since this branch alone keeps the old palette). Section headings grow from 17 to 20 points." },
+      { id: "sidebar", pr: null, name: "Sidebar highlight and accent icons",
+        summary: "Home and Search draw accent icons and full-colour labels; the open page's row sits on a rounded highlight instead of the other rows being dimmed. Row sizes are unchanged." },
+      { id: "combined", pr: null, name: "All three together",
+        summary: "The three changes applied together on main, for the overall look. Not a PR of its own." }
+    ];
+    const params = new URLSearchParams(location.search);
+    const state = {
+      change: Math.max(0, changes.findIndex(c => c.id === params.get("pr"))),
+      page: "album", theme: "dark", revision: "after"
+    };
+    const prs = document.querySelector("#prs");
+    changes.forEach((change, index) => {
+      const button = document.createElement("button");
+      button.textContent = (change.pr ? `#${change.pr} ` : "") + change.name;
+      button.addEventListener("click", () => { state.change = index; render(); });
+      prs.append(button);
+    });
+    for (const button of document.querySelectorAll("button[data-group]")) {
+      button.addEventListener("click", () => { state[button.dataset.group] = button.dataset.value; render(); });
+    }
+    document.querySelector("#prev").addEventListener("click", () => { state.change = (state.change + changes.length - 1) % changes.length; render(); });
+    document.querySelector("#next").addEventListener("click", () => { state.change = (state.change + 1) % changes.length; render(); });
+    function render() {
+      const change = changes[state.change];
+      [...prs.children].forEach((button, index) => button.setAttribute("aria-pressed", index === state.change));
+      for (const button of document.querySelectorAll("button[data-group]")) {
+        button.setAttribute("aria-pressed", state[button.dataset.group] === button.dataset.value);
+      }
+      document.querySelector("#summary").textContent = change.summary;
+      document.querySelector("#direct").href = `?pr=${change.id}`;
+      const folder = state.revision === "before" ? "before" : change.id;
+      const capture = document.querySelector("#capture");
+      capture.src = `${folder}/${state.page}-${state.theme}.png`;
+      capture.alt = `${change.name}: ${state.page}, ${state.theme}, ${state.revision}`;
+    }
+    render();
+  </script>
+</body>
+</html>
