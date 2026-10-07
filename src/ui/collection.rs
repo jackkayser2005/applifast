@@ -799,6 +799,7 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
                 shift,
                 picked: picked.contains(&row),
                 picked_songs: &picked_songs,
+                striped: row % 2 == 1,
             },
         );
         row_responses.push((row, response));
