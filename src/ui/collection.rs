@@ -101,19 +101,19 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
             ui.set_width(width);
             ui.spacing_mut().item_spacing.y = 6.0;
             ui.add_space(cover_size * 0.08);
-            theme::text(ui, hero.kind.as_ref(), theme::medium(12.5), palette.text);
-            let mut size = if cover_size > 200.0 { 56.0 } else { 40.0 };
-            loop {
-                let galley = ui.painter().layout_no_wrap(
-                    hero.title.to_string(),
-                    theme::bold(size),
-                    palette.text,
-                );
-                if galley.size().x <= width || size <= 22.0 {
-                    break;
-                }
-                size -= 6.0;
-            }
+            theme::text(
+                ui,
+                hero.kind.as_ref(),
+                theme::semibold(12.5),
+                palette.secondary,
+            );
+            let size = hero_title_size(cover_size, |size| {
+                ui.painter()
+                    .layout_no_wrap(hero.title.to_string(), theme::bold(size), palette.text)
+                    .size()
+                    .x
+                    <= width
+            });
             theme::text(ui, hero.title, theme::bold(size), palette.text);
             if let Some(description) = &hero.description
                 && !description.is_empty()
@@ -133,7 +133,8 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
                     }
                     match page {
                         Some(page) => {
-                            if theme::link(ui, text, theme::semibold(13.5), palette.text).clicked()
+                            if theme::link(ui, text, theme::semibold(13.5), palette.accent)
+                                .clicked()
                             {
                                 app.actions.push(Action::Open(page.clone()));
                             }
@@ -147,6 +148,16 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
         });
     });
     ui.add_space(20.0);
+}
+
+/// The largest title size that fits, stepping down from the cover's
+/// starting size; past the floor a title is cut instead.
+fn hero_title_size(cover_size: f32, fits: impl Fn(f32) -> bool) -> f32 {
+    let mut size = if cover_size > 200.0 { 40.0 } else { 32.0 };
+    while size > 22.0 && !fits(size) {
+        size -= 4.0;
+    }
+    size
 }
 
 pub struct Actions<'a> {
@@ -2038,6 +2049,16 @@ mod tests {
     use super::*;
     use crate::api::models::{Album, ArtistRef, Image, Track};
     use crate::model::PlaylistPage;
+
+    /// Titles sit beside the cover at a page-title scale rather than as a
+    /// poster, and long ones step down before they are cut.
+    #[test]
+    fn hero_titles_start_at_a_page_title_scale_and_step_down_to_fit() {
+        assert_eq!(hero_title_size(212.0, |_| true), 40.0);
+        assert_eq!(hero_title_size(160.0, |_| true), 32.0);
+        assert_eq!(hero_title_size(212.0, |size| size <= 30.0), 28.0);
+        assert_eq!(hero_title_size(212.0, |_| false), 20.0);
+    }
 
     #[test]
     fn hero_images_keep_the_previous_art_until_the_new_cover_is_ready() {

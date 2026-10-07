@@ -608,7 +608,7 @@ fn track_list(
         Loadable::Loaded(tracks) => tracks,
         Loadable::Loading | Loadable::NotLoaded => {
             if let Some(page) = title_page {
-                if theme::link(ui, title, theme::bold(17.0), palette.text).clicked() {
+                if theme::link(ui, title, theme::section_font(), palette.text).clicked() {
                     app.actions.push(Action::Open(page));
                 }
             } else {
@@ -629,7 +629,7 @@ fn track_list(
         return;
     }
     if let Some(page) = title_page {
-        if theme::link(ui, title, theme::bold(17.0), palette.text).clicked() {
+        if theme::link(ui, title, theme::section_font(), palette.text).clicked() {
             app.actions.push(Action::Open(page));
         }
     } else {

@@ -891,8 +891,13 @@ pub fn link(
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
+/// The heading over a shelf or list within a page, linked or not.
+pub fn section_font() -> egui::FontId {
+    bold(20.0)
+}
+
 pub fn section_title(ui: &mut egui::Ui, palette: &Palette, label: &str) -> Response {
-    text(ui, label, bold(17.0), palette.text)
+    text(ui, label, section_font(), palette.text)
 }
 
 pub fn subtle(ui: &mut egui::Ui, palette: &Palette, label: &str) -> Response {
