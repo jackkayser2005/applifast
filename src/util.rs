@@ -196,28 +196,19 @@ pub fn open_spotify_url(uri: &str) -> Option<String> {
     Some(format!("https://open.spotify.com/{kind}/{id}"))
 }
 
-/// The menu-bar shape for macOS: the circle with the play triangle punched
-/// out. macOS template images use only the alpha channel and paint the
-/// shape themselves, black in a light menu bar and white in a dark one.
+/// The menu-bar shape for macOS: the tile with the play mark punched out.
+/// macOS template images use only the alpha channel and paint the shape
+/// themselves, black in a light menu bar and white in a dark one.
 pub fn tray_template_rgba(size: usize) -> Vec<u8> {
-    let mut rgba = mark_rgba(size, false);
-    for pixel in rgba.as_chunks_mut::<4>().0 {
-        // The triangle is the dark colour; make it a hole instead.
-        if pixel[1] < 128 {
-            pixel[3] = 0;
-        }
-        pixel[0] = 0;
-        pixel[1] = 0;
-        pixel[2] = 0;
-    }
-    rgba
+    mark_rgba(size, false)
 }
 
 /// The mark rasterised to pixels: the window icon, the trays and the logo
-/// drawn in the app (`theme::logo`) all use this one picture.
+/// drawn in the app (`theme::logo`) all use this one picture, as do the
+/// packaged icons that `examples/app_icon.rs` writes.
 ///
-/// It is the polished disc of `packaging/icons` at every size: a darker rim
-/// around a lit face.
+/// It is the tile of `packaging/icons` at every size: a red-to-pink
+/// rounded square carrying a white play triangle with speed lines.
 pub fn app_icon_rgba(size: usize) -> Vec<u8> {
     mark_rgba(size, true)
 }
@@ -248,15 +239,42 @@ fn triangle_distance(p: (f32, f32), a: (f32, f32), b: (f32, f32), c: (f32, f32))
     if inside { 0.0 } else { d1.min(d2).min(d3) }
 }
 
+/// How far `p` is from the segment `a` to `b`.
+fn segment_distance(p: (f32, f32), a: (f32, f32), b: (f32, f32)) -> f32 {
+    let (ex, ey) = (b.0 - a.0, b.1 - a.1);
+    let (px, py) = (p.0 - a.0, p.1 - a.1);
+    let along = ((px * ex + py * ey) / (ex * ex + ey * ey)).clamp(0.0, 1.0);
+    ((px - ex * along).powi(2) + (py - ey * along).powi(2)).sqrt()
+}
+
+/// How far `p` is outside the play mark, negative inside it: a triangle
+/// with corners rounded by 5 and, trailing it, three speed lines 9 thick
+/// with round ends.
+fn glyph_distance(p: (f32, f32)) -> f32 {
+    let triangle = triangle_distance(p, (62.0, 40.0), (62.0, 88.0), (100.0, 64.0)) - 5.0;
+    let lines = [
+        ((36.0, 50.0), (47.0, 50.0)),
+        ((24.0, 64.0), (47.0, 64.0)),
+        ((36.0, 78.0), (47.0, 78.0)),
+    ]
+    .into_iter()
+    .map(|(a, b)| segment_distance(p, a, b) - 4.5)
+    .fold(f32::INFINITY, f32::min);
+    triangle.min(lines)
+}
+
 /// The mark on a 128-unit square, as `packaging/icons/spotifast.svg` draws
-/// it: a disc of radius 62 and a play triangle with corners rounded by 5,
-/// set a little left of its box so it looks centred. `polished` adds the
-/// darker rim, the lit face and the bright edge between them.
-fn mark_rgba(size: usize, polished: bool) -> Vec<u8> {
-    const GREEN: [f32; 3] = [30.0, 215.0, 96.0];
-    const INK: [f32; 3] = [11.0, 14.0, 12.0];
+/// it: a rounded square from 2 to 126 with corners of radius 28, lit pink
+/// at the top left and red at the bottom right, and the white play mark
+/// over a soft shadow. Without `colour` it is the template silhouette: the
+/// square in black with the mark cut out.
+fn mark_rgba(size: usize, colour: bool) -> Vec<u8> {
+    const PINK: [f32; 3] = [255.0, 107.0, 129.0];
+    const RED: [f32; 3] = [252.0, 60.0, 68.0];
+    const SHADE: [f32; 3] = [122.0, 12.0, 28.0];
+    const WHITE: [f32; 3] = [255.0, 255.0, 255.0];
     let mut rgba = vec![0u8; size * size * 4];
-    // The disc keeps two pixels of margin, so its edge is never clipped.
+    // The square keeps two pixels of margin, so its edge is never clipped.
     let unit = (size as f32 / 2.0 - 2.0) / 62.0;
     let origin = size as f32 / 2.0 - 64.0 * unit;
     for y in 0..size {
@@ -264,41 +282,26 @@ fn mark_rgba(size: usize, polished: bool) -> Vec<u8> {
             // The pixel's centre in the mark's own units.
             let u = (x as f32 + 0.5 - origin) / unit;
             let v = (y as f32 + 0.5 - origin) / unit;
-            let distance = ((u - 64.0).powi(2) + (v - 64.0).powi(2)).sqrt();
-            let coverage = ((62.0 - distance) * unit + 0.5).clamp(0.0, 1.0);
+            let (qx, qy) = ((u - 64.0).abs() - 34.0, (v - 64.0).abs() - 34.0);
+            let outside = (qx.max(0.0).powi(2) + qy.max(0.0).powi(2)).sqrt() + qx.max(qy).min(0.0);
+            let coverage = ((28.0 - outside) * unit + 0.5).clamp(0.0, 1.0);
             if coverage <= 0.0 {
                 continue;
             }
-            let mut colour = if polished {
-                let rim = mix([24.0, 192.0, 85.0], [12.0, 138.0, 58.0], (v - 2.0) / 124.0);
-                let lit = (v - 8.0) / 112.0;
-                let face = if lit < 0.55 {
-                    mix([92.0, 240.0, 149.0], GREEN, lit / 0.55)
-                } else {
-                    mix(GREEN, [21.0, 182.0, 80.0], (lit - 0.55) / 0.45)
-                };
-                let on_face = ((54.4 - distance) * unit + 0.5).clamp(0.0, 1.0);
-                let mut colour = mix(rim, face, on_face);
-                // The bright edge where the face meets the rim: light at
-                // the top, shaded at the bottom.
-                let edge = (1.0 - (distance - 55.0).abs() / 0.9).clamp(0.0, 1.0);
-                let (tone, strength) = if lit < 0.5 {
-                    ([217.0, 255.0, 232.0], 1.0 - 1.3 * lit)
-                } else {
-                    ([10.0, 110.0, 46.0], 0.35 + 1.1 * (lit - 0.5))
-                };
-                colour = mix(colour, tone, edge * strength.clamp(0.0, 1.0));
-                colour
-            } else {
-                GREEN
-            };
-            let triangle = triangle_distance((u, v), (49.2, 43.5), (49.2, 84.5), (86.1, 64.0));
-            let glyph = ((5.0 - triangle) * unit + 0.5).clamp(0.0, 1.0);
-            colour = mix(colour, INK, glyph);
+            let glyph = (0.5 - glyph_distance((u, v)) * unit).clamp(0.0, 1.0);
             let index = (y * size + x) * 4;
-            rgba[index] = colour[0].round() as u8;
-            rgba[index + 1] = colour[1].round() as u8;
-            rgba[index + 2] = colour[2].round() as u8;
+            if !colour {
+                rgba[index + 3] = (coverage * (1.0 - glyph) * 255.0) as u8;
+                continue;
+            }
+            let mut tone = mix(PINK, RED, (u + v - 4.0) / 248.0);
+            // The shadow falls 1.6 below the mark and fades over about 4.
+            let shadow = (0.5 - glyph_distance((u, v - 1.6)) / 4.0).clamp(0.0, 1.0);
+            tone = mix(tone, SHADE, 0.3 * shadow);
+            tone = mix(tone, WHITE, glyph);
+            rgba[index] = tone[0].round() as u8;
+            rgba[index + 1] = tone[1].round() as u8;
+            rgba[index + 2] = tone[2].round() as u8;
             rgba[index + 3] = (coverage * 255.0) as u8;
         }
     }
@@ -388,38 +391,39 @@ mod tests {
         ]
     }
 
-    /// The icon wears the polished disc at every size, and the tray
-    /// template keeps its punched-out triangle.
+    /// The icon is the same lit tile at every size, and the tray template
+    /// keeps the play mark punched out.
     #[test]
-    fn the_icon_is_polished_at_every_size() {
+    fn the_icon_is_one_tile_at_every_size() {
         // #given the icon at a dock size and at a tray size
         let (large, small) = (app_icon_rgba(128), app_icon_rgba(32));
 
-        // #then both have a darker rim around a lighter face
-        let rim = pixel(&large, 128, 64, 6);
-        let face = pixel(&large, 128, 64, 20);
-        assert!(
-            face[1] > rim[1],
-            "face {face:?} should be lighter than rim {rim:?}"
-        );
-        assert!(pixel(&small, 32, 16, 6)[1] > pixel(&small, 32, 16, 2)[1]);
-        // #and a lit top fading to a deeper bottom
-        let low = pixel(&large, 128, 64, 108);
-        assert!(face[1] > low[1]);
-
-        // #and both carry the dark triangle, a little right of centre
+        // #then both are pink at the top left and deeper red at the bottom right
         for (icon, size) in [(&large, 128), (&small, 32)] {
-            let centre = pixel(icon, size, size / 2 + size / 16, size / 2);
-            assert!(centre[1] < 40, "triangle missing at {size}: {centre:?}");
+            let lit = pixel(icon, size, size / 8, size / 4);
+            let deep = pixel(icon, size, size - size / 8, size - size / 4);
+            assert!(lit[1] > deep[1] && lit[2] > deep[2], "{lit:?} {deep:?}");
+            assert!(deep[0] > 240 && deep[1] < 90, "not red at {size}: {deep:?}");
         }
 
-        // #and the corners stay clear
-        assert_eq!(pixel(&large, 128, 1, 1)[3], 0);
+        // #and both carry the white triangle, a little right of centre
+        for (icon, size) in [(&large, 128), (&small, 32)] {
+            let centre = pixel(icon, size, size / 2 + size / 8, size / 2);
+            assert_eq!(centre, [255, 255, 255, 255], "triangle missing at {size}");
+        }
 
-        // #and the menu-bar template is the disc with the triangle cut out
+        // #and the speed lines trail it, with tile showing between them
+        assert_eq!(pixel(&large, 128, 32, 64), [255, 255, 255, 255]);
+        assert!(pixel(&large, 128, 32, 57)[1] < 140);
+
+        // #and the rounded corners stay clear
+        assert_eq!(pixel(&large, 128, 4, 4)[3], 0);
+        assert_eq!(pixel(&large, 128, 64, 4)[3], 255);
+
+        // #and the menu-bar template is the tile with the mark cut out
         let template = tray_template_rgba(44);
-        assert_eq!(pixel(&template, 44, 24, 22)[3], 0);
-        assert_eq!(pixel(&template, 44, 8, 22), [0, 0, 0, 255]);
+        assert_eq!(pixel(&template, 44, 26, 22)[3], 0);
+        assert_eq!(pixel(&template, 44, 4, 22), [0, 0, 0, 255]);
     }
 
     #[test]
