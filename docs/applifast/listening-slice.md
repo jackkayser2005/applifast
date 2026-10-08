@@ -307,6 +307,16 @@ Integrated Windows checks also pass: 985 default and 1,016 demo library tests
 default/demo Clippy, formatting, gettext, default doc tests, strict Rustdoc and
 token-generator self-check. Optional projectM/all-features, launcher/site/Nix,
 non-Windows and real-account acceptance remain separate pending gates.
+Draft [PR #22](https://github.com/jackkayser2005/applifast/pull/22) is stacked on
+the search slice. Combined local preview: `dist/applifast-preview-9d4c906/Applifast.exe`.
+The four-file portable archive is `dist/applifast-windows-preview-9d4c906.zip`
+(23,057,452 bytes), SHA256
+`72333a6a29a54bd9b461a37c0a673a53000e8afd560da7ef52c322028b02bbcf`.
+Executable SHA256: `0bdb8081b6b9e090b9cf9230bf63bdfae4c6e0c12aad5d8ea54d671abb06efcf`.
+This is a Windows x64 debug/static-CRT/demo preview with inherited version `0.12.0`,
+not an installer or public release. Quit older previews through the tray before
+starting it. Songs Refresh picks up the metadata request changes; Home Refresh
+retries Recently added and the other feeds. No credential is in the package.
 
 ### Sidebar Favorites shelf
 
