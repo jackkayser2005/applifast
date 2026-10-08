@@ -14,6 +14,14 @@ use super::widgets::{self, TrackRow};
 
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
+    if app.apple.is_some()
+        && matches!(
+            app.search.filter,
+            SearchFilter::Podcasts | SearchFilter::Episodes
+        )
+    {
+        app.actions.push(Action::SetSearchFilter(SearchFilter::All));
+    }
     if app.search.committed.is_empty() && app.search.typed_at.is_none() {
         recent(app, ui);
         return;
@@ -21,6 +29,9 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     ui.add_space(4.0);
     let labels: Vec<_> = SearchFilter::ALL
         .iter()
+        .filter(|filter| {
+            app.apple.is_none() || **filter == SearchFilter::All || filter.apple_kind().is_some()
+        })
         .map(|f| (*f, f.label(app.locale)))
         .collect();
     let options: Vec<(SearchFilter, &str)> = labels
@@ -78,22 +89,36 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         SearchFilter::Podcasts => shows_grid(app, ui, &results),
         SearchFilter::Episodes => episodes(app, ui, &results, usize::MAX),
     }
+    if app.apple_search_has_more() {
+        ui.add_space(12.0);
+        ui.add_enabled_ui(!pending, |ui| {
+            if theme::pill_button(ui, &palette, &gettext(app.locale, "Load more"), false).clicked()
+            {
+                app.actions.push(Action::LoadMore(Page::Search));
+            }
+        });
+    }
 }
 
 fn recent(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     ui.add_space(6.0);
     if app.settings.search_history.is_empty() {
-        widgets::empty_state(
-            ui,
-            &palette,
-            Icon::Search,
-            &gettext(app.locale, "Search Spotify"),
-            &gettext(
-                app.locale,
-                "Find songs, artists, albums, playlists, and podcasts.",
-            ),
-        );
+        let (title, description) = if app.apple.is_some() {
+            (
+                gettext(app.locale, "Search Apple Music"),
+                gettext(app.locale, "Find songs, artists, albums, and playlists."),
+            )
+        } else {
+            (
+                gettext(app.locale, "Search Spotify"),
+                gettext(
+                    app.locale,
+                    "Find songs, artists, albums, playlists, and podcasts.",
+                ),
+            )
+        };
+        widgets::empty_state(ui, &palette, Icon::Search, &title, &description);
         return;
     }
     theme::section_title(ui, &palette, &gettext(app.locale, "Recent searches"));
@@ -144,7 +169,8 @@ fn all(app: &mut App, ui: &mut egui::Ui, results: &SearchResults) {
                     &artist.name,
                     TopResultSubtitle::Text(&gettext(locale, "Artist")),
                     true,
-                    Some(artist.uri.clone()),
+                    (app.apple.is_none() || artist.id.starts_with("catalog."))
+                        .then(|| artist.uri.clone()),
                     Page::Artist(artist.id.clone()),
                     |ui, app| {
                         widgets::context_menu_items(ui, app, &artist.uri, &artist.name, None);
@@ -391,7 +417,7 @@ fn top_result(
             )
             .clicked()
             {
-                if uri.starts_with("spotify:track:") {
+                if crate::util::uri_kind(uri) == Some("track") {
                     app.actions.push(Action::PlayUris {
                         uris: vec![uri.clone()],
                         index: 0,
@@ -471,7 +497,11 @@ fn artist_card(app: &mut App, ui: &mut egui::Ui, artist: &Artist) {
         pick_image(&artist.images, 640),
         &artist.name,
         &gettext(app.locale, "Artist"),
-        widgets::CardCover::portrait(playing_here),
+        widgets::CardCover {
+            playable: app.apple.is_none() || artist.id.starts_with("catalog."),
+            playing: playing_here,
+            circular: true,
+        },
     );
     if card.play {
         if playing_here {

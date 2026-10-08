@@ -609,7 +609,7 @@ pub struct HomeData {
 
 pub const DISCOVER_TERMS: &[&str] = &["Discover Weekly", "Release Radar", "Daily Mix", "daylist"];
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum SearchFilter {
     #[default]
     All,
@@ -622,6 +622,16 @@ pub enum SearchFilter {
 }
 
 impl SearchFilter {
+    pub fn apple_kind(self) -> Option<&'static str> {
+        match self {
+            Self::Songs => Some("songs"),
+            Self::Artists => Some("artists"),
+            Self::Albums => Some("albums"),
+            Self::Playlists => Some("playlists"),
+            _ => None,
+        }
+    }
+
     pub const ALL: [SearchFilter; 7] = [
         Self::All,
         Self::Songs,

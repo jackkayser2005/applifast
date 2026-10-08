@@ -30,6 +30,12 @@ new one. Authorization errors retain an explicit retry action.
   and paginated tracks. Catalog and library search share the existing search view;
   library and catalog resources retain distinct identities. Catalog artist pages
   request Apple's top-songs view; library artists show their library albums.
+  Search offers All, Songs, Artists, Albums and Playlists in Apple mode. Load more
+  requests the next library and catalog pages for the selected filter. All requests
+  each available resource type. A later-page failure keeps successful rows and
+  its cursor for retry; changing the query or signing out invalidates old replies.
+  Overlapping pages deduplicate the same resource URI, never a library/catalog
+  pair. Unavailable uploads remain visible with their original identity.
 - Double-click a playable song to start the loaded-song context; play/pause,
   seek, volume, mute, next, previous, shuffle and repeat use the same action path
   as desktop media keys. Collection cards load their songs before starting playback.
@@ -349,6 +355,59 @@ light/dark, narrow/normal Windows pairs and six selected/empty-state captures.
 All fourteen captures were inspected; their dimensions and gallery selectors were
 checked. At the narrow size, the existing hero style ellipsizes its description.
 The [comparison index](reviews.html) links all integration reviews.
+
+## Apple search pagination
+
+Apple search follows the per-resource `next` URLs returned by the existing
+[library search](https://developer.apple.com/documentation/applemusicapi/search-for-library-resources)
+and catalog search requests. Library and catalog cursors are held separately for
+songs, albums, artists and playlists. **Load more** loads the selected type, or
+every available type for All, without another click while those requests wait.
+It appends unique resource URIs in response order. The same song appearing as a
+library resource and a catalog resource stays distinct; an uploaded song is never
+replaced with its catalog match. Queue occurrence rules are unchanged.
+
+Cursor validation requires the same search path, storefront, committed query,
+resource type and one nonempty offset. External URLs, other queries/types, repeated
+cursors and pages making no progress stop pagination. Changing or clearing a query
+removes pending search IDs and cursors; late replies cannot refill the new view.
+Sign-out retains the existing generation cancellation and account clearing.
+Failures keep successful results and the failed cursor available for retry.
+Queries that cannot pass request validation show an error rather than loading
+forever. No dependency, credential, setting, cache format or network destination
+is added. Search remains on the existing MusicKit host and Apple API endpoints.
+
+Apple filters omit Podcasts and Episodes, and an empty search names Apple Music.
+An Apple track's top-result Play action uses its original track URI. Library
+artist cards open their library albums without offering catalog-only top-song
+playback. Catalog artists retain that action. The existing card layout is retained.
+Demo flags `apple-search-pages`, `apple-search-loading`, `apple-search-error` and
+`apple-search-empty` cover these states without authorization or private metadata.
+
+Windows validation: 985 default and 1,016 demo library tests pass, with three
+ignored account checks in each, plus the binary/integration suites. Regressions
+cover separate library/catalog identities, uploaded-song preservation, cursor
+validation, retry after a partial failure, selected-filter pagination, duplicate
+requests/replies, stale search answers, sign-out and the actual UI Play/Load more
+actions. Strict default/demo all-target Clippy, formatting, gettext, default doc
+tests, strict Rustdoc, bridge and token-generator self-checks pass.
+The [search comparison](review-search/index.html) contains 24 inspected native
+Windows light/dark and narrow/normal frames. Selector paths and PNG dimensions
+also pass; this is not a browser-rendering or real-account acceptance claim.
+Draft [PR #21](https://github.com/jackkayser2005/applifast/pull/21) is stacked on
+the Favorites sidebar slice. Its combined local Windows debug preview is
+`dist/applifast-preview-3866237/Applifast.exe`, with portable archive
+`dist/applifast-windows-preview-3866237.zip` (23,057,219 bytes). The ZIP contains
+only the executable, LICENSE, README.txt and BUILD.txt. ZIP SHA256:
+`b3c17497945091c455c0be61b573e030c9c6cb28bd475dada7313c4cfc42699f`.
+Executable SHA256: `19f6301141539ad611ba8edbb7e001486502920b40089a4ddba32e248c7cdffd`.
+It includes Home, lyrics, Favorites and this search slice. Quit older builds
+through the tray before starting it, then use Home Refresh to retry the feeds.
+This debug/static-CRT/demo package keeps inherited version `0.12.0` and is not an
+installer or public release. The whitelist excludes all keys, tokens and caches.
+Real-account search pagination remains pending while the older preview owns the
+profile. Optional all-features checks retain the recorded projectM/vcpkg blocker;
+Ruby/Unix launcher tools, Jekyll/Nix and non-Windows coverage remain unavailable.
 
 ## Restart restoration
 

@@ -23,7 +23,15 @@ pub enum Read {
     Artist(String),
     ArtistAlbums(String),
     ArtistSongs(String),
-    Search { serial: u64, library: bool },
+    Search {
+        serial: u64,
+        library: bool,
+    },
+    SearchPage {
+        serial: u64,
+        library: bool,
+        filter: crate::model::SearchFilter,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

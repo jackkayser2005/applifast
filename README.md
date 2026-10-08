@@ -11,6 +11,8 @@
 > A separate Favorites page and compact sidebar shelf reuse those loaded flags.
 > Appearance sets its entry count, and Show all opens the complete loaded subset.
 > Home reads Apple Recently Played, Recently Added, Heavy Rotation and Recommendations.
+> Search loads additional catalog and library pages through Load more, with
+> separate original identifiers and retryable partial results.
 > Album sorting retains Apple's added date rather than using release dates.
 > The Lyrics button and full-screen Now Playing reuse LRCLIB text and synced
 > lyrics when available. Opening lyrics sends song metadata to LRCLIB, not tokens.
