@@ -139,6 +139,16 @@ from matching Songs rows. It also shows loading, empty and error states. The use
 requested these Home/date fixes and chose the left sidebar for the upcoming
 Favorites shelf. Lyrics and that shelf remain unfinished in this preview.
 
+The focused draft is [PR #18](https://github.com/jackkayser2005/applifast/pull/18),
+stacked on #17. The local development ZIP is
+`dist/applifast-windows-preview-1996c0e.zip` (23,036,311 bytes), SHA256
+`786440d16f7295e2ff9378da1bd3162674fe707d7c20034011b6624a18c4d326`.
+Its executable SHA256 is
+`63b0f4db6702d0ca899a581ae0a0adc9d3dc7d0a0348b033c37aa64c696760bf`.
+The ZIP contains only the executable, MIT license and usage/build notes. It is
+a debug/demo Windows x64 build with static CRT and inherited version 0.12.0,
+not a public release. Earlier preview packages do not contain the Home fixes.
+
 ## Reading favorites
 
 On `feat/apple-favorites-view`, **Show only favorites** in Songs filters the

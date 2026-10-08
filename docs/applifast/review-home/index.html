@@ -13,7 +13,7 @@
 <h2>Candidate states</h2>
 <label>State <select id="state"><option value="empty">Empty</option><option value="error">Error and Retry</option><option value="loading">Loading</option></select></label>
 <img id="state-shot" alt="Apple Home loading, empty or error state">
-<p>These are actual Windows egui captures. They do not establish real-account API results, audio playback, resource-budget acceptance, lyrics or Favorites shelf completion. Stills do not prove motion behavior. Contribution checks and known platform/tool blockers are recorded in the listening-slice document.</p>
+<p>Candidate source: <code>1996c0e</code>, <a href="https://github.com/jackkayser2005/applifast/pull/18">PR #18</a>. All 28 frames were inspected; selector paths and PNG dimensions were checked. These are actual Windows egui captures. They do not establish real-account API results, audio playback, resource-budget acceptance, lyrics or Favorites shelf completion. Stills do not prove motion behavior. Contribution checks and known platform/tool blockers are recorded in the listening-slice document.</p>
 <script>
 const byId=id=>document.getElementById(id);let phase='after';
 function draw(){const suffix=byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+byId('page').value+'-'+suffix+'.png';byId('label').textContent=phase+' / '+byId('page').value+' / '+suffix;byId('state-shot').src=byId('state').value+'-'+suffix+'.png';}
