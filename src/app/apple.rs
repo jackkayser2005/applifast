@@ -977,9 +977,19 @@ impl App {
         }
     }
     pub(super) fn apple_context_uris(&self, uri: &str) -> Vec<String> {
-        if uri == "apple:collection:library" {
+        if matches!(
+            uri,
+            "apple:collection:library" | "apple:collection:favorites"
+        ) {
             return self.apple.as_ref().map_or_else(Vec::new, |apple| {
-                apple.songs.iter().map(crate::apple::Song::uri).collect()
+                apple
+                    .songs
+                    .iter()
+                    .filter(|song| {
+                        uri != "apple:collection:favorites" || song.in_favorites == Some(true)
+                    })
+                    .map(crate::apple::Song::uri)
+                    .collect()
             });
         }
         match Page::from_uri(uri) {

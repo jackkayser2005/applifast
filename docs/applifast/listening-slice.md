@@ -255,9 +255,9 @@ older snapshots load with unknown favorite state. No new storage, dependencies,
 credentials or network endpoints are added. Refresh Songs to pick up changes made
 in Apple Music.
 
-This is a read/filter slice. Player/mini-player/row favorite write controls, bulk
-writes, a separate navigation entry and a configurable compact Favorites shelf
-remain pending. Apple's [favorite state](https://developer.apple.com/documentation/applemusicapi/librarysongs/attributes-data.dictionary)
+This is a read/filter slice. Player/mini-player/row favorite write controls and
+bulk writes remain pending. The navigation page and shelf are implemented below.
+Apple's [favorite state](https://developer.apple.com/documentation/applemusicapi/librarysongs/attributes-data.dictionary)
 is separate from ratings. Its [add endpoint](https://developer.apple.com/documentation/applemusicapi/add-resource-to-favorites)
 returns 202 with no body and may ignore IDs, so an acknowledgement alone cannot
 confirm a favorite. A supported removal route has not been established in the
@@ -267,6 +267,57 @@ ratings substitution has been implemented.
 Deterministic sample states: `--demo-show favorites` and `favorites-empty`.
 They test filtering and rendering, not an account's favorite metadata or playback.
 Real-account favorite reads and restart restoration remain runtime acceptance gates.
+
+### Sidebar Favorites shelf
+
+On `feat/apple-favorites-shelf`, Apple navigation has a separate Favorites page.
+It reuses the Songs table, sorting, text filtering, selection, queue/menu actions,
+Refresh and Load more, with separate page identity, row caches and filter state.
+Opening it does not change the Songs checkbox. Back/Forward and the existing
+last-page session value preserve this page. Only `inFavorites: true` appears;
+unknown and false states are not guessed. Unavailable favorites remain visible.
+
+The sidebar shows the first loaded favorites in library order. A click starts
+the playable favorite context at that song; unavailable clicks report the
+existing actionable error without replacing playback. Titles truncate through
+the existing bidi helper, with full title/artist on hover and keyboard focus.
+The shelf scrolls when space is tight so the library remains reachable.
+**Show all favorites** opens the dedicated page, including its loaded-subset
+explanation and pagination. This does not claim every account favorite is loaded.
+
+Appearance adds **Favorites in sidebar**, from zero to ten entries, default five.
+Zero hides the compact shelf while retaining Favorites navigation. The additive
+`favorite_shelf_count` preference is serialized through the existing atomic
+settings file; older settings default to five, and loading/changes cap it at ten.
+No new cache, credentials, dependency or network endpoint is introduced.
+Sign-out uses the existing account clearing, so these private song rows disappear.
+Favorite metadata already persists in the existing restart cache; its real-account
+read/restoration acceptance remains pending separately from fixtures.
+
+Demo flags: `favorites-page` opens the separate page; `favorites-shelf-hidden`
+hides the shelf. Combine `favorites-empty,favorites-page` for the no-known-flags
+state. Deterministic tests exercise shelf clicks, Show all, independent navigation,
+playable context identity, unavailable rows, count bounds and older preferences.
+Windows checks pass: 983 default library tests and 1,013 demo library tests,
+with three ignored account checks in each, plus the binary/integration suites.
+Strict default/demo all-target Clippy, formatting, gettext checks, default doc
+tests and Rustdoc pass. The full suite caught a changed Songs filter-cache key;
+restoring its original key and using a separate Favorites key fixed the shared
+cause, and both complete suites passed afterward. No test or lint was relaxed.
+The [Favorites sidebar review](review-favorites-shelf/index.html) includes 32
+inspected native Windows light/dark and narrow/normal frames for Songs, Favorites,
+Appearance, empty favorites and hidden shelf. Selector paths and PNG dimensions
+are checked. Real-account favorite completeness and playback remain pending.
+The existing projectM/vcpkg, site/Nix and non-Windows coverage limitations apply.
+
+The Home follow-up found the user was running preview `3a87e21`, which predates
+the Apple Home integration in `1996c0e` and the combined lyrics preview `2c6c576`.
+The read-only account check stopped before any feed request with validated
+WebView2 HRESULT `0x8007139F`; the older preview still owned the app's browser
+profile. This does not establish a failed Recently Added endpoint or a repaired
+real-account feed. Quit older previews through the tray before testing the new
+one. Diagnostics print only fixed classifications and validated numeric HRESULTs,
+never authorization or SDK error text.
 
 Windows validation for this slice: 979 default and 1,006 demo library tests,
 all default/demo binary and integration targets, strict default/demo Clippy,

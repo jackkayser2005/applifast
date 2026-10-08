@@ -862,6 +862,20 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     {
         app.actions.push(Action::FocusSearch);
     }
+    if app.apple.is_some() {
+        if nav_row(
+            ui,
+            &palette,
+            Icon::HeartFilled,
+            &gettext(locale, "Favorites"),
+            page == Page::Favorites,
+        )
+        .clicked()
+        {
+            app.actions.push(Action::Open(Page::Favorites));
+        }
+        favorites_shelf(app, ui);
+    }
     ui.add_space(10.0);
     ui.painter().hline(
         ui.max_rect().x_range().shrink(4.0),
@@ -1535,6 +1549,113 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
             }
         },
     );
+}
+
+fn favorites_shelf(app: &mut App, ui: &mut egui::Ui) {
+    let count = app.settings.favorite_shelf_count.min(10) as usize;
+    if count == 0 {
+        return;
+    }
+    let apple = app.apple.as_ref().unwrap();
+    let songs = apple
+        .songs
+        .iter()
+        .enumerate()
+        .filter(|(_, song)| song.in_favorites == Some(true))
+        .take(count)
+        .map(|(index, song)| (index, song.clone()))
+        .collect::<Vec<_>>();
+    let palette = app.palette;
+    let now = app.now_playing().map(|now| now.uri);
+    if songs.is_empty() {
+        theme::subtle(
+            ui,
+            &palette,
+            &gettext(app.locale, "No favorites in the loaded songs"),
+        );
+    } else {
+        egui::ScrollArea::vertical()
+            .id_salt("favorites-shelf")
+            .max_height((ui.available_height() * 0.3).max(32.0))
+            .auto_shrink([false, true])
+            .show(ui, |ui| {
+                for (index, song) in &songs {
+                    let (rect, response) =
+                        ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::click());
+                    let uri = song.uri();
+                    let active = now.as_deref() == Some(uri.as_str());
+                    if ui.is_rect_visible(rect) {
+                        if active || response.hovered() {
+                            ui.painter()
+                                .rect_filled(rect, theme::RADIUS, palette.surface_hover);
+                        }
+                        let color = if !song.available() {
+                            palette.secondary
+                        } else if active {
+                            palette.accent
+                        } else {
+                            palette.text
+                        };
+                        let galley = crate::bidi::layout(
+                            ui.painter(),
+                            &song.title,
+                            theme::medium(13.0),
+                            color,
+                            (rect.width() - 24.0).max(1.0),
+                            1,
+                            Some(crate::bidi::ELLIPSIS),
+                        );
+                        let text_rect = Rect::from_center_size(
+                            rect.center(),
+                            vec2((rect.width() - 24.0).max(1.0), galley.size().y),
+                        );
+                        let pos = crate::bidi::galley_pos(text_rect, &galley);
+                        ui.painter().galley(pos, galley, color);
+                    }
+                    response.widget_info(|| {
+                        egui::WidgetInfo::labeled(
+                            egui::WidgetType::Button,
+                            ui.is_enabled(),
+                            format!("{}: {}", song.title, song.artist),
+                        )
+                    });
+                    theme::focus_ring(ui, &response);
+                    if response.clicked() {
+                        let apple = app.apple.as_ref().unwrap();
+                        let (uris, position) = if song.available() {
+                            let position = apple.songs[..*index]
+                                .iter()
+                                .filter(|row| row.in_favorites == Some(true) && row.available())
+                                .count();
+                            let uris = apple
+                                .songs
+                                .iter()
+                                .filter(|row| row.in_favorites == Some(true) && row.available())
+                                .map(crate::apple::Song::uri)
+                                .collect();
+                            (uris, position)
+                        } else {
+                            (vec![uri], 0)
+                        };
+                        app.actions.push(Action::PlayUris {
+                            uris,
+                            index: position as u32,
+                        });
+                    }
+                    response.on_hover_text(format!("{}\n{}", song.title, song.artist));
+                }
+            });
+    }
+    if theme::link(
+        ui,
+        gettext(app.locale, "Show all favorites").into_owned(),
+        theme::medium(13.0),
+        palette.secondary,
+    )
+    .clicked()
+    {
+        app.actions.push(Action::Open(Page::Favorites));
+    }
 }
 
 const EXPANDED_ART_GAP: f32 = 10.0;

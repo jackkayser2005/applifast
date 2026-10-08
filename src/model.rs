@@ -112,6 +112,7 @@ pub enum Page {
     TopSongs,
     Search,
     LikedSongs,
+    Favorites,
     Albums,
     Artists,
     Podcasts,
@@ -134,6 +135,7 @@ impl Page {
             Page::TopSongs => "top-songs".into(),
             Page::Search => "search".into(),
             Page::LikedSongs => "liked".into(),
+            Page::Favorites => "favorites".into(),
             Page::Albums => "albums".into(),
             Page::Artists => "artists".into(),
             Page::Podcasts => "podcasts".into(),
@@ -154,6 +156,7 @@ impl Page {
             "top-songs" => Page::TopSongs,
             "search" => Page::Search,
             "liked" => Page::LikedSongs,
+            "favorites" => Page::Favorites,
             "albums" => Page::Albums,
             "artists" => Page::Artists,
             "podcasts" => Page::Podcasts,
@@ -176,6 +179,9 @@ impl Page {
 
     /// Opens whatever a Spotify URI points at.
     pub fn from_uri(uri: &str) -> Option<Self> {
+        if uri == "apple:collection:favorites" {
+            return Some(Page::Favorites);
+        }
         let mut parts = uri.split(':');
         let _ = parts.next()?;
         let kind = parts.next()?;
@@ -923,6 +929,7 @@ pub enum Action {
     AppleSend(serde_json::Value),
     ApplePlaySong(usize),
     AppleShowFavorites(bool),
+    SetFavoriteShelfCount(u8),
     Open(Page),
     /// Opens the radio of a song shown in a list, after caching the row's
     /// song so the page has its name and cover (#644).

@@ -925,6 +925,10 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             gettext(locale, "Ambient Pulse"),
             gettext(locale, "Decorative animation from playback progress and album colors, shared by both players. This is not an audio spectrum."),
         ).when(app.apple.is_some()),
+        RowText::new(
+            gettext(locale, "Favorites in sidebar"),
+            gettext(locale, "Show up to ten loaded favorite songs. Zero hides the shelf."),
+        ).when(app.apple.is_some()),
     ];
     if section_matches(&needle, &appearance, &appearance_rows) {
         any_visible = true;
@@ -1183,6 +1187,25 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                     .changed()
                     {
                         app.actions.push(Action::SetAmbientPulse(enabled));
+                    }
+                },
+            );
+            filtered_row(
+                ui,
+                &palette,
+                &needle,
+                &appearance,
+                &appearance_rows[11],
+                |ui| {
+                    let mut count = app.settings.favorite_shelf_count;
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut count, 0..=10)
+                                .text(gettext(locale, "Favorites").into_owned()),
+                        )
+                        .changed()
+                    {
+                        app.actions.push(Action::SetFavoriteShelfCount(count));
                     }
                 },
             );

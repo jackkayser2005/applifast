@@ -249,7 +249,7 @@ fn page_tint(app: &mut App) -> Option<Color32> {
             .and_then(|show| pick_image(&show.images, 64))
             .map(str::to_string),
         Page::Radio(seed) => pick_image(&app.radio_images(seed), 64).map(str::to_string),
-        Page::LikedSongs => return Some(Color32::from_rgb(0x50, 0x38, 0xc8)),
+        Page::LikedSongs | Page::Favorites => return Some(Color32::from_rgb(0x50, 0x38, 0xc8)),
         _ => None,
     };
     if !app.settings.accent_from_art && image.is_some() {
@@ -334,7 +334,7 @@ fn central(app: &mut App, ui: &mut egui::Ui) {
                                 Page::Home => home::show(app, ui),
                                 Page::TopSongs => collection::top_songs(app, ui),
                                 Page::Search => search::show(app, ui),
-                                Page::LikedSongs => collection::liked(app, ui),
+                                Page::LikedSongs | Page::Favorites => collection::liked(app, ui),
                                 Page::Albums | Page::Artists | Page::Podcasts | Page::Episodes => {
                                     library::show(app, ui, page)
                                 }

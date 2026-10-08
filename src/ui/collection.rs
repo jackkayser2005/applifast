@@ -532,6 +532,7 @@ pub fn prepare_table_view(
         let mut view_positions = Vec::new();
         let view_uris = (sort.is_some()
             || !needle.is_empty()
+            || *page == Page::Favorites
             || (*page == Page::LikedSongs
                 && app.apple.as_ref().is_some_and(|apple| apple.favorites_only)))
         .then(|| {
@@ -1863,38 +1864,42 @@ fn album_hero(
 
 pub fn liked(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
-    let favorites_only = app.apple.as_ref().is_some_and(|apple| apple.favorites_only);
+    let page = if app.page() == &Page::Favorites {
+        Page::Favorites
+    } else {
+        Page::LikedSongs
+    };
+    let favorites_only =
+        page == Page::Favorites || app.apple.as_ref().is_some_and(|apple| apple.favorites_only);
     let revision = app.library.liked.revision;
     let names = app.user_names_revision;
-    let items =
-        if let Some(items) = table_items_hit(app, &Page::LikedSongs, revision, revision, names) {
-            items
+    let items = if let Some(items) = table_items_hit(app, &page, revision, revision, names) {
+        items
+    } else {
+        let rows = if favorites_only {
+            app.apple
+                .as_ref()
+                .into_iter()
+                .flat_map(|apple| &apple.songs)
+                .filter(|song| song.in_favorites == Some(true))
+                .map(|song| (PlayableItem::Track(song.track()), None, None))
+                .collect()
         } else {
-            let rows = if favorites_only {
-                app.apple
-                    .as_ref()
-                    .unwrap()
-                    .songs
-                    .iter()
-                    .filter(|song| song.in_favorites == Some(true))
-                    .map(|song| (PlayableItem::Track(song.track()), None, None))
-                    .collect()
-            } else {
-                app.library
-                    .liked
-                    .items
-                    .iter()
-                    .map(|saved| {
-                        (
-                            PlayableItem::Track(saved.track.clone()),
-                            saved.added_at.clone(),
-                            None,
-                        )
-                    })
-                    .collect()
-            };
-            remember_table_items(app, Page::LikedSongs, revision, revision, names, rows)
+            app.library
+                .liked
+                .items
+                .iter()
+                .map(|saved| {
+                    (
+                        PlayableItem::Track(saved.track.clone()),
+                        saved.added_at.clone(),
+                        None,
+                    )
+                })
+                .collect()
         };
+        remember_table_items(app, page.clone(), revision, revision, names, rows)
+    };
     let total = if favorites_only {
         items.len() as u32
     } else {
@@ -1937,7 +1942,7 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
             round: false,
         },
     );
-    if app.apple.is_some() {
+    if app.apple.is_some() && page == Page::LikedSongs {
         let mut only = favorites_only;
         if ui
             .checkbox(&mut only, gettext(locale, "Show only favorites"))
@@ -1947,17 +1952,25 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
         }
         ui.add_space(8.0);
     }
-    let collection_uri = app.songs_context_uri();
-    let filter_id = egui::Id::new("liked-filter");
+    let collection_uri = if page == Page::Favorites {
+        Some("apple:collection:favorites".into())
+    } else {
+        app.songs_context_uri()
+    };
+    let filter_id = egui::Id::new(if page == Page::Favorites {
+        "favorites-filter"
+    } else {
+        "liked-filter"
+    });
     let mut filter = ui
         .data(|data| data.get_temp::<String>(filter_id))
         .unwrap_or_default();
     let needle = filter.trim().to_lowercase();
-    let sort = app.table_sorts.get(&Page::LikedSongs).copied();
+    let sort = app.table_sorts.get(&page).copied();
     let table_view = prepare_table_view(
         ui,
         app,
-        &Page::LikedSongs,
+        &page,
         &items,
         &needle,
         sort,
@@ -2013,7 +2026,7 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
             && theme::pill_button(ui, &palette, &gettext(locale, "Load more songs"), false)
                 .clicked()
         {
-            app.actions.push(Action::LoadMore(Page::LikedSongs));
+            app.actions.push(Action::LoadMore(page.clone()));
         }
         return;
     }
@@ -2030,7 +2043,7 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
             // Apple documents library album add dates, but not song add dates.
             show_added: app.apple.is_none(),
             show_added_by: false,
-            page: Page::LikedSongs,
+            page,
             loading,
             error: error.as_deref(),
             can_load_more,
