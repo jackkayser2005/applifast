@@ -357,8 +357,8 @@ bullet; each artist name remains a separate link.
 
 **Reduce motion** in **Settings > Appearance** shows every change at once:
 covers, hearts, queue rows and pages appear without fading, popping or
-sliding, and the bars beside the playing song stand still. It is off by
-default.
+sliding, the bars beside the playing song stand still, and lyrics move to
+the sung line in one step instead of gliding. It is off by default.
 
 ## Windows taskbar controls
 

@@ -17,14 +17,14 @@ const SUNG_LINE_AT: f32 = 0.2;
 
 /// Scrolls so the middle of `line` sits `SUNG_LINE_AT` of the way down the
 /// visible lyrics.
-fn show_sung_line(ui: &egui::Ui, line: Rect, animation: Option<egui::style::ScrollAnimation>) {
+fn show_sung_line(ui: &egui::Ui, line: Rect, animation: egui::style::ScrollAnimation) {
     let above = (ui.clip_rect().height() * SUNG_LINE_AT - line.height() / 2.0).max(0.0);
     let target = Rect::from_min_max(pos2(line.left(), line.top() - above), line.max);
-    match animation {
-        Some(animation) => ui.scroll_to_rect_animation(target, Some(Align::Min), animation),
-        None => ui.scroll_to_rect(target, Some(Align::Min)),
-    }
+    ui.scroll_to_rect_animation(target, Some(Align::Min), animation);
 }
+/// How long the lyrics take to glide to the next sung line, whatever its
+/// distance, so every step of the song moves at the same pace.
+const NEXT_LINE_SECONDS: f32 = 0.45;
 /// How long a line takes to light up or fade.
 const LIGHT_UP_SECONDS: f32 = 0.22;
 
@@ -183,6 +183,11 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
     // line is quiet, regular text, the same before and after it has been
     // sung. A line takes 220 ms to light up or fade, as in omarchy-lyrics.
     let quiet = palette.text.gamma_multiply(0.45);
+    let glide = super::motion::scroll(
+        ui.ctx(),
+        egui::style::ScrollAnimation::duration(NEXT_LINE_SECONDS),
+    );
+    let jump = super::motion::scroll(ui.ctx(), ui.style().scroll_animation);
     let scroll = crate::autoscroll::show(
         ui,
         egui::ScrollArea::vertical()
@@ -194,15 +199,17 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
             // panel sits at the top rather than wherever it was left.
             if follow && lyrics.synced && active.is_none() {
                 let top = ui.cursor().min;
-                ui.scroll_to_rect(
+                ui.scroll_to_rect_animation(
                     egui::Rect::from_min_size(top, egui::vec2(1.0, 1.0)),
                     Some(Align::Min),
+                    jump,
                 );
             }
             ui.add_space(12.0);
             for (index, line) in lyrics.lines.iter().enumerate() {
                 let is_active = active == Some(index);
-                let lit = ui.ctx().animate_bool_with_time(
+                let lit = super::motion::animate_bool(
+                    ui.ctx(),
                     egui::Id::new("lyric-line").with(index),
                     is_active,
                     LIGHT_UP_SECONDS,
@@ -251,7 +258,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                     app.lyrics_following = true;
                 }
                 if is_active && follow {
-                    show_sung_line(ui, rect, None);
+                    show_sung_line(ui, rect, glide);
                 }
                 ui.add_space(LINE_GAP);
             }
@@ -262,12 +269,13 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                     (f64::from(now.position_ms) / f64::from(now.duration_ms)).clamp(0.0, 1.0);
                 let content = ui.min_rect();
                 let y = content.top() + content.height() * fraction as f32;
-                ui.scroll_to_rect(
+                ui.scroll_to_rect_animation(
                     egui::Rect::from_min_max(
                         egui::pos2(content.left(), y),
                         egui::pos2(content.right(), y + 1.0),
                     ),
                     Some(Align::Center),
+                    jump,
                 );
             }
             // Room for the last line to rise to where a sung line sits.
@@ -860,7 +868,10 @@ fn fullscreen_contents(app: &mut App, ui: &mut egui::Ui) {
         });
     let following = app.lyrics_following && !manual_scroll;
     let follow = following && app.lyrics_line_shown != Some(active);
-    let animation = egui::style::ScrollAnimation::duration(0.45);
+    let animation = super::motion::scroll(
+        ui.ctx(),
+        egui::style::ScrollAnimation::duration(NEXT_LINE_SECONDS),
+    );
     let size = (ui.available_width() * 0.046).clamp(28.0, 42.0);
     // The line being sung brightens; all lines keep the same font metrics
     // so highlighting cannot rewrap the words during a transition.
@@ -894,7 +905,8 @@ fn fullscreen_contents(app: &mut App, ui: &mut egui::Ui) {
             ui.add_space(padding);
             for (index, line) in lyrics.lines.iter().enumerate() {
                 let is_active = active == Some(index);
-                let lit = ui.ctx().animate_bool_with_time(
+                let lit = super::motion::animate_bool(
+                    ui.ctx(),
                     egui::Id::new("lyric-line").with(("fullscreen", &now.uri, index)),
                     is_active,
                     0.3,
@@ -944,7 +956,7 @@ fn fullscreen_contents(app: &mut App, ui: &mut egui::Ui) {
                     app.actions.push(Action::FollowLyrics);
                 }
                 if is_active && follow {
-                    show_sung_line(ui, rect, Some(animation));
+                    show_sung_line(ui, rect, animation);
                 }
                 ui.add_space(27.0);
             }

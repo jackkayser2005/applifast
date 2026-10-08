@@ -6100,6 +6100,68 @@ mod tests {
         }
     }
 
+    /// The next sung line lights up over a moment rather than at once;
+    /// Reduce motion lights it at once.
+    #[test]
+    fn the_next_sung_line_lights_up_gradually_unless_motion_is_reduced() {
+        for reduced in [false, true] {
+            let (ctx, mut app) = accessible_app(&format!("lyric-light-{reduced}"));
+            app.settings.reduce_motion = reduced;
+            app.show_lyrics_panel = true;
+            app.lyrics_fullscreen = Some(false);
+            app.lyrics = Loadable::Loaded(Some(sample_lyrics()));
+            app.lyrics_following = true;
+            let colour_at = |app: &mut App, time: f64, position: u32| {
+                let remote = app.remote.as_mut().unwrap();
+                remote.state.is_playing = false;
+                remote.state.progress_ms = Some(position);
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(time),
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(1280.0, 800.0),
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| app.frame_ui(ui),
+                );
+                output.textures_delta.clear();
+                output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::Shape::Text(text)
+                            if text.galley.job.text == "Every window holding someone's evening" =>
+                        {
+                            Some(text.galley.job.sections[0].format.color)
+                        }
+                        _ => None,
+                    })
+                    .expect("the next line is drawn")
+            };
+            let mut quiet = egui::Color32::TRANSPARENT;
+            for frame in 0..10 {
+                quiet = colour_at(&mut app, f64::from(frame) * 0.1, 41_000);
+            }
+            let early = colour_at(&mut app, 1.03, 47_000);
+            let mut lit = early;
+            for frame in 1..10 {
+                lit = colour_at(&mut app, 1.03 + f64::from(frame) * 0.1, 47_000);
+            }
+            assert_ne!(quiet, lit);
+            if reduced {
+                assert_eq!(early, lit);
+            } else {
+                assert!(
+                    early != quiet && early != lit,
+                    "{quiet:?} {early:?} {lit:?}"
+                );
+            }
+            app.backend.shutdown();
+        }
+    }
+
     /// Full screen is a Now Playing screen: its own seek bar and transport
     /// buttons sit under the cover, or under the song in a narrow window,
     /// and they control playback like the player bar's.

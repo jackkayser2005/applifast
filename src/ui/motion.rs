@@ -50,6 +50,18 @@ pub fn animate_value(ctx: &Context, id: Id, value: f32, seconds: f32) -> f32 {
     ctx.animate_value_with_time(id, value, seconds)
 }
 
+/// `animation`, or an instant scroll under Reduce motion.
+pub fn scroll(
+    ctx: &Context,
+    animation: egui::style::ScrollAnimation,
+) -> egui::style::ScrollAnimation {
+    if reduced(ctx) {
+        egui::style::ScrollAnimation::none()
+    } else {
+        animation
+    }
+}
+
 /// Begin a one-off animation under `id`, such as a pop, from now.
 pub fn start(ctx: &Context, id: Id) {
     if reduced(ctx) {
