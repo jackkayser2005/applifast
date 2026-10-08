@@ -394,6 +394,17 @@ tests, strict Rustdoc, bridge and token-generator self-checks pass.
 The [search comparison](review-search/index.html) contains 24 inspected native
 Windows light/dark and narrow/normal frames. Selector paths and PNG dimensions
 also pass; this is not a browser-rendering or real-account acceptance claim.
+Draft [PR #21](https://github.com/jackkayser2005/applifast/pull/21) is stacked on
+the Favorites sidebar slice. Its combined local Windows debug preview is
+`dist/applifast-preview-3866237/Applifast.exe`, with portable archive
+`dist/applifast-windows-preview-3866237.zip` (23,057,219 bytes). The ZIP contains
+only the executable, LICENSE, README.txt and BUILD.txt. ZIP SHA256:
+`b3c17497945091c455c0be61b573e030c9c6cb28bd475dada7313c4cfc42699f`.
+Executable SHA256: `19f6301141539ad611ba8edbb7e001486502920b40089a4ddba32e248c7cdffd`.
+It includes Home, lyrics, Favorites and this search slice. Quit older builds
+through the tray before starting it, then use Home Refresh to retry the feeds.
+This debug/static-CRT/demo package keeps inherited version `0.12.0` and is not an
+installer or public release. The whitelist excludes all keys, tokens and caches.
 Real-account search pagination remains pending while the older preview owns the
 profile. Optional all-features checks retain the recorded projectM/vcpkg blocker;
 Ruby/Unix launcher tools, Jekyll/Nix and non-Windows coverage remain unavailable.
