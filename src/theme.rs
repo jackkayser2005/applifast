@@ -520,6 +520,20 @@ pub fn icon_button(
     hover: Color32,
     tooltip: &str,
 ) -> Response {
+    icon_button_scaled(ui, icon, size, 1.0, color, hover, tooltip)
+}
+
+/// An [`icon_button`] whose icon is drawn `scale` times its size, as in a
+/// pop, without changing the space it takes.
+pub fn icon_button_scaled(
+    ui: &mut egui::Ui,
+    icon: Icon,
+    size: f32,
+    scale: f32,
+    color: Color32,
+    hover: Color32,
+    tooltip: &str,
+) -> Response {
     let edge = size + 12.0;
     let (rect, response) = ui.allocate_exact_size(Vec2::splat(edge), Sense::click());
     response.widget_info(|| {
@@ -531,12 +545,12 @@ pub fn icon_button(
         } else {
             color
         };
-        let scale = if response.is_pointer_button_down_on() {
+        let pressed = if response.is_pointer_button_down_on() {
             0.92
         } else {
             1.0
         };
-        paint_icon(ui, icon, rect, size * scale, tint);
+        paint_icon(ui, icon, rect, size * pressed * scale, tint);
     }
     focus_ring(ui, &response);
     if tooltip.is_empty() {

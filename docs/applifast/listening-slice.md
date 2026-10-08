@@ -44,16 +44,53 @@ new one. Authorization errors retain an explicit retry action.
 The first context contains at most 1,000 loaded songs, the host's validated queue
 limit. Collection playback currently uses the loaded prefix; complete context
 loading and streaming pagination need the queue slice. The existing queue view
-shows upcoming occurrences. Manual queue additions/reordering, queue/session
-restoration, Home/discovery/recommendations, favorites and playlist writes remain
-follow-up integration work. Controls for pending writes report that limitation.
+shows upcoming occurrences, including repeated songs. Manual queue additions,
+album additions, insertion, reordering, removal and clear use the local Apple
+occurrence queue. Queue/session restoration, Home/discovery/recommendations,
+favorites and playlist writes remain follow-up integration work.
 The existing mini player uses the same playback actions, but its window lifecycle
 still needs real runtime acceptance. Cloud-only upload playback
 remains unverified; no upload is silently replaced with a catalog match.
 The player bar omits Spotify Connect, favorites and lyrics controls until supported.
-MilkDrop, spectrum and EQ are not supported because this engine does not expose PCM;
-their remaining legacy settings and mini-player controls still need capability cleanup.
+MilkDrop, spectrum, oscilloscope, EQ, mono and channel balance are not supported
+because this engine does not expose PCM. Their settings and mini-player actions
+are unavailable in Apple mode. Skin artwork can still contain a fixed EQ button;
+it does not open an unsupported effect. Bitrate/sample-rate labels stay blank
+instead of reporting the legacy decoder's values.
 Non-Windows builds report unsupported Apple playback.
+
+## Motion and Now Playing
+
+PR #13's motion is integrated on `feat/apple-release-polish`. It adds cover
+hover/lift, dancing playing indicators, seek hover, cover crossfade, heart pop,
+queue arrivals, art-colored headers, page fades and **Reduce motion**. Apple
+Now Playing shows artwork and transport controls without requesting legacy
+lyrics. Open it with **L** or **Ctrl+Shift+K**; **Esc** returns. **Ctrl+M** opens
+the mini-player.
+
+**Ambient Pulse** is an optional decorative animation shared by both players.
+Enable it in Appearance, click empty player-bar space, or use the mini-player's
+V menu. It follows the playhead and album colors, freezes while paused, changes
+phase on a seek, and works at zero volume. It does not analyze the audio.
+Reduce motion holds it still. Visible playing views request at most 30 pulse
+frames per second; off-screen and minimized views request none from the pulse.
+The default is off. This adds `ambient_pulse` to the existing settings JSON;
+older settings remain readable. No new files, dependencies or network endpoints
+are introduced by this animation.
+
+Apple Account settings provide developer-token renewal and sign-out. Unsupported
+legacy decoder, Spotify account, proxy, audio-cache and upstream-update settings
+are hidden. Artwork already uses a disk cache. Persistent Apple library metadata
+and full queue restoration are still pending; audio remains streamed by MusicKit.
+
+For a deterministic preview without changing your account:
+
+```powershell
+cargo run --locked --features demo -- --demo --demo-page liked --demo-show queue,ambient-pulse
+```
+
+Motion integration, pulse regressions and updated visual evidence require a fresh
+check run; the older results below describe the preceding integration build.
 
 ## Storage and network
 

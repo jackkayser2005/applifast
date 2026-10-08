@@ -1153,6 +1153,8 @@ pub enum Action {
     CycleVisualiser,
     /// A click on the player bar's empty space: spectrum, waveform, off.
     CyclePlayerBarVis,
+    /// Decorative Apple playback animation shared by both players.
+    SetAmbientPulse(bool),
     /// Set the visualizer mode directly.
     SetVisualiser(crate::settings::VisMode),
     /// Open or close the playlist window under the mini player.

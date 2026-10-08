@@ -12,6 +12,7 @@ mod keys;
 pub mod library;
 pub mod login;
 mod lyrics;
+pub mod motion;
 pub mod player_bar;
 pub mod queue;
 pub mod radio;
@@ -35,6 +36,7 @@ use crate::theme::{self, Icon};
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let ctx = ui.ctx().clone();
     let ctx = &ctx;
+    motion::set_reduced(ctx, app.settings.reduce_motion);
     keys::handle(app, ctx);
     for path in winamp::dropped_skins(ctx) {
         app.actions.push(Action::InstallSkin(path));
@@ -259,9 +261,32 @@ fn page_tint(app: &mut App) -> Option<Color32> {
     }
 }
 
+/// The most saturation a page's cover tint keeps, and the brightness band
+/// it is held to: dark under the dark theme's light text, pale under the
+/// light theme's dark text.
+const TINT_MAX_SATURATION: (f32, f32) = (0.6, 0.4);
+const TINT_DARK_MAX_VALUE: f32 = 0.42;
+const TINT_LIGHT_MIN_VALUE: f32 = 0.86;
+
+/// `tint` with its hue kept and its saturation and brightness clamped, so
+/// the page's words stay readable over a header washed in it, whatever the
+/// cover.
+fn legible_tint(tint: Color32, dark: bool) -> Color32 {
+    let mut hsva = egui::ecolor::HsvaGamma::from(tint);
+    if dark {
+        hsva.s = hsva.s.min(TINT_MAX_SATURATION.0);
+        hsva.v = hsva.v.min(TINT_DARK_MAX_VALUE);
+    } else {
+        hsva.s = hsva.s.min(TINT_MAX_SATURATION.1);
+        hsva.v = hsva.v.max(TINT_LIGHT_MIN_VALUE);
+    }
+    hsva.a = 1.0;
+    Color32::from(hsva)
+}
+
 fn central(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
-    let tint = page_tint(app);
+    let tint = page_tint(app).map(|tint| legible_tint(tint, palette.dark));
     egui::CentralPanel::default()
         .frame(Frame::new().fill(palette.window))
         .show(ui, |ui| {
@@ -286,13 +311,16 @@ fn central(app: &mut App, ui: &mut egui::Ui) {
             ui.spacing_mut().scroll.fade.strength = 0.0;
             topbar::show(app, ui);
             let page = app.page().clone();
+            let key = page.encode();
+            let opacity = motion::page_opacity(ui.ctx(), &key);
             let scroll = crate::autoscroll::show(
                 ui,
                 egui::ScrollArea::vertical()
-                    .id_salt(("page", page.encode()))
+                    .id_salt(("page", key))
                     .auto_shrink([false, false]),
                 egui::Vec2b::new(false, true),
                 |ui| {
+                    ui.multiply_opacity(opacity);
                     Frame::new()
                         .inner_margin(Margin {
                             left: widgets::PAGE_PADDING as i8,
@@ -734,6 +762,47 @@ mod window_chrome_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn contrast(a: Color32, b: Color32) -> f32 {
+        let luminance = |colour: Color32| {
+            let linear = egui::Rgba::from(colour);
+            0.2126 * linear.r() + 0.7152 * linear.g() + 0.0722 * linear.b()
+        };
+        let (a, b) = (luminance(a), luminance(b));
+        (a.max(b) + 0.05) / (a.min(b) + 0.05)
+    }
+
+    /// However bright, dark or vivid the cover, the page's words read
+    /// clearly over the strongest wash of its colour, in both themes, and
+    /// the colour keeps its hue.
+    #[test]
+    fn a_cover_tint_keeps_the_header_readable() {
+        let covers = [
+            Color32::from_rgb(255, 240, 80),
+            Color32::from_rgb(30, 215, 96),
+            Color32::from_rgb(0, 200, 255),
+            Color32::from_rgb(230, 30, 40),
+            Color32::from_rgb(20, 30, 90),
+            Color32::from_rgb(120, 40, 160),
+            Color32::WHITE,
+            Color32::BLACK,
+        ];
+        for palette in [theme::Palette::dark(), theme::Palette::light()] {
+            for cover in covers {
+                let tint = legible_tint(cover, palette.dark);
+                let header = blend(palette.window, tint, 0.85);
+                let ratio = contrast(palette.text, header);
+                assert!(
+                    ratio >= 4.5,
+                    "{cover:?} dark={}: {header:?} gives {ratio:.2}",
+                    palette.dark
+                );
+            }
+        }
+        let yellow = egui::ecolor::HsvaGamma::from(legible_tint(covers[0], true));
+        let original = egui::ecolor::HsvaGamma::from(covers[0]);
+        assert!((yellow.h - original.h).abs() < 0.01, "{yellow:?}");
+    }
 
     /// The header casts a shadow only on a page scrolled under it, and it
     /// is black in both themes, never the page's own colour.

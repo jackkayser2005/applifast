@@ -262,6 +262,10 @@ pub struct Settings {
     pub home: HomeSettings,
     /// Tint the interface with the colour of the playing album's art.
     pub accent_from_art: bool,
+    /// Show every interface animation at its end at once.
+    pub reduce_motion: bool,
+    /// Decorative Apple playback animation, independent of audio samples and volume.
+    pub ambient_pulse: bool,
     /// A spectrum or waveform of the playing song behind the player bar.
     pub player_bar_vis: PlayerBarVis,
     /// Last local volume, 0..=65535.
@@ -431,6 +435,8 @@ impl Default for Settings {
             system_theme_cache: None,
             home: HomeSettings::default(),
             accent_from_art: true,
+            reduce_motion: false,
+            ambient_pulse: false,
             player_bar_vis: PlayerBarVis::Off,
             volume: (u16::MAX as u32 * 70 / 100) as u16,
             sidebar_visible: true,
@@ -1203,6 +1209,35 @@ mod tests {
         assert_eq!(PlayerBarVis::Off.next(), PlayerBarVis::Spectrum);
         assert_eq!(PlayerBarVis::Spectrum.next(), PlayerBarVis::Waveform);
         assert_eq!(PlayerBarVis::Waveform.next(), PlayerBarVis::Off);
+    }
+
+    #[test]
+    fn reduce_motion_is_opt_in_and_round_trips() {
+        let settings: Settings = serde_json::from_str(r#"{"zoom": 1.2}"#).unwrap();
+        assert!(!settings.reduce_motion);
+        let settings = Settings {
+            reduce_motion: true,
+            ..Settings::default()
+        };
+        let json = serde_json::to_string(&settings).unwrap();
+        let restored: Settings = serde_json::from_str(&json).unwrap();
+        assert!(restored.reduce_motion);
+    }
+
+    #[test]
+    fn ambient_pulse_is_opt_in_and_preserves_older_settings() {
+        let settings: Settings =
+            serde_json::from_str(r#"{"volume":0,"reduce_motion":true}"#).unwrap();
+        assert!(!settings.ambient_pulse);
+        let settings = Settings {
+            ambient_pulse: true,
+            ..settings
+        };
+        let restored: Settings =
+            serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+        assert!(restored.ambient_pulse);
+        assert!(restored.reduce_motion);
+        assert_eq!(restored.volume, 0);
     }
 
     #[test]

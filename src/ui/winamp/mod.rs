@@ -299,6 +299,7 @@ impl View<'_> {
 /// The whole window, drawn into the root.
 pub fn show(app: &mut App, ui: &mut Ui) {
     let ctx = ui.ctx().clone();
+    super::motion::set_reduced(&ctx, app.settings.reduce_motion);
     let unit = unit(app, &ctx);
     fit_window(&ctx, &app.settings, unit);
     let origin = ui.max_rect().min;
@@ -346,7 +347,7 @@ pub fn show(app: &mut App, ui: &mut Ui) {
     } else {
         layout::WINDOW_HEIGHT
     };
-    if app.settings.eq_open {
+    if app.settings.eq_open && app.apple.is_none() {
         let eq_shaded = app.settings.eq_shaded;
         let mut below = View {
             ui: view.ui,
@@ -720,10 +721,11 @@ fn options_menu(app: &mut App, ui: &mut Ui, unit: f32) {
         }
     }
     let mut milkdrop = app.settings.milkdrop_open;
-    if ui
-        .checkbox(&mut milkdrop, "MilkDrop")
-        .on_hover_text(super::keys::MILKDROP_SHORTCUT)
-        .clicked()
+    if app.apple.is_none()
+        && ui
+            .checkbox(&mut milkdrop, "MilkDrop")
+            .on_hover_text(super::keys::MILKDROP_SHORTCUT)
+            .clicked()
     {
         app.actions.push(Action::ToggleWinampMilkdrop);
     }
@@ -904,12 +906,32 @@ fn clutter_bar(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
         .lamp_button(
             layout::CLUTTER_V,
             sprites::CLUTTER_V_LIT,
-            app.settings.milkdrop_open,
+            if app.apple.is_some() {
+                app.settings.ambient_pulse
+            } else {
+                app.settings.milkdrop_open
+            },
             "clutter-v",
         )
         .on_hover_text(gettext(app.locale, "Visualisation").as_ref());
     let locale = app.locale;
     menu(egui::Popup::menu(&vis), view.skin, unit, |ui| {
+        if app.apple.is_some() {
+            let mut enabled = app.settings.ambient_pulse;
+            if ui
+                .checkbox(&mut enabled, gettext(locale, "Ambient Pulse"))
+                .changed()
+            {
+                app.actions.push(Action::SetAmbientPulse(enabled));
+            }
+            if ui
+                .selectable_label(!enabled, gettext(locale, "Off"))
+                .clicked()
+            {
+                app.actions.push(Action::SetAmbientPulse(false));
+            }
+            return;
+        }
         for (mode, label) in [
             (VisMode::Bars, gettext(locale, "Spectrum analyser")),
             (VisMode::Scope, gettext(locale, "Oscilloscope")),
@@ -941,6 +963,25 @@ fn clutter_bar(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
 /// leaves the bars flat. Returns whether anything is still moving.
 fn visualiser(app: &mut App, view: &mut View, now: Option<&NowPlaying>) -> bool {
     let area = layout::VISUALIZER;
+    if app.apple.is_some() {
+        if view.interact(area, "visualiser", Sense::click()).clicked() {
+            app.actions
+                .push(Action::SetAmbientPulse(!app.settings.ambient_pulse));
+        }
+        if app.settings.ambient_pulse
+            && let Some(now) = now
+        {
+            let color = app.now_playing_tint().unwrap_or(app.palette.accent);
+            super::motion::ambient_pulse(
+                view.ui,
+                view.rect(area),
+                color,
+                now.position_ms,
+                now.playing,
+            );
+        }
+        return false;
+    }
     if view.interact(area, "visualiser", Sense::click()).clicked() {
         app.actions.push(Action::CycleVisualiser);
     }
@@ -1043,6 +1084,9 @@ fn status(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
     };
     view.sprite(stereo, layout::STEREO);
     view.sprite(mono_lamp, layout::MONO);
+    if app.apple.is_some() {
+        return;
+    }
     if view
         .interact(layout::MONO, "mono", Sense::click())
         .on_hover_text(gettext(app.locale, "Play in mono").as_ref())
@@ -1297,6 +1341,9 @@ fn marquee_pixels(app: &mut App, view: &mut View, text: &str, offset: usize) {
 /// the one chosen for this computer, so a device across the room shows
 /// none.
 fn rates(app: &App, view: &mut View, now: Option<&NowPlaying>) {
+    if app.apple.is_some() {
+        return;
+    }
     let Some(now) = now.filter(|now| !stopped(Some(now))) else {
         return;
     };
@@ -1348,7 +1395,18 @@ fn sliders(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
 
     // Balance: the channels' gains in the sound path, with Winamp's snap
     // to the centre.
-    let (response, event) = view.slider(layout::BALANCE, "balance", 14);
+    let (response, event) = if app.apple.is_some() {
+        (
+            view.interact(layout::BALANCE, "balance", Sense::hover())
+                .on_hover_text(gettext(
+                    app.locale,
+                    "Channel balance is unavailable with MusicKit playback.",
+                )),
+            SliderEvent::None,
+        )
+    } else {
+        view.slider(layout::BALANCE, "balance", 14)
+    };
     match event {
         SliderEvent::Dragging(value) => {
             let balance = balance_of(value);
@@ -1361,7 +1419,11 @@ fn sliders(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
         }
         SliderEvent::None => {}
     }
-    let balance = app.winamp.balance_preview.unwrap_or(app.settings.balance);
+    let balance = if app.apple.is_some() {
+        0.0
+    } else {
+        app.winamp.balance_preview.unwrap_or(app.settings.balance)
+    };
     let frame = (balance.abs() * (sprites::SLIDER_FRAMES - 1) as f32).round() as u32;
     view.sprite(sprites::balance_frame(frame), layout::BALANCE);
     let thumb = if response.dragged() || response.is_pointer_button_down_on() {
@@ -1416,7 +1478,9 @@ fn windows_buttons(app: &mut App, view: &mut View) {
     } else {
         (sprites::EQ_OFF, sprites::EQ_OFF_PRESSED)
     };
-    if view
+    if app.apple.is_some() {
+        view.sprite(sprites::EQ_OFF, layout::EQ_BUTTON);
+    } else if view
         .button(layout::EQ_BUTTON, normal, pressed, "equalizer")
         .clicked()
     {

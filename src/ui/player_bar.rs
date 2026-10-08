@@ -81,8 +81,12 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             } else {
                 empty
             };
-            if empty.clicked() && app.apple.is_none() {
-                app.actions.push(Action::CyclePlayerBarVis);
+            if empty.clicked() {
+                app.actions.push(if app.apple.is_some() {
+                    Action::SetAmbientPulse(!app.settings.ambient_pulse)
+                } else {
+                    Action::CyclePlayerBarVis
+                });
             }
             ui.painter().hline(
                 rect.x_range(),
@@ -123,6 +127,18 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
 fn visualizer(app: &mut App, ui: &egui::Ui, rect: Rect, now: Option<&NowPlaying>) -> bool {
     use crate::settings::PlayerBarVis;
     use crate::vis;
+    if app.apple.is_some() {
+        if app.settings.ambient_pulse
+            && let Some(now) = now
+        {
+            let (color, _) = vis_colours(
+                app.now_playing_tint().unwrap_or(app.palette.accent),
+                ui.visuals().dark_mode,
+            );
+            super::motion::ambient_pulse(ui, rect, color, now.position_ms, now.playing);
+        }
+        return false;
+    }
     let mode = app.settings.player_bar_vis;
     let sounding = now.is_some_and(|now| (now.playing || now.loading) && now.local);
     let dark = ui.visuals().dark_mode;
@@ -377,12 +393,94 @@ fn eased_fill(ctx: &egui::Context, panel: Color32, tint: Option<Color32>) -> Col
     }
 }
 
+/// How long a new song's cover takes to cross over the last one.
+const COVER_FADE_SECONDS: f32 = 0.25;
+const COVER_FADE_ID: &str = "player-bar-cover-fade";
+
+/// The covers the player bar crosses between.
+#[derive(Clone, Default)]
+struct CoverFade {
+    shown: Option<String>,
+    /// The last song's cover, kept only until the new one has faded in.
+    previous: Option<String>,
+    /// The new cover is still loading; the fade starts once it is ready.
+    waiting: bool,
+}
+
+impl CoverFade {
+    /// Follow the playing cover to `url`. Returns whether the fade to it
+    /// starts now, its image being `ready`.
+    fn advance(&mut self, url: Option<&str>, ready: impl FnOnce(&str) -> bool) -> bool {
+        if self.shown.as_deref() != url {
+            // While the last change still loads, its predecessor is what shows.
+            let shown = self.shown.take();
+            if !self.waiting {
+                self.previous = shown;
+            }
+            self.shown = url.map(str::to_string);
+            self.waiting = self.previous.is_some();
+        }
+        if self.waiting && url.is_none_or(ready) {
+            self.waiting = false;
+            return true;
+        }
+        false
+    }
+}
+
+/// The playing cover, fading in over the last song's when the song
+/// changes. The old cover holds until the new one has loaded, so the
+/// placeholder never flashes between them.
+fn crossfaded_cover(
+    ui: &mut egui::Ui,
+    palette: &theme::Palette,
+    url: Option<&str>,
+    rect: Rect,
+    art: &crate::images::ArtLoader,
+) {
+    let ctx = &ui.ctx().clone();
+    let id = egui::Id::new(COVER_FADE_ID);
+    let mut fade = ctx
+        .data(|data| data.get_temp::<CoverFade>(id))
+        .unwrap_or_default();
+    let ready = |url: &str| {
+        matches!(
+            egui::Image::new(url).load_for_size(ctx, rect.size()),
+            Ok(egui::load::TexturePoll::Ready { .. })
+        )
+    };
+    if fade.advance(url, ready) {
+        super::motion::start(ctx, id);
+    }
+    let paint = |ui: &egui::Ui, url: Option<&str>| {
+        super::widgets::paint_cover(ui, palette, url, rect, 6.0, Icon::Music, Some(art));
+    };
+    match (&fade.previous, fade.waiting) {
+        (Some(previous), true) => paint(ui, Some(previous)),
+        (Some(previous), false) => match super::motion::progress(ctx, id, COVER_FADE_SECONDS) {
+            Some(t) => {
+                paint(ui, Some(previous));
+                let mut over = ui.new_child(egui::UiBuilder::new().max_rect(rect));
+                over.multiply_opacity(egui::emath::easing::cubic_in_out(t));
+                paint(&over, url);
+            }
+            None => {
+                fade.previous = None;
+                paint(ui, url);
+            }
+        },
+        (None, _) => paint(ui, url),
+    }
+    ctx.data_mut(|data| data.insert_temp(id, fade));
+}
+
 fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option<&NowPlaying>) {
     let palette = app.palette;
     let cy = region.center().y;
     let cover_rect = Rect::from_min_size(pos2(region.left() + 4.0, cy - 28.0), Vec2::splat(56.0));
 
     let Some(now) = now else {
+        ui.data_mut(|data| data.remove::<CoverFade>(egui::Id::new(COVER_FADE_ID)));
         super::widgets::paint_cover(ui, &palette, None, cover_rect, 6.0, Icon::Music, None);
         let text_left = cover_rect.right() + 12.0;
         let text_rect = Rect::from_min_size(
@@ -410,14 +508,12 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
         return;
     };
 
-    super::widgets::paint_cover(
+    crossfaded_cover(
         ui,
         &palette,
         now.art_small.as_deref().or(now.art_url.as_deref()),
         cover_rect,
-        6.0,
-        Icon::Music,
-        Some(app.backend.art()),
+        app.backend.art(),
     );
     let song = app.now_playing_item();
     let drag_sense = if song.is_some() {
@@ -564,7 +660,21 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
                 .max_rect(heart_rect)
                 .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
         );
-        if theme::icon_button(&mut heart_ui, icon, 17.0, color, palette.text, &tooltip).clicked() {
+        let scale = super::motion::heart_scale(ui.ctx(), &now.uri);
+        if theme::icon_button_scaled(
+            &mut heart_ui,
+            icon,
+            17.0,
+            scale,
+            color,
+            palette.text,
+            &tooltip,
+        )
+        .clicked()
+        {
+            if !saved {
+                super::motion::pop_heart(ui.ctx(), &now.uri);
+            }
             app.actions.push(Action::ToggleSaved(now.uri.clone()));
         }
     }
@@ -1046,6 +1156,26 @@ mod player_bar_tint_tests {
 
         end_tint_session(&ctx);
         assert_eq!(frame(&ctx, 0.22, panel, None), panel);
+    }
+
+    /// A new song's cover waits for its image, then fades in over the last
+    /// one; a song skipped before its cover loaded leaves the last cover
+    /// that did show in place.
+    #[test]
+    fn the_cover_crosses_over_once_the_new_one_is_ready() {
+        let mut fade = CoverFade::default();
+        assert!(
+            !fade.advance(Some("a"), |_| true),
+            "the first cover just shows"
+        );
+        assert_eq!(fade.previous, None);
+        assert!(!fade.advance(Some("b"), |_| false));
+        assert_eq!(fade.previous.as_deref(), Some("a"));
+        assert!(!fade.advance(Some("c"), |_| false));
+        assert_eq!(fade.previous.as_deref(), Some("a"), "b never showed");
+        assert!(fade.advance(Some("c"), |_| true));
+        assert!(!fade.advance(Some("c"), |_| true), "starts once");
+        assert_eq!(fade.shown.as_deref(), Some("c"));
     }
 
     /// However light or dark the cover, the visualizer's colours stay in the

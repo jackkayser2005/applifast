@@ -663,6 +663,9 @@ impl App {
         let apple_mode = options.restore_sign_in && !cfg!(test);
         if apple_mode {
             settings.check_for_updates = false;
+            settings.eq_open = false;
+            settings.milkdrop_open = false;
+            settings.mono = false;
         }
         // The legacy password file has no endpoint of its own. Keep the old
         // settings beside it until migration binds that password in the store.
@@ -2782,6 +2785,12 @@ impl App {
     /// Asks for the playing track's lyrics unless they are here or on the
     /// way. Podcasts have no lyrics to ask for.
     pub fn request_lyrics(&mut self) {
+        if self.apple.is_some() {
+            // MusicKit playback has no supported lyrics source in this port.
+            // Full-screen Now Playing still uses the shared cover and controls.
+            self.lyrics = Loadable::Loaded(None);
+            return;
+        }
         let Some(now) = self.now_playing() else {
             return;
         };
@@ -8445,6 +8454,26 @@ impl App {
             });
         }
         match action {
+            Action::ToggleWinampEq
+            | Action::ToggleWinampEqShade
+            | Action::ToggleEq
+            | Action::SetEqBand(..)
+            | Action::SetEqPreamp(_)
+            | Action::ApplyEqPreset(_)
+            | Action::SetBalance(_)
+            | Action::ToggleMono
+            | Action::ToggleWinampMilkdrop
+            | Action::SetMilkdropSeconds(_)
+            | Action::SetMilkdropScale(_)
+            | Action::SetMilkdropFps(_)
+            | Action::OpenMilkdropFolder
+            | Action::DownloadMilkdropPack(_)
+            | Action::SetVisualiser(_) => return true,
+            Action::CycleVisualiser | Action::CyclePlayerBarVis => {
+                self.settings.ambient_pulse = !self.settings.ambient_pulse;
+                self.settings_dirty = true;
+                return true;
+            }
             Action::AddToQueue { uri, label } => {
                 if util::uri_kind(uri) == Some("album") {
                     self.apple_queue_album(uri, label);
@@ -9917,6 +9946,10 @@ impl App {
             Action::CloseWindow => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
             Action::CyclePlayerBarVis => {
                 self.settings.player_bar_vis = self.settings.player_bar_vis.next();
+                self.settings_dirty = true;
+            }
+            Action::SetAmbientPulse(enabled) => {
+                self.settings.ambient_pulse = enabled;
                 self.settings_dirty = true;
             }
             Action::CycleVisualiser => {
@@ -17583,6 +17616,44 @@ mod tests {
             !app.settings.winamp_window,
             "returning to the main interface remains available"
         );
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn apple_now_playing_does_not_request_legacy_lyrics() {
+        let mut app = headless_app();
+        app.apple = Some(crate::apple::State::default());
+        app.lyrics = Loadable::Loading;
+        let ctx = egui::Context::default();
+        app.apply(Action::SetLyricsFullscreen(true), &ctx);
+        assert!(app.lyrics_fullscreen.is_some());
+        assert!(matches!(app.lyrics, Loadable::Loaded(None)));
+        assert!(app.lyrics_uri.is_none());
+        app.apply(Action::SetLyricsFullscreen(false), &ctx);
+        assert!(app.lyrics_fullscreen.is_none());
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn apple_visualizer_actions_share_one_setting_and_cannot_open_audio_effects() {
+        let mut app = headless_app();
+        app.apple = Some(crate::apple::State::default());
+        let ctx = egui::Context::default();
+        app.apply(Action::CycleVisualiser, &ctx);
+        assert!(app.settings.ambient_pulse);
+        assert!(app.settings_dirty);
+        app.apply(Action::CyclePlayerBarVis, &ctx);
+        assert!(!app.settings.ambient_pulse);
+        app.apply(Action::SetAmbientPulse(true), &ctx);
+        assert!(app.settings.ambient_pulse);
+        app.apply(Action::ToggleWinampMilkdrop, &ctx);
+        app.apply(Action::ToggleWinampEq, &ctx);
+        app.apply(Action::ToggleMono, &ctx);
+        app.apply(Action::SetBalance(0.5), &ctx);
+        assert!(!app.settings.milkdrop_open);
+        assert!(!app.settings.eq_open);
+        assert!(!app.settings.mono);
+        assert_eq!(app.settings.balance, 0.0);
         app.backend.shutdown();
     }
 

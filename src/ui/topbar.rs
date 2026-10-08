@@ -495,9 +495,22 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 {
                     app.actions.push(Action::Open(Page::Settings));
                 }
+                let now_playing_hint = if app.apple.is_some() {
+                    gettext(locale, "Now playing").into_owned()
+                } else {
+                    super::keys::platform_shortcut(
+                        &gettext(locale, "MilkDrop visualiser (Ctrl+Shift+K)"),
+                        &gettext(locale, "MilkDrop visualiser (Cmd+Shift+K)"),
+                    )
+                    .to_owned()
+                };
                 if theme::icon_button(
                     ui,
-                    Icon::AudioLines,
+                    if app.apple.is_some() {
+                        Icon::Expand
+                    } else {
+                        Icon::AudioLines
+                    },
                     ICON_BUTTON_ICON,
                     if app.settings.milkdrop_open {
                         palette.accent
@@ -505,14 +518,15 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                         palette.secondary
                     },
                     palette.text,
-                    super::keys::platform_shortcut(
-                        &gettext(locale, "MilkDrop visualiser (Ctrl+Shift+K)"),
-                        &gettext(locale, "MilkDrop visualiser (Cmd+Shift+K)"),
-                    ),
+                    &now_playing_hint,
                 )
                 .clicked()
                 {
-                    app.actions.push(Action::ToggleWinampMilkdrop);
+                    app.actions.push(if app.apple.is_some() {
+                        Action::SetLyricsFullscreen(true)
+                    } else {
+                        Action::ToggleWinampMilkdrop
+                    });
                 }
                 if theme::icon_button(
                     ui,

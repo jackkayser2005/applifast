@@ -12,6 +12,21 @@ use crate::theme::{self, Icon};
 
 use super::widgets::{self, TrackRow};
 
+/// Repeated songs need separate arrival animations too. Ordinals change only
+/// when another copy is inserted or removed, without restarting surviving rows.
+fn occurrence_keys(items: &[PlayableItem]) -> Vec<String> {
+    let mut counts = std::collections::HashMap::<&str, usize>::new();
+    items
+        .iter()
+        .map(|item| {
+            let ordinal = counts.entry(item.uri()).or_default();
+            let key = format!("{ordinal}:{}", item.uri());
+            *ordinal += 1;
+            key
+        })
+        .collect()
+}
+
 pub fn page(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     ui.add_space(8.0);
@@ -365,9 +380,16 @@ fn contents(app: &mut App, ui: &mut egui::Ui, compact: bool) {
                 (row >= 0.0).then(|| (row.round() as usize).min(queued_len))
             })
             .flatten();
+        // Songs just queued ease in: a fade and a short rise into place.
+        let arrivals = egui::Id::new(("queue-arrivals", compact));
+        let arrival_keys = app.queue.get().map_or_else(Vec::new, |queue| {
+            occurrence_keys(&queue.queue[..queued_len])
+        });
+        super::motion::note_rows(ui.ctx(), arrivals, arrival_keys.iter().map(String::as_str));
         widgets::virtual_rows(ui, queued_len, row_height + gap, |ui, index| {
             let width = ui.available_width();
-            let shift = ui.ctx().animate_value_with_time(
+            let shift = super::motion::animate_value(
+                ui.ctx(),
                 ui.id().with(("queue-move-shift", index)),
                 match move_slot {
                     Some(slot) if index < slot => -4.0,
@@ -376,7 +398,13 @@ fn contents(app: &mut App, ui: &mut egui::Ui, compact: bool) {
                 },
                 0.12,
             );
-            queue_row(app, ui, index, compact, shift);
+            let arrived = arrival_keys
+                .get(index)
+                .map_or(1.0, |key| super::motion::arrival(ui.ctx(), arrivals, key));
+            ui.scope(|ui| {
+                ui.multiply_opacity(arrived);
+                queue_row(app, ui, index, compact, shift + 8.0 * (1.0 - arrived));
+            });
             ui.allocate_space(egui::vec2(width, gap));
         });
         if let Some(slot) = move_slot {
@@ -607,4 +635,31 @@ fn queue_row(app: &mut App, ui: &mut egui::Ui, index: usize, compact: bool, shif
             striped: false,
         },
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn duplicate_queue_occurrences_get_independent_arrival_keys() {
+        let song = |uri: &str| {
+            PlayableItem::Track(crate::api::models::Track {
+                uri: uri.to_owned(),
+                ..Default::default()
+            })
+        };
+        let before = occurrence_keys(&[song("apple:library:song:a"), song("apple:library:song:b")]);
+        let after = occurrence_keys(&[
+            song("apple:library:song:a"),
+            song("apple:library:song:b"),
+            song("apple:library:song:a"),
+        ]);
+        assert_eq!(&after[..2], before);
+        assert_ne!(after[0], after[2]);
+        assert_eq!(
+            occurrence_keys(&[song("apple:library:song:a")])[0],
+            before[0]
+        );
+    }
 }
