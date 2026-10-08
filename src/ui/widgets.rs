@@ -2689,23 +2689,30 @@ pub fn thin_slider(
         let active = response.hovered()
             || response.has_focus()
             || response.dragged()
-            || dragging_value.is_some();
-        let bar = Rect::from_center_size(rect.center(), vec2(rect.width(), 4.0));
+            || dragging_value.is_some()
+            || super::motion::forced_hover(ui.ctx(), "slider");
+        // Under the pointer the bar fills out and its knob grows in.
+        let grown = super::motion::animate_bool(ui.ctx(), id.with("grown"), active, 0.15);
+        let thickness = 4.0 + 2.0 * grown;
+        let bar = Rect::from_center_size(rect.center(), vec2(rect.width(), thickness));
         let track_color = if palette.dark {
             Color32::from_white_alpha(50)
         } else {
             Color32::from_black_alpha(40)
         };
-        ui.painter().rect_filled(bar, 2.0, track_color);
+        ui.painter().rect_filled(bar, thickness / 2.0, track_color);
         let filled = Rect::from_min_max(
             bar.min,
             pos2(bar.left() + bar.width() * shown.clamp(0.0, 1.0), bar.max.y),
         );
-        let fill = if active { palette.accent } else { palette.text };
-        ui.painter().rect_filled(filled, 2.0, fill);
-        if active {
-            ui.painter()
-                .circle_filled(pos2(filled.right(), bar.center().y), 6.0, palette.text);
+        let fill = palette.text.lerp_to_gamma(palette.accent, grown);
+        ui.painter().rect_filled(filled, thickness / 2.0, fill);
+        if grown > 0.0 {
+            ui.painter().circle_filled(
+                pos2(filled.right(), bar.center().y),
+                6.0 * grown,
+                palette.text,
+            );
         }
     }
     event

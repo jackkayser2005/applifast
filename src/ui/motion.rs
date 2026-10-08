@@ -262,6 +262,60 @@ mod tests {
         assert_eq!(delay(true, false, false), std::time::Duration::MAX);
     }
 
+    /// The seek bar eases thicker under the pointer and back once it
+    /// leaves; Reduce motion makes the change at once.
+    #[test]
+    fn a_hovered_slider_eases_thicker_and_back() {
+        for reduced in [false, true] {
+            let ctx = Context::default();
+            let palette = crate::theme::Palette::dark();
+            let draw = |time: f64, pointer: egui::Pos2| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(time),
+                        events: vec![egui::Event::PointerMoved(pointer)],
+                        ..Default::default()
+                    },
+                    |ui| {
+                        set_reduced(ui.ctx(), reduced);
+                        crate::ui::widgets::thin_slider(
+                            ui,
+                            &palette,
+                            Id::new("seek-slider-test"),
+                            "Position",
+                            0.5,
+                            300.0,
+                            None,
+                        );
+                    },
+                );
+                output.textures_delta.clear();
+                output
+                    .shapes
+                    .iter()
+                    .find_map(|clipped| match &clipped.shape {
+                        egui::epaint::Shape::Rect(rect) if rect.rect.width() > 299.0 => {
+                            Some(rect.rect.height())
+                        }
+                        _ => None,
+                    })
+                    .expect("the slider's track")
+            };
+            let away = egui::pos2(900.0, 900.0);
+            assert_eq!(draw(0.0, away), 4.0);
+            let over = egui::pos2(150.0, 16.0);
+            let early = draw(0.02, over);
+            if reduced {
+                assert_eq!(early, 6.0);
+            } else {
+                assert!(early > 4.0 && early < 6.0, "{early}");
+            }
+            assert_eq!(draw(1.0, over), 6.0);
+            draw(1.02, away);
+            assert_eq!(draw(2.0, away), 4.0);
+        }
+    }
+
     #[test]
     fn without_reduce_motion_animations_take_their_time() {
         let ctx = Context::default();

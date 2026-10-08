@@ -776,6 +776,8 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
             "queue" => app.show_queue_panel = true,
             // The first cover card as under the pointer.
             "card-hover" => crate::ui::motion::force_hover("card"),
+            // The seek bar, the first slider drawn, as under the pointer.
+            "seek-hover" => crate::ui::motion::force_hover("slider"),
             "playing-next" => {
                 app.show_queue_panel = true;
                 if let Loadable::Loaded(queue) = &app.queue {
