@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast Apple lyrics review</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
+<h1>Apple lyrics and full-screen Now Playing</h1>
+<p>Visible change: the player-bar Lyrics button is available for Apple playback. Now Playing shows synced/plain LRCLIB lyrics beside the cover at normal widths and stacks its controls and lyrics at narrow widths. Loading, no-match, instrumental and Retry states are visible. Existing line following, seeking and Reduce motion controls are reused.</p>
+<p>Baseline: Windows preview <code>1996c0e</code> (PR #18). Candidate: <code>feat/apple-lyrics</code>. Captures match the saved-library fixture, original sample lyrics, artwork, playback position, scale, theme, size and Reduce motion. The baseline side panel is forced open by a demo flag: it could already render sample text, but its Apple lookup and normal player-bar entry were disabled. Full-screen Now Playing intentionally remains dark in either application theme. Sample words are not this recording's actual lyrics.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<label>View <select id="page"><option value="fullscreen">Full screen</option><option value="side">Side panel</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Native Windows lyrics comparison at matching theme and size">
+<h2>Candidate full-screen states</h2>
+<label>State <select id="state"><option value="empty">No lyrics</option><option value="error">Error and Retry</option><option value="loading">Loading</option><option value="instrumental">Instrumental</option></select></label>
+<img id="state-shot" alt="Apple Now Playing lyric loading, no-match, instrumental or error state">
+<p>All 32 actual Windows egui captures were inspected, and the gallery selectors and PNG dimensions were checked. The existing narrow side-panel layout is cramped in both baseline and candidate; this slice improves full-screen lyric layout. These captures do not establish real-account lyric matches, timing, audio playback, resource-budget acceptance or Favorites shelf completion. Stills do not establish motion behavior. The existing motion regressions and contribution checks are recorded separately in the listening-slice document.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+byId('page').value+'-'+suffix+'.png';byId('label').textContent=phase+' / '+byId('page').value+' / '+suffix;byId('state-shot').src=byId('state').value+'-'+suffix+'.png';}
+for(const id of ['theme','size','page','state'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

@@ -301,7 +301,9 @@ pub fn fullscreen(app: &mut App, ui: &mut egui::Ui) {
             background(app, ui, rect);
             let top = theme::titlebar_inset(ui.ctx()) + 24.0;
             if app.now_playing().is_some()
-                && (app.apple.is_some() || rect.width() >= COVER_BESIDE_MIN_WIDTH)
+                && (rect.width() >= COVER_BESIDE_MIN_WIDTH
+                    || (app.apple.is_some()
+                        && !matches!(&app.lyrics, Loadable::Loaded(Some(lyrics)) if !lyrics.instrumental)))
             {
                 with_cover(app, ui, rect, top);
                 return;
@@ -356,8 +358,7 @@ fn with_cover(app: &mut App, ui: &mut egui::Ui, rect: Rect, top: f32) {
     // The cover moves aside only for words to read. While they load it
     // stays in the middle, so a song that turns out to have none never
     // moves at all.
-    let words = app.apple.is_none()
-        && matches!(&app.lyrics, Loadable::Loaded(Some(lyrics)) if !lyrics.instrumental);
+    let words = matches!(&app.lyrics, Loadable::Loaded(Some(lyrics)) if !lyrics.instrumental);
     if words {
         // The cover and the lyrics are one group, centred in the window.
         let gap = 64.0;
@@ -383,9 +384,6 @@ fn with_cover(app: &mut App, ui: &mut egui::Ui, rect: Rect, top: f32) {
             .clamp(200.0, 560.0);
         let column = Rect::from_center_size(below.center(), vec2(side, side + BELOW_COVER));
         big_cover(app, ui, column, Align::Center);
-        if app.apple.is_some() {
-            return;
-        }
         // Why there are no words, quietly, under the song, or that they
         // are still being fetched.
         let (heading, detail) = match &app.lyrics {

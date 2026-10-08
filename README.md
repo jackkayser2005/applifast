@@ -10,6 +10,8 @@
 > metadata is retained in the existing restart cache. Favorite writes are pending.
 > Home reads Apple Recently Played, Recently Added, Heavy Rotation and Recommendations.
 > Album sorting retains Apple's added date rather than using release dates.
+> The Lyrics button and full-screen Now Playing reuse LRCLIB text and synced
+> lyrics when available. Opening lyrics sends song metadata to LRCLIB, not tokens.
 > Real-account playlist-write acceptance is still pending. Run the app from
 > `apple-integration` with `cargo run --locked`; the optional deterministic preview
 > uses `--features demo -- --demo`.

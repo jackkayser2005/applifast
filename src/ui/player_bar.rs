@@ -1029,20 +1029,19 @@ fn extras(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>) {
                 .collect(),
         });
     }
-    if app.apple.is_none()
-        && theme::icon_button(
-            ui,
-            Icon::Mic,
-            18.0,
-            if app.show_lyrics_panel {
-                palette.accent
-            } else {
-                palette.secondary
-            },
-            palette.text,
-            &gettext(app.locale, "Lyrics"),
-        )
-        .clicked()
+    if theme::icon_button(
+        ui,
+        Icon::Mic,
+        18.0,
+        if app.show_lyrics_panel {
+            palette.accent
+        } else {
+            palette.secondary
+        },
+        palette.text,
+        &gettext(app.locale, "Lyrics"),
+    )
+    .clicked()
     {
         app.actions.push(Action::ToggleLyricsPanel);
     }

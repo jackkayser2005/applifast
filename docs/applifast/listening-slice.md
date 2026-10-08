@@ -53,7 +53,7 @@ are implemented below, with real-account write acceptance pending.
 The existing mini player uses the same playback actions, but its window lifecycle
 still needs real runtime acceptance. Cloud-only upload playback
 remains unverified; no upload is silently replaced with a catalog match.
-The player bar omits Spotify Connect, favorites and lyrics controls until supported.
+The player bar omits Spotify Connect and favorite write controls until supported.
 MilkDrop, spectrum, oscilloscope, EQ, mono and channel balance are not supported
 because this engine does not expose PCM. Their settings and mini-player actions
 are unavailable in Apple mode. Skin artwork can still contain a fixed EQ button;
@@ -66,9 +66,63 @@ Non-Windows builds report unsupported Apple playback.
 PR #13's motion is integrated on `feat/apple-release-polish`. It adds cover
 hover/lift, dancing playing indicators, seek hover, cover crossfade, heart pop,
 queue arrivals, art-colored headers, page fades and **Reduce motion**. Apple
-Now Playing shows artwork and transport controls without requesting legacy
-lyrics. Open it with **L** or **Ctrl+Shift+K**; **Esc** returns. **Ctrl+M** opens
+Now Playing shows artwork, transport controls and LRCLIB lyrics when available.
+Open it with **L** or **Ctrl+Shift+K**; **Esc** returns. **Ctrl+M** opens
 the mini-player.
+
+### Apple lyrics
+
+On `feat/apple-lyrics`, the player-bar Lyrics button opens the existing side panel.
+Full-screen Now Playing shows a large cover beside lyrics at normal widths and
+stacks a small cover, controls and lyrics in narrow windows. Timed lines seek
+through the existing Apple player commands. Follow, manual scrolling, smooth
+line highlighting and Reduce motion reuse the existing controls. Missing lyrics,
+instrumental tracks, loading and failures have explicit states; failed requests
+offer Try again rather than retrying automatically every frame.
+
+Apple tracks use the existing [LRCLIB](https://lrclib.net/docs) exact/search
+lookup by artist, title, album and duration. These are community lyrics, not
+Apple's transcription; availability and timing can differ by recording. Apple
+identifiers never enter the Spotify lyrics request path. Opening the side panel
+or Now Playing starts a lookup; keeping it open follows subsequent songs. Only
+song metadata goes to `https://lrclib.net/api/get` and `/api/search`, using the
+existing HTTP client. No Apple tokens, browser profile or audio are sent.
+
+The existing lyrics JSON cache under the separate Applifast cache directory
+stores public metadata-keyed answers for 30 days, including no-match results.
+It is independent of account authorization and can be reused after sign-out.
+Sign-out, authorization cancellation, token import and host replacement cancel
+pending lyric work and clear shown lyrics. New lookups cancel the preceding
+one. URI and request generations reject late results, including an older answer
+for the same song after reauthorization. No dependency or settings format change
+is introduced. Real-account lyric matching, timing and playback acceptance remain
+pending separately from deterministic fixtures.
+
+Windows default/demo contribution checks pass: 982 and 1,011 library tests
+respectively (2 ignored in each suite), their binary/integration targets,
+strict all-target Clippy, formatting and default Rustdoc/doc tests. Focused
+regressions cover same-song stale answers after sign-out/retry, backend
+cancellation, Apple URI exclusion from Spotify requests, timed-line seeking
+and wide/narrow layout. The existing line-following and Reduce motion tests
+also pass. The isolated native credential-store dummy round trip and Node
+bridge/token self-checks pass. Optional all-feature projectM/vcpkg, site/Nix,
+non-Windows and real-account lyric acceptance remain pending.
+
+A public LRCLIB metadata-only smoke request returned HTTP 200 with plain and
+synced lyric fields. It logged only response status and field-presence booleans,
+not lyric text or credentials. This checks service reachability, not account
+matching or the app's playback timing. The initial token self-check command
+used a nonexistent filename; the existing `generate-token.cjs --self-test`
+passed after correcting the command.
+
+The [lyrics comparison](review-lyrics/index.html) records matching Windows
+light/dark and narrow/normal before/after captures and full-screen failure,
+loading, instrumental and no-match states. The baseline side panel is forced
+open with a demo flag and sample text; that baseline has no enabled Apple
+lyrics lookup or player-bar entry. Stills do not prove animation or audio.
+All 32 images were inspected, and the gallery selectors and PNG dimensions
+were checked. The existing narrow side-panel layout remains cramped in both
+the baseline and candidate; this slice improves full-screen lyric layout.
 
 **Ambient Pulse** is an optional decorative animation shared by both players.
 Enable it in Appearance, click empty player-bar space, or use the mini-player's
@@ -137,7 +191,8 @@ The [Home review](review-home/index.html) compares Windows light/dark and
 narrow/normal frames and records the intentional Home feed-data change separately
 from matching Songs rows. It also shows loading, empty and error states. The user
 requested these Home/date fixes and chose the left sidebar for the upcoming
-Favorites shelf. Lyrics and that shelf remain unfinished in this preview.
+Favorites shelf. The Home preview does not include lyrics or that shelf; lyrics
+are a separate following feature slice.
 
 The focused draft is [PR #18](https://github.com/jackkayser2005/applifast/pull/18),
 stacked on #17. The local development ZIP is

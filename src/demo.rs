@@ -1232,6 +1232,10 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
 /// Apple write states use the real action/response path with sample resources only.
 #[cfg(feature = "demo")]
 pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
+    if app.show_lyrics_panel || app.lyrics_fullscreen.is_some() {
+        // The legacy flags run before the demo adopts Apple song identities.
+        app.lyrics_uri = app.now_playing().map(|now| now.uri);
+    }
     for flag in show.unwrap_or("").split(',').map(str::trim) {
         if matches!(
             flag,
@@ -1409,6 +1413,61 @@ mod tests {
         // These frames never advance the clock or take pictures.
         app.reveal_theme_changes = false;
         (ctx, app)
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_lyrics_render_wide_and_narrow_and_seek_from_a_timed_line() {
+        for width in [1100.0, 760.0] {
+            let (ctx, mut app) = accessible_app(&format!("apple-lyrics-{width}"));
+            app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+            app.local = app.apple.as_ref().unwrap().local.clone();
+            app.local.position_ms = 41_000;
+            app.remote = None;
+            apply_flags(&mut app, None, Some("lyrics-fullscreen-view,reduce-motion"));
+            apply_apple_flags(&mut app, Some("lyrics-fullscreen-view"));
+            let draw = |app: &mut App, events: Vec<egui::Event>| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(width, 760.0),
+                        )),
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| crate::ui::show(app, ui),
+                );
+                output.textures_delta.clear();
+                menu_text(&output)
+            };
+            draw(&mut app, vec![]);
+            let text = draw(&mut app, vec![]);
+            assert!(text.iter().any(|(label, _)| label == "Rosewood"));
+            let line = text
+                .iter()
+                .find(|(label, _)| label == "Streetlights blinking down the river road")
+                .expect("the first timed line is visible")
+                .1;
+            draw(
+                &mut app,
+                pointer_click(line.center(), egui::PointerButton::Primary),
+            );
+            assert!(
+                app.actions
+                    .iter()
+                    .any(|action| matches!(action, Action::Seek(40000)))
+            );
+            assert!(
+                app.actions
+                    .iter()
+                    .any(|action| matches!(action, Action::FollowLyrics))
+            );
+            app.lyrics = Loadable::Failed("Connection interrupted".into());
+            let text = draw(&mut app, vec![]);
+            assert!(text.iter().any(|(label, _)| label == "Try again"));
+            app.backend.shutdown();
+        }
     }
 
     #[cfg(feature = "demo")]
