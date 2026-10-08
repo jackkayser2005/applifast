@@ -113,13 +113,23 @@ For a deterministic preview without changing your account:
 cargo run --locked --features demo -- --demo --demo-page liked --demo-show queue,ambient-pulse
 ```
 
-The combined Windows update passes strict default/demo Clippy, 972 library tests,
-the default binary/integration suites, eight playback-boundary tests, the isolated
+The combined Windows update passes strict default/demo Clippy, 972 default and
+996 demo library tests, the default/demo binary and integration suites, eight playback-boundary tests, the isolated
 native credential-store round trip, Node bridge/token checks and generated-catalog
-verification. The older results below describe the preceding integration build.
-Full demo testing, matching motion comparisons, and real app restart acceptance
-remain separate checks. The real-account restoration check was deferred while
+verification. Default Rustdoc with warnings denied and default doctests also pass.
+The older results below describe the preceding integration build.
+The [candidate gallery](review-polish/index.html) covers light/dark and narrow/normal
+Windows views. It is not a matching motion comparison: a baseline build is pending.
+It reveals clipped center content with the sidebar and queue open at 760 points.
+Matching motion comparisons and real app restart acceptance remain separate checks.
+The real-account restoration check was deferred while
 the older app was playing, to avoid interrupting it.
+
+`packaging/applifast-preview.txt` accompanies the local Windows development ZIP.
+It describes saved authorization, restart testing and the credential-free demo.
+The debug preview retains upstream package version 0.12.0 and is not a release.
+The Windows packaging-launcher attempt fails without the Unix `true` executable
+and Ruby YAML tooling; that contribution check has not passed here.
 
 ## Storage and network
 
