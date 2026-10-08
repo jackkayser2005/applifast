@@ -127,6 +127,13 @@ pub struct State {
     pub known_songs: std::collections::HashMap<String, Song>,
     pub storefront: String,
     pub reads: std::collections::HashMap<u64, (Read, u32)>,
+    pub playlist_creates: std::collections::HashMap<u64, String>,
+    pub playlist_confirms: std::collections::HashMap<
+        String,
+        crate::model::PagedList<crate::api::models::PlaylistItem>,
+    >,
+    pub playlist_recheck_at: Option<Instant>,
+    pub playlist_cards: std::collections::HashSet<String>,
     pub next_reads: std::collections::HashMap<Read, (String, u32)>,
     pub pending_play: Option<crate::model::Action>,
     read_serial: u64,
@@ -162,6 +169,10 @@ impl Default for State {
             known_songs: Default::default(),
             storefront: String::new(),
             reads: Default::default(),
+            playlist_creates: Default::default(),
+            playlist_confirms: Default::default(),
+            playlist_recheck_at: None,
+            playlist_cards: Default::default(),
             next_reads: Default::default(),
             pending_play: None,
             read_serial: 0,
@@ -194,6 +205,10 @@ impl State {
         self.songs.clear();
         self.known_songs.clear();
         self.reads.clear();
+        self.playlist_creates.clear();
+        self.playlist_confirms.clear();
+        self.playlist_recheck_at = None;
+        self.playlist_cards.clear();
         self.next_reads.clear();
         self.pending_play = None;
         self.queue.clear();
@@ -417,6 +432,38 @@ impl State {
         self.read_serial += 1;
         self.reads.insert(self.read_serial, (target, offset));
         json!({"type":"request","id":self.read_serial,"path":path})
+    }
+    pub fn create_playlist(
+        &mut self,
+        name: &str,
+        public: bool,
+        uris: &[String],
+    ) -> Result<(String, Value), String> {
+        let items = uris
+            .iter()
+            .map(|uri| {
+                self.find_song(uri)
+                    .map(|song| song.item.clone())
+                    .ok_or_else(|| {
+                        "Reload the selected songs before saving this playlist.".to_owned()
+                    })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let id = self.read_serial + 1;
+        let command = applifast_playback_probe::protocol::Command::CreatePlaylist {
+            id,
+            name: name.trim().into(),
+            public,
+            items,
+        };
+        command.validate()?;
+        let temporary = format!("library.pending.{}.{}", self.session, id);
+        self.read_serial = id;
+        self.playlist_creates.insert(id, temporary.clone());
+        Ok((
+            temporary,
+            serde_json::to_value(command).expect("playlist command serializes"),
+        ))
     }
     fn select(&mut self, index: usize) {
         if let Some(song) = self.queue.get(index) {

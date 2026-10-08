@@ -5,6 +5,8 @@
   let order = { upcoming: [], manualCount: 0, context: [], history: [] };
   let nativeQueue = false;
   let chain = Promise.resolve(), initializing, signingOut = false, authorizing = false;
+  let writes = Promise.resolve();
+  const writeControllers = new Set();
   let transitioning = false, playbackFailed = false;
   let requestGeneration = 0;
   let seekTarget = null;
@@ -150,6 +152,38 @@
         send('response', { id: command.id, data: response.data }, generation);
         return;
       }
+      case 'createPlaylist':
+      case 'appendPlaylist': {
+        const create = command.type === 'createPlaylist';
+        if (!Number.isSafeInteger(command.id) || command.id < 0 ||
+            !Array.isArray(command.items) || command.items.length > 1000 || (!create && !command.items.length) ||
+            (create ? typeof command.name !== 'string' || !command.name.trim() ||
+              new TextEncoder().encode(command.name).length > 1024 || typeof command.public !== 'boolean' :
+              typeof command.playlist !== 'string' || command.playlist.length > 128 || !/^p\.[\w.-]+$/.test(command.playlist))) {
+          throw new Error('playlist');
+        }
+        // Resource IDs identify playlist members. Playback IDs can differ and must not replace them.
+        const data = command.items.map(item => {
+          song(item);
+          return { id: item.id, type: item.kind === 'library' ? 'library-songs' : 'songs' };
+        });
+        const body = create ? {
+          attributes: { name: command.name.trim(), isPublic: command.public },
+          ...(data.length ? { relationships: { tracks: { data } } } : {})
+        } : { data };
+        const path = '/v1/me/library/playlists' + (create ? '' : `/${command.playlist}/tracks`);
+        const controller = new AbortController();
+        writeControllers.add(controller);
+        let response;
+        try {
+          response = await music.api.music(path, {}, {
+            fetchOptions: { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body), signal: controller.signal }
+          });
+        } finally { writeControllers.delete(controller); }
+        send('response', { id: command.id, data: response?.data ?? null }, generation);
+        return;
+      }
       case 'library': {
         const route = command.next || '/v1/me/library/songs?limit=100&include=albums,artists';
         if (typeof route !== 'string' || !route.startsWith('/v1/me/library/songs?') || route.length > 2048) {
@@ -268,6 +302,8 @@
       const pending = chain;
       const generation = ++session;
       signingOut = true;
+      for (const controller of writeControllers) controller.abort();
+      writes = Promise.resolve();
       desiredPlaying = false;
       queue = []; index = -1; order = { upcoming: [], manualCount: 0, context: [], history: [] };
       const result = (async () => {
@@ -282,6 +318,13 @@
       return result;
     }
     const generation = session;
+    if (['createPlaylist', 'appendPlaylist'].includes(command.type)) {
+      // Writes serialize independently: a slow library mutation cannot stall playback controls.
+      writes = writes.then(() => initializing).then(() => perform(command, generation))
+        .catch(() => send('response', { id: command.id,
+          error: 'Apple Music could not save this playlist. Check sign-in, connection and playlist permissions, then retry.' }, generation));
+      return writes;
+    }
     if (command.type === 'request') {
       return Promise.resolve(initializing).then(() => perform(command, generation))
         .catch(() => send('response', { id: command.id, error: 'Apple Music could not load this page. Check sign-in and connection, then retry.' }, generation));

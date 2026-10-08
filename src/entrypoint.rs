@@ -565,6 +565,7 @@ pub(crate) fn run() -> eframe::Result<()> {
             app.toast_error(error.clone());
         }
         app.apple = Some(apple);
+        spotifast::demo::apply_apple_flags(&mut app, cli.demo_show.as_deref());
     }
     #[cfg(feature = "demo")]
     let shot = cli.demo_shot.clone().map(|path| Shot {

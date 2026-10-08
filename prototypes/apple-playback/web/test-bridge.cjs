@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const messages = [], calls = [], listeners = new Map();
 let libraryReply = { data: { data: [], next: null } }, authorization;
+const requests = [];
 const music = {
   playbackState: 2, currentPlaybackTime: 0, currentPlaybackDuration: 240,
   isAuthorized: true, storefrontId: 'us', queue: { length: 1 },
@@ -12,7 +13,7 @@ const music = {
     if (!listeners.has(event)) listeners.set(event, []);
     listeners.get(event).push(handler);
   },
-  api: { music: async () => libraryReply },
+  api: { music: async (...args) => { requests.push(args); return libraryReply; } },
   authorize: () => new Promise(resolve => { authorization = resolve; }),
   unauthorize: async () => {},
   setQueue: async options => {
@@ -29,7 +30,7 @@ const sandbox = {
     chrome: { webview: { postMessage: event => messages.push(event) } }, isSecureContext: true },
   document: { addEventListener: () => {}, dispatchEvent: () => {} },
   CustomEvent: class { constructor(name, properties) { Object.assign(this, properties); } },
-  structuredClone
+  structuredClone, TextEncoder, AbortController
 };
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), sandbox);
 const app = sandbox.window.applifast;
@@ -41,6 +42,45 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   assert.equal(music.playbackMode, 2);
   const uploaded = { kind: 'library', id: 'i.upload', playParams: { id: 'i.upload', kind: 'song', isLibrary: true } };
   const catalog = { kind: 'catalog', id: '123', playParams: null };
+  libraryReply = { data: { data: [{ id: 'p.created', type: 'library-playlists', attributes: { canEdit: true } }] } };
+  await app.dispatch({ type: 'createPlaylist', id: 101, name: ' Queue ', public: false,
+    items: [uploaded, { ...catalog, playParams: { id: '456', kind: 'song' } }, uploaded] });
+  const created = requests.at(-1);
+  assert.equal(created[0], '/v1/me/library/playlists');
+  assert.equal(created[2].fetchOptions.method, 'POST');
+  assert.deepEqual(JSON.parse(created[2].fetchOptions.body), {
+    attributes: { name: 'Queue', isPublic: false }, relationships: { tracks: { data: [
+      { id: 'i.upload', type: 'library-songs' }, { id: '123', type: 'songs' }, { id: 'i.upload', type: 'library-songs' }
+    ] } }
+  });
+  assert.equal(messages.find(event => event.id === 101).data.data[0].id, 'p.created');
+  libraryReply = undefined; // A successful append has no response body.
+  await app.dispatch({ type: 'appendPlaylist', id: 102, playlist: 'p.created', items: [uploaded, uploaded] });
+  assert.equal(requests.at(-1)[0], '/v1/me/library/playlists/p.created/tracks');
+  assert.equal(JSON.parse(requests.at(-1)[2].fetchOptions.body).data.length, 2);
+  assert.equal(messages.find(event => event.id === 102).data, null);
+  const beforeInvalid = requests.length;
+  await app.dispatch({ type: 'appendPlaylist', id: 103, playlist: 'p.created/../../', items: [uploaded] });
+  assert.equal(requests.length, beforeInvalid);
+  assert(messages.find(event => event.id === 103).error);
+
+  // A pending write must not stall play/pause. A rejection must not expose SDK secrets.
+  const api = music.api.music;
+  let rejectWrite;
+  music.api.music = () => new Promise((_, reject) => { rejectWrite = reject; });
+  const write = app.dispatch({ type: 'appendPlaylist', id: 104, playlist: 'p.created', items: [uploaded] });
+  await new Promise(resolve => setImmediate(resolve));
+  let immediatePause = false;
+  const pause = music.pause;
+  music.pause = async () => { immediatePause = true; };
+  await app.dispatch({ type: 'pause' });
+  assert(immediatePause);
+  rejectWrite(new Error('secret SDK write response'));
+  await write;
+  assert(messages.find(event => event.id === 104).error);
+  assert(!JSON.stringify(messages).includes('secret SDK write response'));
+  music.api.music = api;
+  music.pause = pause;
   await app.dispatch({ type: 'play', items: [uploaded, catalog, uploaded], index: 0 });
   await app.dispatch({ type: 'next' });
   await app.dispatch({ type: 'next' });
@@ -151,13 +191,24 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   await pendingRead;
   assert.equal(messages.filter(event=>event.type==='response').at(-1).id,42);
 
+  let resolveWrite, writeSignal, writeCalls = 0;
+  music.api.music = (_, __, options) => { writeCalls++; writeSignal = options.fetchOptions.signal;
+    return new Promise(resolve => { resolveWrite = resolve; }); };
+  const pendingWrite = app.dispatch({ type: 'appendPlaylist', id: 105, playlist: 'p.created', items: [uploaded] });
+  while (!resolveWrite) await new Promise(resolve => setImmediate(resolve));
+  const queuedWrite = app.dispatch({ type: 'createPlaylist', id: 106, name: 'Canceled', public: false, items: [] });
   const pendingAuthorization = app.dispatch({ type: 'authorize' });
   while (!authorization) await new Promise(resolve => setImmediate(resolve));
   const signOut = app.dispatch({ type: 'signOut' });
+  assert(writeSignal.aborted);
   authorization('late-user-token');
-  await pendingAuthorization; await signOut;
+  await Promise.race([signOut, new Promise((_, reject) => setTimeout(() => reject(new Error('Write blocked sign-out')), 250))]);
+  resolveWrite({ data: { data: [] } });
+  await pendingWrite; await queuedWrite; await pendingAuthorization;
+  assert.equal(writeCalls, 1); // Queued mutations cannot execute under a new account.
+  assert(!messages.some(event => [105, 106].includes(event.id))); // Late write replies are stale.
   assert(!messages.some(event => event.type === 'authorized'));
   assert.equal(messages.at(-1).type, 'signedOut');
   assert.equal(messages.at(-1).session, 2);
-  console.log('Bridge self-check passed: uploaded IDs, occurrences, pagination, failures, stale authorization.');
+  console.log('Bridge self-check passed: uploaded IDs, occurrences, pagination, playlist writes, failures, stale authorization.');
 })().catch(failure => { console.error(failure); process.exitCode = 1; });

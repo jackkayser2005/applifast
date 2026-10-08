@@ -24,10 +24,17 @@ Reduce motion stops its animation. Ambient Pulse is off by default.
 Preview the design without signing in or changing your library from PowerShell:
   .\Applifast.exe --demo --demo-page liked --demo-show queue,ambient-pulse
 
-Playlist writes, Apple favorites and public token onboarding remain unfinished.
+Try playlist creation with the library + button or Save as a playlist in the
+queue. Queue saving preserves repeats. Creation writes to your Apple library;
+if an error is ambiguous, check the library before retrying to avoid a duplicate.
+Apple may take a few seconds to show the new playlist and its songs.
+Demo-only states: --demo-show playlist-saving, playlist-created or playlist-error.
+
+Appending to existing playlists, Apple favorites and public token onboarding
+remain unfinished. Real-account creation and uploaded members need acceptance.
 Cloud-only uploads are never replaced with catalog songs; their playback is
 not guaranteed. Runtime restart/window checks and the gaming soak are pending.
-See https://github.com/jackkayser2005/applifast/tree/feat/apple-release-polish
+See https://github.com/jackkayser2005/applifast/tree/feat/apple-playlists
 for the source and docs/applifast/listening-slice.md for exact validation status.
 
 Applifast is an MIT-licensed fork of Spotifast by Carmine Paolino.
