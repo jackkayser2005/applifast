@@ -4286,6 +4286,39 @@ impl App {
     fn reload(&mut self, page: Page) {
         if self.apple.is_some() {
             match &page {
+                Page::Home => {
+                    let apple = self.apple.as_mut().unwrap();
+                    apple
+                        .reads
+                        .retain(|_, (read, _)| !matches!(read, crate::apple::Read::Home(_)));
+                    apple
+                        .next_reads
+                        .retain(|read, _| !matches!(read, crate::apple::Read::Home(_)));
+                    for shelf in crate::apple::HomeShelf::ALL {
+                        if shelf == crate::apple::HomeShelf::Recommendations
+                            && !self.settings.home.recommendations.visible
+                        {
+                            continue;
+                        }
+                        if self
+                            .apple
+                            .as_ref()
+                            .unwrap()
+                            .home
+                            .get(&shelf)
+                            .and_then(Loadable::get)
+                            .is_none()
+                        {
+                            self.apple
+                                .as_mut()
+                                .unwrap()
+                                .home
+                                .insert(shelf, Loadable::Loading);
+                        }
+                        self.apple_read(crate::apple::Read::Home(shelf), shelf.path().into(), 0);
+                    }
+                    return;
+                }
                 Page::LikedSongs => {
                     if let Some(apple) = &mut self.apple {
                         if apple.loading {

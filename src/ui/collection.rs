@@ -2027,7 +2027,8 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
             context,
             show_album: true,
             show_cover: true,
-            show_added: true,
+            // Apple documents library album add dates, but not song add dates.
+            show_added: app.apple.is_none(),
             show_added_by: false,
             page: Page::LikedSongs,
             loading,

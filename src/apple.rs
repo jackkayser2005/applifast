@@ -12,6 +12,7 @@ pub mod models;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Read {
+    Home(HomeShelf),
     Playlists,
     Albums,
     Artists,
@@ -23,6 +24,44 @@ pub enum Read {
     ArtistAlbums(String),
     ArtistSongs(String),
     Search { serial: u64, library: bool },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum HomeShelf {
+    Recent,
+    Added,
+    HeavyRotation,
+    Recommendations,
+}
+
+impl HomeShelf {
+    pub const ALL: [Self; 4] = [
+        Self::Recent,
+        Self::Added,
+        Self::HeavyRotation,
+        Self::Recommendations,
+    ];
+
+    pub fn path(self) -> &'static str {
+        match self {
+            Self::Recent => {
+                "/v1/me/recent/played?types=albums,library-albums,playlists,library-playlists,artists&limit=10"
+            }
+            Self::Added => "/v1/me/library/recently-added",
+            Self::HeavyRotation => "/v1/me/history/heavy-rotation?limit=10",
+            Self::Recommendations => "/v1/me/recommendations?limit=10",
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct HomeCard {
+    pub name: String,
+    pub subtitle: String,
+    pub image: Option<String>,
+    pub uri: String,
+    pub page: Option<crate::model::Page>,
+    pub playable: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -125,6 +164,7 @@ pub struct State {
     pub token_path: String,
     pub filter: String,
     pub favorites_only: bool,
+    pub home: std::collections::HashMap<HomeShelf, crate::model::Loadable<Vec<HomeCard>>>,
     pub queue: Vec<Song>,
     pub order: QueueOrder,
     recent_adds: std::collections::HashMap<String, Instant>,
@@ -172,6 +212,7 @@ impl Default for State {
             token_path: String::new(),
             filter: String::new(),
             favorites_only: false,
+            home: Default::default(),
             queue: Vec::new(),
             order: QueueOrder::default(),
             recent_adds: Default::default(),
@@ -217,6 +258,7 @@ impl State {
         self.loading = false;
         self.songs.clear();
         self.favorites_only = false;
+        self.home.clear();
         self.known_songs.clear();
         self.reads.clear();
         self.playlist_creates.clear();
@@ -928,6 +970,27 @@ impl State {
                     .and_then(|artist| artist.id.clone()),
                 in_favorites: Some(index % 3 == 0),
             });
+        }
+        for (index, shelf) in HomeShelf::ALL.into_iter().enumerate() {
+            state.home.insert(
+                shelf,
+                crate::model::Loadable::Loaded(
+                    state
+                        .songs
+                        .iter()
+                        .skip(index)
+                        .take(4)
+                        .map(|song| HomeCard {
+                            name: song.title.clone(),
+                            subtitle: song.artist.clone(),
+                            image: song.artwork.clone(),
+                            uri: song.uri(),
+                            page: None,
+                            playable: song.available(),
+                        })
+                        .collect(),
+                ),
+            );
         }
         state.local.volume = 32768;
         state.local.connected = true;

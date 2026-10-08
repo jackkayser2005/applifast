@@ -4,6 +4,82 @@ use crate::api::models::{Album, Artist, ArtistRef, Image, Owner, Playlist, Track
 use applifast_playback_probe::protocol::{ItemKind, PlaybackItem};
 use serde_json::Value;
 
+pub fn added_at(resource: &Value) -> Option<String> {
+    let date = resource["attributes"]["dateAdded"].as_str()?;
+    let date = match date.len() {
+        4 => format!("{date}-01-01T00:00:00Z"),
+        10 => format!("{date}T00:00:00Z"),
+        _ => date.to_owned(),
+    };
+    date.parse::<jiff::Timestamp>().ok().map(|_| date)
+}
+
+pub fn home_card(resource: &Value) -> Option<super::HomeCard> {
+    use crate::model::Page;
+    let (name, subtitle, image, uri, page, playable) = match resource["type"].as_str()? {
+        "songs" | "library-songs" => {
+            let song = song(resource)?;
+            let page = song.album_id.clone().map(Page::Album);
+            (
+                song.title.clone(),
+                song.artist.clone(),
+                song.artwork.clone(),
+                song.uri(),
+                page,
+                song.available(),
+            )
+        }
+        "albums" | "library-albums" => {
+            let album = album(resource);
+            (
+                album.name,
+                album
+                    .artists
+                    .iter()
+                    .map(|artist| artist.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                album.images.first().map(|image| image.url.clone()),
+                album.uri,
+                Some(Page::Album(album.id)),
+                true,
+            )
+        }
+        "playlists" | "library-playlists" => {
+            let playlist = playlist(resource);
+            let owner = playlist.owner_name().to_owned();
+            (
+                playlist.name,
+                owner,
+                playlist.images.first().map(|image| image.url.clone()),
+                playlist.uri,
+                Some(Page::Playlist(playlist.id)),
+                true,
+            )
+        }
+        "artists" | "library-artists" => {
+            let artist = artist(resource);
+            (
+                artist.name,
+                String::new(),
+                artist.images.first().map(|image| image.url.clone()),
+                artist.uri,
+                Some(Page::Artist(artist.id)),
+                false,
+            )
+        }
+        _ => return None,
+    };
+    Some(super::HomeCard {
+        name,
+        subtitle,
+        image,
+        uri,
+        page,
+        playable,
+    })
+}
+
 fn text(value: &Value, key: &str) -> String {
     value[key].as_str().unwrap_or_default().to_owned()
 }
@@ -150,6 +226,21 @@ pub fn playlist(resource: &Value) -> Playlist {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn apple_added_dates_keep_timestamp_date_and_year_ordering() {
+        for (input, expected) in [
+            ("2026-10-08", Some("2026-10-08T00:00:00Z")),
+            ("2025", Some("2025-01-01T00:00:00Z")),
+            ("2026-10-08T16:30:00Z", Some("2026-10-08T16:30:00Z")),
+            ("2026-99-99", None),
+            ("unknown", None),
+        ] {
+            assert_eq!(
+                added_at(&json!({"attributes":{"dateAdded":input}})).as_deref(),
+                expected
+            );
+        }
+    }
     #[test]
     fn favorites_are_optional_booleans_and_survive_metadata_serialization() {
         for (flag, expected) in [
