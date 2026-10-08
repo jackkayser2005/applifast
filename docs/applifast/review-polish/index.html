@@ -16,6 +16,7 @@
   built with the demo feature. Every song and playlist is sample data.
   Source motion comes from <a href="https://github.com/jackkayser2005/applifast/pull/13">PR #13</a>.
   Ambient Pulse is enabled here to show the optional decorative animation.
+  The normal Songs capture has the queue open; the narrow capture has it closed.
   Apple Now Playing shows the cover and transport controls. Apple lyrics are unsupported.</p>
 <p>This is a candidate gallery, not a matching before-and-after approval comparison.
   A fresh build of baseline <code>72e6f74</code> is still needed for that comparison.
@@ -31,10 +32,14 @@
   <option value="now-playing-light-760x760.png">Now Playing, light, narrow</option>
   <option value="settings-dark-1100x760.png">Settings, dark, normal</option>
   <option value="mini-playing.png">Mini player with Ambient Pulse</option>
+  <option value="forced-queue-dark-760x760.png">Forced below panel minimum, dark</option>
+  <option value="forced-queue-light-760x760.png">Forced below panel minimum, light</option>
 </select></label>
 <img id="interaction" alt="Selected Now Playing or settings capture">
-<p>The narrow Songs view with both sidebar and queue open still has clipped center
-  content and toolbar controls. This remains a layout issue to resolve before release.
+<p>The forced 760-point Songs captures bypass the native minimum width while both
+  side panels are open. They show clipped center content and toolbar controls at
+  that forced size. Ordinary native resizing raises its minimum with these panels;
+  window-manager and real resize coverage remain pending.
   Stills do not establish animation timing, real playback, restart restoration,
   window lifecycle, performance or a one-hour gaming session.
   <a href="../listening-slice.md">Supported features and test results</a>.</p>
