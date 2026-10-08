@@ -1891,9 +1891,8 @@ impl App {
                     }
                     self.local = apple.local.clone();
                     self.shuffle_wanted = apple.local.shuffle;
-                    self.backend.send(Command::AppleSend(
-                        serde_json::json!({"type":"library","next":null}).to_string(),
-                    ));
+                    self.backend
+                        .send(Command::AppleSend(apple.library_request(None).to_string()));
                     self.sync_apple_library();
                     self.sync_apple_queue();
                 }
@@ -4071,7 +4070,7 @@ impl App {
                 apple.loading = true;
                 self.library.liked.loading = true;
                 self.backend.send(Command::AppleSend(
-                    serde_json::json!({"type":"library","next":apple.next}).to_string(),
+                    apple.library_request(apple.next.clone()).to_string(),
                 ));
             }
             self.apple_load_more(page);
@@ -4356,11 +4355,9 @@ impl App {
                         if apple.loading {
                             return;
                         }
-                        apple.refresh_library();
+                        let request = apple.refresh_library();
                         self.library.liked.loading = true;
-                        self.backend.send(Command::AppleSend(
-                            serde_json::json!({"type":"library","next":null}).to_string(),
-                        ));
+                        self.backend.send(Command::AppleSend(request.to_string()));
                     }
                     return;
                 }

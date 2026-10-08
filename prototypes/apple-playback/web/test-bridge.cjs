@@ -4,6 +4,8 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
 const messages = [], calls = [], listeners = new Map();
+const readTimers = new Map();
+let timerId = 0;
 let libraryReply = { data: { data: [], next: null } }, authorization;
 const requests = [];
 const music = {
@@ -30,7 +32,9 @@ const sandbox = {
     chrome: { webview: { postMessage: event => messages.push(event) } }, isSecureContext: true },
   document: { addEventListener: () => {}, dispatchEvent: () => {} },
   CustomEvent: class { constructor(name, properties) { Object.assign(this, properties); } },
-  structuredClone, TextEncoder, AbortController, URLSearchParams
+  structuredClone, TextEncoder, AbortController, URLSearchParams,
+  setTimeout: (callback, delay) => { assert.equal(delay, 20_000); readTimers.set(++timerId, callback); return timerId; },
+  clearTimeout: id => readTimers.delete(id)
 };
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), sandbox);
 const app = sandbox.window.applifast;
@@ -81,6 +85,36 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   assert(!JSON.stringify(messages).includes('secret SDK write response'));
   music.api.music = api;
   music.pause = pause;
+  let resolveLibrary;
+  music.api.music = () => new Promise(resolve => { resolveLibrary = resolve; });
+  const slowLibrary = app.dispatch({ type: 'library', id: 107, next: null });
+  let libraryPause = false;
+  music.pause = async () => { libraryPause = true; };
+  await Promise.race([
+    app.dispatch({ type: 'pause' }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Library blocked pause')), 250))
+  ]);
+  assert(libraryPause);
+  resolveLibrary({ data: { data: [], next: null } });
+  await slowLibrary;
+  assert.equal(messages.find(event => event.type === 'library' && event.id === 107).items.length, 0);
+  music.api.music = async () => { throw new Error('secret SDK library response'); };
+  await app.dispatch({ type: 'library', id: 108, next: null });
+  assert(messages.find(event => event.type === 'library' && event.id === 108).error);
+  assert(!JSON.stringify(messages).includes('secret SDK library response'));
+  music.api.music = (_path, _parameters, { fetchOptions }) => new Promise((_resolve, reject) => {
+    fetchOptions.signal.addEventListener('abort', () => reject(new Error('secret timeout response')), { once: true });
+  });
+  const timedOut = app.dispatch({ type: 'library', id: 109, next: null });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(readTimers.size, 1);
+  [...readTimers.values()][0]();
+  await timedOut;
+  assert(messages.find(event => event.type === 'library' && event.id === 109).error);
+  assert.equal(readTimers.size, 0);
+  assert(!JSON.stringify(messages).includes('secret timeout response'));
+  music.api.music = api;
+  music.pause = pause;
   await app.dispatch({ type: 'play', items: [uploaded, catalog, uploaded], index: 0 });
   await app.dispatch({ type: 'next' });
   await app.dispatch({ type: 'next' });
@@ -120,7 +154,7 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   assert.equal(firstLibraryURL.pathname, '/v1/me/library/songs');
   assert.equal(firstLibraryURL.searchParams.get('include'), 'albums,artists');
   assert.equal(firstLibraryURL.searchParams.get('extend'), 'inFavorites');
-  const page = messages.find(event => event.type === 'library');
+  const page = messages.filter(event => event.type === 'library').at(-1);
   assert.equal(page.items[0].id, 'i.upload');
   assert.equal(page.items[0].playParams, null); // Unavailable metadata stays visible.
   assert.deepEqual(page.items.map(item => item.inFavorites), [true, false, null, null]);
@@ -216,18 +250,34 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   const pendingWrite = app.dispatch({ type: 'appendPlaylist', id: 105, playlist: 'p.created', items: [uploaded] });
   while (!resolveWrite) await new Promise(resolve => setImmediate(resolve));
   const queuedWrite = app.dispatch({ type: 'createPlaylist', id: 106, name: 'Canceled', public: false, items: [] });
+  const writeAPI = music.api.music, readSignals = [];
+  music.api.music = (path, parameters, options) => {
+    if (options.fetchOptions.method === 'POST') return writeAPI(path, parameters, options);
+    const signal = options.fetchOptions.signal;
+    readSignals.push(signal);
+    return new Promise((_resolve, reject) => signal.addEventListener('abort',
+      () => reject(new Error('secret canceled read')), { once: true }));
+  };
+  const pendingReads = [app.dispatch({ type: 'library', id: 110, next: null }),
+    app.dispatch({ type: 'request', id: 203, path: '/v1/me/library/recently-added' })];
+  while (readSignals.length < 2) await new Promise(resolve => setImmediate(resolve));
   const pendingAuthorization = app.dispatch({ type: 'authorize' });
   while (!authorization) await new Promise(resolve => setImmediate(resolve));
   const signOut = app.dispatch({ type: 'signOut' });
   assert(writeSignal.aborted);
+  assert(readSignals.every(signal => signal.aborted));
   authorization('late-user-token');
   await Promise.race([signOut, new Promise((_, reject) => setTimeout(() => reject(new Error('Write blocked sign-out')), 250))]);
   resolveWrite({ data: { data: [] } });
   await pendingWrite; await queuedWrite; await pendingAuthorization;
+  await Promise.all(pendingReads);
   assert.equal(writeCalls, 1); // Queued mutations cannot execute under a new account.
   assert(!messages.some(event => [105, 106].includes(event.id))); // Late write replies are stale.
+  assert(!messages.some(event => [110, 203].includes(event.id)));
+  assert(!JSON.stringify(messages).includes('secret canceled read'));
   assert(!messages.some(event => event.type === 'authorized'));
   assert.equal(messages.at(-1).type, 'signedOut');
   assert.equal(messages.at(-1).session, 2);
-  console.log('Bridge self-check passed: uploaded IDs, occurrences, pagination, playlist writes, failures, stale authorization.');
+  assert.equal(readTimers.size, 0);
+  console.log('Bridge self-check passed: uploaded IDs, occurrences, pagination, read deadlines, responsive transport, playlist writes, failures, stale authorization.');
 })().catch(failure => { console.error(failure); process.exitCode = 1; });

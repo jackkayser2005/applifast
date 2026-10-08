@@ -61,6 +61,47 @@ previously documented limitations.
 
 ## Supported now
 
+### Library request lifetime
+
+Every desktop song-library page now has its own request ID, including initial
+sign-in, cached-session refresh, manual refresh and continuation pages. The
+bridge and native sanitizer retain it. Only the current request may replace
+loaded songs or finish loading; stale successes, stale failures, duplicate pages
+and untagged replies are ignored. Sign-out invalidates the active request.
+The existing browser-console diagnostic remains compatible with untagged reads.
+Storage and cached song formats are unchanged.
+
+Library reads no longer share the transport command chain. A slow read cannot
+hold Pause behind a network response. All MusicKit metadata reads supply a
+20-second abort deadline, and sign-out aborts pending API reads as well as writes.
+The shared request helper keeps playlist writes' existing confirmation behavior
+without adding a timeout that could misreport an already-applied mutation.
+Library failures show a fixed retry diagnosis, keep loaded songs and the queue,
+and do not pause playback. Playback errors still pause playback but no longer
+cancel an independent library refresh. No layout, control, credential store,
+cache format, dependency or network destination changes.
+
+Focused fixtures verify out-of-order successes and errors, missing IDs,
+duplicate replies, refreshed favorite metadata, unchanged queue occurrences,
+playback failure during refresh and sign-out. Bridge checks cover an unresolved
+read alongside Pause, a controlled read deadline, fixed error output and aborting
+library/Home reads during sign-out without accepting late results. Native tests
+verify ID/error sanitization and the JavaScript-safe request-ID boundary.
+These checks do not establish actual SDK deadline/cancellation behavior or
+integrated listening. Those remain separate Windows account acceptance checks.
+
+Windows checks pass: 986 default and 1,017 demo library tests, with four opt-in
+checks skipped in each, binary/integration suites, formatting, strict default/demo
+Clippy, default doc tests, strict demo Rustdoc and the demo build. All 11
+standalone host tests pass (one native-store check skipped), with standalone
+Clippy/formatting. Bridge, token-generator and gettext checks pass. Translation
+updates change source references and template dates only, without new messages
+or translations. The existing all-features/projectM, launcher/site/Nix, hosted
+CI and non-Windows limitations remain. Existing visual comparisons apply because
+the views and fixture rendering are unchanged.
+
+### Listening and browsing
+
 - Reuse the original sidebar, tables, artwork, search, account menu and player bar.
   Apple authorization occupies the existing sign-in card. No replacement app shell
   or palette redesign is included. The synced song shelf is called **Songs**.

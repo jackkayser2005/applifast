@@ -77,6 +77,17 @@ EOF also exits. Other console commands are JSON, for example:
 {"type":"signOut"}
 ```
 
+The desktop app also supplies a numeric `id` with every song-library page request.
+The library reply echoes it. Only the app's currently pending ID may update its
+songs, loading state or read error; older, duplicated and untagged replies are
+ignored. The diagnostic console still accepts the untagged example above.
+Metadata reads run independently of transport commands and supply a 20-second
+abort deadline. Sign-out aborts in-flight API reads and writes and suppresses
+their late replies. Playlist writes retain their existing confirmation behavior
+without a new deadline, since an interrupted write may have reached Apple.
+Library read failures retain loaded songs and the local playback queue, and
+do not pause audio. Refresh Songs retries the read.
+
 Repeat modes are 0=off, 1=current occurrence, 2=queue. Sign-out invalidates old
 responses, deletes the protected user grant, closes popups and clears the
 dedicated browser profile. Check the `profileCleared` result. A durable

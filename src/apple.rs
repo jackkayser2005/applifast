@@ -193,6 +193,7 @@ pub struct State {
     pub next_reads: std::collections::HashMap<Read, (String, u32)>,
     pub pending_play: Option<crate::model::Action>,
     read_serial: u64,
+    library_read_id: Option<u64>,
     pub index: Option<usize>,
     pub local: LocalState,
     pending_index: Option<usize>,
@@ -238,6 +239,7 @@ impl Default for State {
             next_reads: Default::default(),
             pending_play: None,
             read_serial: 0,
+            library_read_id: None,
             index: None,
             local: LocalState::default(),
             pending_index: None,
@@ -269,6 +271,7 @@ impl State {
         self.home.clear();
         self.known_songs.clear();
         self.reads.clear();
+        self.library_read_id = None;
         self.playlist_creates.clear();
         self.playlist_confirms.clear();
         self.playlist_recheck_at = None;
@@ -501,6 +504,13 @@ impl State {
         self.reads.insert(self.read_serial, (target, offset));
         json!({"type":"request","id":self.read_serial,"path":path})
     }
+    pub fn library_request(&mut self, next: Option<String>) -> Value {
+        self.read_serial += 1;
+        self.library_read_id = Some(self.read_serial);
+        self.loading = true;
+        self.error = None;
+        json!({"type":"library", "id":self.read_serial, "next":next})
+    }
     pub fn create_playlist(
         &mut self,
         name: &str,
@@ -703,7 +713,7 @@ impl State {
                 self.local.connected = self.authorized;
                 if self.authorized {
                     self.loading = true;
-                    return Some(json!({"type":"library","next":null}));
+                    return Some(self.library_request(None));
                 }
             }
             Some("authorized") => {
@@ -719,11 +729,20 @@ impl State {
                 self.authorized = true;
                 self.local.connected = true;
                 self.loading = true;
-                return Some(json!({"type":"library","next":null}));
+                return Some(self.library_request(None));
             }
             Some("signedOut") => self.clear_account(),
             Some("library") => {
+                if self.library_read_id.is_none() || event["id"].as_u64() != self.library_read_id {
+                    return None;
+                }
+                self.library_read_id = None;
                 self.loading = false;
+                if event["error"].is_string() {
+                    self.error = Some("Apple Music could not load songs. Check sign-in and connection, then refresh Songs.".into());
+                    self.refresh_songs = None;
+                    return None;
+                }
                 let parsed: Result<Vec<Song>, _> = serde_json::from_value(event["items"].clone());
                 match parsed {
                     Ok(songs) if songs.iter().all(|song| song.item.validate().is_ok()) => {
@@ -738,7 +757,7 @@ impl State {
                             // Keep cached rows visible until their loaded span is refreshed.
                             if next.is_some() && fresh.len() < self.songs.len() {
                                 self.loading = true;
-                                return Some(json!({"type":"library","next":next}));
+                                return Some(self.library_request(next));
                             }
                             self.songs = self.refresh_songs.take().unwrap_or_default();
                         } else {
@@ -835,9 +854,10 @@ impl State {
                 {
                     return None;
                 }
-                self.loading = false;
                 if event.get("requestGeneration").is_none() {
+                    self.loading = false;
                     self.refresh_songs = None;
+                    self.library_read_id = None;
                 }
                 self.error = Some(
                     event["message"]
@@ -938,9 +958,10 @@ impl State {
             },
         })
     }
-    pub fn refresh_library(&mut self) {
+    pub fn refresh_library(&mut self) -> Value {
         self.refresh_songs = Some(Vec::new());
-        self.loading = true;
+        self.error = None;
+        self.library_request(None)
     }
     #[cfg(feature = "demo")]
     pub fn demo(saved: &[crate::api::models::SavedTrack]) -> Self {
@@ -1119,14 +1140,14 @@ mod tests {
     #[test]
     fn cached_rows_stay_until_refresh_completes_and_cannot_undo_a_new_queue() {
         let mut state = queue_state();
-        state.refresh_songs = Some(Vec::new());
+        let request = state.refresh_library();
         let row = serde_json::to_value(&state.songs[0]).unwrap();
-        let next = state.event(1, &json!({"type":"library","session":1,"items":[row.clone()],"next":"/v1/me/library/songs?offset=100"}));
-        assert!(next.is_some());
+        let next = state.event(1, &json!({"type":"library","id":request["id"],"session":1,"items":[row.clone()],"next":"/v1/me/library/songs?offset=100"})).unwrap();
+        assert_ne!(request["id"], next["id"]);
         assert_eq!(state.songs.len(), 3);
         state.event(
             1,
-            &json!({"type":"library","session":1,"items":[row],"next":null}),
+            &json!({"type":"library","id":next["id"],"session":1,"items":[row],"next":null}),
         );
         assert_eq!(state.songs.len(), 2);
         assert_eq!(state.queue.len(), 3);
@@ -1345,9 +1366,10 @@ mod tests {
     fn duplicate_occurrences_and_new_play_intent_survive_stale_and_failed_events() {
         let row = json!({"kind":"library","id":"i.matched","playParams":{"id":"i.matched","kind":"song","isLibrary":true,"catalogId":"123"},"catalogId":"123","title":"Library copy","artist":"Example","album":"Example","durationMs":180000});
         let mut state = State::default();
+        let request = state.library_request(None);
         state.event(
             1,
-            &json!({"type":"library","session":1,"items":[row.clone(),row],"next":null}),
+            &json!({"type":"library","id":request["id"],"session":1,"items":[row.clone(),row],"next":null}),
         );
         let command = state.play(1).unwrap();
         assert_eq!(command["index"], 1);
@@ -1378,7 +1400,8 @@ mod tests {
     fn pages_preserve_uploads_and_ignore_revoked_events() {
         let row = json!({"kind":"library","id":"i.upload","playParams":null,"catalogId":null,"title":"Upload","artist":"Me","album":"","durationMs":1234});
         let mut state = State::default();
-        state.event(1, &json!({"type":"library","session":1,"items":[row.clone()],"next":"/v1/me/library/songs?offset=100"}));
+        let request = state.library_request(None);
+        state.event(1, &json!({"type":"library","id":request["id"],"session":1,"items":[row.clone()],"next":"/v1/me/library/songs?offset=100"}));
         assert_eq!(state.songs.len(), 1);
         assert!(!state.songs[0].available());
         assert!(state.songs[0].catalog_id.is_none());
@@ -1392,11 +1415,71 @@ mod tests {
         state.event(0, &json!({"type":"authorized","session":2}));
         assert!(state.songs.is_empty());
         assert!(!state.authorized);
+        let request = state.library_request(None);
         state.event(
             1,
-            &json!({"type":"library","session":2,"items":[row],"next":null}),
+            &json!({"type":"library","id":request["id"],"session":2,"items":[row],"next":null}),
         );
         assert_eq!(state.songs.len(), 1);
         assert!(state.next.is_none());
+    }
+
+    #[test]
+    fn library_replies_cannot_undo_refresh_or_interrupt_playback() {
+        let mut state = queue_state();
+        state.local.playback = Playback::Playing;
+        let mut fresh = serde_json::to_value(&state.songs[0]).unwrap();
+        fresh["inFavorites"] = json!(true);
+        let old = state.library_request(None);
+        let request = state.refresh_library();
+        for reply in [
+            json!({"type":"library","id":old["id"],"items":[],"next":null}),
+            json!({"type":"library","id":old["id"],"error":"secret SDK response"}),
+            json!({"type":"library","items":[],"next":null}),
+        ] {
+            assert!(state.event(1, &reply).is_none());
+            assert!(state.loading);
+            assert!(state.error.is_none());
+            assert_eq!(state.songs.len(), 3);
+        }
+        let reply = json!({"type":"library","id":request["id"],"items":[fresh],"next":null});
+        state.event(1, &reply);
+        assert_eq!(state.songs.len(), 1);
+        assert_eq!(state.songs[0].in_favorites, Some(true));
+        assert!(!state.loading);
+        state.event(
+            1,
+            &json!({"type":"library","id":old["id"],"items":[],"next":null}),
+        );
+        state.event(1, &reply); // A duplicate page cannot duplicate library rows.
+        assert_eq!(state.songs.len(), 1);
+        let failed = state.library_request(state.next.clone());
+        state.event(
+            1,
+            &json!({"type":"library","id":failed["id"],"error":"secret SDK response"}),
+        );
+        assert!(!state.loading);
+        assert!(!state.error.as_ref().unwrap().contains("secret"));
+        assert_eq!(state.songs[0].in_favorites, Some(true));
+        assert_eq!(state.queue.len(), 3);
+        assert_eq!(state.local.playback, Playback::Playing);
+        let retry = state.refresh_library();
+        state.event(1, &json!({"type":"error","requestGeneration":state.request_generation,"message":"Playback failed"}));
+        assert!(
+            state.loading,
+            "Playback failure cannot cancel a metadata refresh"
+        );
+        assert_eq!(state.local.playback, Playback::Paused);
+        state.event(1, &json!({"type":"library","id":retry["id"],"items":[serde_json::to_value(&state.songs[0]).unwrap()],"next":null}));
+        assert!(!state.loading);
+        assert_eq!(
+            state.songs.len(),
+            1,
+            "Refresh still replaces its cached span"
+        );
+        assert_eq!(state.queue.len(), 3);
+        state.clear_account();
+        state.event(1, &reply);
+        assert!(state.songs.is_empty());
     }
 }
