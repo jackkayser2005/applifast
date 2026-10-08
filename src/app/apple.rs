@@ -1576,6 +1576,15 @@ mod tests {
                     let event = events
                         .recv_timeout(deadline.saturating_duration_since(Instant::now()))
                         .unwrap_or_else(|_| panic!("Host timed out awaiting {kind}"));
+                    if event["type"] == "hostErrorCode"
+                        && let Some(code) = event["hresult"].as_str().filter(|code| {
+                            code.len() == 10
+                                && code.starts_with("0x")
+                                && code[2..].bytes().all(|byte| byte.is_ascii_hexdigit())
+                        })
+                    {
+                        eprintln!("WebView2 initialization HRESULT: {code}");
+                    }
                     if event["type"] == "error" {
                         // Fixed diagnoses only; never log authorization or SDK error text.
                         let diagnosis = match event["message"].as_str() {
@@ -1600,6 +1609,9 @@ mod tests {
                             Some("LOCALAPPDATA is unavailable.") => {
                                 "missing local app data directory"
                             }
+                            Some(
+                                "WebView2 host failed. Install or repair the Evergreen runtime.",
+                            ) => "WebView2 initialization failed",
                             Some("Cannot read sign-out state.") => "cannot read sign-out marker",
                             Some("Stored credential is invalid.") => "invalid stored credential",
                             Some(
