@@ -116,6 +116,27 @@ matching or the app's playback timing. The initial token self-check command
 used a nonexistent filename; the existing `generate-token.cjs --self-test`
 passed after correcting the command.
 
+The follow-up read-only account check can be run with:
+
+```powershell
+cargo test --locked --lib app::apple::tests::native_host_reads_home_and_album_dates -- --ignored --exact --nocapture
+```
+
+It starts no playback or library writes. It checks the four Home responses and
+the album-date mapping through the native host and application response path,
+and logs aggregate counts only. This machine's run failed during host
+initialization, before authorization readiness or any Apple API read. Fixed
+redacted setup diagnoses did not identify the cause. Raw host-error logging was
+rejected by automatic approval review because it could expose authorization or
+SDK data; that logging was removed. No real-account Home/date result is claimed.
+
+After adding this opt-in check, strict default/demo all-target Clippy and
+formatting pass. Both full all-target suites pass again (982/1,011 library tests,
+now 3 ignored in each). The first demo rerun hit the existing settings-save
+branding test; its isolated run and the full demo rerun passed without changing
+or weakening the test. The packaged preview predates only this test/docs
+follow-up; its application code is unchanged.
+
 The [lyrics comparison](review-lyrics/index.html) records matching Windows
 light/dark and narrow/normal before/after captures and full-screen failure,
 loading, instrumental and no-match states. The baseline side panel is forced

@@ -1558,6 +1558,121 @@ fn merge<T: Default>(held: &mut Option<ApiPage<T>>, fresh: Option<ApiPage<T>>) {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "Reads Home and album dates using the locally authorized Apple account"]
+    fn native_host_reads_home_and_album_dates() {
+        let (sender, events) = std::sync::mpsc::channel();
+        let host = crate::player::AppleHost::start(None, move |event| {
+            let _ = sender.send(event);
+        });
+        let mut app = super::super::tests::test_app("apple-home-native");
+        app.backend.set_offline(true);
+        let check = || {
+            let await_event = |kind: &str, id: Option<u64>| {
+                let deadline = Instant::now() + Duration::from_secs(45);
+                loop {
+                    let event = events
+                        .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                        .unwrap_or_else(|_| panic!("Host timed out awaiting {kind}"));
+                    if event["type"] == "error" {
+                        // Fixed diagnoses only; never log authorization or SDK error text.
+                        let diagnosis = match event["message"].as_str() {
+                            Some("Import your developer token with --token-file PATH.") => {
+                                "missing developer token"
+                            }
+                            Some("Developer token expired. Generate and import a fresh token.") => {
+                                "expired developer token"
+                            }
+                            Some(
+                                "Expected a signed MusicKit developer JWT, not a .p8 signing key.",
+                            ) => "invalid developer token format",
+                            Some(
+                                "Developer token dates are invalid. Check the signing machine's clock.",
+                            ) => "invalid token dates",
+                            Some(
+                                "Developer token's origin must permit https://applifast.invalid.",
+                            ) => "invalid token origin",
+                            Some("System clock is before the Unix epoch.") => {
+                                "invalid system clock"
+                            }
+                            Some("LOCALAPPDATA is unavailable.") => {
+                                "missing local app data directory"
+                            }
+                            Some("Cannot read sign-out state.") => "cannot read sign-out marker",
+                            Some("Stored credential is invalid.") => "invalid stored credential",
+                            Some(
+                                "Windows Credential Manager is unavailable."
+                                | "Cannot read Windows Credential Manager.",
+                            ) => "credential store unavailable",
+                            Some(
+                                "Probe did not finish successfully."
+                                | "Playback host thread stopped unexpectedly.",
+                            ) => "native host stopped",
+                            _ => "unclassified host initialization failure",
+                        };
+                        panic!("{diagnosis}");
+                    }
+                    if event["type"] == kind && id.is_none_or(|id| event["id"] == id) {
+                        return event;
+                    }
+                }
+            };
+            let ready = await_event("ready", None);
+            assert_eq!(ready["authorized"], true, "Authorize the local host first");
+            let mut state = crate::apple::State::default();
+            state.authorized = true;
+            state.ready = true;
+            app.apple = Some(state);
+            for shelf in crate::apple::HomeShelf::ALL {
+                let command =
+                    app.apple
+                        .as_mut()
+                        .unwrap()
+                        .read(Read::Home(shelf), shelf.path().into(), 0);
+                host.send(command.to_string());
+                let response = await_event("response", command["id"].as_u64());
+                assert!(response["error"].is_null(), "Home {shelf:?} read failed");
+                app.apple_response(&response);
+                let cards = app.apple.as_ref().unwrap().home[&shelf].get().unwrap();
+                eprintln!("Home {shelf:?}: {} loaded cards", cards.len());
+            }
+            let command = app.apple.as_mut().unwrap().read(
+                Read::Albums,
+                "/v1/me/library/albums?limit=100".into(),
+                0,
+            );
+            host.send(command.to_string());
+            let response = await_event("response", command["id"].as_u64());
+            assert!(response["error"].is_null(), "Library album read failed");
+            let rows = response["data"]["data"].as_array().unwrap();
+            let dated = rows
+                .iter()
+                .filter(|row| models::added_at(row).is_some())
+                .count();
+            let total = rows.len();
+            app.apple_response(&response);
+            assert_eq!(app.library.albums.items.len(), total);
+            assert_eq!(
+                app.library
+                    .albums
+                    .items
+                    .iter()
+                    .filter(|row| row.added_at.is_some())
+                    .count(),
+                dated
+            );
+            eprintln!("Library albums: {total} loaded rows, {dated} parsed add dates");
+        };
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(check));
+        host.shutdown();
+        app.backend.shutdown();
+        if let Err(error) = result {
+            std::panic::resume_unwind(error);
+        }
+    }
+
     #[test]
     fn apple_home_reads_paginate_refresh_and_ignore_stale_answers() {
         use crate::apple::HomeShelf;
