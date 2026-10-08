@@ -9,6 +9,7 @@
 > The Songs view can show only loaded songs Apple marks as favorites; favorite
 > metadata is retained in the existing restart cache. Favorite writes are pending.
 > A separate Favorites page and compact sidebar shelf reuse those loaded flags.
+> Library song reads explicitly request favorite metadata on every page.
 > Appearance sets its entry count, and Show all opens the complete loaded subset.
 > Home reads Apple Recently Played, Recently Added, Heavy Rotation and Recommendations.
 > Search loads additional catalog and library pages through Load more, with

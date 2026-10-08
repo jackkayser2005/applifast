@@ -274,6 +274,50 @@ Deterministic sample states: `--demo-show favorites` and `favorites-empty`.
 They test filtering and rendering, not an account's favorite metadata or playback.
 Real-account favorite reads and restart restoration remain runtime acceptance gates.
 
+### Requesting favorite metadata
+
+The favorite-metadata follow-up explicitly requests `extend=inFavorites` on
+library song reads. Apple's [library song endpoint](https://developer.apple.com/documentation/applemusicapi/get-all-library-songs)
+supports attribute extensions, and its [song attributes](https://developer.apple.com/documentation/applemusicapi/librarysongs/attributes-data.dictionary)
+include the optional favorite boolean. The MusicKit bridge adds that extension
+to initial pages, continuation pages and direct library song reads. It keeps
+existing query parameters and requests album/artist relationships when a next
+URL omits them. Original library IDs and playback parameters remain unchanged.
+Catalog/search/playlist routes are not extended. The native read boundary permits
+only this named extension on library song collection/detail paths; other extension
+names, catalog paths and playlist-track paths remain rejected.
+
+This changes reads, not favorite writes or the interface. Existing optional flags
+and the atomic restart cache retain their format; missing/string flags stay unknown,
+and ratings do not imply favorites. After updating, use **Songs > Refresh** to
+replace the cached library span with newly requested metadata. No extra endpoint,
+dependency, credential or cache is introduced. Real-account favorite completeness
+still requires verification; requesting a documented attribute does not prove what
+an individual account returns. The older preview still owns the profile in the
+latest process check, so no competing account host has been started.
+
+The bridge self-check verifies first/next/detail requests, preserved offset and
+album/artist inclusion, a single favorite extension, untouched catalog search,
+optional boolean flags and original uploaded IDs. All 11 standalone host tests
+pass, plus strict standalone Clippy/formatting and its isolated Windows Credential
+Manager dummy round trip. This read-only change retains the existing Favorites
+[visual comparison](review-favorites-shelf/index.html); no layout or control changed.
+Integrated Windows checks also pass: 985 default and 1,016 demo library tests
+(three account checks ignored in each), binary/integration suites, strict
+default/demo Clippy, formatting, gettext, default doc tests, strict Rustdoc and
+token-generator self-check. Optional projectM/all-features, launcher/site/Nix,
+non-Windows and real-account acceptance remain separate pending gates.
+Draft [PR #22](https://github.com/jackkayser2005/applifast/pull/22) is stacked on
+the search slice. Combined local preview: `dist/applifast-preview-9d4c906/Applifast.exe`.
+The four-file portable archive is `dist/applifast-windows-preview-9d4c906.zip`
+(23,057,452 bytes), SHA256
+`72333a6a29a54bd9b461a37c0a673a53000e8afd560da7ef52c322028b02bbcf`.
+Executable SHA256: `0bdb8081b6b9e090b9cf9230bf63bdfae4c6e0c12aad5d8ea54d671abb06efcf`.
+This is a Windows x64 debug/static-CRT/demo preview with inherited version `0.12.0`,
+not an installer or public release. Quit older previews through the tray before
+starting it. Songs Refresh picks up the metadata request changes; Home Refresh
+retries Recently added and the other feeds. No credential is in the package.
+
 ### Sidebar Favorites shelf
 
 On `feat/apple-favorites-shelf`, Apple navigation has a separate Favorites page.

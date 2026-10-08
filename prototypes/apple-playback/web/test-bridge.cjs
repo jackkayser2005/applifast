@@ -30,7 +30,7 @@ const sandbox = {
     chrome: { webview: { postMessage: event => messages.push(event) } }, isSecureContext: true },
   document: { addEventListener: () => {}, dispatchEvent: () => {} },
   CustomEvent: class { constructor(name, properties) { Object.assign(this, properties); } },
-  structuredClone, TextEncoder, AbortController
+  structuredClone, TextEncoder, AbortController, URLSearchParams
 };
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), sandbox);
 const app = sandbox.window.applifast;
@@ -116,10 +116,24 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
     { id: 'i.invalid', attributes: { name: 'Invalid', inFavorites: 'true' } }],
     next: '/v1/me/library/songs?offset=100' } };
   await app.dispatch({ type: 'library', next: null });
+  const firstLibraryURL = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
+  assert.equal(firstLibraryURL.pathname, '/v1/me/library/songs');
+  assert.equal(firstLibraryURL.searchParams.get('include'), 'albums,artists');
+  assert.equal(firstLibraryURL.searchParams.get('extend'), 'inFavorites');
   const page = messages.find(event => event.type === 'library');
   assert.equal(page.items[0].id, 'i.upload');
   assert.equal(page.items[0].playParams, null); // Unavailable metadata stays visible.
   assert.deepEqual(page.items.map(item => item.inFavorites), [true, false, null, null]);
+  await app.dispatch({type:'library',next:page.next});
+  const nextLibraryURL = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
+  assert.equal(nextLibraryURL.searchParams.get('offset'), '100');
+  assert.equal(nextLibraryURL.searchParams.get('include'), 'albums,artists');
+  assert.deepEqual(nextLibraryURL.searchParams.getAll('extend'), ['inFavorites']);
+  await app.dispatch({type:'request',id:201,path:'/v1/me/library/songs/i.upload?extend=inFavorites'});
+  const detailURL = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
+  assert.deepEqual(detailURL.searchParams.getAll('extend'), ['inFavorites']);
+  await app.dispatch({type:'request',id:202,path:'/v1/catalog/us/search?term=test&types=songs'});
+  assert.equal(requests.at(-1)[0], '/v1/catalog/us/search?term=test&types=songs');
   const count = messages.filter(event => event.type === 'library').length;
   libraryReply.data.next = 'https://untrusted.example/';
   await app.dispatch({ type: 'library', next: null });
