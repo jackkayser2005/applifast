@@ -49,7 +49,7 @@ album additions, insertion, reordering, removal and clear use the local Apple
 occurrence queue. Library/queue restoration retains the current occurrence,
 position, manual additions, context, Previous history, shuffle and repeat.
 It restores paused. Home/discovery/recommendations,
-favorites remain follow-up integration work. Playlist creation and appending
+favorite writes remain follow-up integration work. Playlist creation and appending
 are implemented below, with real-account write acceptance pending.
 The existing mini player uses the same playback actions, but its window lifecycle
 still needs real runtime acceptance. Cloud-only upload playback
@@ -85,6 +85,52 @@ Apple Account settings provide developer-token renewal and sign-out. Unsupported
 legacy decoder, Spotify account, proxy, audio-cache and upstream-update settings
 are hidden. Artwork already uses a disk cache. Loaded Apple song metadata and
 the full local queue now persist across restarts; audio remains streamed by MusicKit.
+
+## Reading favorites
+
+On `feat/apple-favorites-view`, **Show only favorites** in Songs filters the
+loaded library using Apple's optional `inFavorites` boolean. The heading becomes
+Favorites and its count covers only these loaded rows. Library membership,
+ratings, a catalog match and a missing flag never imply a favorite. Unknown and
+false flags remain distinct in metadata. Unavailable favorited songs stay visible.
+The filtered header and song rows play only the displayed playable songs, even
+with shuffle enabled. Sorting and text filtering still apply within the subset.
+
+An empty loaded subset explains its scope and offers **Load more songs** when
+Apple supplies another page. It does not claim the entire account has no favorites
+or download every page automatically. Clearing the checkbox restores all loaded
+songs. Sign-out clears this in-memory view preference along with account data.
+Favorite metadata persists as an optional field in the existing `apple-session.json`;
+older snapshots load with unknown favorite state. No new storage, dependencies,
+credentials or network endpoints are added. Refresh Songs to pick up changes made
+in Apple Music.
+
+This is a read/filter slice. Player/mini-player/row favorite write controls, bulk
+writes, a separate navigation entry and a configurable compact Favorites shelf
+remain pending. Apple's [favorite state](https://developer.apple.com/documentation/applemusicapi/librarysongs/attributes-data.dictionary)
+is separate from ratings. Its [add endpoint](https://developer.apple.com/documentation/applemusicapi/add-resource-to-favorites)
+returns 202 with no body and may ignore IDs, so an acknowledgement alone cannot
+confirm a favorite. A supported removal route has not been established in the
+official API documentation checked for this slice; no undocumented DELETE or
+ratings substitution has been implemented.
+
+Deterministic sample states: `--demo-show favorites` and `favorites-empty`.
+They test filtering and rendering, not an account's favorite metadata or playback.
+Real-account favorite reads and restart restoration remain runtime acceptance gates.
+
+Windows validation for this slice: 979 default and 1,006 demo library tests,
+all default/demo binary and integration targets, strict default/demo Clippy,
+ten playback-boundary tests, both isolated native credential-store round trips,
+Node bridge/token checks, formatting, generated catalogs, default doctests and
+Rustdoc with warnings denied pass. All-feature checks remain blocked by the
+unchanged optional projectM vcpkg prerequisite. Jekyll/Nix and non-Windows builds
+have not been verified here. The ignored real-account playback/restoration test
+was deferred because an older app instance was still running.
+The [favorites comparison](review-favorites/index.html) has four matching
+light/dark, narrow/normal Windows pairs and six selected/empty-state captures.
+All fourteen captures were inspected; their dimensions and gallery selectors were
+checked. At the narrow size, the existing hero style ellipsizes its description.
+The [comparison index](reviews.html) links all integration reviews.
 
 ## Restart restoration
 

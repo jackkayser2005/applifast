@@ -8512,6 +8512,12 @@ impl App {
 
     fn apply_apple_action(&mut self, action: &Action) -> bool {
         use serde_json::json;
+        if let Action::AppleShowFavorites(only) = action {
+            self.apple.as_mut().unwrap().favorites_only = *only;
+            // The existing row cache and selection must rebuild for the new subset.
+            self.library.liked.revision += 1;
+            return true;
+        }
         if matches!(action, Action::CloseDialog | Action::ShowDialog(_)) {
             let apple = self.apple.as_mut().unwrap();
             if apple.pending_playlist_add.take().is_some()
@@ -8960,7 +8966,10 @@ impl App {
             self.leave_lyrics_fullscreen(ctx);
         }
         match action {
-            Action::AppleImportToken(_) | Action::AppleSend(_) | Action::ApplePlaySong(_) => {}
+            Action::AppleImportToken(_)
+            | Action::AppleSend(_)
+            | Action::ApplePlaySong(_)
+            | Action::AppleShowFavorites(_) => {}
             Action::Open(page) => self.open(page),
             Action::OpenSongRadio { uri, track } => self.open_song_radio(&uri, &track),
             Action::PrepareTint(url) => {

@@ -78,6 +78,7 @@ pub fn song(resource: &Value) -> Option<Song> {
         artwork: images(resource).first().map(|image| image.url.clone()),
         album_id: related_id(resource, "albums"),
         artist_id: related_id(resource, "artists"),
+        in_favorites: attributes["inFavorites"].as_bool(),
     })
 }
 pub fn album(resource: &Value) -> Album {
@@ -149,6 +150,33 @@ pub fn playlist(resource: &Value) -> Playlist {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn favorites_are_optional_booleans_and_survive_metadata_serialization() {
+        for (flag, expected) in [
+            (json!(true), Some(true)),
+            (json!(false), Some(false)),
+            (Value::Null, None),
+            (json!("true"), None),
+        ] {
+            let resource = json!({"id":"i.upload","type":"library-songs","attributes":{
+                "name":"Upload", "inFavorites":flag, "rating":1}});
+            let song = song(&resource).unwrap();
+            assert_eq!(song.in_favorites, expected);
+            assert!(!song.available());
+            let mut cached = serde_json::to_value(&song).unwrap();
+            assert_eq!(
+                serde_json::from_value::<Song>(cached.clone())
+                    .unwrap()
+                    .in_favorites,
+                expected
+            );
+            cached.as_object_mut().unwrap().remove("inFavorites");
+            assert_eq!(
+                serde_json::from_value::<Song>(cached).unwrap().in_favorites,
+                None
+            );
+        }
+    }
     #[test]
     fn library_and_catalog_identity_never_collapse() {
         let upload = json!({"id":"i.upload","type":"library-songs","attributes":{"name":"Upload","playParams":{"id":"i.upload","isLibrary":true,"catalogId":"123"}},"relationships":{"albums":{"data":[{"id":"l.album","type":"library-albums"}]}}});

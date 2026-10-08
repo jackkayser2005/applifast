@@ -39,11 +39,15 @@ with Add anyway confirmation for songs already in the destination.
 Demo-only states: --demo-show playlist-appending, playlist-appended,
 playlist-append-error or playlist-duplicates.
 
-Apple favorites and public token onboarding remain unfinished. Real-account
-creation, appending, permissions and uploaded members need acceptance.
+Songs offers Show only favorites for loaded songs Apple marks as favorites.
+Missing flags stay unknown. Favorite metadata stays in the existing restart cache;
+refresh Songs for changes made in Apple Music. Favorite writes, the compact shelf
+and public token onboarding remain unfinished. Demo: --demo-show favorites or
+favorites-empty. Real-account favorite reads and restart restoration need acceptance.
+Real-account creation, appending, permissions and uploaded members need acceptance.
 Cloud-only uploads are never replaced with catalog songs; their playback is
 not guaranteed. Runtime restart/window checks and the gaming soak are pending.
-See https://github.com/jackkayser2005/applifast/tree/feat/apple-playlist-additions
+See https://github.com/jackkayser2005/applifast/tree/feat/apple-favorites-view
 for the source and docs/applifast/listening-slice.md for exact validation status.
 
 Applifast is an MIT-licensed fork of Spotifast by Carmine Paolino.

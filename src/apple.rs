@@ -41,6 +41,9 @@ pub struct Song {
     pub album_id: Option<String>,
     #[serde(default)]
     pub artist_id: Option<String>,
+    /// Missing state is unknown, never inferred from library membership or ratings.
+    #[serde(default)]
+    pub in_favorites: Option<bool>,
 }
 
 impl Song {
@@ -121,6 +124,7 @@ pub struct State {
     pub next: Option<String>,
     pub token_path: String,
     pub filter: String,
+    pub favorites_only: bool,
     pub queue: Vec<Song>,
     pub order: QueueOrder,
     recent_adds: std::collections::HashMap<String, Instant>,
@@ -167,6 +171,7 @@ impl Default for State {
             next: None,
             token_path: String::new(),
             filter: String::new(),
+            favorites_only: false,
             queue: Vec::new(),
             order: QueueOrder::default(),
             recent_adds: Default::default(),
@@ -211,6 +216,7 @@ impl State {
         self.authorized = false;
         self.loading = false;
         self.songs.clear();
+        self.favorites_only = false;
         self.known_songs.clear();
         self.reads.clear();
         self.playlist_creates.clear();
@@ -920,6 +926,7 @@ impl State {
                     .artists
                     .first()
                     .and_then(|artist| artist.id.clone()),
+                in_favorites: Some(index % 3 == 0),
             });
         }
         state.local.volume = 32768;
@@ -963,6 +970,8 @@ mod tests {
         source.cache_checked = true;
         source.account_tag = Some("a".repeat(64));
         source.storefront = "us".into();
+        source.songs[0].in_favorites = Some(true);
+        source.songs[1].in_favorites = Some(false);
         let catalog: Song = serde_json::from_value(json!({"kind":"catalog","id":"123","playParams":{"id":"123","kind":"song"},"title":"Catalog","artist":"Artist","album":"Album","durationMs":180000,"catalogId":"123"})).unwrap();
         let catalog_uri = catalog.uri();
         source.known_songs.insert(catalog_uri.clone(), catalog);
@@ -1004,6 +1013,9 @@ mod tests {
         assert!(parsed.validate().is_ok());
         assert_eq!(restored.local.playback, Playback::Paused);
         assert_eq!(restored.local.position_ms, 42_000);
+        assert_eq!(restored.songs[0].in_favorites, Some(true));
+        assert_eq!(restored.songs[1].in_favorites, Some(false));
+        assert_eq!(restored.songs[2].in_favorites, None);
         assert_eq!(restored.order.upcoming, source.order.upcoming);
         assert_eq!(restored.order.manual_count, 3);
         assert_eq!(restored.queue[3].uri(), restored.queue[4].uri());
@@ -1022,6 +1034,7 @@ mod tests {
         let replaced = restored.cache_snapshot(false).unwrap();
         assert_eq!(replaced.queue[0].item.id, "i.b");
         restored.clear_account();
+        assert!(!restored.favorites_only);
         assert!(restored.restore_cache(Some(snapshot.clone())).is_none());
         assert!(restored.cache_snapshot(true).is_none());
         let mut invalid = snapshot;

@@ -109,12 +109,17 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   await app.dispatch({ type: 'previous' });
   assert(!played); // Previous keeps paused playback paused.
 
-  libraryReply = { data: { data: [{ id: 'i.upload', attributes: { name: 'Upload' } }],
+  libraryReply = { data: { data: [
+    { id: 'i.upload', attributes: { name: 'Upload', inFavorites: true } },
+    { id: 'i.other', attributes: { name: 'Other', inFavorites: false } },
+    { id: 'i.unknown', attributes: { name: 'Unknown' } },
+    { id: 'i.invalid', attributes: { name: 'Invalid', inFavorites: 'true' } }],
     next: '/v1/me/library/songs?offset=100' } };
   await app.dispatch({ type: 'library', next: null });
   const page = messages.find(event => event.type === 'library');
   assert.equal(page.items[0].id, 'i.upload');
   assert.equal(page.items[0].playParams, null); // Unavailable metadata stays visible.
+  assert.deepEqual(page.items.map(item => item.inFavorites), [true, false, null, null]);
   const count = messages.filter(event => event.type === 'library').length;
   libraryReply.data.next = 'https://untrusted.example/';
   await app.dispatch({ type: 'library', next: null });
