@@ -3,6 +3,7 @@
 <title>Applifast Favorites sidebar review</title>
 <style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
 <h1>Favorites in the left sidebar</h1>
+<p><a href="https://github.com/jackkayser2005/applifast/pull/20">PR #20</a>, source <code>36de358</code>, stacked on PR #19.</p>
 <p>Visible change: Apple navigation adds Favorites, a scrolling shelf of loaded favorite songs, and Show all favorites. The dedicated page reuses the existing table without changing the Songs checkbox. Appearance adds a zero-to-ten shelf count, default five; zero hides the shelf while retaining navigation.</p>
 <p>Baseline: Windows preview <code>2c6c576</code> (PR #19). Candidate: <code>feat/apple-favorites-shelf</code>. Captures match the same fourteen-song demo fixture, playing song, theme, zoom, window size and Reduce motion setting. The Favorites baseline is the existing filtered Songs view; the candidate is the deliberately separate Favorites page with the same five rows. Songs and Favorites use the same neutral pointer position. Settings uses the same scrollbar drag in each build; the added row changes its scroll extent.</p>
 <label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>

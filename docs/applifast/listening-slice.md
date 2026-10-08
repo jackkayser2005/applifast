@@ -308,7 +308,10 @@ The [Favorites sidebar review](review-favorites-shelf/index.html) includes 32
 inspected native Windows light/dark and narrow/normal frames for Songs, Favorites,
 Appearance, empty favorites and hidden shelf. Selector paths and PNG dimensions
 are checked. Real-account favorite completeness and playback remain pending.
-The existing projectM/vcpkg, site/Nix and non-Windows coverage limitations apply.
+Bridge and token-generator self-checks also pass. The launcher-install check
+cannot complete here because its Ruby YAML parser and Unix `true` utility are
+unavailable. The existing projectM/vcpkg, site/Nix and non-Windows coverage
+limitations apply.
 
 The Home follow-up found the user was running preview `3a87e21`, which predates
 the Apple Home integration in `1996c0e` and the combined lyrics preview `2c6c576`.
@@ -319,7 +322,21 @@ real-account feed. Quit older previews through the tray before testing the new
 one. Diagnostics print only fixed classifications and validated numeric HRESULTs,
 never authorization or SDK error text.
 
-Windows validation for this slice: 979 default and 1,006 demo library tests,
+The combined [draft PR #20](https://github.com/jackkayser2005/applifast/pull/20)
+preview is built from `36de3583e3408ae404fbd5cedd4c95e6675ebb2e`. Run
+`dist/applifast-preview-36de358/Applifast.exe` after quitting older tray instances.
+It includes Home, lyrics and the sidebar shelf. The executable is 63,895,552
+bytes, SHA-256 `1353df7076ccbdb1ed288e96d0a646eac665442dfe4bc4ee1b81e0eb2c9e3fe8`.
+`dist/applifast-windows-preview-36de358.zip` is 23,042,506 bytes, SHA-256
+`c0b1cefe940013d43b58f0023f05ddeef16b962691f267a80377c199e8b05a50`.
+Its verified whitelist is the executable, LICENSE, README.txt and BUILD.txt.
+This remains a Windows x64 MSVC debug/demo preview with a static CRT and inherited
+`spotifast 0.12.0` version, not a public release or installer. It carries no keys
+or tokens; existing local authorization is reused. Runtime gates above remain
+pending and the package is ignored by Git.
+
+Windows validation for the preceding favorites read/filter slice: 979 default
+and 1,006 demo library tests,
 all default/demo binary and integration targets, strict default/demo Clippy,
 ten playback-boundary tests, both isolated native credential-store round trips,
 Node bridge/token checks, formatting, generated catalogs, default doctests and
