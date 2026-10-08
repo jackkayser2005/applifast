@@ -364,6 +364,15 @@ fn contents(app: &mut App, ui: &mut egui::Ui, compact: bool) {
                 (row >= 0.0).then(|| (row.round() as usize).min(queued_len))
             })
             .flatten();
+        // Songs just queued ease in: a fade and a short rise into place.
+        let arrivals = egui::Id::new(("queue-arrivals", compact));
+        if let Some(queue) = app.queue.get() {
+            super::motion::note_rows(
+                ui.ctx(),
+                arrivals,
+                queue.queue[..queued_len].iter().map(PlayableItem::uri),
+            );
+        }
         widgets::virtual_rows(ui, queued_len, row_height + gap, |ui, index| {
             let width = ui.available_width();
             let shift = ui.ctx().animate_value_with_time(
@@ -375,7 +384,17 @@ fn contents(app: &mut App, ui: &mut egui::Ui, compact: bool) {
                 },
                 0.12,
             );
-            queue_row(app, ui, index, compact, shift);
+            let arrived = app
+                .queue
+                .get()
+                .and_then(|queue| queue.queue.get(index))
+                .map_or(1.0, |item| {
+                    super::motion::arrival(ui.ctx(), arrivals, item.uri())
+                });
+            ui.scope(|ui| {
+                ui.multiply_opacity(arrived);
+                queue_row(app, ui, index, compact, shift + 8.0 * (1.0 - arrived));
+            });
             ui.allocate_space(egui::vec2(width, gap));
         });
         if let Some(slot) = move_slot {

@@ -95,6 +95,67 @@ pub fn heart_scale(ctx: &Context, uri: &str) -> f32 {
         .map_or(1.0, |t| 1.0 + 0.35 * (std::f32::consts::PI * t).sin())
 }
 
+/// How long a newly arrived row takes to ease into place.
+const ARRIVAL_SECONDS: f32 = 0.22;
+
+/// Which rows of a list are new, and since when.
+#[derive(Clone, Default)]
+struct Arrivals {
+    known: std::collections::HashSet<String>,
+    since: std::collections::HashMap<String, f64>,
+    /// The frame that last drew the list. A list out of sight for a while
+    /// starts afresh rather than easing in everything added meanwhile.
+    pass: Option<u64>,
+}
+
+impl Arrivals {
+    fn update<'a>(&mut self, keys: impl Iterator<Item = &'a str>, pass: u64, now: f64) {
+        let keys: std::collections::HashSet<String> = keys.map(str::to_string).collect();
+        if self.pass.is_some_and(|last| last + 1 >= pass) {
+            for key in keys.difference(&self.known) {
+                self.since.insert(key.clone(), now);
+            }
+        } else {
+            self.since.clear();
+        }
+        self.since
+            .retain(|key, since| keys.contains(key) && now - *since < f64::from(ARRIVAL_SECONDS));
+        self.known = keys;
+        self.pass = Some(pass);
+    }
+}
+
+/// Note the rows the list under `id` holds this frame, by key. Rows that
+/// were not there the frame before ease in; see [`arrival`].
+pub fn note_rows<'a>(ctx: &Context, id: Id, keys: impl Iterator<Item = &'a str>) {
+    let mut arrivals = ctx
+        .data(|data| data.get_temp::<Arrivals>(id))
+        .unwrap_or_default();
+    let (pass, now) = (ctx.cumulative_pass_nr(), ctx.input(|input| input.time));
+    arrivals.update(keys, pass, now);
+    if reduced(ctx) {
+        arrivals.since.clear();
+    }
+    ctx.data_mut(|data| data.insert_temp(id, arrivals));
+}
+
+/// How far the row `key` of the list under `id` has eased in, from 0 just
+/// added to 1 settled.
+pub fn arrival(ctx: &Context, id: Id, key: &str) -> f32 {
+    let since = ctx.data(|data| {
+        data.get_temp::<Arrivals>(id)
+            .and_then(|arrivals| arrivals.since.get(key).copied())
+    });
+    let Some(since) = since else {
+        return 1.0;
+    };
+    let t = ((ctx.input(|input| input.time) - since) as f32 / ARRIVAL_SECONDS).clamp(0.0, 1.0);
+    if t < 1.0 {
+        ctx.request_repaint();
+    }
+    egui::emath::easing::cubic_out(t)
+}
+
 const BARS: usize = 4;
 const BARS_CLOCK: &str = "playing-bars-clock";
 /// How often moving bars are redrawn: thirty times a second is smooth at
@@ -252,6 +313,50 @@ mod tests {
                 assert!(scales[0] > 1.3, "{scales:?}");
                 assert!(scales[1] > 1.0 && scales[1] < scales[0], "{scales:?}");
                 assert_eq!(scales[2], 1.0);
+            }
+        }
+    }
+
+    /// Only rows added while the list is in view ease in: not the rows it
+    /// opened with, nor rows added while it was out of sight.
+    #[test]
+    fn only_rows_added_in_view_ease_in() {
+        let mut arrivals = Arrivals::default();
+        arrivals.update(["a", "b"].into_iter(), 1, 0.0);
+        assert!(arrivals.since.is_empty(), "the opening rows just show");
+        arrivals.update(["a", "b", "c"].into_iter(), 2, 0.05);
+        assert_eq!(arrivals.since.keys().collect::<Vec<_>>(), ["c"]);
+        arrivals.update(["a", "b", "c"].into_iter(), 3, 0.1);
+        assert!(arrivals.since.contains_key("c"), "still easing in");
+        arrivals.update(["a", "b", "c"].into_iter(), 4, 1.0);
+        assert!(arrivals.since.is_empty(), "settled");
+        arrivals.update(["a", "b", "c", "d"].into_iter(), 40, 2.0);
+        assert!(arrivals.since.is_empty(), "added while out of sight");
+        arrivals.update(["b", "c", "d", "e"].into_iter(), 41, 2.01);
+        assert_eq!(arrivals.since.keys().collect::<Vec<_>>(), ["e"]);
+    }
+
+    #[test]
+    fn a_new_row_eases_in_unless_motion_is_reduced() {
+        for reduced in [false, true] {
+            let ctx = Context::default();
+            let id = Id::new("queue");
+            let mut seen = Vec::new();
+            frame(&ctx, 0.0, reduced, |ctx| {
+                note_rows(ctx, id, ["a"].into_iter())
+            });
+            for time in [0.02, 0.1, 0.5] {
+                frame(&ctx, time, reduced, |ctx| {
+                    note_rows(ctx, id, ["a", "b"].into_iter());
+                    seen.push(arrival(ctx, id, "b"));
+                    assert_eq!(arrival(ctx, id, "a"), 1.0);
+                });
+            }
+            if reduced {
+                assert_eq!(seen, [1.0, 1.0, 1.0]);
+            } else {
+                assert!(seen[0] < seen[1] && seen[1] < 1.0, "{seen:?}");
+                assert_eq!(seen[2], 1.0);
             }
         }
     }
