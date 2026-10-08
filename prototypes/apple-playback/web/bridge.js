@@ -26,6 +26,14 @@
     message: 'Operation failed. Check authorization, subscription, connection, or song availability.'
   }, generation);
   const number = value => Number.isFinite(value) ? value : 0;
+  const songAttributes = path => {
+    const [bare, query = ''] = path.split('?');
+    if (!/^\/v1\/me\/library\/songs(?:\/[\w.-]+)?$/.test(bare)) return path;
+    const params = new URLSearchParams(query);
+    params.set('extend', 'inFavorites');
+    if (!params.has('include')) params.set('include', 'albums,artists');
+    return `${bare}?${params}`;
+  };
   const state = () => {
     const position = number(music.currentPlaybackTime);
     if (seekTarget !== null && Math.abs(position - seekTarget) <= 1) seekTarget = null;
@@ -148,7 +156,7 @@
       case 'authorize': return authorize(generation);
       case 'request': {
         // The native boundary validates the relative path before it reaches MusicKit.
-        const response = await music.api.music(command.path);
+        const response = await music.api.music(songAttributes(command.path));
         send('response', { id: command.id, data: response.data }, generation);
         return;
       }
@@ -189,7 +197,7 @@
         if (typeof route !== 'string' || !route.startsWith('/v1/me/library/songs?') || route.length > 2048) {
           throw new Error('pagination');
         }
-        const response = await music.api.music(route);
+        const response = await music.api.music(songAttributes(route));
         if (generation !== session) return;
         const page = response.data;
         if (!page || !Array.isArray(page.data)) throw new Error('libraryResponse');

@@ -344,8 +344,14 @@ pub fn valid_read_path(path: &str) -> bool {
     };
     valid
         && path.split_once('?').is_none_or(|(_, query)| {
-            url::form_urlencoded::parse(query.as_bytes()).all(|(key, _)| {
+            url::form_urlencoded::parse(query.as_bytes()).all(|(key, value)| {
                 ["limit", "offset", "term", "types", "include"].contains(&key.as_ref())
+                    || (key == "extend"
+                        && value == "inFavorites"
+                        && matches!(
+                            parts.as_slice(),
+                            ["v1", "me", "library", "songs"] | ["v1", "me", "library", "songs", _]
+                        ))
             })
         })
 }
@@ -432,6 +438,10 @@ mod tests {
             "/v1/me/recommendations/anything",
             "/v1/me/history/heavy-rotation?token=secret",
             "/v1/me/library/recently-added/anything",
+            "/v1/me/library/songs?extend=authorization",
+            "/v1/me/library/songs?extend=inFavorites,authorization",
+            "/v1/catalog/us/songs?extend=inFavorites",
+            "/v1/me/library/playlists/p.1/tracks?extend=inFavorites",
         ] {
             assert!(!valid_read_path(path), "{path}");
         }
@@ -444,6 +454,8 @@ mod tests {
             "/v1/me/history/heavy-rotation?offset=10",
             "/v1/me/recommendations?limit=10",
             "/v1/me/library/recently-added?offset=10",
+            "/v1/me/library/songs?limit=100&extend=inFavorites",
+            "/v1/me/library/songs/i.upload?extend=inFavorites",
         ] {
             assert!(valid_read_path(path), "{path}");
         }
