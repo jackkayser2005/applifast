@@ -1372,8 +1372,8 @@ fn track_row_contents(
                 Icon::PlayFilled
             };
             theme::paint_icon(ui, icon, cell, 14.0, palette.text);
-        } else if playing {
-            theme::paint_icon(ui, Icon::AudioLines, cell, 16.0, palette.accent);
+        } else if is_current {
+            super::motion::playing_bars(ui, cell, palette.accent, playing);
         } else {
             let color = if is_current {
                 palette.accent
@@ -1437,9 +1437,9 @@ fn track_row_contents(
                     Icon::PlayFilled
                 };
                 theme::paint_icon(ui, icon, cover_rect, 16.0, Color32::WHITE);
-            } else if playing {
+            } else if is_current {
                 scrim(110);
-                theme::paint_icon(ui, Icon::AudioLines, cover_rect, 16.0, palette.accent);
+                super::motion::playing_bars(ui, cover_rect, palette.accent, playing);
             }
         }
         x += cols.cover;

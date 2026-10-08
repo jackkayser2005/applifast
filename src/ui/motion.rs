@@ -77,6 +77,67 @@ pub fn progress(ctx: &Context, id: Id, seconds: f32) -> Option<f32> {
     Some(t)
 }
 
+const BARS: usize = 4;
+const BARS_CLOCK: &str = "playing-bars-clock";
+/// How often moving bars are redrawn: thirty times a second is smooth at
+/// their size.
+const BARS_FRAME: std::time::Duration = std::time::Duration::from_millis(33);
+
+/// Each bar's height, from 0 to 1, `t` seconds into the song's dance.
+/// Every bar mixes two slow waves of its own, so they never move in step.
+pub fn bar_heights(t: f64) -> [f32; BARS] {
+    const WAVES: [(f64, f64, f64, f64); BARS] = [
+        (7.1, 0.0, 3.3, 1.9),
+        (5.3, 2.1, 8.9, 0.4),
+        (8.7, 4.0, 4.1, 2.8),
+        (6.2, 1.2, 7.4, 5.1),
+    ];
+    WAVES.map(|(a, pa, b, pb)| {
+        let wave = ((t * a + pa).sin() + (t * b + pb).sin()) * 0.25 + 0.5;
+        (0.25 + 0.75 * wave) as f32
+    })
+}
+
+/// The heights still bars show under Reduce motion.
+const STILL_BARS: [f32; BARS] = [0.55, 1.0, 0.4, 0.75];
+
+/// Small bars in `rect` that dance while `moving`, as the playing song's
+/// mark in a track list. They hold where they were while the song is
+/// paused, and stand still under Reduce motion. Moving bars ask for the
+/// next frame only while they are on screen.
+pub fn playing_bars(ui: &egui::Ui, rect: egui::Rect, color: egui::Color32, moving: bool) {
+    if !ui.is_rect_visible(rect) {
+        return;
+    }
+    let ctx = ui.ctx();
+    let heights = if reduced(ctx) {
+        STILL_BARS
+    } else {
+        let clock = Id::new(BARS_CLOCK);
+        let t = if moving {
+            let now = ctx.input(|input| input.time);
+            ctx.data_mut(|data| data.insert_temp(clock, now));
+            ctx.request_repaint_after(BARS_FRAME);
+            now
+        } else {
+            ctx.data(|data| data.get_temp::<f64>(clock)).unwrap_or(0.0)
+        };
+        bar_heights(t)
+    };
+    let (width, gap, tallest) = (2.5, 2.0, 13.0);
+    let span = BARS as f32 * width + (BARS - 1) as f32 * gap;
+    let foot = rect.center().y + tallest / 2.0;
+    let mut left = rect.center().x - span / 2.0;
+    for height in heights {
+        let bar = egui::Rect::from_min_max(
+            egui::pos2(left, foot - tallest * height),
+            egui::pos2(left + width, foot),
+        );
+        ui.painter().rect_filled(bar, 1.0, color);
+        left += width + gap;
+    }
+}
+
 /// Hover states a demo capture asks for, since a screenshot has no pointer.
 #[cfg(feature = "demo")]
 static FORCED_HOVER: std::sync::Mutex<Vec<&'static str>> = std::sync::Mutex::new(Vec::new());
@@ -151,6 +212,54 @@ mod tests {
             assert_eq!(progress(ctx, id.with(2), 0.2), None);
         });
         assert_eq!(seen, [0.0, 1.0, 4.0, 9.0]);
+    }
+
+    /// Bars stay within their cell and keep moving apart from each other.
+    #[test]
+    fn playing_bars_dance_within_their_cell() {
+        let mut changed = false;
+        let first = bar_heights(0.0);
+        for step in 0..600 {
+            let heights = bar_heights(f64::from(step) * 0.033);
+            assert!(
+                heights.iter().all(|h| (0.25..=1.0).contains(h)),
+                "{heights:?}"
+            );
+            changed |= heights != first;
+        }
+        assert!(changed);
+    }
+
+    /// Moving bars ask for the next frame; paused or still bars, and bars
+    /// out of sight, leave the app idle.
+    #[test]
+    fn only_moving_bars_on_screen_keep_the_app_drawing() {
+        let delay = |moving: bool, reduced: bool, visible: bool| {
+            let ctx = Context::default();
+            let mut delay = std::time::Duration::ZERO;
+            // egui draws its first frames again regardless; measure after.
+            for _ in 0..3 {
+                let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                    set_reduced(ui.ctx(), reduced);
+                    let rect = if visible {
+                        egui::Rect::from_min_size(egui::pos2(10.0, 10.0), egui::vec2(20.0, 20.0))
+                    } else {
+                        egui::Rect::from_min_size(
+                            egui::pos2(-500.0, -500.0),
+                            egui::vec2(20.0, 20.0),
+                        )
+                    };
+                    playing_bars(ui, rect, egui::Color32::WHITE, moving);
+                });
+                output.textures_delta.clear();
+                delay = output.viewport_output[&egui::ViewportId::ROOT].repaint_delay;
+            }
+            delay
+        };
+        assert!(delay(true, false, true) <= BARS_FRAME);
+        assert_eq!(delay(false, false, true), std::time::Duration::MAX);
+        assert_eq!(delay(true, true, true), std::time::Duration::MAX);
+        assert_eq!(delay(true, false, false), std::time::Duration::MAX);
     }
 
     #[test]
