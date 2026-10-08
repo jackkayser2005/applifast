@@ -1430,6 +1430,10 @@ msgstr "Własny pasek tytułu"
 msgid "Player bar visualizer"
 msgstr "Wizualizacja na pasku odtwarzacza"
 
+#: src/ui/settings.rs:808
+msgid "Reduce motion"
+msgstr "Ogranicz ruch"
+
 #: src/ui/settings.rs:818
 msgid "Follow system uses your Omarchy colours."
 msgstr "Zgodnie z systemem używa Twoich kolorów Omarchy."
@@ -1496,6 +1500,10 @@ msgid ""
 msgstr ""
 "Pokazuje ruch utworu za przyciskami paska odtwarzacza, gdy gra na tym "
 "komputerze."
+
+#: src/ui/settings.rs:890
+msgid "Show changes at once, without fades, pops or moving bars."
+msgstr "Pokazuj zmiany od razu, bez przenikania, podskoków i ruchomych pasków."
 
 #: src/ui/settings.rs:1017
 msgid "Off"

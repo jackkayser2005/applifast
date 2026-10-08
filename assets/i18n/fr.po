@@ -1425,6 +1425,10 @@ msgstr "Barre de titre personnalisée"
 msgid "Player bar visualizer"
 msgstr "Visualiseur dans la barre de lecture"
 
+#: src/ui/settings.rs:808
+msgid "Reduce motion"
+msgstr "Réduire les animations"
+
 #: src/ui/settings.rs:818
 msgid "Follow system uses your Omarchy colours."
 msgstr "Suivre le système utilise vos couleurs Omarchy."
@@ -1494,6 +1498,10 @@ msgid ""
 msgstr ""
 "Montre le titre en mouvement derrière les commandes de la barre de lecture "
 "pendant qu’il est lu ici."
+
+#: src/ui/settings.rs:890
+msgid "Show changes at once, without fades, pops or moving bars."
+msgstr "Affiche les changements immédiatement, sans fondus, rebonds ni barres animées."
 
 #: src/ui/settings.rs:1017
 msgid "Off"

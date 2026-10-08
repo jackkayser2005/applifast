@@ -1427,6 +1427,10 @@ msgstr "Eigene Titelleiste"
 msgid "Player bar visualizer"
 msgstr "Visualizer in der Wiedergabeleiste"
 
+#: src/ui/settings.rs:808
+msgid "Reduce motion"
+msgstr "Bewegung reduzieren"
+
 #: src/ui/settings.rs:818
 msgid "Follow system uses your Omarchy colours."
 msgstr "„System folgen“ verwendet deine Omarchy-Farben."
@@ -1496,6 +1500,10 @@ msgid ""
 msgstr ""
 "Zeigt den Song in Bewegung hinter den Steuerelementen der Wiedergabeleiste, "
 "während er hier läuft."
+
+#: src/ui/settings.rs:890
+msgid "Show changes at once, without fades, pops or moving bars."
+msgstr "Änderungen sofort zeigen, ohne Überblendungen, Hüpfer oder bewegte Balken."
 
 #: src/ui/settings.rs:1017
 msgid "Off"

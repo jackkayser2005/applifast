@@ -1416,6 +1416,10 @@ msgstr "Anpassad namnlist"
 msgid "Player bar visualizer"
 msgstr "Visualisering i spelarfältet"
 
+#: src/ui/settings.rs:808
+msgid "Reduce motion"
+msgstr "Minska rörelse"
+
 #: src/ui/settings.rs:818
 msgid "Follow system uses your Omarchy colours."
 msgstr "”Följ systemet” använder dina Omarchy-färger."
@@ -1478,6 +1482,10 @@ msgid ""
 "Show the song moving behind the player bar's controls while it plays here."
 msgstr ""
 "Visar låten i rörelse bakom spelarfältets kontroller medan den spelas här."
+
+#: src/ui/settings.rs:890
+msgid "Show changes at once, without fades, pops or moving bars."
+msgstr "Visa ändringar direkt, utan toningar, studsar eller rörliga staplar."
 
 #: src/ui/settings.rs:1017
 msgid "Off"

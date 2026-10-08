@@ -1413,6 +1413,10 @@ msgstr "カスタムタイトルバー"
 msgid "Player bar visualizer"
 msgstr "プレイヤーバーのビジュアライザー"
 
+#: src/ui/settings.rs:808
+msgid "Reduce motion"
+msgstr "動きを減らす"
+
 #: src/ui/settings.rs:818
 msgid "Follow system uses your Omarchy colours."
 msgstr "「システムに合わせる」ではOmarchyの色を使います。"
@@ -1478,6 +1482,10 @@ msgid ""
 msgstr ""
 "このコンピューターで再生中の曲の動きを、プレイヤーバーの操作ボタンの背後に表"
 "示します。"
+
+#: src/ui/settings.rs:890
+msgid "Show changes at once, without fades, pops or moving bars."
+msgstr "フェードや弾む動き、動くバーを使わずに、変化をすぐに表示します。"
 
 #: src/ui/settings.rs:1017
 msgid "Off"

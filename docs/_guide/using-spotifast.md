@@ -355,6 +355,11 @@ In **Settings > Appearance**, **Compact track list** puts each song on one
 line. In narrow lists, the added date follows the artist credits with a spaced
 bullet; each artist name remains a separate link.
 
+**Reduce motion** in **Settings > Appearance** shows every change at once:
+covers, hearts, queue rows and pages appear without fading, popping or
+sliding, and the bars beside the playing song stand still. It is off by
+default.
+
 ## Windows taskbar controls
 
 Since 0.8.0, hovering Spotifast's taskbar button offers **Previous**,

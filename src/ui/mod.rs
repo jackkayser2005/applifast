@@ -11,6 +11,7 @@ mod keys;
 pub mod library;
 pub mod login;
 mod lyrics;
+pub mod motion;
 pub mod player_bar;
 pub mod queue;
 pub mod radio;
@@ -34,6 +35,7 @@ use crate::theme::{self, Icon};
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let ctx = ui.ctx().clone();
     let ctx = &ctx;
+    motion::set_reduced(ctx, app.settings.reduce_motion);
     keys::handle(app, ctx);
     for path in winamp::dropped_skins(ctx) {
         app.actions.push(Action::InstallSkin(path));

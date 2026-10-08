@@ -805,6 +805,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let middle_click = gettext(locale, "Middle-click autoscroll");
     let custom_titlebar = gettext(locale, "Custom title bar");
     let player_bar_vis = gettext(locale, "Player bar visualizer");
+    let reduce_motion = gettext(locale, "Reduce motion");
     let appearance_rows = [
         RowText::new(theme_title.clone(), {
             let detail = theme::catalog_detail(
@@ -880,6 +881,13 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             gettext(
                 locale,
                 "Show the song moving behind the player bar's controls while it plays here.",
+            ),
+        ),
+        RowText::new(
+            reduce_motion.clone(),
+            gettext(
+                locale,
+                "Show changes at once, without fades, pops or moving bars.",
             ),
         ),
     ];
@@ -1097,6 +1105,25 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                         &palette,
                         &tracklist_compact,
                         &mut app.settings.tracklist_compact,
+                    )
+                    .changed()
+                    {
+                        changed = true;
+                    }
+                },
+            );
+            filtered_row(
+                ui,
+                &palette,
+                &needle,
+                &appearance,
+                &appearance_rows[9],
+                |ui| {
+                    if widgets::switch(
+                        ui,
+                        &palette,
+                        &reduce_motion,
+                        &mut app.settings.reduce_motion,
                     )
                     .changed()
                     {

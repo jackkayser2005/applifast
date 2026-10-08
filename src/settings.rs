@@ -262,6 +262,8 @@ pub struct Settings {
     pub home: HomeSettings,
     /// Tint the interface with the colour of the playing album's art.
     pub accent_from_art: bool,
+    /// Show every interface animation at its end at once.
+    pub reduce_motion: bool,
     /// A spectrum or waveform of the playing song behind the player bar.
     pub player_bar_vis: PlayerBarVis,
     /// Last local volume, 0..=65535.
@@ -431,6 +433,7 @@ impl Default for Settings {
             system_theme_cache: None,
             home: HomeSettings::default(),
             accent_from_art: true,
+            reduce_motion: false,
             player_bar_vis: PlayerBarVis::Off,
             volume: (u16::MAX as u32 * 70 / 100) as u16,
             sidebar_visible: true,
@@ -1203,6 +1206,19 @@ mod tests {
         assert_eq!(PlayerBarVis::Off.next(), PlayerBarVis::Spectrum);
         assert_eq!(PlayerBarVis::Spectrum.next(), PlayerBarVis::Waveform);
         assert_eq!(PlayerBarVis::Waveform.next(), PlayerBarVis::Off);
+    }
+
+    #[test]
+    fn reduce_motion_is_opt_in_and_round_trips() {
+        let settings: Settings = serde_json::from_str(r#"{"zoom": 1.2}"#).unwrap();
+        assert!(!settings.reduce_motion);
+        let settings = Settings {
+            reduce_motion: true,
+            ..Settings::default()
+        };
+        let json = serde_json::to_string(&settings).unwrap();
+        let restored: Settings = serde_json::from_str(&json).unwrap();
+        assert!(restored.reduce_motion);
     }
 
     #[test]

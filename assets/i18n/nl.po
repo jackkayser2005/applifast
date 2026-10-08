@@ -1424,6 +1424,10 @@ msgstr "Aangepaste titelbalk"
 msgid "Player bar visualizer"
 msgstr "Visualisatie in de spelerbalk"
 
+#: src/ui/settings.rs:808
+msgid "Reduce motion"
+msgstr "Beweging verminderen"
+
 #: src/ui/settings.rs:818
 msgid "Follow system uses your Omarchy colours."
 msgstr "“Systeem volgen” gebruikt je Omarchy-kleuren."
@@ -1489,6 +1493,10 @@ msgid ""
 msgstr ""
 "Toont het nummer in beweging achter de knoppen van de spelerbalk terwijl het "
 "hier speelt."
+
+#: src/ui/settings.rs:890
+msgid "Show changes at once, without fades, pops or moving bars."
+msgstr "Wijzigingen direct tonen, zonder vervagen, sprongetjes of bewegende balken."
 
 #: src/ui/settings.rs:1017
 msgid "Off"
