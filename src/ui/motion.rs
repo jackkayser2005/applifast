@@ -107,6 +107,29 @@ pub fn heart_scale(ctx: &Context, uri: &str) -> f32 {
         .map_or(1.0, |t| 1.0 + 0.35 * (std::f32::consts::PI * t).sin())
 }
 
+/// How long a newly opened page takes to fade fully in.
+const PAGE_FADE_SECONDS: f32 = 0.14;
+/// How visible a page is the moment it opens: enough to show at once what
+/// was clicked, while the fade still marks the change.
+const PAGE_FADE_FROM: f32 = 0.35;
+
+/// How opaque to draw the page `key` this frame: it fades in briefly when
+/// it replaces another page, and is fully drawn otherwise.
+pub fn page_opacity(ctx: &Context, key: &str) -> f32 {
+    let shown = Id::new("motion-page-shown");
+    let fade = Id::new("motion-page-fade");
+    let previous = ctx.data(|data| data.get_temp::<String>(shown));
+    if previous.as_deref() != Some(key) {
+        ctx.data_mut(|data| data.insert_temp(shown, key.to_string()));
+        if previous.is_some() {
+            start(ctx, fade);
+        }
+    }
+    progress(ctx, fade, PAGE_FADE_SECONDS).map_or(1.0, |t| {
+        PAGE_FADE_FROM + (1.0 - PAGE_FADE_FROM) * egui::emath::easing::cubic_out(t)
+    })
+}
+
 /// How long a newly arrived row takes to ease into place.
 const ARRIVAL_SECONDS: f32 = 0.22;
 
@@ -325,6 +348,37 @@ mod tests {
                 assert!(scales[0] > 1.3, "{scales:?}");
                 assert!(scales[1] > 1.0 && scales[1] < scales[0], "{scales:?}");
                 assert_eq!(scales[2], 1.0);
+            }
+        }
+    }
+
+    /// A page fades in when it replaces another, never when the app opens
+    /// on it or while it stays; Reduce motion shows it at once.
+    #[test]
+    fn a_new_page_fades_in_unless_motion_is_reduced() {
+        for reduced in [false, true] {
+            let ctx = Context::default();
+            let mut seen = Vec::new();
+            for (time, page) in [
+                (0.0, "home"),
+                (0.5, "home"),
+                (1.0, "album"),
+                (1.07, "album"),
+            ] {
+                frame(&ctx, time, reduced, |ctx| {
+                    seen.push(page_opacity(ctx, page))
+                });
+            }
+            frame(&ctx, 2.0, reduced, |ctx| {
+                seen.push(page_opacity(ctx, "album"))
+            });
+            if reduced {
+                assert_eq!(seen, [1.0; 5]);
+            } else {
+                assert_eq!(seen[..2], [1.0, 1.0]);
+                assert_eq!(seen[2], PAGE_FADE_FROM);
+                assert!(seen[3] > PAGE_FADE_FROM && seen[3] < 1.0, "{seen:?}");
+                assert_eq!(seen[4], 1.0);
             }
         }
     }

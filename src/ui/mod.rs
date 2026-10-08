@@ -305,13 +305,16 @@ fn central(app: &mut App, ui: &mut egui::Ui) {
             ui.spacing_mut().scroll.fade.strength = 0.0;
             topbar::show(app, ui);
             let page = app.page().clone();
+            let key = page.encode();
+            let opacity = motion::page_opacity(ui.ctx(), &key);
             let scroll = crate::autoscroll::show(
                 ui,
                 egui::ScrollArea::vertical()
-                    .id_salt(("page", page.encode()))
+                    .id_salt(("page", key))
                     .auto_shrink([false, false]),
                 egui::Vec2b::new(false, true),
                 |ui| {
+                    ui.multiply_opacity(opacity);
                     Frame::new()
                         .inner_margin(Margin {
                             left: widgets::PAGE_PADDING as i8,
