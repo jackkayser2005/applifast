@@ -85,7 +85,11 @@
         summary: "Covers in page headers and on cards (Home shelves, library grids) use 8 px corners instead of 6 px. Artist pictures stay round; rows, quick tiles and the player bar are unchanged." },
       { id: "polish-combined", pr: null, name: "All polish on top of #2",
         before: "palette",
-        summary: "#9, #10, #11 and #12 applied together on top of #2's palette, compared with #2 alone, so only the polish differs. Not a PR of its own." }
+        summary: "#9, #10, #11 and #12 applied together on top of #2's palette, compared with #2 alone, so only the polish differs. Not a PR of its own." },
+      { id: "motion", pr: 13, name: "Gentle motion and Now Playing",
+        before: "before-motion",
+        pages: [["home", "Home (hovered card)"], ["liked", "Header colour, playing bars, hovered seek bar"], ["nowplaying", "Now Playing (full screen)"], ["settings", "Settings (Reduce motion)"]],
+        summary: "Stills hold each hover at its end. A hovered card lifts and its Play button fades in; the playing song shows dancing bars; the seek bar eases thicker with a knob; the header colour from the cover is clamped so its words stay readable (paler in Light). Full-screen lyrics gain a seek bar and transport buttons under the cover. Settings adds Reduce motion. Liked Songs stands in for an album page because demo album covers get no computed colour. The heart pop, cover crossfade, queue slide, lyric glide and page fade only show in motion. Before is a main build." }
     ];
     const mainPages = [
       ["home", "Home"], ["playlist", "Playlist + queue"], ["album", "Album"],
