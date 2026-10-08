@@ -305,6 +305,18 @@ pub fn fullscreen(app: &mut App, ui: &mut egui::Ui) {
             fullscreen_header(app, &mut content);
             content.add_space(20.0);
             track_heading(app, &mut content);
+            // A narrow window stacks the controls under the song, above
+            // its words.
+            if app.now_playing().is_some() {
+                content.add_space(8.0);
+                let (row, _) = content.allocate_exact_size(
+                    vec2(content.available_width(), CONTROLS_HEIGHT),
+                    Sense::hover(),
+                );
+                let width = row.width().min(560.0);
+                let controls = Rect::from_center_size(row.center(), vec2(width, CONTROLS_HEIGHT));
+                now_playing_controls(app, &mut content, controls);
+            }
             content.add_space(16.0);
             fullscreen_contents(app, &mut content);
         });
@@ -339,13 +351,13 @@ fn with_cover(app: &mut App, ui: &mut egui::Ui, rect: Rect, top: f32) {
         // The cover and the lyrics are one group, centred in the window.
         let gap = 64.0;
         let side = (below.width() * 0.38)
-            .min(below.height() - 90.0)
+            .min(below.height() - BELOW_COVER)
             .clamp(200.0, 520.0);
         let lyrics_width = (below.width() - side - gap).min(LYRICS_BESIDE_WIDTH);
         let left = below.center().x - (side + gap + lyrics_width) / 2.0;
         let column = Rect::from_min_size(
-            pos2(left, below.center().y - (side + 90.0) / 2.0),
-            vec2(side, side + 90.0),
+            pos2(left, below.center().y - (side + BELOW_COVER) / 2.0),
+            vec2(side, side + BELOW_COVER),
         );
         big_cover(app, ui, column, Align::Min);
         let lyrics = Rect::from_min_max(
@@ -355,10 +367,10 @@ fn with_cover(app: &mut App, ui: &mut egui::Ui, rect: Rect, top: f32) {
         let mut content = ui.new_child(UiBuilder::new().max_rect(lyrics));
         fullscreen_contents(app, &mut content);
     } else {
-        let side = (below.height() - 140.0)
+        let side = (below.height() - BELOW_COVER - 50.0)
             .min(below.width() * 0.5)
             .clamp(200.0, 560.0);
-        let column = Rect::from_center_size(below.center(), vec2(side, side + 90.0));
+        let column = Rect::from_center_size(below.center(), vec2(side, side + BELOW_COVER));
         big_cover(app, ui, column, Align::Center);
         // Why there are no words, quietly, under the song, or that they
         // are still being fetched.
@@ -418,9 +430,16 @@ fn with_cover(app: &mut App, ui: &mut egui::Ui, rect: Rect, top: f32) {
     }
 }
 
+/// The room under the big cover: the title and artists, then the controls.
+const BELOW_COVER: f32 = 80.0 + CONTROLS_HEIGHT;
+
+/// The seek bar with its times, and the transport buttons beneath.
+const CONTROLS_HEIGHT: f32 = 96.0;
+
 /// The playing song's cover filling the top of `column`, with its title and
-/// artists beneath, aligned to its left edge or centred.
-fn big_cover(app: &App, ui: &mut egui::Ui, column: Rect, align: Align) {
+/// artists beneath, aligned to its left edge or centred, and the controls
+/// at the foot.
+fn big_cover(app: &mut App, ui: &mut egui::Ui, column: Rect, align: Align) {
     let Some(now) = app.now_playing() else {
         return;
     };
@@ -468,6 +487,183 @@ fn big_cover(app: &App, ui: &mut egui::Ui, column: Rect, align: Align) {
         )
         .truncate(),
     );
+    let controls = Rect::from_min_max(
+        pos2(column.left(), column.bottom() - CONTROLS_HEIGHT),
+        column.max,
+    );
+    now_playing_controls(app, ui, controls);
+}
+
+/// The song's seek bar, its times under each end, and large transport
+/// buttons, the player bar's controls at full-screen size.
+fn now_playing_controls(app: &mut App, ui: &mut egui::Ui, rect: Rect) {
+    let palette = theme::Palette::dark();
+    let Some(now) = app.now_playing() else {
+        return;
+    };
+    let locale = app.locale;
+    let (position, duration) = (now.position_ms, now.duration_ms);
+    let shown = app
+        .seek_preview
+        .map_or(position, |fraction| (fraction * duration as f32) as u32);
+    let bar_y = rect.top() + 10.0;
+    let mut slider_ui = ui.new_child(
+        UiBuilder::new()
+            .max_rect(Rect::from_center_size(
+                pos2(rect.center().x, bar_y),
+                vec2(rect.width(), 16.0),
+            ))
+            .layout(Layout::left_to_right(Align::Center)),
+    );
+    let fraction = if duration > 0 {
+        position as f32 / duration as f32
+    } else {
+        0.0
+    };
+    match widgets::thin_slider(
+        &mut slider_ui,
+        &palette,
+        egui::Id::new("now-playing-seek-slider"),
+        &gettext(locale, "Playback position (%)"),
+        fraction,
+        rect.width(),
+        None,
+    ) {
+        widgets::SliderEvent::Dragging(value) => app.seek_preview = Some(value),
+        widgets::SliderEvent::Committed(value) => {
+            app.seek_preview = None;
+            if duration > 0 {
+                app.actions
+                    .push(Action::Seek((value * duration as f32) as u32));
+            }
+        }
+        widgets::SliderEvent::None => {}
+    }
+    let times = Color32::from_gray(200);
+    for (x, align, ms) in [
+        (rect.left(), egui::Align2::LEFT_TOP, shown),
+        (rect.right(), egui::Align2::RIGHT_TOP, duration),
+    ] {
+        ui.painter().text(
+            pos2(x, bar_y + 12.0),
+            align,
+            crate::util::format_duration_ms(ms),
+            theme::regular(12.0),
+            times,
+        );
+    }
+
+    let dim = Color32::from_gray(225);
+    let (repeat_icon, repeat_on, repeat_tooltip) = match now.repeat {
+        crate::player::RepeatMode::Off => (Icon::Repeat, false, gettext(locale, "Repeat")),
+        crate::player::RepeatMode::Context => (Icon::Repeat, true, gettext(locale, "Repeat one")),
+        crate::player::RepeatMode::Track => (Icon::Repeat1, true, gettext(locale, "Repeat off")),
+    };
+    let disc = 56.0;
+    let widths = [32.0, 38.0, disc, 38.0, 32.0];
+    let gap = 26.0;
+    let total = widths.iter().sum::<f32>() + gap * (widths.len() - 1) as f32;
+    let cy = rect.bottom() - disc / 2.0 - 4.0;
+    let mut x = rect.center().x - total / 2.0;
+    let mut cells = widths.map(|width| {
+        let cell = Rect::from_center_size(pos2(x + width / 2.0, cy), vec2(width, disc));
+        x += width + gap;
+        ui.new_child(
+            UiBuilder::new()
+                .max_rect(cell)
+                .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
+        )
+    });
+    let toggle = |on: bool| if on { palette.accent } else { dim };
+    let shuffle = theme::icon_button(
+        &mut cells[0],
+        Icon::Shuffle,
+        20.0,
+        toggle(now.shuffle),
+        if now.shuffle {
+            palette.accent_hover
+        } else {
+            Color32::WHITE
+        },
+        &gettext(locale, "Shuffle"),
+    );
+    shuffle.widget_info(|| {
+        egui::WidgetInfo::selected(
+            egui::WidgetType::Checkbox,
+            true,
+            now.shuffle,
+            gettext(locale, "Shuffle"),
+        )
+    });
+    if shuffle.clicked() {
+        app.actions.push(Action::ToggleShuffle);
+    }
+    if theme::icon_button(
+        &mut cells[1],
+        Icon::SkipBackFilled,
+        26.0,
+        dim,
+        Color32::WHITE,
+        &gettext(locale, "Previous"),
+    )
+    .clicked()
+    {
+        app.actions.push(Action::Previous);
+    }
+    let tooltip = gettext(locale, if now.playing { "Pause" } else { "Play" });
+    if now.loading || app.any_play_pending() {
+        theme::circle_spinner(
+            &mut cells[2],
+            disc,
+            Color32::WHITE,
+            palette.window,
+            &tooltip,
+        );
+    } else if theme::circle_button(
+        &mut cells[2],
+        if now.playing {
+            Icon::PauseFilled
+        } else {
+            Icon::PlayFilled
+        },
+        disc,
+        Color32::WHITE,
+        Color32::from_gray(235),
+        palette.window,
+        &tooltip,
+    )
+    .clicked()
+    {
+        app.actions.push(Action::TogglePlay);
+    }
+    if theme::icon_button(
+        &mut cells[3],
+        Icon::SkipForwardFilled,
+        26.0,
+        dim,
+        Color32::WHITE,
+        &gettext(locale, "Next"),
+    )
+    .clicked()
+    {
+        app.actions.push(Action::Next);
+    }
+    if theme::icon_button(
+        &mut cells[4],
+        repeat_icon,
+        20.0,
+        toggle(repeat_on),
+        if repeat_on {
+            palette.accent_hover
+        } else {
+            Color32::WHITE
+        },
+        &repeat_tooltip,
+    )
+    .clicked()
+    {
+        app.actions.push(Action::CycleRepeat);
+    }
 }
 
 fn fullscreen_content_width(viewport_width: f32) -> f32 {
@@ -520,7 +716,7 @@ fn fullscreen_header(app: &mut App, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
         theme::text(
             ui,
-            gettext(app.locale, "Lyrics"),
+            gettext(app.locale, "Now playing"),
             theme::bold(18.0),
             palette.text,
         );

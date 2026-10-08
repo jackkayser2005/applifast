@@ -504,7 +504,9 @@ scroll smoothly and highlight the playing line automatically. Scrolling by
 hand pauses following; choose **Follow** to resume. Since 0.11.0, a wide
 window shows the song's cover beside the lyrics, the two centred together,
 and a song without words, such as an instrumental, shows just its cover in
-the middle of the screen.
+the middle of the screen. Full screen is also a Now Playing screen: a seek
+bar and large Shuffle, Previous, Play, Next and Repeat buttons sit under the
+cover, or under the song's title in a narrow window, above its lyrics.
 Since 0.10.0, quitting while lyrics are full screen no longer leaves
 the next launch stuck in full screen: the window returns to its previous size.
 

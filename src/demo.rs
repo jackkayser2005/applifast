@@ -6100,6 +6100,75 @@ mod tests {
         }
     }
 
+    /// Full screen is a Now Playing screen: its own seek bar and transport
+    /// buttons sit under the cover, or under the song in a narrow window,
+    /// and they control playback like the player bar's.
+    #[cfg(feature = "demo")]
+    #[test]
+    fn full_screen_now_playing_has_its_own_controls() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        for (width, surface) in [
+            (1600.0, "lyrics-fullscreen-view"),
+            (820.0, "lyrics-fullscreen-view"),
+            (1600.0, "lyrics-fullscreen-instrumental"),
+        ] {
+            let (ctx, mut app) = accessible_app(&format!("now-playing-{width}-{surface}"));
+            apply_flags(&mut app, None, Some(surface));
+            let frame = |app: &mut App, events: Vec<egui::Event>| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(width, 900.0),
+                        )),
+                        events,
+                        ..Default::default()
+                    },
+                    // Drawn without applying, so the actions stay to be seen.
+                    |ui| crate::ui::show(app, ui),
+                );
+                output.textures_delta.clear();
+                output.platform_output.accesskit_update.unwrap()
+            };
+            frame(&mut app, vec![]);
+            let tree = frame(&mut app, vec![]);
+            let sliders = tree
+                .nodes
+                .iter()
+                .filter(|(_, node)| {
+                    node.role() == Role::Slider && node.label() == Some("Playback position (%)")
+                })
+                .count();
+            assert_eq!(sliders, 2, "{width} {surface}: player bar and full screen");
+            let nexts = tree
+                .nodes
+                .iter()
+                .filter(|(_, node)| node.label() == Some("Next") && node.role() == Role::Button)
+                .map(|(id, node)| (*id, node.bounds().map_or(0.0, |bounds| bounds.y0)))
+                .collect::<Vec<_>>();
+            assert_eq!(nexts.len(), 2, "{width} {surface}");
+            // The full-screen Next is the one above the player bar.
+            let (next, _) = nexts
+                .iter()
+                .min_by(|a, b| a.1.total_cmp(&b.1))
+                .copied()
+                .unwrap();
+            app.actions.clear();
+            frame(
+                &mut app,
+                vec![accessible_action(next, AccessibleAction::Click, None)],
+            );
+            assert!(
+                app.actions
+                    .iter()
+                    .any(|action| matches!(action, Action::Next)),
+                "{width} {surface}: {:?}",
+                app.actions
+            );
+            app.backend.shutdown();
+        }
+    }
+
     /// Full screen puts the cover and the lyrics side by side as one centred
     /// group, and a song without words gets its cover alone in the middle.
     #[cfg(feature = "demo")]
