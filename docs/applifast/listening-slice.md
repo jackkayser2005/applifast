@@ -20,6 +20,45 @@ only in Apple's popup. Existing grants from the playback probe restore without
 another import. An expired developer JWT requires generating and importing a
 new one. Authorization errors retain an explicit retry action.
 
+## Read-only account diagnostics
+
+On Windows, this opt-in check reads metadata using Applifast's own saved grants,
+without opening a second WebView2 host or interrupting music:
+
+```powershell
+cargo test --locked --lib app::apple::tests::account_api_reads_home_and_library -- --ignored --exact --nocapture
+```
+
+It sends HTTPS GET requests to `api.music.apple.com` for the four Home feeds,
+the first 100 library albums and the first 100 library songs. Requests use the
+documented [developer and Music User Token headers](https://developer.apple.com/documentation/applemusicapi/user-authentication-for-musickit).
+Redirects are disabled; authorization headers are marked sensitive. It checks
+the app's sign-out marker and unchanged saved grants before and after requests,
+and after reading JSON. Errors are fixed diagnoses or numeric HTTP statuses.
+Output contains aggregate counts only, never tokens, resources or library names.
+It writes no credentials, browser profile, account cache or library data. The
+ordinary test suite skips this check.
+
+The October 8, 2026 Windows account run passed: Recent returned 10 resources
+and 10 rendered cards, Recently added returned 10 and 10, Heavy rotation returned
+8 and 8, and Recommendations returned 10 groups and 64 rendered cards. All 100
+sampled albums supplied parseable add dates. All 100 sampled library songs
+retained their original IDs and playback parameters and supplied explicit
+favorite flags; 30 were favorites. This verifies actual API data and the app's
+Home parser, not the MusicKit bridge, visible window, complete library,
+pagination, favorite writes or playback. The older `3a87e21` preview predates
+the Home integration. Quit it through the tray, run the current combined preview,
+and use **Home > Refresh** to check the visible feed.
+
+This diagnostic adds no production code, dependency, interface or storage-format
+change. Windows formatting and strict default/demo all-target Clippy pass.
+The all-target suites pass with 985 default and 1,016 demo library tests, four
+opt-in checks skipped in each, plus the binary and integration suites. Default
+doc tests, strict demo Rustdoc, the demo build, gettext, bridge and token-generator
+self-checks pass. Optional projectM/all-features,
+launcher/site/Nix, hosted CI and non-Windows runtime checks retain their
+previously documented limitations.
+
 ## Supported now
 
 - Reuse the original sidebar, tables, artwork, search, account menu and player bar.
@@ -134,7 +173,9 @@ and logs aggregate counts only. This machine's run failed during host
 initialization, before authorization readiness or any Apple API read. Fixed
 redacted setup diagnoses did not identify the cause. Raw host-error logging was
 rejected by automatic approval review because it could expose authorization or
-SDK data; that logging was removed. No real-account Home/date result is claimed.
+SDK data; that logging was removed. That host run supplies no real-account
+Home/date result. The separate read-only account diagnostic above later passed;
+it does not satisfy native-host acceptance.
 
 After adding this opt-in check, strict default/demo all-target Clippy and
 formatting pass. Both full all-target suites pass again (982/1,011 library tests,
@@ -291,10 +332,10 @@ This changes reads, not favorite writes or the interface. Existing optional flag
 and the atomic restart cache retain their format; missing/string flags stay unknown,
 and ratings do not imply favorites. After updating, use **Songs > Refresh** to
 replace the cached library span with newly requested metadata. No extra endpoint,
-dependency, credential or cache is introduced. Real-account favorite completeness
-still requires verification; requesting a documented attribute does not prove what
-an individual account returns. The older preview still owns the profile in the
-latest process check, so no competing account host has been started.
+dependency, credential or cache is introduced. The read-only account diagnostic
+above verified explicit flags on 100 sampled songs, including 30 favorites.
+Complete-library favorite coverage and the visible shelf still require verification.
+No competing account host has been started while the older preview owns its profile.
 
 The bridge self-check verifies first/next/detail requests, preserved offset and
 album/artist inclusion, a single favorite extension, untouched catalog search,

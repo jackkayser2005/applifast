@@ -1718,6 +1718,160 @@ mod tests {
     use serde_json::json;
 
     #[cfg(windows)]
+    #[tokio::test]
+    #[ignore = "Read-only Apple account API checks; prints aggregate counts, never credentials or resources"]
+    async fn account_api_reads_home_and_library() -> Result<(), &'static str> {
+        use keyring_core::api::CredentialStoreApi;
+        use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue, ORIGIN};
+
+        // Same app-owned entries and sign-out marker as the playback host. This
+        // test never opens its browser profile or changes saved credentials.
+        let marker = std::path::PathBuf::from(
+            std::env::var_os("LOCALAPPDATA").ok_or("Missing local app data directory")?,
+        )
+        .join("Applifast/playback-probe/signed-out");
+        let read_token = |name: &str| {
+            windows_native_keyring_store::Store::new()
+                .and_then(|store| store.build("local.applifast.playback-probe", name, None))
+                .and_then(|entry| entry.get_secret())
+                .map_err(|_| "Cannot read saved Applifast credential")
+                .and_then(|bytes| String::from_utf8(bytes).map_err(|_| "Invalid saved credential"))
+        };
+        let signed_in = || match marker.try_exists() {
+            Ok(false) => Ok(()),
+            Ok(true) => Err("Applifast is signed out"),
+            Err(_) => Err("Cannot check sign-out state"),
+        };
+        signed_in()?;
+        let developer = read_token("developer-token")?;
+        let user = read_token("music-user-token")?;
+        applifast_playback_probe::protocol::validate_developer_token(&developer)
+            .map_err(|_| "Renew or reimport the developer token")?;
+        let current_account = || {
+            signed_in()?;
+            if read_token("music-user-token")? == user
+                && read_token("developer-token")? == developer
+            {
+                Ok(())
+            } else {
+                Err("Authorization changed during the check")
+            }
+        };
+        let mut headers = HeaderMap::new();
+        for (name, value) in [
+            (AUTHORIZATION, format!("Bearer {developer}")),
+            (
+                reqwest::header::HeaderName::from_static("music-user-token"),
+                user.clone(),
+            ),
+        ] {
+            let mut value =
+                HeaderValue::from_str(&value).map_err(|_| "Invalid credential header")?;
+            value.set_sensitive(true);
+            headers.insert(name, value);
+        }
+        headers.insert(
+            ORIGIN,
+            HeaderValue::from_static("https://applifast.invalid"),
+        );
+        let client = reqwest::Client::builder()
+            .https_only(true)
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(Duration::from_secs(20))
+            .default_headers(headers)
+            .build()
+            .map_err(|_| "Cannot create Apple API client")?;
+        let get = async |path: &str| {
+            if !applifast_playback_probe::protocol::valid_read_path(path) {
+                return Err("Unsupported Apple read path");
+            }
+            current_account()?;
+            let response = client
+                .get(format!("https://api.music.apple.com{path}"))
+                .send()
+                .await
+                .map_err(|_| "Apple API connection failed")?;
+            current_account()?;
+            if !response.status().is_success() {
+                eprintln!("Apple API HTTP status: {}", response.status().as_u16());
+                return Err("Apple rejected the read-only request");
+            }
+            let data = response
+                .json::<Value>()
+                .await
+                .map_err(|_| "Invalid Apple API JSON")?;
+            current_account()?;
+            Ok(data)
+        };
+        let mut app = super::super::tests::test_app("apple-account-api");
+        app.backend.set_offline(true);
+        app.apple = Some(crate::apple::State::default());
+        for shelf in crate::apple::HomeShelf::ALL {
+            let data = get(shelf.path()).await?;
+            let raw = data["data"]
+                .as_array()
+                .ok_or("Home resources missing")?
+                .len();
+            let command =
+                app.apple
+                    .as_mut()
+                    .unwrap()
+                    .read(Read::Home(shelf), shelf.path().into(), 0);
+            app.apple_response(&json!({"id":command["id"], "data":data}));
+            let cards = app.apple.as_ref().unwrap().home[&shelf]
+                .get()
+                .ok_or("Home did not load")?;
+            eprintln!(
+                "Home {shelf:?}: {raw} API resources, {} rendered cards",
+                cards.len()
+            );
+        }
+        let data = get("/v1/me/library/albums?limit=100").await?;
+        let rows = data["data"].as_array().ok_or("Library albums missing")?;
+        let dated = rows
+            .iter()
+            .filter(|row| models::added_at(row).is_some())
+            .count();
+        eprintln!(
+            "Library albums: {} resources, {dated} parsed add dates",
+            rows.len()
+        );
+        let data =
+            get("/v1/me/library/songs?limit=100&include=albums,artists&extend=inFavorites").await?;
+        let rows = data["data"].as_array().ok_or("Library songs missing")?;
+        let songs = rows.iter().filter_map(models::song).collect::<Vec<_>>();
+        assert_eq!(
+            songs.len(),
+            rows.len(),
+            "Library song identities did not parse"
+        );
+        assert!(
+            rows.iter().zip(&songs).all(|(row, song)| {
+                row["id"].as_str() == Some(song.item.id.as_str())
+                    && row["attributes"]
+                        .get("playParams")
+                        .filter(|value| value.is_object())
+                        == song.item.play_params.as_ref()
+            }),
+            "Original library identity or playback parameters changed"
+        );
+        let known = songs
+            .iter()
+            .filter(|song| song.in_favorites.is_some())
+            .count();
+        let favorites = songs
+            .iter()
+            .filter(|song| song.in_favorites == Some(true))
+            .count();
+        eprintln!(
+            "Library songs: {} parsed rows, {known} explicit favorite flags, {favorites} favorites",
+            songs.len()
+        );
+        app.backend.shutdown();
+        Ok(())
+    }
+
+    #[cfg(windows)]
     #[test]
     #[ignore = "Reads Home and album dates using the locally authorized Apple account"]
     fn native_host_reads_home_and_album_dates() {
