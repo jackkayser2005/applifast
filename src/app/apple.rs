@@ -23,6 +23,79 @@ fn page<T>(items: Vec<T>, data: &Value, offset: u32) -> ApiPage<T> {
 }
 
 impl App {
+    pub(super) fn apple_queue_add(&mut self, uris: &[String], position: usize, album: bool) {
+        let Some(apple) = &mut self.apple else { return };
+        if !apple.authorized {
+            return;
+        }
+        if let Some(count) = apple.add_uris(uris, position, QUEUE_ADD_DEBOUNCE, album) {
+            let request = apple.intent(apple.queue_command());
+            self.backend.send(Command::AppleSend(request.to_string()));
+            self.sync_apple_queue();
+            self.queued_toast(count);
+        }
+    }
+    pub(super) fn apple_queue_album(&mut self, uri: &str, label: &str) {
+        if self
+            .last_album_queue
+            .as_ref()
+            .is_some_and(|(previous, at)| previous == uri && at.elapsed() < QUEUE_ADD_DEBOUNCE)
+        {
+            return;
+        }
+        let Some(id) = util::uri_id(uri).map(str::to_owned) else {
+            return;
+        };
+        self.last_album_queue = Some((uri.into(), Instant::now()));
+        self.album_queue_serial = self.album_queue_serial.wrapping_add(1);
+        self.pending_album_queues.insert(
+            self.album_queue_serial,
+            PendingAlbumQueue {
+                id: id.clone(),
+                label: label.into(),
+                target: Target::Local,
+                offset: 0,
+                tracks: Vec::new(),
+            },
+        );
+        self.apple_ensure_loaded(Page::Album(id));
+        self.apple_finish_album_queues();
+    }
+    pub(super) fn apple_finish_album_queues(&mut self) {
+        let pending = self
+            .pending_album_queues
+            .iter()
+            .map(|(request, album)| (*request, album.id.clone()))
+            .collect::<Vec<_>>();
+        for (request, id) in pending {
+            let Some(page) = self.album_pages.get(&id) else {
+                continue;
+            };
+            if page.tracks.loading {
+                continue;
+            }
+            if let Some(error) = &page.tracks.error {
+                let error = error.clone();
+                self.pending_album_queues.remove(&request);
+                self.toast_error(error);
+            } else if page.tracks.is_complete() {
+                let uris = page
+                    .tracks
+                    .items
+                    .iter()
+                    .map(|track| track.uri.clone())
+                    .collect::<Vec<_>>();
+                self.pending_album_queues.remove(&request);
+                let position = self
+                    .apple
+                    .as_ref()
+                    .map_or(0, |apple| apple.order.manual_count);
+                self.apple_queue_add(&uris, position, true);
+            } else {
+                self.apple_load_more(Page::Album(id));
+            }
+        }
+    }
     pub(super) fn apple_evict_songs(&mut self) {
         let Some(apple) = &mut self.apple else {
             return;
@@ -118,12 +191,19 @@ impl App {
                 .and_then(|index| apple.queue.get(index))
                 .map(|song| PlayableItem::Track(song.track())),
             queue: apple
-                .queue
+                .order
+                .upcoming
                 .iter()
-                .skip(apple.index.map_or(apple.queue.len(), |index| index + 1))
+                .filter_map(|index| apple.queue.get(*index))
                 .map(|song| PlayableItem::Track(song.track()))
                 .collect(),
         });
+        self.manual_queue = apple.order.upcoming[..apple.order.manual_count]
+            .iter()
+            .filter_map(|index| apple.queue.get(*index))
+            .map(crate::apple::Song::uri)
+            .collect();
+        self.session_dirty = true;
     }
     fn apple_read(&mut self, target: Read, path: String, offset: u32) {
         let Some(apple) = &mut self.apple else { return };
@@ -583,6 +663,122 @@ fn merge<T: Default>(held: &mut Option<ApiPage<T>>, fresh: Option<ApiPage<T>>) {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn mini_player_queue_actions_preserve_occurrences_and_album_adds_are_atomic() {
+        let mut app = super::super::tests::test_app("apple-mini-queue");
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        state.loading = false;
+        app.apple = Some(state);
+        let songs = ["i.a", "i.b", "i.c"].iter().map(|id| models::song(&json!({
+            "id":id,"type":"library-songs","attributes":{"name":id,"playParams":{"id":id,"kind":"song","isLibrary":true}},
+        })).unwrap()).collect::<Vec<_>>();
+        app.apple.as_mut().unwrap().songs = songs;
+        let uris = app
+            .apple
+            .as_ref()
+            .unwrap()
+            .songs
+            .iter()
+            .map(crate::apple::Song::uri)
+            .collect::<Vec<_>>();
+        let ctx = egui::Context::default();
+        app.apply(
+            Action::PlayUris {
+                uris: uris.clone(),
+                index: 0,
+            },
+            &ctx,
+        );
+        app.apply(
+            Action::QueueMany {
+                songs: vec![
+                    (uris[1].clone(), "B".into()),
+                    (uris[2].clone(), "C".into()),
+                    (uris[1].clone(), "B".into()),
+                ],
+            },
+            &ctx,
+        );
+        assert_eq!(app.queued_rows_len(), 3);
+        app.apply(
+            Action::PlayFromRow {
+                context: RowContext::Queue,
+                uri: uris[1].clone(),
+                index: 2,
+            },
+            &ctx,
+        );
+        assert_eq!(app.apple.as_ref().unwrap().index, Some(5));
+        assert_eq!(app.queued_rows_len(), 0);
+        let remaining = app
+            .queue
+            .get()
+            .unwrap()
+            .queue
+            .iter()
+            .map(|item| item.uri().to_owned())
+            .collect::<Vec<_>>();
+        assert_eq!(remaining, uris[1..]);
+        assert_eq!(app.local.track.as_ref().unwrap().uri, uris[1]);
+        app.apply(
+            Action::AddToQueue {
+                uri: "apple:album:library.l.album".into(),
+                label: "Album".into(),
+            },
+            &ctx,
+        );
+        assert!(!app.pending_album_queues.is_empty());
+        let read = app
+            .apple
+            .as_ref()
+            .unwrap()
+            .reads
+            .iter()
+            .find(|(_, (target, _))| matches!(target, Read::AlbumTracks(_)))
+            .map(|(id, _)| *id)
+            .unwrap();
+        let resource = json!({"id":"i.a","type":"library-songs","attributes":{"name":"A","playParams":{"id":"i.a","kind":"song","isLibrary":true}}});
+        app.apple_response(&json!({"id":read,"data":{"data":[resource.clone()],"next":"/v1/me/library/albums/l.album/tracks?offset=1"}}));
+        app.apple_finish_album_queues();
+        assert_eq!(app.queued_rows_len(), 0);
+        let read = app
+            .apple
+            .as_ref()
+            .unwrap()
+            .reads
+            .iter()
+            .find(|(_, (target, _))| matches!(target, Read::AlbumTracks(_)))
+            .map(|(id, _)| *id)
+            .unwrap();
+        app.apple_response(&json!({"id":read,"error":"Unavailable"}));
+        app.apple_finish_album_queues();
+        assert!(app.pending_album_queues.is_empty());
+        assert_eq!(app.queued_rows_len(), 0);
+        app.apply(Action::ClearQueue, &ctx);
+        app.apply(
+            Action::AddToQueue {
+                uri: "apple:album:library.l.album".into(),
+                label: "Album".into(),
+            },
+            &ctx,
+        );
+        app.apple_load_more(Page::Album("library.l.album".into()));
+        let read = app
+            .apple
+            .as_ref()
+            .unwrap()
+            .reads
+            .iter()
+            .find(|(_, (target, _))| matches!(target, Read::AlbumTracks(_)))
+            .map(|(id, _)| *id)
+            .unwrap();
+        app.apply(Action::ClearQueue, &ctx);
+        app.apple_response(&json!({"id":read,"data":{"data":[resource]}}));
+        app.apple_finish_album_queues();
+        assert_eq!(app.queued_rows_len(), 0); // Clear cancels a late album completion.
+    }
     #[test]
     fn apple_pages_preserve_pagination_and_stale_search_and_authorization() {
         let mut app = super::super::tests::test_app("apple-page-routing");

@@ -93,6 +93,38 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   await app.dispatch({type:'play',items:[{kind:'catalog',id:'123',playParams:{id:'456',kind:'song'}}],index:0});
   assert.equal(calls.at(-1).items[0].id,'456'); // Apple's own catalog playback ID can differ from its resource ID.
 
+  await app.dispatch({type:'play',items:[uploaded,catalog],index:0});
+  const beforeEdit = calls.length;
+  const order = {upcoming:[2,3,4,1],manualCount:3,context:[0,1]};
+  await app.dispatch({type:'intent',generation:10,command:{type:'queue',items:[uploaded,catalog,uploaded,catalog,uploaded],index:0,order}});
+  assert.equal(calls.length,beforeEdit); // Editing the queue must not restart audio.
+  assert.equal(lastState().order.manualCount,3);
+  await app.dispatch({type:'next'});
+  assert.equal(lastState().index,2); // A manual duplicate plays before the catalog context.
+  await app.dispatch({type:'jump',position:1});
+  assert.equal(lastState().index,4);
+  assert.equal(lastState().order.manualCount,0);
+  assert.deepEqual(Array.from(lastState().order.upcoming),[1]);
+  await app.dispatch({type:'queue',items:[uploaded,catalog,uploaded],index:2,
+    order:{upcoming:[1],manualCount:0,context:[0,1],history:[0]}});
+  assert.equal(lastState().index,2); // Reclaimed rows can remap the current occurrence without changing audio.
+  await app.dispatch({type:'next'});
+  assert.equal(calls.at(-1).items[0].id,'123');
+  assert.equal(lastState().order.manualCount,0);
+  const validOrder = JSON.stringify(lastState().order);
+  await app.dispatch({type:'queue',items:[uploaded,catalog,uploaded],index:1,
+    order:{upcoming:[2,2],manualCount:2,context:[0,1]}});
+  assert.equal(JSON.stringify(lastState().order),validOrder);
+  const endedCalls = calls.length;
+  music.playbackState = 10; emit('playbackStateDidChange');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls.length,endedCalls); // Native orders advance only after the native coordinator chooses the occurrence.
+  await app.dispatch({type:'intent',generation:11,command:{type:'select',index:2,playing:true,
+    order:{upcoming:[],manualCount:0,context:[0,1],history:[0,1]}}});
+  assert.equal(lastState().index,2);
+  assert.equal(calls.at(-1).items[0].id,'i.upload');
+  music.playbackState = 2;
+
   let resolveRead;
   music.api.music = () => new Promise(resolve => {resolveRead=resolve;});
   const pendingRead=app.dispatch({type:'request',id:42,path:'/v1/me/library/albums?limit=100'});

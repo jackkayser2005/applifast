@@ -2,6 +2,8 @@
 (() => {
   'use strict';
   let music, session = 1, queue = [], index = -1, repeat = 0, shuffle = false;
+  let order = { upcoming: [], manualCount: 0, context: [], history: [] };
+  let nativeQueue = false;
   let chain = Promise.resolve(), initializing, signingOut = false, authorizing = false;
   let transitioning = false, playbackFailed = false;
   let requestGeneration = 0;
@@ -28,7 +30,7 @@
     send('state', {
     status: transitioning ? 1 : number(music.playbackState), position: transitioning ? 0 : (seekTarget ?? position),
     duration: number(music.currentPlaybackDuration), actualPosition: position, index, queueLength: queue.length,
-    requestGeneration
+    requestGeneration, order: structuredClone(order)
   }); };
   function song(item) {
     if (!item) throw new Error('invalidItem');
@@ -69,15 +71,60 @@
       throw failure;
     } finally { transitioning = false; if (generation === session) state(); }
   }
+  function queueOrder(value, items, current) {
+    value = { ...value, history: value?.history || [] };
+    const valid = indices => Array.isArray(indices) && indices.length <= items.length &&
+      indices.every(at => Number.isInteger(at) && at >= 0 && at < items.length) &&
+      new Set(indices).size === indices.length;
+    if (!value || !valid(value.upcoming) || !valid(value.context) ||
+        !Number.isInteger(value.manualCount) || value.manualCount < 0 || value.manualCount > value.upcoming.length ||
+        value.upcoming.includes(current) ||
+        value.upcoming.slice(0, value.manualCount).some(at => value.context.includes(at)) ||
+        value.upcoming.slice(value.manualCount).some(at => !value.context.includes(at)) ||
+        !Array.isArray(value.history) || value.history.length > 64 ||
+        value.history.some(at => !Number.isInteger(at) || at < 0 || at >= items.length)) throw new Error('queue');
+    return structuredClone(value);
+  }
+  function rememberCurrent() {
+    order.history.push(index);
+    if (order.history.length > 64) order.history.shift();
+  }
+  function shuffled(indices) {
+    for (let i = indices.length - 1; i > 0; i--) {
+      const at = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[at]] = [indices[at], indices[i]];
+    }
+    return indices;
+  }
+  function jump(position) {
+    if (position < 0 || position >= order.upcoming.length) return -1;
+    if (index >= 0) rememberCurrent();
+    const target = order.upcoming[position];
+    order.upcoming.splice(0, position + 1);
+    order.manualCount = Math.max(0, order.manualCount - position - 1);
+    return target;
+  }
   function nextPosition(direction, ended = false) {
     if (ended && repeat === 1) return index;
-    if (shuffle && queue.length > 1) {
-      const offset = 1 + Math.floor(Math.random() * (queue.length - 1));
-      return (index + offset) % queue.length;
+    if (direction > 0) {
+      if (order.upcoming.length) return jump(0);
+      if (repeat === 2 && order.context.length) {
+        if (index >= 0) rememberCurrent();
+        order.upcoming = order.context.slice(1);
+        return order.context[0];
+      }
+    } else if (order.history.length) {
+      const target = order.history.pop();
+      if (index >= 0) {
+        const manual = !order.context.includes(index);
+        order.upcoming.splice(manual ? 0 : order.manualCount, 0, index);
+        order.manualCount += Number(manual);
+      }
+      const at = order.upcoming.indexOf(target);
+      if (at >= 0) { order.upcoming.splice(at, 1); order.manualCount -= Number(at < order.manualCount); }
+      return target;
     }
-    const candidate = index + direction;
-    if (candidate >= 0 && candidate < queue.length) return candidate;
-    return repeat === 2 ? (candidate + queue.length) % queue.length : -1;
+    return -1;
   }
   async function authorize(generation) {
     if (authorizing || signingOut) return;
@@ -135,12 +182,38 @@
           throw new Error('queue');
         }
         command.items.forEach(song);
+        order = queueOrder(command.order || {upcoming: Array.from({length: command.items.length - command.index - 1}, (_, at) => command.index + at + 1),
+          manualCount: 0, context: command.items.map((_, at) => at)}, command.items, command.index);
         queue = structuredClone(command.items);
+        nativeQueue = !!command.order;
+        
         return playAt(command.index, generation);
+      case 'queue': {
+        if (!Array.isArray(command.items) || command.items.length > 1000 ||
+            (command.index !== null && (!Number.isInteger(command.index) || command.index < 0 || command.index >= command.items.length))) throw new Error('queue');
+        command.items.forEach(song);
+        const current = command.index ?? -1;
+        if ((current < 0) !== (index < 0) || (current >= 0 && JSON.stringify(command.items[current]) !== JSON.stringify(queue[index]))) throw new Error('queue');
+        order = queueOrder(command.order, command.items, current);
+        queue = structuredClone(command.items);
+        index = current;
+        nativeQueue = true;
+        break;
+      }
+      case 'select': {
+        if (!Number.isInteger(command.index) || command.index < 0 || command.index >= queue.length || typeof command.playing !== 'boolean') throw new Error('queue');
+        order = queueOrder(command.order, queue, command.index);
+        nativeQueue = true;
+        return playAt(command.index, generation, command.playing);
+      }
+      case 'jump': return playAt(jump(command.position), generation, desiredPlaying);
       case 'next': return playAt(nextPosition(1), generation, desiredPlaying);
       case 'previous': return playAt(nextPosition(-1), generation, desiredPlaying);
       case 'pause': desiredPlaying = false; await music.pause(); break;
-      case 'resume': desiredPlaying = true; await music.play(); break;
+      case 'resume':
+        desiredPlaying = true;
+        if (index < 0) return playAt(nextPosition(1), generation);
+        await music.play(); break;
       case 'seek': {
         if (!Number.isFinite(command.seconds) || command.seconds < 0) throw new Error('seek');
         seekTarget = command.seconds;
@@ -153,7 +226,12 @@
       case 'volume':
         if (!Number.isFinite(command.value) || command.value < 0 || command.value > 1) throw new Error('volume');
         music.volume = command.value; break;
-      case 'shuffle': shuffle = command.enabled === true; break;
+      case 'shuffle':
+        shuffle = command.enabled === true;
+        const rest = order.upcoming.splice(order.manualCount);
+        order.upcoming.push(...(shuffle ? shuffled(rest) : rest.sort((a, b) => a - b)));
+        if (shuffle) shuffled(order.context); else order.context.sort((a, b) => a - b);
+        break;
       case 'repeat':
         if (![0, 1, 2].includes(command.mode)) throw new Error('repeat');
         repeat = command.mode; break;
@@ -171,7 +249,7 @@
       const generation = ++session;
       signingOut = true;
       desiredPlaying = false;
-      queue = []; index = -1;
+      queue = []; index = -1; order = { upcoming: [], manualCount: 0, context: [], history: [] }; 
       const result = (async () => {
         await initializing;
         await music.pause();
@@ -219,7 +297,7 @@
         error('playback', session); // Queue/index stay visible. Do not skip an unavailable song.
       });
       music.addEventListener(events.playbackStateDidChange, () => {
-        if (!signingOut && !transitioning && !playbackFailed && index >= 0 &&
+        if (!nativeQueue && !signingOut && !transitioning && !playbackFailed && index >= 0 &&
             music.playbackState === window.MusicKit.PlaybackStates.ended) {
           const generation = session;
           chain = chain.then(() => playAt(nextPosition(1, true), generation)).catch(() => error('playback', generation));

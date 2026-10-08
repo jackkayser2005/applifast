@@ -61,6 +61,49 @@ impl PlaybackItem {
     }
 }
 
+/// Indices identify occurrences, so two copies of one song remain distinct.
+#[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct QueueOrder {
+    pub upcoming: Vec<usize>,
+    pub manual_count: usize,
+    pub context: Vec<usize>,
+    /// A bounded local Previous history, including consumed manual occurrences.
+    #[serde(default)]
+    pub history: Vec<usize>,
+}
+
+impl QueueOrder {
+    pub fn validate(&self, len: usize, current: Option<usize>) -> Result<(), String> {
+        let unique = |indices: &[usize]| {
+            indices.len() <= len
+                && indices.iter().all(|index| *index < len)
+                && indices
+                    .iter()
+                    .copied()
+                    .collect::<std::collections::HashSet<_>>()
+                    .len()
+                    == indices.len()
+        };
+        if !unique(&self.upcoming)
+            || !unique(&self.context)
+            || self.manual_count > self.upcoming.len()
+            || self.history.len() > 64
+            || self.history.iter().any(|index| *index >= len)
+            || current.is_some_and(|index| index >= len || self.upcoming.contains(&index))
+            || self.upcoming[..self.manual_count]
+                .iter()
+                .any(|index| self.context.contains(index))
+            || self.upcoming[self.manual_count..]
+                .iter()
+                .any(|index| !self.context.contains(index))
+        {
+            return Err("Invalid queue occurrence order.".into());
+        }
+        Ok(())
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase", deny_unknown_fields)]
 pub enum Command {
@@ -81,6 +124,21 @@ pub enum Command {
         index: usize,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         generation: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        order: Option<QueueOrder>,
+    },
+    Queue {
+        items: Vec<PlaybackItem>,
+        index: Option<usize>,
+        order: QueueOrder,
+    },
+    Jump {
+        position: usize,
+    },
+    Select {
+        index: usize,
+        order: QueueOrder,
+        playing: bool,
     },
     Pause,
     Resume,
@@ -137,6 +195,7 @@ impl Command {
                 items,
                 index,
                 generation,
+                order,
             } => {
                 if generation.is_some_and(|value| value > 9_007_199_254_740_991) {
                     return Err("Playback generation exceeds the JavaScript integer range.".into());
@@ -144,8 +203,25 @@ impl Command {
                 if items.is_empty() || items.len() > 1000 || *index >= items.len() {
                     return Err("Choose an existing row in a queue of 1 to 1000 songs.".into());
                 }
-                items.iter().try_for_each(PlaybackItem::validate)
+                items.iter().try_for_each(PlaybackItem::validate)?;
+                if let Some(order) = order {
+                    order.validate(items.len(), Some(*index))?;
+                }
+                Ok(())
             }
+            Self::Queue {
+                items,
+                index,
+                order,
+            } => {
+                if items.len() > 1000 {
+                    return Err("The queue supports at most 1000 occurrences.".into());
+                }
+                items.iter().try_for_each(PlaybackItem::validate)?;
+                order.validate(items.len(), *index)
+            }
+            Self::Jump { position } if *position >= 1000 => Err("Invalid queue row.".into()),
+            Self::Select { index, order, .. } => order.validate(1000, Some(*index)),
             Self::Seek { seconds } if !seconds.is_finite() || *seconds < 0.0 => {
                 Err("Seek position must be a finite nonnegative number.".into())
             }
@@ -340,10 +416,26 @@ mod tests {
                 items: vec![],
                 index: 0,
                 generation: None,
+                order: None,
             }
             .validate()
             .is_err()
         );
+    }
+    #[test]
+    fn occurrence_orders_reject_invalid_indices_and_manual_context_overlap() {
+        let order = |upcoming: Vec<usize>, manual_count| QueueOrder {
+            upcoming,
+            manual_count,
+            context: vec![0, 1],
+            history: vec![0],
+        };
+        assert!(order(vec![2, 1], 1).validate(3, Some(0)).is_ok());
+        assert!(order(vec![2, 2, 1], 1).validate(3, Some(0)).is_err());
+        assert!(order(vec![3, 1], 1).validate(3, Some(0)).is_err());
+        assert!(order(vec![0, 1], 1).validate(3, Some(0)).is_err());
+        assert!(order(vec![2, 1], 2).validate(3, Some(0)).is_err());
+        assert!(order(vec![2, 1], 0).validate(3, Some(0)).is_err());
     }
 
     fn token(expires: u64) -> String {

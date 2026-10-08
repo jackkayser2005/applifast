@@ -142,6 +142,19 @@ fn sanitized_event(value: &Value) -> Option<Value> {
     {
         result["data"] = safe_music_data(data, 0);
     }
+    if kind == "state"
+        && let Some(order) = value.get("order")
+    {
+        let parsed = serde_json::from_value::<crate::protocol::QueueOrder>(order.clone());
+        if let (Ok(order), Some(len)) = (parsed, value["queueLength"].as_u64()) {
+            let current = value["index"]
+                .as_u64()
+                .and_then(|index| usize::try_from(index).ok());
+            if len <= 1000 && order.validate(len as usize, current).is_ok() {
+                result["order"] = serde_json::to_value(order).ok()?;
+            }
+        }
+    }
     if kind == "library" {
         result["items"] = Value::Array(
             value

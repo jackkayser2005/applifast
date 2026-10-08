@@ -1874,6 +1874,7 @@ impl App {
                     if value["type"] == "response" {
                         self.apple_response(&value);
                         self.apple_finish_pending_play();
+                        self.apple_finish_album_queues();
                         continue;
                     }
                     if let Some(apple) = &mut self.apple {
@@ -4480,6 +4481,9 @@ impl App {
     /// How many leading rows of Next up are songs the user queued here,
     /// so the view can give them their own section.
     pub fn queued_rows_len(&self) -> usize {
+        if let Some(apple) = &self.apple {
+            return apple.order.manual_count;
+        }
         // Before resume, use the saved manual queue to split restored rows.
         let manual = if self.manual_queue.is_empty() && self.resume_only() {
             &self.resume_queue
@@ -4498,6 +4502,9 @@ impl App {
     /// and re-add its songs in the new order, which only reaches the
     /// engine actually playing them.
     pub fn queue_locally_reorderable(&self) -> bool {
+        if let Some(apple) = &self.apple {
+            return apple.authorized;
+        }
         self.local.is_active() && matches!(self.target(), Target::Local)
     }
 
@@ -8436,6 +8443,35 @@ impl App {
             });
         }
         match action {
+            Action::AddToQueue { uri, label } => {
+                if util::uri_kind(uri) == Some("album") {
+                    self.apple_queue_album(uri, label);
+                } else {
+                    let position = self
+                        .apple
+                        .as_ref()
+                        .map_or(0, |apple| apple.order.manual_count);
+                    self.apple_queue_add(std::slice::from_ref(uri), position, false);
+                }
+                return true;
+            }
+            Action::QueueMany { songs } => {
+                let uris = songs.iter().map(|(uri, _)| uri.clone()).collect::<Vec<_>>();
+                let position = self
+                    .apple
+                    .as_ref()
+                    .map_or(0, |apple| apple.order.manual_count);
+                self.apple_queue_add(&uris, position, false);
+                return true;
+            }
+            Action::InsertInQueue { items, position } => {
+                let uris = items
+                    .iter()
+                    .map(|item| item.uri().to_owned())
+                    .collect::<Vec<_>>();
+                self.apple_queue_add(&uris, *position, false);
+                return true;
+            }
             Action::RefreshQueue => {
                 self.sync_apple_queue();
                 return true;
@@ -8446,11 +8482,6 @@ impl App {
             }
             Action::ToggleSaved(_)
             | Action::SetSavedMany { .. }
-            | Action::AddToQueue { .. }
-            | Action::QueueMany { .. }
-            | Action::InsertInQueue { .. }
-            | Action::MoveInQueue { .. }
-            | Action::ClearQueue
             | Action::AddToPlaylist { .. }
             | Action::InsertInPlaylist { .. }
             | Action::ConfirmAddToPlaylist { .. }
@@ -8548,15 +8579,39 @@ impl App {
                 uri,
                 index,
             } => {
+                if matches!(context, RowContext::Queue) {
+                    let position = if apple
+                        .order
+                        .upcoming
+                        .get(*index as usize)
+                        .and_then(|at| apple.queue.get(*at))
+                        .is_some_and(|song| song.uri() == *uri)
+                    {
+                        *index as usize
+                    } else if let Some(position) = apple
+                        .order
+                        .upcoming
+                        .iter()
+                        .position(|at| apple.queue[*at].uri() == *uri)
+                    {
+                        position
+                    } else {
+                        return true;
+                    };
+                    if !apple.jump(position) {
+                        return true;
+                    }
+                    let command = apple.selection_command(true);
+                    let request = apple.intent(command);
+                    self.local = apple.local.clone();
+                    self.backend.send(Command::AppleSend(request.to_string()));
+                    self.sync_apple_queue();
+                    return true;
+                }
                 let uris = match context {
                     RowContext::Uris(uris) | RowContext::View { uris, .. } => uris.to_vec(),
                     RowContext::Context { .. } => context_uris.clone().unwrap_or_default(),
-                    RowContext::Queue => apple
-                        .queue
-                        .iter()
-                        .skip(apple.index.map_or(0, |index| index + 1))
-                        .map(crate::apple::Song::uri)
-                        .collect(),
+                    RowContext::Queue => unreachable!(),
                 };
                 let index = if uris.get(*index as usize) == Some(uri) {
                     *index as usize
@@ -8597,16 +8652,20 @@ impl App {
             }
             Action::TogglePlay => apple.toggle_play(),
             Action::Next => {
-                apple.skip(1);
-                json!({"type":"next"})
+                if !apple.skip(1) {
+                    return true;
+                }
+                apple.selection_command(apple.local.playback != Playback::Paused)
             }
             Action::Previous => {
                 if apple.local.position_now() > 3000 {
                     apple.seek(0);
                     json!({"type":"seek","seconds":0})
                 } else {
-                    apple.skip(-1);
-                    json!({"type":"previous"})
+                    if !apple.skip(-1) {
+                        return true;
+                    }
+                    apple.selection_command(apple.local.playback != Playback::Paused)
                 }
             }
             Action::Seek(ms) => {
@@ -8645,15 +8704,24 @@ impl App {
                 self.settings_dirty = true;
                 json!({"type":"volume","value":f64::from(next)/100.0})
             }
-            // MusicKit chooses the next shuffled occurrence. Do not guess a sequential index.
+            Action::ClearQueue => {
+                self.pending_album_queues.clear();
+                self.last_album_queue = None;
+                apple.clear_manual();
+                apple.queue_command()
+            }
+            Action::MoveInQueue { from, to } => {
+                apple.move_manual(*from, *to);
+                apple.queue_command()
+            }
             Action::ToggleShuffle | Action::SetShuffle(_) => {
                 self.shuffle_wanted = if let Action::SetShuffle(value) = action {
                     *value
                 } else {
                     !self.shuffle_wanted
                 };
-                apple.local.shuffle = self.shuffle_wanted;
-                json!({"type":"shuffle","enabled":self.shuffle_wanted})
+                apple.set_shuffle(self.shuffle_wanted);
+                apple.queue_command()
             }
             Action::CycleRepeat => {
                 apple.local.repeat = apple.local.repeat.next();
@@ -8680,6 +8748,8 @@ impl App {
                 | Action::SetRepeat(_)
                 | Action::SetShuffle(_)
                 | Action::ToggleShuffle
+                | Action::ClearQueue
+                | Action::MoveInQueue { .. }
         ) {
             apple.intent(request)
         } else {

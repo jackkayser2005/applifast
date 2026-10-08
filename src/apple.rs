@@ -5,7 +5,8 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use crate::player::{LocalState, LocalTrack, Playback};
-use applifast_playback_probe::protocol::PlaybackItem;
+use applifast_playback_probe::protocol::{PlaybackItem, QueueOrder};
+use rand::seq::SliceRandom;
 pub mod models;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -120,6 +121,8 @@ pub struct State {
     pub token_path: String,
     pub filter: String,
     pub queue: Vec<Song>,
+    pub order: QueueOrder,
+    recent_adds: std::collections::HashMap<String, Instant>,
     pub known_songs: std::collections::HashMap<String, Song>,
     pub storefront: String,
     pub reads: std::collections::HashMap<u64, (Read, u32)>,
@@ -147,6 +150,8 @@ impl Default for State {
             token_path: String::new(),
             filter: String::new(),
             queue: Vec::new(),
+            order: QueueOrder::default(),
+            recent_adds: Default::default(),
             known_songs: Default::default(),
             storefront: String::new(),
             reads: Default::default(),
@@ -179,6 +184,8 @@ impl State {
         self.next_reads.clear();
         self.pending_play = None;
         self.queue.clear();
+        self.order = QueueOrder::default();
+        self.recent_adds.clear();
         self.next = None;
         self.index = None;
         self.pending_index = None;
@@ -201,19 +208,43 @@ impl State {
             self.error = Some("Apple supplied no playback parameters for this song. Try it in Apple Music; cloud-only uploads are not guaranteed yet.".into());
             return None;
         }
-        if uris.len() > 1000 {
-            self.error = Some("This first listening slice supports contexts of at most 1,000 songs. Restart to reload the first page; larger queues arrive in the queue integration slice.".into());
+        if uris.len() + self.order.manual_count > 1000 {
+            self.error = Some("This listening slice supports at most 1,000 queue occurrences. Clear manual additions or choose a smaller context.".into());
             return None;
         }
         let queue: Option<Vec<_>> = uris
             .iter()
             .map(|uri| self.find_song(uri).cloned())
             .collect();
-        let Some(queue) = queue else {
+        let Some(mut queue) = queue else {
             self.error = Some("This song has not been loaded from Apple Music. Open its collection and try again.".into());
             return None;
         };
+        let manual = self.order.upcoming[..self.order.manual_count]
+            .iter()
+            .filter_map(|index| self.queue.get(*index).cloned())
+            .collect::<Vec<_>>();
+        let context_len = queue.len();
+        queue.extend(manual);
         self.queue = queue;
+        self.order = QueueOrder {
+            upcoming: (context_len..self.queue.len()).collect(),
+            manual_count: self.queue.len() - context_len,
+            context: (0..context_len).collect(),
+            history: Vec::new(),
+        };
+        let mut rest = if self.local.shuffle {
+            (0..context_len)
+                .filter(|at| *at != index)
+                .collect::<Vec<_>>()
+        } else {
+            (index + 1..context_len).collect()
+        };
+        if self.local.shuffle {
+            rest.shuffle(&mut rand::rng());
+            self.order.context.shuffle(&mut rand::rng());
+        }
+        self.order.upcoming.extend(rest);
         let position = index;
         self.pending_index = Some(position);
         self.pending_playback = None;
@@ -223,8 +254,138 @@ impl State {
         self.error = None;
         self.request_generation += 1;
         Some(
-            json!({"type":"play","items":self.queue.iter().map(|song| &song.item).collect::<Vec<_>>(),"index":position,"generation":self.request_generation}),
+            json!({"type":"play","items":self.queue.iter().map(|song| &song.item).collect::<Vec<_>>(),"index":position,"generation":self.request_generation,"order":self.order}),
         )
+    }
+    pub fn queue_command(&self) -> Value {
+        json!({"type":"queue","items":self.queue.iter().map(|song| &song.item).collect::<Vec<_>>(),"index":self.index,"order":self.order})
+    }
+    pub fn selection_command(&mut self, playing: bool) -> Value {
+        self.local.playback = if playing {
+            Playback::Loading
+        } else {
+            Playback::Paused
+        };
+        self.pending_playback = (!playing).then_some(Playback::Paused);
+        json!({"type":"select","index":self.index,"order":self.order,"playing":playing})
+    }
+    pub fn add_uris(
+        &mut self,
+        uris: &[String],
+        position: usize,
+        debounce: std::time::Duration,
+        album: bool,
+    ) -> Option<usize> {
+        self.recent_adds.retain(|_, at| at.elapsed() < debounce);
+        // Decide before inserting: repeats within this batch are distinct occurrences.
+        let additions = uris
+            .iter()
+            .filter(|uri| album || !self.recent_adds.contains_key(*uri))
+            .map(|uri| self.find_song(uri).cloned())
+            .collect::<Option<Vec<_>>>();
+        let Some(additions) = additions else {
+            self.error = Some(
+                "Open the song's collection and wait for it to load before adding it to queue."
+                    .into(),
+            );
+            return None;
+        };
+        let additions = additions
+            .into_iter()
+            .filter(Song::available)
+            .collect::<Vec<_>>();
+        if additions.is_empty() {
+            if !uris.iter().all(|uri| self.recent_adds.contains_key(uri)) {
+                self.error = Some("Apple supplied no playable songs to add to queue.".into());
+            }
+            return None;
+        }
+        // ponytail: bounded wire snapshots allow 1,000 occurrences; paged queues are a later slice.
+        let retained = self.retained_occurrences();
+        if retained.len() + additions.len() > 1000 {
+            self.error = Some("This listening slice supports at most 1,000 queue occurrences. Choose a smaller context.".into());
+            return None;
+        }
+        self.compact_queue(&retained);
+        let count = additions.len();
+        let indices = self.queue.len()..self.queue.len() + count;
+        for song in &additions {
+            self.recent_adds.insert(song.uri(), Instant::now());
+        }
+        self.queue.extend(additions);
+        let position = position.min(self.order.manual_count);
+        self.order.upcoming.splice(position..position, indices);
+        self.order.manual_count += count;
+        self.error = None;
+        Some(count)
+    }
+    pub fn clear_manual(&mut self) {
+        self.order.upcoming.drain(..self.order.manual_count);
+        self.order.manual_count = 0;
+        self.recent_adds.clear();
+        self.compact_queue(&self.retained_occurrences());
+    }
+    fn retained_occurrences(&self) -> std::collections::HashSet<usize> {
+        self.order
+            .context
+            .iter()
+            .chain(&self.order.upcoming)
+            .chain(&self.order.history)
+            .copied()
+            .chain(self.index)
+            .collect()
+    }
+    fn compact_queue(&mut self, retained: &std::collections::HashSet<usize>) {
+        let mut remap = vec![0; self.queue.len()];
+        let mut next = 0;
+        let mut old = 0;
+        self.queue.retain(|_| {
+            let keep = retained.contains(&old);
+            if keep {
+                remap[old] = next;
+                next += 1;
+            }
+            old += 1;
+            keep
+        });
+        for index in self
+            .order
+            .context
+            .iter_mut()
+            .chain(&mut self.order.upcoming)
+            .chain(&mut self.order.history)
+        {
+            *index = remap[*index];
+        }
+        self.index = self.index.map(|index| remap[index]);
+        self.pending_index = self.pending_index.map(|index| remap[index]);
+    }
+    fn remember_current(&mut self) {
+        if let Some(index) = self.index {
+            self.order.history.push(index);
+            // ponytail: Previous keeps 64 played occurrences; older manual rows can be reclaimed.
+            if self.order.history.len() > 64 {
+                self.order.history.remove(0);
+            }
+        }
+    }
+    pub fn move_manual(&mut self, from: usize, to: usize) {
+        if from < self.order.manual_count {
+            let index = self.order.upcoming.remove(from);
+            let to = (if to > from { to - 1 } else { to }).min(self.order.manual_count - 1);
+            self.order.upcoming.insert(to, index);
+        }
+    }
+    pub fn set_shuffle(&mut self, enabled: bool) {
+        self.local.shuffle = enabled;
+        let rest = &mut self.order.upcoming[self.order.manual_count..];
+        if enabled {
+            rest.shuffle(&mut rand::rng());
+            self.order.context.shuffle(&mut rand::rng());
+        } else {
+            rest.sort_unstable();
+            self.order.context.sort_unstable();
+        }
     }
     pub fn find_song(&self, uri: &str) -> Option<&Song> {
         self.known_songs
@@ -245,35 +406,79 @@ impl State {
             self.local.track = Some(song.local_track());
         }
     }
-    pub fn skip(&mut self, direction: i32) {
-        if self.local.shuffle {
-            self.pending_index = None;
-            return;
+    pub fn jump(&mut self, position: usize) -> bool {
+        let Some(index) = self.order.upcoming.get(position).copied() else {
+            return false;
+        };
+        if !self.queue[index].available() {
+            self.error = Some("Apple supplied no playback parameters for the next song. Choose another queue row to continue.".into());
+            return false;
         }
-        let Some(index) = self.index else { return };
-        let mut next = index as i64 + i64::from(direction);
-        if self.local.repeat == crate::player::RepeatMode::Context && !self.queue.is_empty() {
-            next = next.rem_euclid(self.queue.len() as i64);
+        self.remember_current();
+        self.order.upcoming.drain(..=position);
+        self.order.manual_count = self.order.manual_count.saturating_sub(position + 1);
+        self.select_pending(index);
+        true
+    }
+    pub fn skip(&mut self, direction: i32) -> bool {
+        if direction > 0 {
+            if !self.order.upcoming.is_empty() {
+                return self.jump(0);
+            }
+            if self.local.repeat == crate::player::RepeatMode::Context
+                && !self.order.context.is_empty()
+            {
+                let index = self.order.context[0];
+                if !self.queue[index].available() {
+                    self.error = Some("Apple supplied no playback parameters for the next song. Choose another queue row to continue.".into());
+                    return false;
+                }
+                self.order.upcoming = self.order.context[1..].to_vec();
+                self.remember_current();
+                self.select_pending(index);
+                return true;
+            }
+        } else if let Some(index) = self.order.history.pop() {
+            if let Some(current) = self.index {
+                let manual = !self.order.context.contains(&current);
+                self.order
+                    .upcoming
+                    .insert(if manual { 0 } else { self.order.manual_count }, current);
+                self.order.manual_count += usize::from(manual);
+            }
+            if let Some(at) = self.order.upcoming.iter().position(|at| *at == index) {
+                self.order.upcoming.remove(at);
+                self.order.manual_count -= usize::from(at < self.order.manual_count);
+            }
+            self.select_pending(index);
+            return true;
         }
-        if next >= 0 && (next as usize) < self.queue.len() {
-            let paused = self.local.playback == Playback::Paused;
-            self.pending_index = Some(next as usize);
-            self.pending_playback = paused.then_some(Playback::Paused);
-            self.select(next as usize);
-            self.local.position_ms = 0;
-            self.local.position_at = None;
-            self.local.playback = if paused {
-                Playback::Paused
-            } else {
-                Playback::Loading
-            };
+        false
+    }
+    fn select_pending(&mut self, index: usize) {
+        let paused = self.local.playback == Playback::Paused;
+        self.pending_index = Some(index);
+        self.pending_playback = paused.then_some(Playback::Paused);
+        if self.index == Some(index) {
+            self.local.track_sequence += 1;
         }
+        self.select(index);
+        self.local.position_ms = 0;
+        self.local.position_at = None;
+        self.local.playback = if paused {
+            Playback::Paused
+        } else {
+            Playback::Loading
+        };
     }
     pub fn intent(&mut self, command: Value) -> Value {
         self.request_generation += 1;
         json!({"type":"intent","generation":self.request_generation,"command":command})
     }
     pub fn toggle_play(&mut self) -> Value {
+        if self.index.is_none() && self.jump(0) {
+            return self.selection_command(true);
+        }
         let playing = self.local.playback == Playback::Playing;
         self.local.position_ms = self.local.position_now();
         self.local.playback = if playing {
@@ -356,7 +561,19 @@ impl State {
                 if self.pending_index.is_some() && index != self.pending_index {
                     return None;
                 }
+                if event["status"] == 10 && self.pending_index.is_some() {
+                    return None;
+                }
                 if let Some(index) = index {
+                    if let Some(order) = event.get("order") {
+                        let Ok(order) = serde_json::from_value::<QueueOrder>(order.clone()) else {
+                            return None;
+                        };
+                        if order.validate(self.queue.len(), Some(index)).is_err() {
+                            return None;
+                        }
+                        self.order = order;
+                    }
                     self.select(index);
                 }
                 let playback = match event["status"].as_u64() {
@@ -364,6 +581,7 @@ impl State {
                     Some(3) => Playback::Paused,
                     Some(0) if index.is_some() => Playback::Paused,
                     Some(1 | 4 | 6 | 8) => Playback::Loading,
+                    Some(10) => Playback::Paused,
                     _ => Playback::Stopped,
                 };
                 if let Some(expected) = self.pending_playback {
@@ -380,6 +598,22 @@ impl State {
                     (event["position"].as_f64().unwrap_or(0.0).max(0.0) * 1000.0) as u32;
                 self.local.position_at =
                     (self.local.playback == Playback::Playing).then(Instant::now);
+                if event["status"] == 10 && self.error.is_none() {
+                    let advance = if self.local.repeat == crate::player::RepeatMode::Track {
+                        if let Some(index) = self.index {
+                            self.select_pending(index);
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        self.skip(1)
+                    };
+                    if advance {
+                        let command = self.selection_command(true);
+                        return Some(self.intent(command));
+                    }
+                }
             }
             Some("error") => {
                 if event
@@ -460,6 +694,113 @@ impl State {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn queue_state() -> State {
+        let songs = ["i.a", "i.b", "i.c"]
+            .iter()
+            .map(|id| {
+                serde_json::from_value(json!({
+            "kind":"library","id":id,"playParams":{"id":id,"kind":"song","isLibrary":true},
+            "catalogId":null,"title":id,"artist":"Example","album":"Example","durationMs":180000,
+        })).unwrap()
+            })
+            .collect();
+        let mut state = State {
+            songs,
+            ..Default::default()
+        };
+        state.play(0).unwrap();
+        state
+    }
+    #[test]
+    fn manual_occurrences_precede_context_and_survive_new_contexts() {
+        let mut state = queue_state();
+        let uris = [
+            state.songs[1].uri(),
+            state.songs[2].uri(),
+            state.songs[1].uri(),
+        ];
+        let debounce = std::time::Duration::from_millis(1500);
+        assert_eq!(state.add_uris(&uris, 0, debounce, false), Some(3));
+        assert_eq!(state.order.upcoming, [3, 4, 5, 1, 2]);
+        assert!(state.add_uris(&uris, 3, debounce, false).is_none());
+        state.move_manual(0, 3);
+        assert_eq!(state.order.upcoming, [4, 5, 3, 1, 2]);
+        assert!(state.jump(1));
+        assert_eq!(state.index, Some(5));
+        assert_eq!(state.order.upcoming, [3, 1, 2]);
+        assert_eq!(state.order.manual_count, 1);
+        let start = state
+            .play_uris(&[state.songs[2].uri(), state.songs[0].uri()], 0)
+            .unwrap();
+        assert_eq!(start["items"][2]["id"], "i.b");
+        assert_eq!(state.order.upcoming, [2, 1]);
+        state.clear_manual();
+        assert_eq!(state.order.upcoming, [1]);
+        assert_eq!(state.order.manual_count, 0);
+        assert_eq!(state.queue.len(), 2);
+        let command = serde_json::from_value::<applifast_playback_probe::protocol::Command>(
+            state.queue_command(),
+        )
+        .unwrap();
+        assert!(command.validate().is_ok());
+    }
+    #[test]
+    fn explicit_shuffle_next_stale_events_and_failed_rows_keep_the_queue() {
+        let mut state = queue_state();
+        let uri = state.songs[0].uri();
+        state
+            .add_uris(&[uri], 0, std::time::Duration::ZERO, false)
+            .unwrap();
+        state.set_shuffle(true);
+        assert_eq!(state.order.upcoming[0], 3);
+        let mut rest = state.order.upcoming[1..].to_vec();
+        rest.sort_unstable();
+        assert_eq!(rest, [1, 2]);
+        let next = state.order.upcoming[0];
+        assert!(state.skip(1));
+        state.intent(json!({"type":"next"}));
+        assert_eq!(state.index, Some(next));
+        assert_eq!(state.order.manual_count, 0);
+        let remaining = state.order.upcoming.clone();
+        state.event(1, &json!({"type":"state","session":1,"requestGeneration":1,"index":0,"position":90,"status":2}));
+        assert_eq!(state.index, Some(next));
+        assert_eq!(state.order.upcoming, remaining);
+        state.set_shuffle(false);
+        let blocked = state.order.upcoming[0];
+        state.queue[blocked].item.play_params = None;
+        assert!(!state.skip(1));
+        assert_eq!(state.order.upcoming[0], blocked);
+        assert_eq!(state.index, Some(next));
+        state.event(
+            1,
+            &json!({"type":"error","session":1,"requestGeneration":2,"message":"Unavailable"}),
+        );
+        assert_eq!(state.order.upcoming[0], blocked);
+    }
+    #[test]
+    fn consumed_manual_rows_are_reclaimed_without_changing_occurrence_history() {
+        let mut state = queue_state();
+        let uri = state.songs[0].uri();
+        for _ in 0..1100 {
+            assert_eq!(
+                state.add_uris(
+                    std::slice::from_ref(&uri),
+                    0,
+                    std::time::Duration::ZERO,
+                    true
+                ),
+                Some(1)
+            );
+            assert!(state.skip(1));
+            assert_eq!(state.local.track.as_ref().unwrap().uri, uri);
+            assert!(state.queue.len() <= 69);
+            assert!(state.order.validate(state.queue.len(), state.index).is_ok());
+        }
+        assert!(state.skip(-1));
+        assert_eq!(state.order.manual_count, 1);
+        assert!(state.skip(1));
+        assert!(state.order.validate(state.queue.len(), state.index).is_ok());
+    }
     #[cfg(windows)]
     #[test]
     #[ignore = "Uses the locally authorized Apple account and starts muted real playback"]

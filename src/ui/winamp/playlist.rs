@@ -310,7 +310,7 @@ fn rows(app: &App, now: Option<&NowPlaying>) -> (Vec<Row>, Vec<String>) {
         });
     }
     let queued: &[PlayableItem] = queue.map(|queue| queue.queue.as_slice()).unwrap_or(&[]);
-    let stale = current.is_none() && queue.is_some();
+    let stale = app.apple.is_none() && current.is_none() && queue.is_some();
     let mut skipped_playing = false;
     for (index, item) in queued.iter().enumerate() {
         if stale && !skipped_playing && now.is_some_and(|now| now.uri == item.uri()) {
