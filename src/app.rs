@@ -415,6 +415,7 @@ pub struct App {
     pub softened_covers: crate::images::SoftenedCovers,
     /// The track the lyrics below are for.
     pub lyrics_uri: Option<String>,
+    lyrics_generation: u64,
     /// `Loaded(None)` when no lyrics are available.
     pub lyrics: Loadable<Option<crate::lyrics::Lyrics>>,
     /// Whether the panel follows the current line. Manual scrolling disables
@@ -873,6 +874,7 @@ impl App {
             lyrics_backdrop: Default::default(),
             softened_covers: Default::default(),
             lyrics_uri: None,
+            lyrics_generation: 0,
             lyrics: Loadable::NotLoaded,
             lyrics_following: true,
             lyrics_line_shown: None,
@@ -1951,6 +1953,9 @@ impl App {
                         self.apple_ensure_loaded(self.page().clone());
                     }
                     self.sync_apple_queue();
+                    if value["type"] == "signedOut" {
+                        self.clear_lyrics();
+                    }
                     if value["type"] == "error" && self.account_ready() {
                         self.toast_error(
                             value["message"]
@@ -2045,13 +2050,12 @@ impl App {
                     }
                     Err(error) => log::warn!("rootlist unavailable: {error}"),
                 },
-                Event::Lyrics { uri, result } => {
-                    if self.lyrics_uri.as_deref() == Some(uri.as_str()) {
-                        self.lyrics = match result {
-                            Ok(found) => Loadable::Loaded(found),
-                            Err(error) => Loadable::Failed(error),
-                        };
-                    }
+                Event::Lyrics {
+                    uri,
+                    generation,
+                    result,
+                } => {
+                    self.receive_lyrics(&uri, generation, result);
                 }
                 Event::PlaylistCache {
                     account_id,
@@ -2241,6 +2245,7 @@ impl App {
     }
 
     fn reset_data(&mut self) {
+        self.clear_lyrics();
         self.playlist_busy = false;
         self.local_transfer_sequence = None;
         self.queue_start_pending = None;
@@ -2817,13 +2822,12 @@ impl App {
     /// Asks for the playing track's lyrics unless they are here or on the
     /// way. Podcasts have no lyrics to ask for.
     pub fn request_lyrics(&mut self) {
-        if self.apple.is_some() {
-            // MusicKit playback has no supported lyrics source in this port.
-            // Full-screen Now Playing still uses the shared cover and controls.
-            self.lyrics = Loadable::Loaded(None);
+        if self.apple.as_ref().is_some_and(|apple| !apple.authorized) {
             return;
         }
         let Some(now) = self.now_playing() else {
+            self.clear_lyrics();
+            self.lyrics = Loadable::Loaded(None);
             return;
         };
         if self.lyrics_uri.as_deref() == Some(now.uri.as_str())
@@ -2832,15 +2836,18 @@ impl App {
             return;
         }
         self.lyrics_uri = Some(now.uri.clone());
+        self.lyrics_generation += 1;
         self.lyrics_following = true;
         self.lyrics_line_shown = None;
         if now.is_episode || self.offline {
+            self.backend.send(Command::CancelLyrics);
             self.lyrics = Loadable::Loaded(None);
             return;
         }
         self.lyrics = Loadable::Loading;
         self.backend.send(Command::Lyrics(Box::new(LyricsRequest {
             uri: now.uri,
+            generation: self.lyrics_generation,
             query: crate::lyrics::Query {
                 artist: now
                     .artists
@@ -2852,6 +2859,28 @@ impl App {
                 duration_ms: now.duration_ms,
             },
         })));
+    }
+
+    fn clear_lyrics(&mut self) {
+        self.lyrics_generation += 1;
+        self.lyrics_uri = None;
+        self.lyrics = Loadable::NotLoaded;
+        self.lyrics_line_shown = None;
+        self.backend.send(Command::CancelLyrics);
+    }
+
+    fn receive_lyrics(
+        &mut self,
+        uri: &str,
+        generation: u64,
+        result: Result<Option<crate::lyrics::Lyrics>, String>,
+    ) {
+        if generation == self.lyrics_generation && self.lyrics_uri.as_deref() == Some(uri) {
+            self.lyrics = match result {
+                Ok(found) => Loadable::Loaded(found),
+                Err(error) => Loadable::Failed(error),
+            };
+        }
     }
 
     /// Pushes the Winamp window's always-on-top level to the live window.
@@ -10652,6 +10681,14 @@ impl App {
         if self.settings.winamp_window && needs_sign_in && !self.switch_intent {
             self.actions.push(Action::ToggleWinampWindow);
         }
+        if self.apple.is_some()
+            && !self.settings.winamp_window
+            && (self.show_lyrics_panel || self.lyrics_fullscreen.is_some())
+            && (self.lyrics_uri != self.now_playing().map(|now| now.uri)
+                || matches!(self.lyrics, Loadable::NotLoaded))
+        {
+            self.request_lyrics();
+        }
         if self.settings.winamp_window {
             crate::ui::winamp::show(self, ui);
         } else {
@@ -17838,15 +17875,52 @@ mod tests {
     }
 
     #[test]
-    fn apple_now_playing_does_not_request_legacy_lyrics() {
+    fn apple_lyrics_retry_and_signout_reject_old_answers_for_the_same_song() {
         let mut app = headless_app();
-        app.apple = Some(crate::apple::State::default());
-        app.lyrics = Loadable::Loading;
+        app.backend.set_offline(true);
+        let song: crate::apple::Song = serde_json::from_value(serde_json::json!({
+            "kind":"library", "id":"i.lyrics", "playParams":{"id":"i.lyrics","kind":"song","isLibrary":true},
+            "title":"Example", "artist":"Example artist", "album":"Example album", "durationMs":180000
+        })).unwrap();
+        let uri = song.uri();
+        let mut apple = crate::apple::State::default();
+        apple.authorized = true;
+        apple.songs.push(song.clone());
+        apple.play(0).unwrap();
+        app.local = apple.local.clone();
+        app.apple = Some(apple);
         let ctx = egui::Context::default();
         app.apply(Action::SetLyricsFullscreen(true), &ctx);
         assert!(app.lyrics_fullscreen.is_some());
+        assert!(matches!(app.lyrics, Loadable::Loading));
+        assert_eq!(app.lyrics_uri.as_deref(), Some(uri.as_str()));
+        let first = app.lyrics_generation;
+        app.request_lyrics();
+        assert_eq!(app.lyrics_generation, first, "one request per shown song");
+        app.receive_lyrics(&uri, first, Err("offline".into()));
+        app.apply(Action::RetryLyrics, &ctx);
+        let retry = app.lyrics_generation;
+        assert!(retry > first);
+        app.receive_lyrics(&uri, first, Ok(None));
+        assert!(matches!(app.lyrics, Loadable::Loading));
+        app.receive_lyrics("apple:track:other", retry, Ok(None));
+        assert!(matches!(app.lyrics, Loadable::Loading));
+        app.receive_lyrics(&uri, retry, Ok(None));
         assert!(matches!(app.lyrics, Loadable::Loaded(None)));
+        app.apply(Action::SignOut, &ctx);
         assert!(app.lyrics_uri.is_none());
+        assert!(matches!(app.lyrics, Loadable::NotLoaded));
+        let apple = app.apple.as_mut().unwrap();
+        apple.authorized = true;
+        apple.songs.push(song);
+        apple.play(0).unwrap();
+        app.local = apple.local.clone();
+        app.request_lyrics();
+        app.receive_lyrics(&uri, retry, Ok(None));
+        assert!(
+            matches!(app.lyrics, Loadable::Loading),
+            "prior account answer is stale"
+        );
         app.apply(Action::SetLyricsFullscreen(false), &ctx);
         assert!(app.lyrics_fullscreen.is_none());
         app.backend.shutdown();

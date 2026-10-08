@@ -692,6 +692,7 @@ pub enum Command {
     },
     /// The words of a track, from LRCLIB.
     Lyrics(Box<LyricsRequest>),
+    CancelLyrics,
     /// The account's playlist tree, folders and all, from the session.
     Rootlist,
     /// Internal: a rootlist read completed for this signed-in session.
@@ -756,6 +757,7 @@ pub enum Command {
 pub struct LyricsRequest {
     /// The track the answer is for, so a stale one is ignored.
     pub uri: String,
+    pub generation: u64,
     pub query: crate::lyrics::Query,
 }
 
@@ -821,6 +823,7 @@ pub enum Event {
     /// Track lyrics, or `None` when unavailable.
     Lyrics {
         uri: String,
+        generation: u64,
         result: Result<Option<crate::lyrics::Lyrics>, String>,
     },
     /// The account's playlist tree, folders and all, and which of its
@@ -1375,6 +1378,7 @@ struct Worker {
     /// second attempt does not pile up.
     engine_busy: bool,
     search_tasks: Vec<tokio::task::AbortHandle>,
+    lyrics_task: Option<tokio::task::AbortHandle>,
     /// A user changed engine-affecting settings while the current connection
     /// attempt was in flight. Its result is stale and must not be installed.
     engine_restart_pending: bool,
@@ -1439,6 +1443,7 @@ impl Worker {
             radio_waiting: BTreeMap::new(),
             engine_busy: false,
             search_tasks: Vec::new(),
+            lyrics_task: None,
             engine_restart_pending: false,
             signed_in: false,
             premium: None,
@@ -1615,6 +1620,7 @@ impl Worker {
                     generation,
                     token_file,
                 } => {
+                    self.cancel_lyrics();
                     if let Some(host) = self.apple.take() {
                         let _ = tokio::task::spawn_blocking(move || host.shutdown()).await;
                     }
@@ -1747,6 +1753,7 @@ impl Worker {
                     });
                 }
                 Command::Shutdown => {
+                    self.cancel_lyrics();
                     if let Some(host) = self.apple.take() {
                         let _ = tokio::task::spawn_blocking(move || host.shutdown()).await;
                     }
@@ -1976,6 +1983,7 @@ impl Worker {
                     });
                 }
                 Command::Lyrics(request) => self.fetch_lyrics(*request),
+                Command::CancelLyrics => self.cancel_lyrics(),
                 Command::Rootlist => self.fetch_rootlist(),
                 Command::RootlistFinished { generation, result } => {
                     self.on_rootlist_finished(generation, result);
@@ -2544,6 +2552,7 @@ impl Worker {
     }
 
     fn sign_out(&mut self) {
+        self.cancel_lyrics();
         self.spotify_restore_started = true;
         self.cancel_search();
         self.signed_in = false;
@@ -3224,31 +3233,42 @@ impl Worker {
         self.start_album_type_lookup();
     }
 
-    fn fetch_lyrics(&self, request: LyricsRequest) {
+    fn cancel_lyrics(&mut self) {
+        if let Some(task) = self.lyrics_task.take() {
+            task.abort();
+        }
+    }
+
+    fn fetch_lyrics(&mut self, request: LyricsRequest) {
+        self.cancel_lyrics();
         let http = self.http.client();
         let events = self.events.clone();
         let waker = self.waker.clone();
         let cache_dir = self.dirs.lyrics_cache_dir();
         let engine = self.engine.clone();
-        tokio::spawn(async move {
-            // Spotify's own words go first: they follow the recording
-            // exactly. Everything else, a signed-out session included,
-            // falls back to LRCLIB.
-            let result = match spotify_lyrics(engine, &request.uri, &cache_dir).await {
-                Some(found) => Ok(Some(found)),
-                None => match http {
-                    Ok(http) => crate::lyrics::fetch(&http, &cache_dir, &request.query)
-                        .await
-                        .map_err(|error| format!("{error:#}")),
-                    Err(error) => Err(error),
-                },
-            };
-            let _ = events.send(Event::Lyrics {
-                uri: request.uri,
-                result,
-            });
-            waker.wake();
-        });
+        self.lyrics_task = Some(
+            tokio::spawn(async move {
+                // Spotify's own words go first: they follow the recording
+                // exactly. Everything else, a signed-out session included,
+                // falls back to LRCLIB.
+                let result = match spotify_lyrics(engine, &request.uri, &cache_dir).await {
+                    Some(found) => Ok(Some(found)),
+                    None => match http {
+                        Ok(http) => crate::lyrics::fetch(&http, &cache_dir, &request.query)
+                            .await
+                            .map_err(|error| format!("{error:#}")),
+                        Err(error) => Err(error),
+                    },
+                };
+                let _ = events.send(Event::Lyrics {
+                    uri: request.uri,
+                    generation: request.generation,
+                    result,
+                });
+                waker.wake();
+            })
+            .abort_handle(),
+        );
     }
 
     /// Loads cached playlist items. The UI compares the cached snapshot with
@@ -5945,6 +5965,42 @@ mod authorization_tests {
                 Operation::PlaylistSearch
             );
         }
+    }
+
+    #[test]
+    fn lyrics_abort_on_replacement_and_signout_without_spotify_requests_for_apple() {
+        let (runtime, mut worker, _) = worker("apple-lyrics-cancellation");
+        runtime.block_on(async {
+            assert!(
+                spotify_lyrics(
+                    None,
+                    "apple:track:library.i.example",
+                    &worker.dirs.lyrics_cache_dir()
+                )
+                .await
+                .is_none()
+            );
+            for signout in [false, true] {
+                let pending = tokio::spawn(std::future::pending::<()>());
+                worker.lyrics_task = Some(pending.abort_handle());
+                if signout {
+                    worker.sign_out();
+                } else {
+                    worker.fetch_lyrics(LyricsRequest {
+                        uri: "apple:track:library.i.example".into(),
+                        generation: 1,
+                        query: crate::lyrics::Query {
+                            artist: String::new(),
+                            title: String::new(),
+                            album: String::new(),
+                            duration_ms: 0,
+                        },
+                    });
+                }
+                assert!(pending.await.unwrap_err().is_cancelled());
+                worker.cancel_lyrics();
+            }
+        });
     }
 
     #[test]
