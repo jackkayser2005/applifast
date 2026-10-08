@@ -200,7 +200,8 @@
             artwork: a.artwork?.url?.replace('{w}', '640').replace('{h}', '640') || null,
             albumId: resource.relationships?.albums?.data?.[0]?.id ? `library.${resource.relationships.albums.data[0].id}` : null,
             artistId: resource.relationships?.artists?.data?.[0]?.id ? `library.${resource.relationships.artists.data[0].id}` : null,
-            catalogId: p && p.catalogId || null };
+            catalogId: p && p.catalogId || null,
+            inFavorites: typeof a.inFavorites === 'boolean' ? a.inFavorites : null };
         });
         const next = page.next || null;
         if (next && (!next.startsWith('/v1/me/library/songs?') || next.length > 2048)) {

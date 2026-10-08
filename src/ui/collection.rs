@@ -199,7 +199,10 @@ pub fn actions_row(
             // A radio is mixed afresh each time Spotify is asked, so it
             // always plays the songs on screen.
             let play_view = actions.view.is_some()
-                && (!app.playing_context_shuffle() || is_filtered || actions.save_radio.is_some());
+                && (app.apple.is_some()
+                    || !app.playing_context_shuffle()
+                    || is_filtered
+                    || actions.save_radio.is_some());
             let can_start = actions.view.as_ref().is_none_or(|uris| !uris.is_empty());
             let (icon, play_label) = if now_playing_here {
                 (Icon::PauseFilled, gettext(locale, "Pause"))
@@ -527,7 +530,11 @@ pub fn prepare_table_view(
     } else {
         let visible = view_indices(items, needle, sort);
         let mut view_positions = Vec::new();
-        let view_uris = (sort.is_some() || !needle.is_empty()).then(|| {
+        let view_uris = (sort.is_some()
+            || !needle.is_empty()
+            || (*page == Page::LikedSongs
+                && app.apple.as_ref().is_some_and(|apple| apple.favorites_only)))
+        .then(|| {
             let mut uris = Vec::new();
             for &index in &visible {
                 let item = &items[index].0;
@@ -1856,28 +1863,43 @@ fn album_hero(
 
 pub fn liked(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
+    let favorites_only = app.apple.as_ref().is_some_and(|apple| apple.favorites_only);
     let revision = app.library.liked.revision;
     let names = app.user_names_revision;
     let items =
         if let Some(items) = table_items_hit(app, &Page::LikedSongs, revision, revision, names) {
             items
         } else {
-            let rows = app
-                .library
-                .liked
-                .items
-                .iter()
-                .map(|saved| {
-                    (
-                        PlayableItem::Track(saved.track.clone()),
-                        saved.added_at.clone(),
-                        None,
-                    )
-                })
-                .collect();
+            let rows = if favorites_only {
+                app.apple
+                    .as_ref()
+                    .unwrap()
+                    .songs
+                    .iter()
+                    .filter(|song| song.in_favorites == Some(true))
+                    .map(|song| (PlayableItem::Track(song.track()), None, None))
+                    .collect()
+            } else {
+                app.library
+                    .liked
+                    .items
+                    .iter()
+                    .map(|saved| {
+                        (
+                            PlayableItem::Track(saved.track.clone()),
+                            saved.added_at.clone(),
+                            None,
+                        )
+                    })
+                    .collect()
+            };
             remember_table_items(app, Page::LikedSongs, revision, revision, names, rows)
         };
-    let total = app.library.liked.total.unwrap_or(items.len() as u32);
+    let total = if favorites_only {
+        items.len() as u32
+    } else {
+        app.library.liked.total.unwrap_or(items.len() as u32)
+    };
     let user = app
         .user
         .as_ref()
@@ -1889,7 +1911,9 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
     } else {
         song_count(locale, total)
     };
-    let liked_title = if app.apple.is_some() {
+    let liked_title = if favorites_only {
+        gettext(locale, "Favorites")
+    } else if app.apple.is_some() {
         gettext(locale, "Songs")
     } else {
         gettext(locale, "Liked Songs")
@@ -1902,11 +1926,27 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
             liked: true,
             kind: gettext(locale, "Playlist"),
             title: &liked_title,
-            description: None,
+            description: favorites_only.then(|| {
+                gettext(
+                    locale,
+                    "Favorites from loaded songs. Refresh Songs for changes made in Apple Music.",
+                )
+                .into_owned()
+            }),
             byline: vec![(user, None), (count_text, None)],
             round: false,
         },
     );
+    if app.apple.is_some() {
+        let mut only = favorites_only;
+        if ui
+            .checkbox(&mut only, gettext(locale, "Show only favorites"))
+            .changed()
+        {
+            app.actions.push(Action::AppleShowFavorites(only));
+        }
+        ui.add_space(8.0);
+    }
     let collection_uri = app.songs_context_uri();
     let filter_id = egui::Id::new("liked-filter");
     let mut filter = ui
@@ -1929,7 +1969,7 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
         ui,
         Actions {
             play_uri: collection_uri.clone(),
-            view: liked_view,
+            view: liked_view.clone(),
             saved: None,
             saved_icons: (Icon::Heart, Icon::HeartFilled),
             saved_tooltips: Default::default(),
@@ -1947,6 +1987,11 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
         .collect::<Vec<_>>()
         .into();
     let context = match collection_uri {
+        Some(uri) if favorites_only => RowContext::View {
+            uris: liked_view.unwrap_or_else(|| Arc::from([])),
+            context_uri: uri,
+            editable_playlist: None,
+        },
         Some(uri) if app.library.liked.is_complete() => RowContext::Context {
             uri,
             editable_playlist: None,
@@ -1956,7 +2001,22 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
     let loading = app.library.liked.loading;
     let error = app.library.liked.error.clone();
     let can_load_more = app.library.liked.can_load_more();
-    let _ = &palette;
+    if favorites_only && items.is_empty() && !loading && error.is_none() {
+        widgets::empty_state(
+            ui,
+            &palette,
+            Icon::Heart,
+            &gettext(locale, "No favorites in the loaded songs"),
+            &gettext(locale, "Only songs Apple marks as favorites appear here."),
+        );
+        if can_load_more
+            && theme::pill_button(ui, &palette, &gettext(locale, "Load more songs"), false)
+                .clicked()
+        {
+            app.actions.push(Action::LoadMore(Page::LikedSongs));
+        }
+        return;
+    }
     table(
         app,
         ui,

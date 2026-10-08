@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast integration comparisons</title>
+<style>
+body { font: 16px system-ui; background: #202022; color: #eee; margin: 20px; }
+select, button { font: inherit; padding: 8px; margin: 4px; } a { color: #ff7a80; }
+iframe { width: 100%; height: 90vh; border: 1px solid #666; }
+</style>
+<h1>Applifast integration comparisons</h1>
+<p>Windows sample-data captures. Motion has a candidate gallery; its matching
+baseline is still pending. Runtime and release checks remain separate.</p>
+<button id="previous">Previous</button>
+<label>Review <select id="review">
+<option value="review-polish/index.html">PR #14: motion, cache and polish</option>
+<option value="review-playlists/index.html">PR #15: create and save playlists</option>
+<option value="review-playlist-additions/index.html">PR #16: append songs, albums and queue</option>
+<option value="review-favorites/index.html">PR #17: favorites read/filter slice</option>
+</select></label>
+<button id="next">Next</button> <a id="direct">Open selected comparison</a>
+<iframe id="comparison" title="Selected integration comparison"></iframe>
+<script>
+const byId = id => document.getElementById(id), review = byId('review');
+function draw() {
+  byId('comparison').src = review.value; byId('direct').href = review.value;
+  byId('previous').disabled = review.selectedIndex === 0;
+  byId('next').disabled = review.selectedIndex === review.options.length - 1;
+}
+review.onchange = draw;
+byId('previous').onclick = () => { if (review.selectedIndex > 0) review.selectedIndex--; draw(); };
+byId('next').onclick = () => { if (review.selectedIndex < review.options.length - 1) review.selectedIndex++; draw(); };
+draw();
+</script>
+</html>

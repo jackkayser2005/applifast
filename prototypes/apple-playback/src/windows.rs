@@ -183,10 +183,12 @@ fn sanitized_event(value: &Value) -> Option<Value> {
                         "artwork",
                         "albumId",
                         "artistId",
+                        "inFavorites",
                     ] {
                         if let Some(data) = item.get(field)
-                            && (data.is_string()
+                            && ((data.is_string() && field != "inFavorites")
                                 || (field == "durationMs" && data.is_number())
+                                || (field == "inFavorites" && data.is_boolean())
                                 || (field == "catalogId" && data.is_null()))
                         {
                             safe[field] = data.clone();
@@ -223,7 +225,7 @@ fn safe_music_data(value: &Value, depth: usize) -> Value {
         Value::Object(object) => Value::Object(
             object
                 .iter()
-                .filter(|(key, _)| {
+                .filter(|(key, data)| {
                     [
                         "data",
                         "next",
@@ -269,8 +271,10 @@ fn safe_music_data(value: &Value, depth: usize) -> Value {
                         "discNumber",
                         "trackNumber",
                         "contentRating",
+                        "inFavorites",
                     ]
                     .contains(&key.as_str())
+                        && (key.as_str() != "inFavorites" || data.is_boolean())
                 })
                 .map(|(key, value)| (key.clone(), safe_music_data(value, depth + 1)))
                 .collect(),
@@ -1220,6 +1224,33 @@ mod tests {
         let value=sanitized_event(&json!({"type":"response","session":1,"id":4,"data":{"data":[{"id":"i.1","type":"library-songs","attributes":{"name":"Song","token":"SECRET","playParams":{"id":"i.1","isLibrary":true,"token":"SECRET"}}}],"token":"SECRET"}})).unwrap();
         assert_eq!(value["data"]["data"][0]["attributes"]["name"], "Song");
         assert!(!value.to_string().contains("SECRET"));
+    }
+    #[test]
+    fn favorite_metadata_crosses_the_bridge_only_as_a_boolean() {
+        for flag in [
+            json!(true),
+            json!(false),
+            Value::Null,
+            json!("SECRET"),
+            json!({"token":"SECRET"}),
+        ] {
+            let value = sanitized_event(&json!({"type":"library","session":1,
+                "items":[{"kind":"library","id":"i.1","inFavorites":flag}]}))
+            .unwrap();
+            let response = sanitized_event(&json!({"type":"response","session":1,"id":2,
+                "data":{"data":[{"attributes":{"inFavorites":flag}}]}}))
+            .unwrap();
+            for attribute in [
+                &value["items"][0],
+                &response["data"]["data"][0]["attributes"],
+            ] {
+                assert_eq!(
+                    attribute.get("inFavorites"),
+                    flag.is_boolean().then_some(&flag)
+                );
+                assert!(!attribute.to_string().contains("SECRET"));
+            }
+        }
     }
     #[test]
     fn page_commands_use_the_validated_native_command_path() {

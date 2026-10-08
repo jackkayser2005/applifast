@@ -6,6 +6,8 @@
 > restart, restores playback paused, and refreshes the library in the background.
 > Audio is streamed. Playlist creation, queue saving and appending selected songs,
 > whole albums or the queue now use Apple Music, preserving repeated songs.
+> The Songs view can show only loaded songs Apple marks as favorites; favorite
+> metadata is retained in the existing restart cache. Favorite writes are pending.
 > Real-account playlist-write acceptance is still pending. Run the app from
 > `apple-integration` with `cargo run --locked`; the optional deterministic preview
 > uses `--features demo -- --demo`.

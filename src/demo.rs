@@ -1233,6 +1233,20 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
 #[cfg(feature = "demo")]
 pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
     for flag in show.unwrap_or("").split(',').map(str::trim) {
+        if flag == "favorites" || flag == "favorites-empty" {
+            if let Some(apple) = &mut app.apple {
+                if flag == "favorites-empty" {
+                    for song in &mut apple.songs {
+                        song.in_favorites = None;
+                    }
+                    apple.next = Some("/v1/me/library/songs?offset=100".into());
+                    app.library.liked.next_offset = Some(apple.songs.len() as u32);
+                }
+                app.apply(Action::AppleShowFavorites(true), &egui::Context::default());
+                app.open(Page::LikedSongs);
+            }
+            continue;
+        }
         if !matches!(
             flag,
             "create"
@@ -1377,6 +1391,114 @@ mod tests {
         // These frames never advance the clock or take pictures.
         app.reveal_theme_changes = false;
         (ctx, app)
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_favorites_filter_keeps_unknowns_distinct_and_plays_the_shuffled_view() {
+        let (ctx, mut app) = accessible_app("apple-favorites");
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        for song in &mut apple.songs {
+            song.in_favorites = Some(false);
+        }
+        apple.songs[0].in_favorites = Some(true);
+        apple.songs[1].in_favorites = None;
+        apple.songs[2].in_favorites = Some(true);
+        apple.songs[2].item.play_params = None;
+        apple.local.shuffle = true;
+        apple.local.playback = crate::player::Playback::Paused;
+        let wanted = apple.songs[0].uri();
+        app.library.liked.items = apple
+            .songs
+            .iter()
+            .map(|song| SavedTrack {
+                track: song.track(),
+                added_at: None,
+            })
+            .collect();
+        app.library.liked.revision += 1;
+        app.local = apple.local.clone();
+        app.local_ready = true;
+        app.apple = Some(apple);
+        app.remote = None;
+        let draw = crate::ui::collection::liked;
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let toggle = text
+            .iter()
+            .find(|(label, _)| label == "Show only favorites")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(toggle, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            app.actions
+                .iter()
+                .any(|action| matches!(action, Action::AppleShowFavorites(true)))
+        );
+        app.actions.clear();
+        app.apply(Action::AppleShowFavorites(true), &ctx);
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert_eq!(app.table_rows[&Page::LikedSongs].items.len(), 2);
+        assert!(text.iter().any(|(label, _)| label == "Favorites"));
+        let play = text
+            .iter()
+            .find(|(label, _)| label == "Play")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(play, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(app.actions.iter().any(|action| matches!(action,
+            Action::PlayFromRow { context: RowContext::View { uris, .. }, .. }
+                if uris.as_ref() == [wanted.clone()])));
+        app.actions.clear();
+        app.apply(Action::AppleShowFavorites(false), &ctx);
+        view_frame(&ctx, &mut app, vec![], draw);
+        assert_eq!(
+            app.table_rows[&Page::LikedSongs].items.len(),
+            app.apple.as_ref().unwrap().songs.len()
+        );
+        apply_apple_flags(&mut app, Some("favorites-empty"));
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(
+            text.iter()
+                .any(|(label, _)| label == "No favorites in the loaded songs")
+        );
+        let load = text
+            .iter()
+            .find(|(label, _)| label == "Load more songs")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(load, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            app.actions
+                .iter()
+                .any(|action| matches!(action, Action::LoadMore(Page::LikedSongs)))
+        );
+        app.apply(Action::SignOut, &ctx);
+        assert!(!app.apple.as_ref().unwrap().favorites_only);
+        assert!(app.apple.as_ref().unwrap().songs.is_empty());
+        app.backend.shutdown();
     }
 
     #[cfg(feature = "demo")]
