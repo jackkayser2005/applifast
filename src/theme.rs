@@ -38,21 +38,23 @@ impl Palette {
     pub fn dark() -> Self {
         Self {
             dark: true,
-            window: Color32::from_rgb(0x0f, 0x11, 0x14),
-            panel: Color32::from_rgb(0x15, 0x18, 0x1c),
-            surface: Color32::from_rgb(0x1d, 0x21, 0x27),
-            surface_hover: Color32::from_rgb(0x26, 0x2b, 0x33),
-            surface_active: Color32::from_rgb(0x2f, 0x35, 0x3f),
-            outline: Color32::from_rgb(0x2a, 0x30, 0x38),
-            text: Color32::from_rgb(0xf2, 0xf4, 0xf6),
-            secondary: Color32::from_rgb(0xa9, 0xb1, 0xbc),
-            dim: Color32::from_rgb(0x6e, 0x77, 0x84),
-            accent: Color32::from_rgb(0x1e, 0xd7, 0x60),
-            accent_hover: Color32::from_rgb(0x3c, 0xe8, 0x7a),
-            on_accent: Color32::from_rgb(0x0a, 0x14, 0x0e),
-            danger: Color32::from_rgb(0xf5, 0x71, 0x7f),
-            warning: Color32::from_rgb(0xf2, 0xb8, 0x5c),
-            overlay: Color32::from_rgb(0x22, 0x27, 0x2e),
+            window: Color32::from_rgb(0x1c, 0x1c, 0x1e),
+            panel: Color32::from_rgb(0x24, 0x24, 0x26),
+            surface: Color32::from_rgb(0x2c, 0x2c, 0x2e),
+            surface_hover: Color32::from_rgb(0x3a, 0x3a, 0x3c),
+            surface_active: Color32::from_rgb(0x48, 0x48, 0x4a),
+            outline: Color32::from_rgb(0x38, 0x38, 0x3a),
+            text: Color32::from_rgb(0xf5, 0xf5, 0xf7),
+            secondary: Color32::from_rgb(0xa1, 0xa1, 0xa6),
+            dim: Color32::from_rgb(0x76, 0x76, 0x7b),
+            // Readable as text on the window (4.7:1); white icons on it
+            // clear the 3:1 asked of graphics.
+            accent: Color32::from_rgb(0xfc, 0x3c, 0x44),
+            accent_hover: Color32::from_rgb(0xff, 0x5a, 0x61),
+            on_accent: Color32::WHITE,
+            danger: Color32::from_rgb(0xff, 0x6b, 0x5e),
+            warning: Color32::from_rgb(0xff, 0xb3, 0x40),
+            overlay: Color32::from_rgb(0x2c, 0x2c, 0x2e),
             shadow: Color32::from_black_alpha(140),
         }
     }
@@ -60,20 +62,22 @@ impl Palette {
     pub fn light() -> Self {
         Self {
             dark: false,
-            window: Color32::from_rgb(0xf8, 0xf9, 0xfb),
-            panel: Color32::from_rgb(0xff, 0xff, 0xff),
-            surface: Color32::from_rgb(0xee, 0xf0, 0xf3),
-            surface_hover: Color32::from_rgb(0xe3, 0xe6, 0xeb),
-            surface_active: Color32::from_rgb(0xd7, 0xdb, 0xe1),
-            outline: Color32::from_rgb(0xdd, 0xe1, 0xe6),
-            text: Color32::from_rgb(0x14, 0x17, 0x1a),
-            secondary: Color32::from_rgb(0x53, 0x5b, 0x66),
-            dim: Color32::from_rgb(0x8b, 0x93, 0x9e),
-            accent: Color32::from_rgb(0x15, 0xa6, 0x4a),
-            accent_hover: Color32::from_rgb(0x12, 0x8f, 0x40),
+            window: Color32::from_rgb(0xff, 0xff, 0xff),
+            panel: Color32::from_rgb(0xf5, 0xf5, 0xf7),
+            surface: Color32::from_rgb(0xec, 0xec, 0xf0),
+            surface_hover: Color32::from_rgb(0xe2, 0xe2, 0xe7),
+            surface_active: Color32::from_rgb(0xd5, 0xd5, 0xdb),
+            outline: Color32::from_rgb(0xdc, 0xdc, 0xe0),
+            text: Color32::from_rgb(0x1d, 0x1d, 0x1f),
+            secondary: Color32::from_rgb(0x6e, 0x6e, 0x73),
+            dim: Color32::from_rgb(0x8e, 0x8e, 0x93),
+            // Deeper than the dark theme's red so white labels on it and
+            // red text on white both reach 4.5:1.
+            accent: Color32::from_rgb(0xe0, 0x23, 0x3f),
+            accent_hover: Color32::from_rgb(0xc8, 0x1e, 0x38),
             on_accent: Color32::WHITE,
-            danger: Color32::from_rgb(0xd6, 0x3b, 0x4c),
-            warning: Color32::from_rgb(0xb8, 0x7a, 0x14),
+            danger: Color32::from_rgb(0xd7, 0x00, 0x15),
+            warning: Color32::from_rgb(0xb2, 0x50, 0x00),
             overlay: Color32::from_rgb(0xff, 0xff, 0xff),
             shadow: Color32::from_black_alpha(50),
         }
@@ -554,12 +558,12 @@ pub fn play_glyph_offset(icon: Icon, icon_size: f32) -> Vec2 {
     }
 }
 
-/// The app's mark, the same picture as the app icon: the polished green
-/// disc with the play triangle, rasterised once per size by
+/// The app's mark, the same picture as the app icon: the red rounded
+/// square with the white play mark, rasterised once per size by
 /// `util::app_icon_rgba` and drawn wherever the app shows its logo.
 pub fn logo(ui: &egui::Ui, center: egui::Pos2, diameter: f32) {
     let ppp = ui.ctx().pixels_per_point();
-    // The raster keeps two pixels of margin on each side of the disc.
+    // The raster keeps two pixels of margin on each side of the tile.
     let pixels = (diameter * ppp).round() as usize + 4;
     let id = egui::Id::new(("spotifast-logo", pixels));
     let texture = ui
@@ -647,6 +651,125 @@ pub fn circle_spinner(
     }
     if tooltip.is_empty() {
         response
+    } else {
+        response.on_hover_text(tooltip)
+    }
+}
+
+const HEADER_BUTTON_ICON: f32 = 16.0;
+const HEADER_BUTTON_GAP: f32 = 8.0;
+const HEADER_BUTTON_PADDING: f32 = 18.0;
+/// The width of an icon-only [`header_button`], for rows without room.
+pub const HEADER_BUTTON_COMPACT: f32 = 44.0;
+
+/// The width that fits the widest of `labels` in a [`header_button`], so a
+/// pair of them can share one width and a label change never moves a
+/// neighbour.
+pub fn header_button_width(ui: &egui::Ui, labels: &[&str]) -> f32 {
+    let text = labels
+        .iter()
+        .map(|label| {
+            crate::bidi::layout_line(ui.painter(), *label, semibold(14.0), Color32::WHITE)
+                .size()
+                .x
+        })
+        .fold(0.0, f32::max);
+    (text + HEADER_BUTTON_ICON + HEADER_BUTTON_GAP + HEADER_BUTTON_PADDING * 2.0).max(112.0)
+}
+
+/// A rounded-rectangle header action with an accent icon beside a label,
+/// like the Play and Shuffle pair on Apple Music's album pages.
+///
+/// The label keeps the text colour: the accent on `surface` measures under
+/// 4.5:1 as text in both default themes, but clears 3:1 as an icon. An
+/// `active` button is tinted with the accent. Without an icon the button is
+/// busy: a spinner takes the icon's place and it stops taking clicks. A
+/// button narrower than its label, such as [`HEADER_BUTTON_COMPACT`], shows
+/// only its icon.
+pub fn header_button(
+    ui: &mut egui::Ui,
+    palette: &Palette,
+    icon: Option<Icon>,
+    label: &str,
+    width: f32,
+    active: bool,
+    tooltip: &str,
+) -> Response {
+    let busy = icon.is_none();
+    let (rect, response) = ui.allocate_exact_size(
+        Vec2::new(width, 36.0),
+        if busy { Sense::hover() } else { Sense::click() },
+    );
+    let name = if tooltip.is_empty() { label } else { tooltip };
+    response.widget_info(|| {
+        let kind = if busy {
+            egui::WidgetType::ProgressIndicator
+        } else {
+            egui::WidgetType::Button
+        };
+        egui::WidgetInfo::labeled(kind, ui.is_enabled(), name)
+    });
+    if ui.is_rect_visible(rect) {
+        let hovered = !busy && (response.hovered() || response.has_focus());
+        let radius = CornerRadius::same(8);
+        let fill = if hovered {
+            palette.surface_hover
+        } else {
+            palette.surface
+        };
+        ui.painter().rect_filled(rect, radius, fill);
+        if active {
+            ui.painter()
+                .rect_filled(rect, radius, palette.accent.gamma_multiply(0.15));
+        }
+        let galley = crate::bidi::layout_line(ui.painter(), label, semibold(14.0), palette.text);
+        let content = HEADER_BUTTON_ICON + HEADER_BUTTON_GAP + galley.size().x;
+        let labelled = width >= content + 16.0;
+        let icon_rect = egui::Rect::from_center_size(
+            if labelled {
+                egui::pos2(
+                    rect.center().x - content / 2.0 + HEADER_BUTTON_ICON / 2.0,
+                    rect.center().y,
+                )
+            } else {
+                rect.center()
+            },
+            Vec2::splat(HEADER_BUTTON_ICON),
+        );
+        let scale = if response.is_pointer_button_down_on() {
+            0.92
+        } else {
+            1.0
+        };
+        match icon {
+            Some(icon) => paint_icon(
+                ui,
+                icon,
+                icon_rect,
+                HEADER_BUTTON_ICON * scale,
+                palette.accent,
+            ),
+            None => {
+                let mut child = ui.new_child(egui::UiBuilder::new().max_rect(icon_rect).layout(
+                    egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
+                ));
+                spinner(&mut child, HEADER_BUTTON_ICON + 2.0, palette.accent);
+            }
+        }
+        if labelled {
+            ui.painter().galley(
+                egui::pos2(
+                    icon_rect.right() + HEADER_BUTTON_GAP,
+                    rect.center().y - galley.size().y / 2.0,
+                ),
+                galley,
+                palette.text,
+            );
+        }
+    }
+    focus_ring(ui, &response);
+    if tooltip.is_empty() {
+        response.on_hover_text(label)
     } else {
         response.on_hover_text(tooltip)
     }
@@ -887,8 +1010,13 @@ pub fn link(
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
+/// The heading over a shelf or list within a page, linked or not.
+pub fn section_font() -> egui::FontId {
+    bold(20.0)
+}
+
 pub fn section_title(ui: &mut egui::Ui, palette: &Palette, label: &str) -> Response {
-    text(ui, label, bold(17.0), palette.text)
+    text(ui, label, section_font(), palette.text)
 }
 
 pub fn subtle(ui: &mut egui::Ui, palette: &Palette, label: &str) -> Response {
@@ -900,7 +1028,7 @@ mod tests {
     use super::*;
 
     /// The logo drawn in the app is the app icon's own picture, not a
-    /// disc in the theme's accent colour: it uploads the icon's pixels.
+    /// shape in the theme's accent colour: it uploads the icon's pixels.
     #[test]
     fn the_logo_in_the_app_is_the_app_icon() {
         // #given the logo drawn 40 points wide at twice the pixel density
@@ -928,6 +1056,45 @@ mod tests {
             assert_eq!(&got[..], expected, "pixel {x},{y}");
         }
         output.textures_delta.clear();
+    }
+
+    fn contrast(a: Color32, b: Color32) -> f32 {
+        let luminance = |c: Color32| {
+            let [r, g, b] = [c.r(), c.g(), c.b()].map(|v| {
+                let v = f32::from(v) / 255.0;
+                if v <= 0.040_45 {
+                    v / 12.92
+                } else {
+                    ((v + 0.055) / 1.055).powf(2.4)
+                }
+            });
+            0.2126 * r + 0.7152 * g + 0.0722 * b
+        };
+        let (a, b) = (luminance(a), luminance(b));
+        (a.max(b) + 0.05) / (a.min(b) + 0.05)
+    }
+
+    /// The playing song's title is drawn in the accent, and text and icons
+    /// sit on accent fills, so both pairings have to stay legible.
+    #[test]
+    fn the_accent_stays_legible_in_both_themes() {
+        for palette in [Palette::dark(), Palette::light()] {
+            let dark = palette.dark;
+            assert!(
+                contrast(palette.accent, palette.window) >= 4.5,
+                "dark: {dark}"
+            );
+            assert!(contrast(palette.text, palette.panel) >= 7.0, "dark: {dark}");
+            assert!(
+                contrast(palette.secondary, palette.panel) >= 4.5,
+                "dark: {dark}"
+            );
+            let on_accent = if dark { 3.0 } else { 4.5 };
+            assert!(
+                contrast(palette.on_accent, palette.accent) >= on_accent,
+                "dark: {dark}"
+            );
+        }
     }
 
     /// Palette files name the sixteen colours every app shares, and only

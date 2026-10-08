@@ -1259,6 +1259,39 @@ mod tests {
         (ctx, app)
     }
 
+    /// The open page's sidebar row sits on a rounded highlight, so the
+    /// place is shown by a fill rather than by dimming the other rows.
+    #[test]
+    fn the_open_pages_sidebar_row_is_highlighted() {
+        let (ctx, mut app) = accessible_app("sidebar-nav-highlight");
+        app.open(Page::Home);
+        let view = crate::ui::sidebar::show;
+        view_frame(&ctx, &mut app, vec![], view);
+        let painted = view_frame(&ctx, &mut app, vec![], view);
+        let home = sidebar_text(&painted, "Home").center();
+        let search = sidebar_text(&painted, "Search").center();
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(1280.0, 800.0),
+                )),
+                ..Default::default()
+            },
+            |ui| view(&mut app, ui),
+        );
+        output.textures_delta.clear();
+        let highlighted = |at: egui::Pos2| {
+            output.shapes.iter().any(|clipped| {
+                matches!(&clipped.shape, egui::epaint::Shape::Rect(rect)
+                    if rect.fill == app.palette.surface_active && rect.rect.contains(at))
+            })
+        };
+        assert!(highlighted(home), "the open page's row has no highlight");
+        assert!(!highlighted(search), "a closed page's row is highlighted");
+        app.backend.shutdown();
+    }
+
     /// #576: the Library heading never runs under the header's buttons. It
     /// shrinks a little for a long translation and gives way entirely in
     /// the narrowest sidebar, but stays where there is room.
@@ -1404,6 +1437,44 @@ mod tests {
         }
     }
 
+    /// Home's lower shelves run past the bottom of the window; debug builds
+    /// painted an ID clash over them until each shelf's autoscroll
+    /// background had its own ID.
+    #[test]
+    fn home_shelves_below_the_window_have_no_id_clash() {
+        fn warnings(shape: &egui::Shape, out: &mut Vec<String>) {
+            match shape {
+                egui::Shape::Text(text) if text.galley.text().contains("use of widget ID") => {
+                    out.push(text.galley.text().to_owned());
+                }
+                egui::Shape::Vec(shapes) => shapes.iter().for_each(|s| warnings(s, out)),
+                _ => {}
+            }
+        }
+        let (ctx, mut app) = accessible_app("home-id-clash");
+        ctx.options_mut(|options| options.warn_on_id_clash = true);
+        app.open(Page::Home);
+        let mut found = Vec::new();
+        for _ in 0..4 {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            found.clear();
+            for clipped in &output.shapes {
+                warnings(&clipped.shape, &mut found);
+            }
+        }
+        assert_eq!(found, Vec::<String>::new());
+    }
+
     fn accessible_frame(
         ctx: &egui::Context,
         app: &mut App,
@@ -1496,6 +1567,92 @@ mod tests {
         app.backend.shutdown();
     }
 
+    /// A collection header offers Play and Shuffle as a pair of labelled
+    /// buttons of one width, and each still does its job.
+    #[test]
+    fn collection_header_has_labelled_play_and_shuffle_buttons() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        let (ctx, mut app) = accessible_app("header-buttons");
+        app.open(Page::Album("alb0".into()));
+        let frame = |ctx: &egui::Context, app: &mut App, events| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            output
+        };
+        let header = |tree: &egui::accesskit::TreeUpdate, labels: &[&str]| {
+            tree.nodes
+                .iter()
+                .find(|(_, node)| {
+                    node.role() == Role::Button
+                        && node.label().is_some_and(|label| labels.contains(&label))
+                        // The player bar's own Play sits at the bottom.
+                        && node.bounds().is_some_and(|bounds| bounds.y1 < 600.0)
+                })
+                .map(|(id, node)| {
+                    let bounds = node.bounds().unwrap();
+                    (
+                        *id,
+                        egui::Rect::from_min_max(
+                            egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                            egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                        ),
+                    )
+                })
+                .unwrap_or_else(|| panic!("missing header button {labels:?}"))
+        };
+        frame(&ctx, &mut app, vec![]);
+        let output = frame(&ctx, &mut app, vec![]);
+        let painted = menu_text(&output);
+        let tree = output.platform_output.accesskit_update.unwrap();
+        let (_, play) = header(&tree, &["Play", "Pause"]);
+        let (shuffle_id, shuffle) = header(&tree, &["Shuffle", "Shuffle off"]);
+        assert_eq!(play.size(), shuffle.size(), "the pair shares one width");
+        assert!(play.width() > play.height() * 2.0, "{play:?} is not a pill");
+        assert!(shuffle.left() > play.right(), "Shuffle follows Play");
+        for (label, rect) in [("Play", play), ("Shuffle", shuffle)] {
+            assert!(
+                painted
+                    .iter()
+                    .any(|(text, at)| text == label && rect.contains_rect(*at)),
+                "{label} is written on its button"
+            );
+        }
+
+        let before = app.playing_context_shuffle();
+        frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(shuffle_id, AccessibleAction::Click, None)],
+        );
+        assert_eq!(app.playing_context_shuffle(), !before);
+
+        let tree = frame(&ctx, &mut app, vec![])
+            .platform_output
+            .accesskit_update
+            .unwrap();
+        let (play_id, _) = header(&tree, &["Play"]);
+        frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(play_id, AccessibleAction::Click, None)],
+        );
+        assert_eq!(
+            app.playing_context_uri().as_deref(),
+            Some("spotify:album:alb0")
+        );
+        app.backend.shutdown();
+    }
+
     #[test]
     fn translated_sidebar_keeps_keyboard_navigation_and_accessible_names() {
         use crate::i18n::{Locale, gettext};
@@ -1564,6 +1721,117 @@ mod tests {
             );
             app.backend.shutdown();
         }
+    }
+
+    /// Every other song in a list is shaded by its place in the list, so a
+    /// song keeps its shade while the virtual rows scroll past.
+    #[test]
+    fn song_list_stripes_follow_the_songs_when_scrolling() {
+        let (ctx, mut app) = accessible_app("striped-rows");
+        app.open(Page::Playlist("pl1".into()));
+        let stripe = crate::ui::widgets::stripe_fill(&app.palette);
+        let frame = |ctx: &egui::Context, app: &mut App, events| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            output
+        };
+        // Each song row clear of the player bar: its top edge and whether
+        // it is shaded.
+        let rows = |output: &egui::FullOutput| {
+            let stripes: Vec<egui::Rect> = output
+                .shapes
+                .iter()
+                .filter_map(|shape| match &shape.shape {
+                    egui::epaint::Shape::Rect(rect) if rect.fill == stripe => Some(rect.rect),
+                    _ => None,
+                })
+                .collect();
+            let tree = output.platform_output.accesskit_update.as_ref().unwrap();
+            fn label(node: &egui::accesskit::Node) -> Option<&str> {
+                node.label().filter(|label| label.starts_with("Play "))
+            }
+            // A song the playlist holds twice cannot say which copy it is.
+            let once = |wanted: &str| {
+                tree.nodes
+                    .iter()
+                    .filter(|(_, node)| label(node) == Some(wanted))
+                    .count()
+                    == 1
+            };
+            tree.nodes
+                .iter()
+                .filter(|(_, node)| label(node).is_some_and(once))
+                .filter_map(|(_, node)| {
+                    let bounds = node.bounds()?;
+                    let rect = egui::Rect::from_min_max(
+                        egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                        egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                    );
+                    let clear = rect.top() > 0.0 && rect.bottom() < 700.0;
+                    (rect.height() >= crate::theme::THIN_ROW_HEIGHT && clear).then(|| {
+                        let shaded = stripes
+                            .iter()
+                            .any(|stripe| (stripe.top() - rect.top()).abs() < 0.5);
+                        (node.label().unwrap().to_owned(), (rect.top(), shaded))
+                    })
+                })
+                .collect::<std::collections::BTreeMap<_, _>>()
+        };
+        frame(&ctx, &mut app, vec![]);
+        let before = rows(&frame(&ctx, &mut app, vec![egui::Event::PointerGone]));
+        let shaded = before.values().filter(|(_, shaded)| *shaded).count();
+        assert!(
+            shaded > 0 && shaded < before.len(),
+            "some rows are shaded, not all: {before:?}"
+        );
+
+        let over_list = egui::pos2(700.0, 600.0);
+        frame(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(over_list),
+                egui::Event::MouseWheel {
+                    unit: egui::MouseWheelUnit::Point,
+                    delta: egui::vec2(0.0, -150.0),
+                    modifiers: egui::Modifiers::NONE,
+                    phase: egui::TouchPhase::Move,
+                },
+            ],
+        );
+        let mut after = Default::default();
+        for _ in 0..30 {
+            after = rows(&frame(&ctx, &mut app, vec![egui::Event::PointerGone]));
+        }
+        let mut compared = 0;
+        for (song, (top, shaded)) in &after {
+            if let Some((was, was_shaded)) = before.get(song) {
+                assert!(*top < *was, "{song} moved up as the list scrolled");
+                assert_eq!(shaded, was_shaded, "{song} kept its shade");
+                compared += 1;
+            }
+        }
+        let distances: std::collections::BTreeSet<i32> = after
+            .iter()
+            .filter_map(|(song, (top, _))| Some((before.get(song)?.0 - top).round() as i32))
+            .collect();
+        assert_eq!(
+            distances.len(),
+            1,
+            "one scroll for every row: {distances:?}"
+        );
+        assert!(compared >= 2, "{before:?} then {after:?}");
+        app.backend.shutdown();
     }
 
     #[test]
@@ -3293,6 +3561,7 @@ mod tests {
                                 shift: 0.0,
                                 picked: false,
                                 picked_songs: &[],
+                                striped: false,
                             },
                         );
                     }
@@ -3398,6 +3667,7 @@ mod tests {
                                     shift: 0.0,
                                     picked: false,
                                     picked_songs: &[],
+                                    striped: false,
                                 },
                             );
                         });
@@ -3518,6 +3788,7 @@ mod tests {
                                 shift: 0.0,
                                 picked: false,
                                 picked_songs: &[],
+                                striped: false,
                             },
                         );
                     }
@@ -4306,6 +4577,7 @@ mod tests {
                         shift: 0.0,
                         picked: false,
                         picked_songs: &[],
+                        striped: false,
                     },
                 );
             }
@@ -8970,6 +9242,84 @@ mod tests {
 
         app.backend.shutdown();
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    /// Where playback is reads as a neutral status, whatever the accent;
+    /// only the update badge, which asks to be used, keeps the accent tint.
+    #[test]
+    fn only_the_update_badge_is_tinted_with_the_accent() {
+        for light in [false, true] {
+            let (ctx, mut app) = accessible_app("badges");
+            if light {
+                app.settings.theme = crate::settings::ThemeChoice::Light;
+                app.actions.push(Action::SettingsChanged);
+            }
+            app.update = Some(crate::updates::Release {
+                version: "0.7.1".into(),
+                url: "https://example.invalid/releases".into(),
+            });
+            accessible_frame(&ctx, &mut app, vec![]);
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    events: vec![egui::Event::PointerGone],
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            let palette = app.palette;
+            assert_eq!(palette.dark, !light);
+            let tree = output.platform_output.accesskit_update.as_ref().unwrap();
+            let fill = |prefix: &str| {
+                let bounds = tree
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| node.label().is_some_and(|label| label.starts_with(prefix)))
+                    .and_then(|(_, node)| node.bounds())
+                    .unwrap_or_else(|| panic!("missing the {prefix} badge"));
+                let badge = egui::Rect::from_min_max(
+                    egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                    egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                );
+                output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::epaint::Shape::Rect(rect)
+                            if (rect.rect.min - badge.min).length() < 0.5
+                                && (rect.rect.max - badge.max).length() < 0.5 =>
+                        {
+                            Some(rect.fill)
+                        }
+                        _ => None,
+                    })
+                    .unwrap_or_else(|| panic!("the {prefix} badge has no fill"))
+            };
+            assert_eq!(fill("Playing on"), palette.surface, "light: {light}");
+            assert_eq!(
+                fill("Update to"),
+                palette.accent.gamma_multiply(0.16),
+                "light: {light}"
+            );
+            let color = output
+                .shapes
+                .iter()
+                .find_map(|shape| match &shape.shape {
+                    egui::epaint::Shape::Text(text)
+                        if text.galley.job.text.starts_with("Playing on") =>
+                    {
+                        Some(text.galley.job.sections[0].format.color)
+                    }
+                    _ => None,
+                })
+                .expect("the device label");
+            assert_eq!(color, palette.text, "light: {light}");
+            app.backend.shutdown();
+        }
     }
 
     /// The badges at the right end of the top bar sit in a right-to-left

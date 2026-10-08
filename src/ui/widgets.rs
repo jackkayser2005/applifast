@@ -1130,6 +1130,10 @@ pub struct TrackRow<'a> {
     /// the menu can update a destination playlist before Spotify answers.
     /// Empty where a list does not offer picking.
     pub picked_songs: &'a [PlayableItem],
+    /// Whether this row takes the list's faint alternate shade. Set from the
+    /// row's place in the whole list, never its place on screen, so the
+    /// stripes stay put while a virtual list scrolls.
+    pub striped: bool,
 }
 
 /// Draw each credited artist separately so its Spotify id remains clickable.
@@ -1208,6 +1212,12 @@ fn columns(width: f32, row: &TrackRow<'_>) -> Columns {
         duration: if row.compact { 44.0 } else { 56.0 },
         more: if row.compact { 0.0 } else { 36.0 },
     }
+}
+
+/// The alternate shade of a striped song list: half the way to `surface`,
+/// fainter than the hover and selection fills that replace it.
+pub(crate) fn stripe_fill(palette: &Palette) -> Color32 {
+    palette.surface.gamma_multiply(0.5)
 }
 
 /// Draws one song in a list.
@@ -1346,6 +1356,9 @@ fn track_row_contents(
                 .surface_hover
                 .gamma_multiply(if palette.dark { 0.7 } else { 1.0 }),
         );
+    } else if row.striped {
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(6), stripe_fill(&palette));
     }
     // The row highlight also shows keyboard focus. Do not add an outline
     // when a mouse click gives the row focus for arrow-key navigation.
@@ -2372,7 +2385,11 @@ pub fn card(
             );
         }
         let image_rect = Rect::from_min_size(rect.min + vec2(PAD, PAD), Vec2::splat(image_size));
-        let radius = if circular { image_size / 2.0 } else { 6.0 };
+        let radius = if circular {
+            image_size / 2.0
+        } else {
+            f32::from(theme::RADIUS)
+        };
         paint_shadow(ui, &palette, image_rect, radius);
         paint_cover(
             ui,
@@ -3787,6 +3804,7 @@ mod tests {
                                     shift: 0.0,
                                     picked,
                                     picked_songs: &[],
+                                    striped: false,
                                 },
                             );
                             rect = response.rect;
@@ -3839,6 +3857,96 @@ mod tests {
                 );
                 assert_eq!(rect.height(), theme::ROW_HEIGHT);
                 assert!(app.actions.is_empty());
+            }
+        }
+    }
+
+    /// A striped row has one faint fill of its own; hover, focus and
+    /// selection replace it rather than stack on top of it.
+    #[test]
+    fn a_stripe_gives_way_to_hover_and_selection() {
+        for palette in [Palette::dark(), Palette::light()] {
+            for (striped, picked, focused) in [
+                (true, false, false),
+                (true, true, false),
+                (true, false, true),
+                (false, false, false),
+            ] {
+                let mut app = test_app();
+                app.backend.shutdown();
+                app.palette = palette;
+                let ctx = egui::Context::default();
+                theme::install(&ctx);
+                theme::apply(&ctx, &palette);
+                let item = song("spotify:track:striped");
+                let context = RowContext::Queue;
+                let mut rect = Rect::NOTHING;
+                let mut draw = || {
+                    let mut output = ctx.run_ui(
+                        egui::RawInput {
+                            screen_rect: Some(Rect::from_min_size(
+                                egui::Pos2::ZERO,
+                                vec2(760.0, 520.0),
+                            )),
+                            events: vec![egui::Event::PointerGone],
+                            ..Default::default()
+                        },
+                        |ui| {
+                            let (response, _) = track_row_response(
+                                ui,
+                                &mut app,
+                                TrackRow {
+                                    index: 1,
+                                    number: Some(2),
+                                    item: &item,
+                                    context: &context,
+                                    show_cover: false,
+                                    show_album: false,
+                                    added_at: None,
+                                    added_by: None,
+                                    show_added_by: false,
+                                    compact: false,
+                                    thin: false,
+                                    shift: 0.0,
+                                    picked,
+                                    picked_songs: &[],
+                                    striped,
+                                },
+                            );
+                            rect = response.rect;
+                            if focused {
+                                response.request_focus();
+                            }
+                        },
+                    );
+                    output.textures_delta.clear();
+                    output
+                };
+                draw();
+                let output = draw();
+                let fills: Vec<_> = output
+                    .shapes
+                    .iter()
+                    .filter_map(|shape| match &shape.shape {
+                        egui::epaint::Shape::Rect(shape) if shape.rect == rect => Some(shape.fill),
+                        _ => None,
+                    })
+                    .collect();
+                let expected = if picked {
+                    vec![palette.secondary.gamma_multiply(0.20)]
+                } else if focused {
+                    vec![
+                        palette
+                            .surface_hover
+                            .gamma_multiply(if palette.dark { 0.7 } else { 1.0 }),
+                    ]
+                } else if striped {
+                    vec![stripe_fill(&palette)]
+                } else {
+                    vec![]
+                };
+                assert_eq!(fills, expected, "striped {striped}, picked {picked}");
+                assert_ne!(stripe_fill(&palette), Color32::TRANSPARENT);
             }
         }
     }

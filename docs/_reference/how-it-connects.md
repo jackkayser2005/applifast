@@ -6,7 +6,7 @@ nav_order: 1
 
 ## Independent grants, once each
 
-Spotifast uses separate credentials for Web API access, a personal app, and
+Applifast uses separate credentials for Web API access, a personal app, and
 local playback:
 
 1. **The shared Web API app** keeps full catalogue and playlist coverage.
@@ -50,11 +50,11 @@ track transitions and pause/resume retain that history.
 Since 0.8.0, requests that need a grant still being
 verified wait for it instead of showing "not signed in". Sign-out cancels
 pending requests, and their late results cannot undo a new sign-in. If Spotify
-rejects a saved refresh grant, Spotifast removes that grant and asks for a new
+rejects a saved refresh grant, Applifast removes that grant and asks for a new
 browser approval. Upgrading to protected storage does not itself require
 signing in again.
 
-By default, Spotifast uses the public app shared with spotify-player, ncspot,
+By default, Applifast uses the public app shared with spotify-player, ncspot,
 and Omarchy Spotify. Spotify divides its quota among all users. A personal app
 adds a separate Development Mode quota. See
 [Use a Personal Spotify App](/make-it-even-faster/).
@@ -103,7 +103,7 @@ current-track pickup.
 - Since 0.8.0, shared and personal Web API grants
   and the reusable playback credential use the platform credential store:
   Secret Service on Linux, Keychain on macOS, and Credential Manager on
-  Windows. Librespot retains its reusable credential in memory; Spotifast
+  Windows. Librespot retains its reusable credential in memory; Applifast
   owns persistence. Flatpak can talk to `org.freedesktop.secrets` for this.
   Version 0.7.1 still uses the older unencrypted files.
   See [migration, sign-out, and storage protection](/settings-and-files/).
@@ -124,7 +124,7 @@ current-track pickup.
   prefixes refresh through the existing Web API grant, one page at a time,
   while the saved rows remain visible. Manual refresh starts immediately.
   Like and Unlike are kept over lagging reads until Spotify confirms them.
-- Spotifast has no telemetry, analytics, or hosted service. When the lyrics
+- Applifast has no telemetry, analytics, or hosted service. When the lyrics
   panel is open and Spotify has no lyrics, it sends the track's artist, title,
   album, and length to [lrclib.net](https://lrclib.net). It also checks
   api.github.com once a day for updates. You can turn off automatic checks in
@@ -133,10 +133,10 @@ current-track pickup.
 
   On Windows, macOS, and Linux, downloading an update fetches release metadata and
   `checksums.txt` from the project's GitHub release, then the matching binary
-  archive, Windows installer, or universal macOS DMG. Spotifast checks the published SHA-256 digest
+  archive, Windows installer, or universal macOS DMG. Applifast checks the published SHA-256 digest
   and the portable executable's reported version before offering a restart.
   Automatic downloads are optional; installation always waits for your click.
-  Checks and downloads do not open the update popup. The green update pill opens
+  Checks and downloads do not open the update popup. The update pill in the top bar opens
   it on request; closing the popup does not cancel a download.
   No Spotify credential is sent. These are GitHub-hosted checksums, not a
   separate publisher signature.
@@ -157,7 +157,7 @@ current-track pickup.
 ## Collection loading and artwork
 
 Since 0.9.0, opening a playlist, album, artist, or podcast keeps any
-title, summary, and cover Spotifast already knows while the complete page is
+title, summary, and cover Applifast already knows while the complete page is
 requested. Controls that need unfinished details stay disabled, and a loading
 indicator marks the unfinished content. If the request fails, the known header
 stays above **Retry**. A direct link with no known details shows only the normal
@@ -185,7 +185,7 @@ rows are placeholders until their page arrives; scrolling never starts playback.
 ## When Spotify pushes back
 
 Each Web API session has separate concurrency and rate limits. A `Retry-After`
-response pauses only that session. Spotifast routes each request once and
+response pauses only that session. Applifast routes each request once and
 does not retry it through the other app. A playlist read the librespot session
 refuses outright, because the playlist is gone or private, is shown as such. A
 dropped connection, a read that takes longer than 30 seconds, or a page whose
@@ -194,11 +194,11 @@ instead of caching rows without songs. A song Spotify no longer has, or
 withholds for legal reasons, is an empty row, as the Web API shows it.
 
 Spotify can also explicitly refuse the key needed to decrypt a track. When
-that happens, Spotifast stops local playback and leaves the rest of the queue
+that happens, Applifast stops local playback and leaves the rest of the queue
 alone instead of treating every following track as unavailable. This refusal
 comes from Spotify; trying again later may work.
 
-Before adding songs to an existing playlist, Spotifast checks the rows it
+Before adding songs to an existing playlist, Applifast checks the rows it
 already holds. A known duplicate produces an immediate confirmation naming the
 song. Only a playlist that has not been fully loaded needs a background scan to
 rule out duplicates. Once confirmed, the new rows appear locally at once.
@@ -208,7 +208,7 @@ through the same Web API grant. Duplicate checks and confirmation retain that
 position; partial loaded pages keep the correct continuation offset. A
 successful write advances the cached playlist to Spotify's returned snapshot
 instead of downloading the playlist again. If Spotify cannot answer the scan,
-Spotifast preserves the requested edit and lets the write report its result.
+Applifast preserves the requested edit and lets the write report its result.
 
 Since 0.8.0, manually reloading an edited playlist waits for all
 pending writes and confirmation of the returned Spotify revision before
@@ -253,7 +253,7 @@ append might already have succeeded.
 ## Playlist cover uploads
 
 Since 0.9.0, **Edit details → Change cover** opens the native file
-picker. Spotifast reads only the selected JPEG or PNG, preserves its aspect ratio, flattens transparent
+picker. Applifast reads only the selected JPEG or PNG, preserves its aspect ratio, flattens transparent
 pixels onto white, and encodes a JPEG preview. Files must be smaller than 20 MB
 and no larger than 8192 pixels per side, within a 128 MB decoding budget.
 Encoding reduces the image to fit
@@ -263,7 +263,7 @@ Spotify; **Save** separately saves the name, description, and visibility.
 Uploads use the same shared or personal app routing as playlist edits. Requests
 are not retried through another app. The uploaded image stays visible while
 Spotify propagates its artwork. A changed URL can still contain an earlier
-upload, so Spotifast checks the largest returned image through its normal
+upload, so Applifast checks the largest returned image through its normal
 artwork cache, off the UI thread. Only matching image bytes or decoded pixels
 replace the temporary preview. It makes at most three immediate metadata
 rechecks; if Spotify is still catching up or the check fails, the preview stays
@@ -271,7 +271,7 @@ and a later page refresh can check again. Once confirmed, later cover changes
 from other clients can appear. The selected source file is not copied to the
 cache or settings.
 
-Image uploads require renewed Web API consent. If Spotifast asks you to sign
+Image uploads require renewed Web API consent. If Applifast asks you to sign
 in again after updating, approve the image upload permission. Reconnect your
 personal app in Settings too, if you use one. Local playback authorization is
 unchanged. Spotify can refuse changes to playlists you do not own.
@@ -292,12 +292,12 @@ seconds overall after discovery. Only responding receivers with a name and
 ID are offered. Matching IDs are combined; separate devices can have the
 same name. These reads send no account credential.
 
-When a receiver is selected, Spotifast encrypts the stored librespot credential
+When a receiver is selected, Applifast encrypts the stored librespot credential
 with a receiver-specific key and a key from a Diffie-Hellman exchange. The
-encrypted value only works for that receiver and exchange. Spotifast does not
+encrypted value only works for that receiver and exchange. Applifast does not
 save another copy of the credential.
 
-The receiver then signs in and appears in Spotify's device list. Spotifast
+The receiver then signs in and appears in Spotify's device list. Applifast
 uses the Web API for subsequent control requests.
 
 ## The engine
@@ -319,7 +319,7 @@ system mixers and audio processors can identify and route it. Explicit
 `PULSE_PROP_application.name` and `PULSE_PROP_stream.description` environment
 values take precedence.
 The same session checks releases that the Web API calls `single`, so confirmed
-EPs can carry their precise label. Spotifast deduplicates these checks while
+EPs can carry their precise label. Applifast deduplicates these checks while
 the app session is active. If the engine reconnects, an interrupted check may
 be tried again; if metadata is unavailable, its label stays `Single`.
 
@@ -330,7 +330,7 @@ inbound ports have to be open.
 
 Each socket setup and handshake shares a five-second deadline. The pinned
 librespot version can try up to six access points and retry each connection
-once. Spotifast allows 75 seconds for the whole engine connection, giving
+once. Applifast allows 75 seconds for the whole engine connection, giving
 stalled endpoints more time to fall back. Resolving access points,
 authentication, and other setup also use that outer deadline, so reaching
 every fallback endpoint is not guaranteed.
@@ -359,7 +359,7 @@ Since 0.9.0, Settings → Proxy has four modes:
   Spotify hostnames are resolved by that proxy.
 
 The mode selects the protocol. Host and port are separate fields.
-These settings apply to Spotifast's requests. The external browser used
+These settings apply to Applifast's requests. The external browser used
 for Spotify approval keeps its own network and proxy settings.
 
 The Web API, artwork, lyrics, update checks and downloads, and MilkDrop preset

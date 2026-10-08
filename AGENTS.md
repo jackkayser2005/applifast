@@ -3,6 +3,19 @@
 Follow `CONTRIBUTING.md`; it is the canonical product and contribution policy.
 These instructions add implementation constraints for coding agents.
 
+## Applifast fork policy
+
+The maintainer has authorized a Windows Apple Music port using Rust/egui and
+MusicKit JS in an independent WebView2 playback host. This supersedes the
+upstream Spotify-only and no-browser boundaries below. Keep MIT licensing,
+upstream credit, no hosted backend, no app telemetry, and no DRM circumvention.
+Use feature branches and focused feature PRs on `jackkayser2005/applifast`, as
+requested for this fork, instead of the upstream direct-main workflow below.
+Preserve separate Applifast settings and credentials. Follow the existing
+architecture, optimistic-state rules, checks and visual-evidence requirements.
+See `docs/applifast/listening-slice.md` for implemented and pending capabilities;
+the remaining Spotify-specific sections describe retained upstream code.
+
 ## Product boundaries
 
 - Keep Spotifast a small native Spotify client. Do not add a browser engine,

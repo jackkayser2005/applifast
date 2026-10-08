@@ -1,0 +1,73 @@
+//! Apple setup content inside the existing native sign-in card.
+use crate::{app::App, model::Action, theme};
+
+pub(super) fn login_contents(app: &mut App, ui: &mut egui::Ui) {
+    let (ready, loading, error) = {
+        let apple = app.apple.as_ref().expect("Apple sign-in");
+        (apple.ready, apple.loading, apple.error.clone())
+    };
+    if let Some(error) = error {
+        ui.add(
+            egui::Label::new(
+                egui::RichText::new(error)
+                    .font(theme::regular(13.0))
+                    .color(app.palette.danger),
+            )
+            .wrap(),
+        );
+        ui.add_space(12.0);
+    }
+    if !cfg!(windows) {
+        theme::text(
+            ui,
+            "Apple playback is currently supported on Windows.",
+            theme::regular(13.0),
+            app.palette.secondary,
+        );
+        return;
+    }
+    if loading {
+        ui.horizontal(|ui| {
+            theme::spinner(ui, 18.0, app.palette.accent);
+            theme::text(
+                ui,
+                if ready {
+                    "Waiting for Apple authorization"
+                } else {
+                    "Connecting to Apple Music"
+                },
+                theme::medium(14.0),
+                app.palette.text,
+            );
+        });
+        if ready && theme::pill_button(ui, &app.palette, "Cancel", false).clicked() {
+            app.actions.push(Action::CancelSignIn);
+        }
+    }
+    if ui
+        .add_enabled_ui(ready && !loading, |ui| {
+            super::login::big_button(ui, app, "Sign in with Apple")
+        })
+        .inner
+    {
+        app.actions.push(Action::SignIn);
+    }
+    ui.add_space(10.0);
+    theme::text(
+        ui,
+        "Sign in through Apple's authorization window.",
+        theme::regular(12.5),
+        app.palette.secondary,
+    );
+    ui.add_space(12.0);
+    let apple = app.apple.as_mut().expect("Apple sign-in");
+    ui.add(
+        egui::TextEdit::singleline(&mut apple.token_path)
+            .hint_text("Path to developer-token.txt")
+            .desired_width(ui.available_width()),
+    );
+    if theme::pill_button(ui, &app.palette, "Import developer token", false).clicked() {
+        app.actions
+            .push(Action::AppleImportToken(apple.token_path.clone().into()));
+    }
+}

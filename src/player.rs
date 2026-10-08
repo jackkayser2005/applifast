@@ -307,6 +307,46 @@ pub enum EngineEvent {
 
 pub type Notify = Arc<dyn Fn(EngineEvent) + Send + Sync>;
 
+/// Channel owner for the Apple coordinator and its independent STA host.
+pub struct AppleHost {
+    input: std::sync::mpsc::Sender<String>,
+    task: std::thread::JoinHandle<()>,
+}
+
+impl AppleHost {
+    pub fn start(
+        token_file: Option<PathBuf>,
+        emit: impl Fn(serde_json::Value) + Send + Sync + Clone + 'static,
+    ) -> Self {
+        let (input, receiver) = std::sync::mpsc::channel();
+        let task = std::thread::spawn(move || {
+            #[cfg(windows)]
+            if let Err(message) =
+                applifast_playback_probe::windows::attach(token_file, receiver, emit.clone())
+            {
+                emit(serde_json::json!({"type":"error","message":message}));
+            }
+            #[cfg(not(windows))]
+            {
+                drop((token_file, receiver));
+                emit(
+                    serde_json::json!({"type":"error","message":"Apple playback is supported on Windows only."}),
+                );
+            }
+        });
+        Self { input, task }
+    }
+    pub fn send(&self, command: String) {
+        let _ = self.input.send(command);
+    }
+    /// The backend awaits this on a blocking worker, never on the UI thread.
+    pub fn shutdown(self) {
+        let _ = self.input.send("{\"type\":\"shutdown\"}".into());
+        drop(self.input);
+        let _ = self.task.join();
+    }
+}
+
 pub struct Engine {
     player: Arc<Player>,
     spirc: Arc<Spirc>,

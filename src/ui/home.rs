@@ -46,12 +46,17 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     let mut tiles: Vec<Tile> = vec![Tile {
         image: None,
-        name: gettext(app.locale, "Liked Songs").into_owned(),
+        name: gettext(
+            app.locale,
+            if app.apple.is_some() {
+                "Songs"
+            } else {
+                "Liked Songs"
+            },
+        )
+        .into_owned(),
         page: Page::LikedSongs,
-        uri: app
-            .user
-            .as_ref()
-            .map(|user| format!("spotify:user:{}:collection", user.id)),
+        uri: app.songs_context_uri(),
         liked: true,
         owned_playlist: None,
     }];
@@ -603,7 +608,7 @@ fn track_list(
         Loadable::Loaded(tracks) => tracks,
         Loadable::Loading | Loadable::NotLoaded => {
             if let Some(page) = title_page {
-                if theme::link(ui, title, theme::bold(17.0), palette.text).clicked() {
+                if theme::link(ui, title, theme::section_font(), palette.text).clicked() {
                     app.actions.push(Action::Open(page));
                 }
             } else {
@@ -624,7 +629,7 @@ fn track_list(
         return;
     }
     if let Some(page) = title_page {
-        if theme::link(ui, title, theme::bold(17.0), palette.text).clicked() {
+        if theme::link(ui, title, theme::section_font(), palette.text).clicked() {
             app.actions.push(Action::Open(page));
         }
     } else {
@@ -657,6 +662,7 @@ fn track_list(
                 shift: 0.0,
                 picked: false,
                 picked_songs: &[],
+                striped: false,
             },
         );
     }

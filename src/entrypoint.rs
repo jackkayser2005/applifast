@@ -11,7 +11,7 @@ struct Cli {
     control: Option<Control>,
 
     /// A Spotify link to open: spotify:track:…, or an open.spotify.com
-    /// address. The running Spotifast opens it when there is one, which
+    /// address. The running Applifast opens it when there is one, which
     /// is how the desktop hands links over.
     #[arg(value_name = "LINK")]
     link: Option<String>,
@@ -228,7 +228,7 @@ fn run_control(control: Control) -> i32 {
             }
         }
         Err(error) => {
-            eprintln!("Spotifast is not running or does not support remote control: {error}");
+            eprintln!("Applifast is not running or does not support remote control: {error}");
             return 1;
         }
     };
@@ -527,6 +527,45 @@ pub(crate) fn run() -> eframe::Result<()> {
         }
     }
     #[cfg(feature = "demo")]
+    if demo
+        && !cli
+            .demo_show
+            .as_deref()
+            .is_some_and(|flags| flags.split(',').any(|flag| flag == "legacy"))
+    {
+        let mut apple = spotifast::apple::State::demo(&app.library.liked.items);
+        for flag in cli.demo_show.as_deref().unwrap_or("").split(',') {
+            match flag {
+                "signed-out" => apple.clear_account(),
+                "connecting" => { apple.clear_account(); apple.ready = false; apple.loading = true; },
+                "collection-loading" => apple.loading = true,
+                "apple-error" => apple.error = Some("Example playback error. Check connection or song availability. The queue is retained.".into()),
+                _ => {}
+            }
+        }
+        app.local = apple.local.clone();
+        app.local_ready = apple.authorized;
+        app.library.liked.items = apple
+            .songs
+            .iter()
+            .map(|song| spotifast::api::models::SavedTrack {
+                added_at: None,
+                track: song.track(),
+            })
+            .collect();
+        app.library.liked.loading = apple.loading;
+        app.library.liked.revision += 1;
+        for saved in &app.library.liked.items {
+            if let Some(id) = &saved.track.id {
+                app.track_cache.insert(id.clone(), saved.track.clone());
+            }
+        }
+        if let Some(error) = &apple.error {
+            app.toast_error(error.clone());
+        }
+        app.apple = Some(apple);
+    }
+    #[cfg(feature = "demo")]
     let shot = cli.demo_shot.clone().map(|path| Shot {
         path,
         due: std::time::Instant::now() + std::time::Duration::from_millis(cli.demo_shot_delay),
@@ -773,7 +812,7 @@ fn native_options(
         app_icon()
     };
     let viewport = egui::ViewportBuilder::default()
-        .with_title("Spotifast")
+        .with_title("Applifast")
         .with_app_id(app_id)
         .with_taskbar(true)
         .with_icon(icon);

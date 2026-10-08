@@ -1,0 +1,22 @@
+[package]
+name = "applifast-playback-probe"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[workspace]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+url = "2"
+
+[target.'cfg(windows)'.dependencies]
+# Rust WebView2 COM bindings use Microsoft's installed Evergreen runtime.
+webview2-com = "=0.39.1"
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_Com", "Win32_System_LibraryLoader", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging"] }
+# Keep probe tokens in Windows Credential Manager, separate from Spotifast.
+keyring-core = "1"
+windows-native-keyring-store = "1.1"

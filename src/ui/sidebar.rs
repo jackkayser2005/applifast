@@ -50,9 +50,7 @@ impl Entry {
 /// account's collection instead.
 fn entry_play_uri(app: &App, entry: &Entry) -> Option<String> {
     if entry.liked {
-        app.user
-            .as_ref()
-            .map(|user| format!("spotify:user:{}:collection", user.id))
+        app.songs_context_uri()
     } else if entry.uri.is_empty() {
         None
     } else {
@@ -307,7 +305,15 @@ fn liked_entry(app: &App) -> Entry {
     Entry {
         image: None,
         grid_image: None,
-        name: gettext(app.locale, "Liked Songs").into_owned(),
+        name: gettext(
+            app.locale,
+            if app.apple.is_some() {
+                "Songs"
+            } else {
+                "Liked Songs"
+            },
+        )
+        .into_owned(),
         subtitle,
         grid_subtitle,
         page: Page::LikedSongs,
@@ -800,20 +806,26 @@ fn nav_row(
 ) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::click());
     if ui.is_rect_visible(rect) {
-        let color = if active || response.hovered() {
-            palette.text
+        let fill = if active {
+            Some(palette.surface_active)
+        } else if response.hovered() {
+            Some(palette.surface_hover)
         } else {
-            palette.secondary
+            None
         };
+        if let Some(fill) = fill {
+            ui.painter()
+                .rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
+        }
         let icon_rect =
             Rect::from_center_size(pos2(rect.left() + 22.0, rect.center().y), Vec2::splat(22.0));
-        icon.image(color, 22.0).paint_at(ui, icon_rect);
+        icon.image(palette.accent, 22.0).paint_at(ui, icon_rect);
         ui.painter().text(
             pos2(rect.left() + 46.0, rect.center().y),
             egui::Align2::LEFT_CENTER,
             label,
-            theme::bold(15.0),
-            color,
+            theme::semibold(15.0),
+            palette.text,
         );
     }
     response.widget_info(|| {

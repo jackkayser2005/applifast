@@ -283,8 +283,8 @@ msgid "Mute"
 msgstr "Silenciar"
 
 #: src/ui/player_bar.rs:869
-msgid "This device's volume can't be changed from Spotifast"
-msgstr "O volume deste dispositivo não pode ser alterado a partir do Spotifast"
+msgid "This device's volume can't be changed from Applifast"
+msgstr "O volume deste dispositivo não pode ser alterado a partir do Applifast"
 
 #: src/ui/player_bar.rs:884 src/ui/devices.rs:193
 msgid "Connect to a device"
@@ -651,12 +651,12 @@ msgstr ""
 #. Translators: {version} is a version number such as 1.4.0.
 #: src/app.rs:2002
 #, rust-format
-msgid "Spotifast {version} is available"
-msgstr "O Spotifast {version} está disponível"
+msgid "Applifast {version} is available"
+msgstr "O Applifast {version} está disponível"
 
 #: src/app.rs:2019
-msgid "Spotifast is up to date"
-msgstr "O Spotifast está atualizado"
+msgid "Applifast is up to date"
+msgstr "O Applifast está atualizado"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:2027
@@ -872,8 +872,8 @@ msgid "This song's album is not on Spotify"
 msgstr "O álbum desta música não está no Spotify"
 
 #: src/app.rs:6324
-msgid "Spotifast cannot open this kind of Spotify link"
-msgstr "O Spotifast não consegue abrir este tipo de ligação do Spotify"
+msgid "Applifast cannot open this kind of Spotify link"
+msgstr "O Applifast não consegue abrir este tipo de ligação do Spotify"
 
 #: src/app.rs:6487
 msgid "Nothing is playing. Pick something first"
@@ -1303,16 +1303,16 @@ msgstr "Reproduz as faixas sem silêncio entre elas."
 
 #: src/ui/settings.rs:481
 msgid ""
-"Spotifast hides to the system tray. Quit from the tray menu or with Ctrl+Q."
+"Applifast hides to the system tray. Quit from the tray menu or with Ctrl+Q."
 msgstr ""
-"O Spotifast fica na área de notificação. Sai pelo menu da área de "
+"O Applifast fica na área de notificação. Sai pelo menu da área de "
 "notificação ou com Ctrl+Q."
 
 #: src/ui/settings.rs:485
 msgid ""
-"Spotifast hides to the system tray. Quit from the tray menu or with Cmd+Q."
+"Applifast hides to the system tray. Quit from the tray menu or with Cmd+Q."
 msgstr ""
-"O Spotifast fica na área de notificação. Sai pelo menu da área de "
+"O Applifast fica na área de notificação. Sai pelo menu da área de "
 "notificação ou com Cmd+Q."
 
 #: src/ui/settings.rs:492
@@ -1475,10 +1475,10 @@ msgstr ""
 
 #: src/ui/settings.rs:874
 msgid ""
-"Draw Spotifast's own title bar and window buttons instead of the standard "
+"Draw Applifast's own title bar and window buttons instead of the standard "
 "Windows ones."
 msgstr ""
-"Desenha a barra de título e os botões de janela do próprio Spotifast em vez "
+"Desenha a barra de título e os botões de janela do próprio Applifast em vez "
 "dos predefinidos do Windows."
 
 #: src/ui/settings.rs:882
@@ -1660,10 +1660,10 @@ msgstr "Predefinições"
 #: src/ui/settings.rs:1486
 #, rust-format
 msgid ""
-"None yet in {folder}. Add .milk files here. Spotifast downloads presets when "
+"None yet in {folder}. Add .milk files here. Applifast downloads presets when "
 "MilkDrop first opens with an empty folder."
 msgstr ""
-"Ainda não há nenhuma em {folder}. Adiciona ficheiros .milk aqui. O Spotifast "
+"Ainda não há nenhuma em {folder}. Adiciona ficheiros .milk aqui. O Applifast "
 "transfere predefinições quando o MilkDrop abre pela primeira vez com a pasta "
 "vazia."
 
@@ -1671,10 +1671,10 @@ msgstr ""
 #: src/ui/settings.rs:1492
 #, rust-format
 msgid ""
-"One preset in {folder}. Add .milk files here. Spotifast downloads presets "
+"One preset in {folder}. Add .milk files here. Applifast downloads presets "
 "when MilkDrop first opens with an empty folder."
 msgstr ""
-"Uma predefinição em {folder}. Adiciona ficheiros .milk aqui. O Spotifast "
+"Uma predefinição em {folder}. Adiciona ficheiros .milk aqui. O Applifast "
 "transfere predefinições quando o MilkDrop abre pela primeira vez com a pasta "
 "vazia."
 
@@ -1682,18 +1682,18 @@ msgstr ""
 #: src/ui/settings.rs:1498
 #, rust-format
 msgid ""
-"{count} preset in {folder}. Add .milk files here. Spotifast downloads "
+"{count} preset in {folder}. Add .milk files here. Applifast downloads "
 "presets when MilkDrop first opens with an empty folder."
 msgid_plural ""
-"{count} presets in {folder}. Add .milk files here. Spotifast downloads "
+"{count} presets in {folder}. Add .milk files here. Applifast downloads "
 "presets when MilkDrop first opens with an empty folder."
 msgstr[0] ""
-"{count} predefinição em {folder}. Adiciona ficheiros .milk aqui. O Spotifast "
+"{count} predefinição em {folder}. Adiciona ficheiros .milk aqui. O Applifast "
 "transfere predefinições quando o MilkDrop abre pela primeira vez com a pasta "
 "vazia."
 msgstr[1] ""
 "{count} predefinições em {folder}. Adiciona ficheiros .milk aqui. O "
-"Spotifast transfere predefinições quando o MilkDrop abre pela primeira vez "
+"Applifast transfere predefinições quando o MilkDrop abre pela primeira vez "
 "com a pasta vazia."
 
 #: src/ui/settings.rs:1507
@@ -2162,11 +2162,11 @@ msgstr "Espera menos pelo Spotify"
 
 #: src/ui/dialogs.rs:41
 msgid ""
-"Spotifast's default connection shares Spotify's request limit with other "
+"Applifast's default connection shares Spotify's request limit with other "
 "listeners. When it gets busy, loading music and using playback controls can "
 "take longer."
 msgstr ""
-"A ligação predefinida do Spotifast partilha o limite de pedidos do Spotify "
+"A ligação predefinida do Applifast partilha o limite de pedidos do Spotify "
 "com outros ouvintes. Quando está sobrecarregada, carregar música e usar os "
 "controlos de reprodução pode demorar mais."
 
@@ -2244,10 +2244,10 @@ msgstr "Esta conta não pode reproduzir música aqui"
 #: src/ui/dialogs.rs:213
 msgid ""
 "Playback needs Spotify Premium. Free accounts can browse and search, but "
-"cannot play music through Spotifast."
+"cannot play music through Applifast."
 msgstr ""
 "A reprodução requer o Spotify Premium. As contas gratuitas podem navegar e "
-"pesquisar, mas não podem reproduzir música no Spotifast."
+"pesquisar, mas não podem reproduzir música no Applifast."
 
 #: src/ui/dialogs.rs:222
 msgid "OK"
@@ -2599,10 +2599,10 @@ msgstr "Iniciar sessão com o Spotify"
 
 #: src/ui/login.rs:134
 msgid ""
-"Sign in through your browser. Spotifast never sees your password. Local "
+"Sign in through your browser. Applifast never sees your password. Local "
 "playback needs Spotify Premium."
 msgstr ""
-"Inicia sessão no navegador. O Spotifast nunca vê a tua palavra-passe. A "
+"Inicia sessão no navegador. O Applifast nunca vê a tua palavra-passe. A "
 "reprodução local requer o Spotify Premium."
 
 #: src/ui/login.rs:167
@@ -2612,8 +2612,8 @@ msgstr "Definições de proxy"
 #. Translators: {version} is the app's version number, such as 1.2.0.
 #: src/ui/login.rs:188
 #, rust-format
-msgid "Spotifast {version} • not affiliated with Spotify"
-msgstr "Spotifast {version} • sem afiliação ao Spotify"
+msgid "Applifast {version} • not affiliated with Spotify"
+msgstr "Applifast {version} • sem afiliação ao Spotify"
 
 #: src/ui/mod.rs:464
 msgid "Minimize"
@@ -2809,8 +2809,8 @@ msgid "Version {version} is available."
 msgstr "A versão {version} está disponível."
 
 #: src/ui/update.rs:19
-msgid "Update Spotifast"
-msgstr "Atualizar o Spotifast"
+msgid "Update Applifast"
+msgstr "Atualizar o Applifast"
 
 #: src/ui/update.rs:51
 msgid "Close update"
@@ -2835,9 +2835,9 @@ msgid "Ready to install"
 msgstr "Pronto para instalar"
 
 #: src/ui/update.rs:115
-msgid "Music playing on this computer will stop when Spotifast restarts."
+msgid "Music playing on this computer will stop when Applifast restarts."
 msgstr ""
-"A música a tocar neste computador vai parar quando o Spotifast reiniciar."
+"A música a tocar neste computador vai parar quando o Applifast reiniciar."
 
 #: src/ui/update.rs:122
 msgid "Restart to update"
@@ -3163,12 +3163,12 @@ msgstr ""
 "de trabalho."
 
 #: src/window.rs:32
-msgid "Spotifast cannot open its window"
-msgstr "O Spotifast não consegue abrir a janela"
+msgid "Applifast cannot open its window"
+msgstr "O Applifast não consegue abrir a janela"
 
 #: src/window.rs:35
-msgid "On Windows on ARM, the OpenGL that Spotifast draws with comes from Microsoft's OpenCL, OpenGL & Vulkan Compatibility Pack. Open its Microsoft Store page to install or repair it?"
-msgstr "No Windows on ARM, o OpenGL que o Spotifast usa para desenhar vem do OpenCL, OpenGL & Vulkan Compatibility Pack da Microsoft. Abrir a respetiva página na Microsoft Store para o instalar ou reparar?"
+msgid "On Windows on ARM, the OpenGL that Applifast draws with comes from Microsoft's OpenCL, OpenGL & Vulkan Compatibility Pack. Open its Microsoft Store page to install or repair it?"
+msgstr "No Windows on ARM, o OpenGL que o Applifast usa para desenhar vem do OpenCL, OpenGL & Vulkan Compatibility Pack da Microsoft. Abrir a respetiva página na Microsoft Store para o instalar ou reparar?"
 
 #~ msgid "MacBook notch interactive widget"
 #~ msgstr "Widget interativo do notch do MacBook"

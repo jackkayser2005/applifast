@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Applifast playback probe</title>
+<style>
+  body { font: 16px system-ui; margin: 24px; color-scheme: light dark; }
+  button,input { font: inherit; margin: 4px; }
+  li { margin-block: 8px; }
+  pre { white-space: pre-wrap; }
+</style>
+<h1>Applifast playback probe</h1>
+<p>This temporary window tests MusicKit playback. The desktop app has not been converted.</p>
+<button id="authorize">Sign in with Apple</button>
+<button id="library">Load library songs</button>
+<button id="signOut">Sign out</button>
+<p>
+  <button id="previous">Previous</button><button id="pause">Pause</button>
+  <button id="resume">Play</button><button id="next">Next</button>
+  <label>Seek seconds <input id="seconds" type="number" min="0" value="30"></label>
+  <button id="seek">Seek</button>
+</p>
+<p><label>Catalog song ID <input id="catalogId" inputmode="numeric"></label>
+  <button id="catalog">Play catalog song</button>
+  <button id="mixed">Play catalog then selected library song twice</button></p>
+<p id="status" role="status">Waiting for the native host and MusicKit.</p>
+<ol id="songs"></ol>
+<script src="bridge.js"></script>
+<script>
+  let songs = [], selected = null, nextPage = null;
+  const dispatch = command => window.applifast.request(command);
+  for (const type of ['authorize', 'previous', 'pause', 'resume', 'next', 'signOut']) {
+    document.getElementById(type).onclick = () => dispatch({ type });
+  }
+  document.getElementById('library').onclick = () => dispatch({ type: 'library', next: nextPage });
+  document.getElementById('seek').onclick = () => dispatch({ type: 'seek', seconds: Number(document.getElementById('seconds').value) });
+  const catalog = () => ({ kind: 'catalog', id: document.getElementById('catalogId').value, playParams: null });
+  document.getElementById('catalog').onclick = () => dispatch({ type: 'play', items: [catalog()], index: 0 });
+  document.getElementById('mixed').onclick = () => {
+    if (!selected) { document.getElementById('status').textContent = 'Select a library song first.'; return; }
+    const item = { kind: selected.kind, id: selected.id, playParams: selected.playParams };
+    dispatch({ type: 'play', items: [catalog(), item, item], index: 0 });
+  };
+  document.addEventListener('applifast-event', ({ detail: event }) => {
+    if (event.type === 'authorized') {
+      document.getElementById('status').textContent = 'Authorized. Load the library to choose a song.';
+      return; // Never display the token.
+    }
+    if (event.type === 'signedOut') { songs = []; selected = null; nextPage = null; }
+    if (event.type === 'library') {
+      songs.push(...event.items); nextPage = event.next;
+      document.getElementById('library').textContent = nextPage ? 'Load next page' : 'Reload library';
+    }
+    if (event.type === 'library' || event.type === 'signedOut') {
+      const list = document.getElementById('songs'); list.replaceChildren();
+      for (const song of songs) {
+        const row = document.createElement('li');
+        const button = document.createElement('button');
+        button.textContent = `${song.title} / ${song.artist} [${song.id}]${song.catalogId ? '' : ' (no catalog ID)'}${song.playParams ? '' : ' (no playback parameters)'} `;
+        button.onclick = () => {
+          selected = song;
+          dispatch({ type: 'play', items: [{ kind: song.kind, id: song.id, playParams: song.playParams }], index: 0 });
+        };
+        row.append(button); list.append(row);
+      }
+    }
+    document.getElementById('status').textContent = event.type === 'state'
+      ? `Queue occurrence ${event.index + 1}/${event.queueLength}. Position ${event.position.toFixed(1)} / ${event.duration.toFixed(1)} seconds. State ${event.status}.`
+      : event.type === 'error' ? event.message : event.type;
+  });
+</script>
+<!-- Load Apple's licensed SDK from Apple, never vendor or re-host it. -->
+<script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js" async></script>
+</html>

@@ -222,6 +222,7 @@ struct Listening {
 }
 
 pub struct App {
+    pub apple: Option<crate::apple::State>,
     pub dirs: AppDirs,
     pub settings: Settings,
     /// Proxy policy actually handed to network workers. Manual form edits are
@@ -578,7 +579,7 @@ const RECENTS_PAGE: u32 = 50;
 /// Who the desktop's media controls belong to. Links to Spotify, as
 /// `spotify:` URIs or web addresses, are what they may ask Spotifast to open.
 fn media_app() -> fastframe_now_playing::App {
-    let mut app = fastframe_now_playing::App::new("spotifast", "Spotifast");
+    let mut app = fastframe_now_playing::App::new("applifast", "Applifast");
     app.uri_schemes = vec!["spotify".into(), "https".into(), "http".into()];
     app
 }
@@ -634,19 +635,19 @@ fn play_pause_label(playing: bool) -> &'static str {
     if playing { "Pause" } else { "Play" }
 }
 
-/// The tray item: Spotifast's icon, and a menu that shows or hides the
+/// The tray item: Applifast's icon, and a menu that shows or hides the
 /// window, controls playback and quits.
 fn tray_config() -> fastframe_tray::Config {
     use fastframe_tray::MenuItem;
     fastframe_tray::Config {
-        id: "spotifast",
-        title: "Spotifast".into(),
+        id: "applifast",
+        title: "Applifast".into(),
         icon: util::app_icon_rgba,
         template_icon: Some(util::tray_template_rgba),
         themed_icon: true,
         menu_on_click: false,
         menu: vec![
-            MenuItem::action(TRAY_SHOW, "Show or hide Spotifast"),
+            MenuItem::action(TRAY_SHOW, "Show or hide Applifast"),
             MenuItem::Separator,
             MenuItem::action(TRAY_PLAY_PAUSE, play_pause_label(false)),
             MenuItem::action(TRAY_NEXT, "Next"),
@@ -659,6 +660,10 @@ fn tray_config() -> fastframe_tray::Config {
 
 impl App {
     pub fn new(waker: &Waker, dirs: AppDirs, mut settings: Settings, options: AppOptions) -> Self {
+        let apple_mode = options.restore_sign_in && !cfg!(test);
+        if apple_mode {
+            settings.check_for_updates = false;
+        }
         // The legacy password file has no endpoint of its own. Keep the old
         // settings beside it until migration binds that password in the store.
         settings.proxy_password_legacy |= dirs.proxy_secret_file().try_exists().unwrap_or(true);
@@ -685,10 +690,10 @@ impl App {
             engine_config,
             settings.web_client_id.clone(),
             waker.clone(),
-            options.restore_sign_in,
+            options.restore_sign_in && !apple_mode,
         );
         let locale = settings.language.resolve();
-        let applied_proxy = if options.restore_sign_in {
+        let applied_proxy = if options.restore_sign_in && !apple_mode {
             crate::settings::ProxyConfig::Invalid(
                 gettext(locale, "Restoring proxy settings").into_owned(),
             )
@@ -735,6 +740,7 @@ impl App {
 
         let palette = settings.cached_palette().unwrap_or_else(Palette::dark);
         let mut app = Self {
+            apple: apple_mode.then(crate::apple::State::default),
             custom_themes: theme::Catalog::default(),
             dirs,
             settings,
@@ -950,6 +956,15 @@ impl App {
             player_bar_analyser: crate::vis::WideAnalyser::default(),
         };
         app.local.volume = app.settings.volume;
+        if let Some(apple) = &mut app.apple {
+            app.history = vec![Page::LikedSongs];
+            app.history_index = 0;
+            apple.local.volume = app.settings.volume;
+            app.backend.send(Command::AppleStart {
+                generation: apple.generation,
+                token_file: None,
+            });
+        }
         // What was played here is on disk and needs nothing from the
         // network, so the tab has rows before Spotify has answered.
         app.rebuild_recents();
@@ -977,7 +992,7 @@ impl App {
         self.wants_show = false;
         self.switch_intent = false;
         self.winamp_level_reassert = 0;
-        // A new window starts titled "Spotifast"; name the playing song
+        // A new window starts titled "Applifast"; name the playing song
         // again rather than trust what the replaced window was told.
         self.window_title.clear();
         if let Some(tray) = &mut self.tray {
@@ -1079,7 +1094,27 @@ impl App {
     }
 
     pub fn is_connected(&self) -> bool {
-        matches!(self.auth, AuthStatus::Connected { .. })
+        self.apple.as_ref().map_or_else(
+            || matches!(self.auth, AuthStatus::Connected { .. }),
+            |apple| apple.authorized,
+        )
+    }
+
+    pub fn account_ready(&self) -> bool {
+        self.apple.as_ref().map_or_else(
+            || self.is_connected() && self.user.is_some(),
+            |apple| apple.authorized,
+        )
+    }
+
+    pub fn songs_context_uri(&self) -> Option<String> {
+        if self.apple.is_some() {
+            Some("apple:collection:library".into())
+        } else {
+            self.user
+                .as_ref()
+                .map(|user| format!("spotify:user:{}:collection", user.id))
+        }
     }
 
     pub fn user_id(&self) -> Option<&str> {
@@ -1826,6 +1861,71 @@ impl App {
                 continue;
             }
             match event {
+                Event::Auth(_) | Event::Playback(_) | Event::Local(_) | Event::Api(_)
+                    if self.apple.is_some() => {}
+                Event::Apple { generation, value } => {
+                    if self.apple.as_ref().is_none_or(|apple| {
+                        apple.generation != generation
+                            || value
+                                .get("session")
+                                .and_then(serde_json::Value::as_u64)
+                                .is_some_and(|session| session != apple.session)
+                    }) {
+                        continue;
+                    }
+                    if value["type"] == "response" {
+                        self.apple_response(&value);
+                        self.apple_finish_pending_play();
+                        self.apple_finish_album_queues();
+                        continue;
+                    }
+                    if let Some(apple) = &mut self.apple {
+                        let request = apple.event(generation, &value);
+                        self.local = apple.local.clone();
+                        self.local_ready = apple.authorized;
+                        if value["type"] == "library" {
+                            self.library.liked.items = apple
+                                .songs
+                                .iter()
+                                .map(|song| crate::api::models::SavedTrack {
+                                    added_at: None,
+                                    track: song.track(),
+                                })
+                                .collect();
+                            self.library.liked.loaded_once = true;
+                            self.library.liked.loading = apple.loading;
+                            self.library.liked.total = Some(apple.songs.len() as u32);
+                            self.library.liked.next_offset =
+                                apple.next.as_ref().map(|_| apple.songs.len() as u32);
+                            self.library.liked.revision += 1;
+                            for saved in &self.library.liked.items {
+                                if let Some(id) = &saved.track.id {
+                                    self.track_cache.insert(id.clone(), saved.track.clone());
+                                }
+                            }
+                        }
+                        if let Some(request) = request {
+                            if matches!(value["type"].as_str(), Some("ready" | "authorized")) {
+                                apple.local.volume = self.settings.volume;
+                                self.local.volume = self.settings.volume;
+                                self.backend.send(Command::AppleSend(serde_json::json!({"type":"volume","value":f64::from(self.settings.volume)/65535.0}).to_string()));
+                            }
+                            self.backend.send(Command::AppleSend(request.to_string()));
+                        }
+                    }
+                    if matches!(value["type"].as_str(), Some("ready" | "authorized")) {
+                        self.apple_ensure_loaded(self.page().clone());
+                    }
+                    self.sync_apple_queue();
+                    if value["type"] == "error" && self.account_ready() {
+                        self.toast_error(
+                            value["message"]
+                                .as_str()
+                                .unwrap_or("Apple playback failed. Try this song again.")
+                                .to_owned(),
+                        );
+                    }
+                }
                 Event::PlaylistCoverChecked {
                     id,
                     request,
@@ -2000,7 +2100,7 @@ impl App {
                             if manual || self.update.as_ref() != Some(&notice) {
                                 self.toast(
                                     // Translators: {version} is a version number such as 1.4.0.
-                                    gettext(self.locale, "Spotifast {version} is available")
+                                    gettext(self.locale, "Applifast {version} is available")
                                         .replace("{version}", &notice.version.to_string()),
                                 );
                             }
@@ -2017,7 +2117,7 @@ impl App {
                         Ok(None) => {
                             self.update = None;
                             if manual {
-                                self.toast(gettext(self.locale, "Spotifast is up to date"));
+                                self.toast(gettext(self.locale, "Applifast is up to date"));
                             } else {
                                 log::debug!("this is the newest release");
                             }
@@ -2762,12 +2862,12 @@ impl App {
             self.check_for_updates(false);
         }
 
-        if self.is_connected() && !self.offline {
+        if self.apple.is_none() && self.is_connected() && !self.offline {
             self.request_resume_track();
             self.ensure_resume_context_loaded();
         }
 
-        if self.is_connected() && !self.offline {
+        if self.apple.is_none() && self.is_connected() && !self.offline {
             let interval = match self.target() {
                 Target::Local if self.local.is_active() => REMOTE_POLL_IDLE,
                 _ => REMOTE_POLL_ACTIVE,
@@ -3616,6 +3716,10 @@ impl App {
     }
 
     pub fn ensure_loaded(&mut self, page: Page) {
+        if self.apple.is_some() {
+            self.apple_ensure_loaded(page);
+            return;
+        }
         if !self.is_connected() {
             return;
         }
@@ -3731,6 +3835,10 @@ impl App {
     }
 
     fn load_artist_albums(&mut self, id: &str, filter: DiscographyFilter) {
+        if self.apple.is_some() {
+            self.apple_artist_filters(id);
+            return;
+        }
         let Some(page) = self.artist_pages.get_mut(id) else {
             return;
         };
@@ -3884,6 +3992,17 @@ impl App {
     }
 
     pub fn load_more(&mut self, page: Page) {
+        if let Some(apple) = &mut self.apple {
+            if page == Page::LikedSongs && !apple.loading && apple.next.is_some() {
+                apple.loading = true;
+                self.library.liked.loading = true;
+                self.backend.send(Command::AppleSend(
+                    serde_json::json!({"type":"library","next":apple.next}).to_string(),
+                ));
+            }
+            self.apple_load_more(page);
+            return;
+        }
         match page {
             Page::LikedSongs => {
                 if !self.liked_songs.cache_checked {
@@ -4008,6 +4127,10 @@ impl App {
     }
 
     fn load_window(&mut self, page: Page, position: u32) {
+        if self.apple.is_some() {
+            self.load_more(page);
+            return;
+        }
         match page {
             Page::Playlist(id) => {
                 let Some(page) = self.playlist_pages.get_mut(&id) else {
@@ -4110,6 +4233,61 @@ impl App {
     }
 
     fn reload(&mut self, page: Page) {
+        if self.apple.is_some() {
+            match &page {
+                Page::LikedSongs => {
+                    if let Some(apple) = &mut self.apple {
+                        if apple.loading {
+                            return;
+                        }
+                        apple.songs.clear();
+                        apple.next = None;
+                        apple.loading = true;
+                        self.library.liked.loading = true;
+                        self.backend.send(Command::AppleSend(
+                            serde_json::json!({"type":"library","next":null}).to_string(),
+                        ));
+                    }
+                    return;
+                }
+                Page::Albums => self.library.albums.reset(),
+                Page::Artists => self.library.artists.reset(),
+                Page::Album(id) => {
+                    self.album_pages.remove(id);
+                }
+                Page::Playlist(id) => {
+                    self.playlist_pages.remove(id);
+                }
+                Page::Artist(id) => {
+                    self.artist_pages.remove(id);
+                }
+                _ => {}
+            }
+            if let Some(apple) = &mut self.apple {
+                apple.reads.retain(|_, (target, _)| match (&page, target) {
+                    (
+                        Page::Album(id),
+                        crate::apple::Read::Album(held) | crate::apple::Read::AlbumTracks(held),
+                    )
+                    | (
+                        Page::Playlist(id),
+                        crate::apple::Read::Playlist(held)
+                        | crate::apple::Read::PlaylistTracks(held),
+                    )
+                    | (
+                        Page::Artist(id),
+                        crate::apple::Read::Artist(held)
+                        | crate::apple::Read::ArtistAlbums(held)
+                        | crate::apple::Read::ArtistSongs(held),
+                    ) => id != held,
+                    (Page::Albums, crate::apple::Read::Albums)
+                    | (Page::Artists, crate::apple::Read::Artists) => false,
+                    _ => true,
+                });
+            }
+            self.apple_ensure_loaded(page);
+            return;
+        }
         match &page {
             Page::Home => self.load_home(true),
             Page::TopSongs => self.load_top_songs(true),
@@ -4305,6 +4483,9 @@ impl App {
     /// How many leading rows of Next up are songs the user queued here,
     /// so the view can give them their own section.
     pub fn queued_rows_len(&self) -> usize {
+        if let Some(apple) = &self.apple {
+            return apple.order.manual_count;
+        }
         // Before resume, use the saved manual queue to split restored rows.
         let manual = if self.manual_queue.is_empty() && self.resume_only() {
             &self.resume_queue
@@ -4323,6 +4504,9 @@ impl App {
     /// and re-add its songs in the new order, which only reaches the
     /// engine actually playing them.
     pub fn queue_locally_reorderable(&self) -> bool {
+        if let Some(apple) = &self.apple {
+            return apple.authorized;
+        }
         self.local.is_active() && matches!(self.target(), Target::Local)
     }
 
@@ -4571,6 +4755,10 @@ impl App {
         } else {
             Loadable::Loading
         };
+        if self.apple.is_some() {
+            self.apple_search(&query);
+            return;
+        }
         // An empty query also cancels requests waiting on Spotify's quota.
         self.backend.api(ApiRequest::Search {
             query,
@@ -4639,6 +4827,9 @@ impl App {
     }
 
     pub fn request_contains(&mut self, uris: Vec<String>) {
+        if self.apple.is_some() {
+            return;
+        }
         let mut batch = Vec::new();
         for uri in uris {
             if uri.is_empty()
@@ -6322,7 +6513,7 @@ impl App {
                 self.pending_link = None;
                 self.toast_error(gettext(
                     self.locale,
-                    "Spotifast cannot open this kind of Spotify link",
+                    "Applifast cannot open this kind of Spotify link",
                 ));
             }
         }
@@ -6475,6 +6666,7 @@ impl App {
         }
         let current = self.page().clone();
         self.retain_table_rows(&current);
+        self.apple_evict_songs();
     }
 
     // ---- playback --------------------------------------------------------------
@@ -8222,7 +8414,378 @@ impl App {
         }
     }
 
+    fn apply_apple_action(&mut self, action: &Action) -> bool {
+        use serde_json::json;
+        if let Action::PlayContext { uri, .. } | Action::ShufflePlay(uri) = action
+            && self.apple_context_uris(uri).is_empty()
+            && let Some(page) = Page::from_uri(uri)
+        {
+            self.apple_ensure_loaded(page.clone());
+            if self.apple.as_ref().is_some_and(|apple| {
+                apple
+                    .reads
+                    .values()
+                    .any(|(target, _)| apple::read_for_page(target, &page))
+            }) {
+                self.apple.as_mut().unwrap().pending_play = Some(action.clone());
+            } else {
+                self.toast_error(
+                    "Apple returned no playable songs for this collection. Open it and retry.",
+                );
+            }
+            return true;
+        }
+        if let Action::ShufflePlay(uri) = action {
+            self.apply_apple_action(&Action::SetShuffle(true));
+            let len = self.apple_context_uris(uri).len();
+            return self.apply_apple_action(&Action::PlayContext {
+                uri: uri.clone(),
+                offset_uri: None,
+                offset_index: (len > 0).then(|| rand::random_range(0..len) as u32),
+            });
+        }
+        match action {
+            Action::AddToQueue { uri, label } => {
+                if util::uri_kind(uri) == Some("album") {
+                    self.apple_queue_album(uri, label);
+                } else {
+                    let position = self
+                        .apple
+                        .as_ref()
+                        .map_or(0, |apple| apple.order.manual_count);
+                    self.apple_queue_add(std::slice::from_ref(uri), position, false);
+                }
+                return true;
+            }
+            Action::QueueMany { songs } => {
+                let uris = songs.iter().map(|(uri, _)| uri.clone()).collect::<Vec<_>>();
+                let position = self
+                    .apple
+                    .as_ref()
+                    .map_or(0, |apple| apple.order.manual_count);
+                self.apple_queue_add(&uris, position, false);
+                return true;
+            }
+            Action::InsertInQueue { items, position } => {
+                let uris = items
+                    .iter()
+                    .map(|item| item.uri().to_owned())
+                    .collect::<Vec<_>>();
+                self.apple_queue_add(&uris, *position, false);
+                return true;
+            }
+            Action::RefreshQueue => {
+                self.sync_apple_queue();
+                return true;
+            }
+            Action::LoadMoreArtistAlbums(id) => {
+                self.apple_load_more(Page::Artist(id.clone()));
+                return true;
+            }
+            Action::ToggleSaved(_)
+            | Action::SetSavedMany { .. }
+            | Action::AddToPlaylist { .. }
+            | Action::InsertInPlaylist { .. }
+            | Action::ConfirmAddToPlaylist { .. }
+            | Action::RemoveFromPlaylist { .. }
+            | Action::MoveInPlaylist { .. }
+            | Action::CreatePlaylist { .. }
+            | Action::ChoosePlaylistCover(_)
+            | Action::UploadPlaylistCover(_)
+            | Action::UpdatePlaylist { .. }
+            | Action::DeletePlaylist(_)
+            | Action::SaveQueueAsPlaylist
+            | Action::Transfer(_)
+            | Action::ActivateReceiver(_)
+            | Action::RefreshDevices
+            | Action::ToggleDevicesPopup
+            | Action::RestartEngine
+            | Action::ConfigurePersonalWebApp => {
+                self.toast_error("This Apple Music control is still being integrated.");
+                return true;
+            }
+            _ => {}
+        }
+        let context_uri = match action {
+            Action::PlayContext { uri, .. } | Action::ShufflePlay(uri) => Some(uri.clone()),
+            Action::PlayFromRow {
+                context:
+                    RowContext::Context { uri, .. }
+                    | RowContext::View {
+                        context_uri: uri, ..
+                    },
+                ..
+            } => Some(uri.clone()),
+            _ => None,
+        };
+        let context_uris = context_uri.as_ref().map(|uri| self.apple_context_uris(uri));
+        if matches!(
+            action,
+            Action::SignOut | Action::CancelSignIn | Action::AppleImportToken(_)
+        ) {
+            self.reset_data();
+            self.track_cache.clear();
+            self.manual_queue.clear();
+            self.recent_contexts.clear();
+            self.resume_queue.clear();
+            self.resume_track = None;
+            self.resume_context = None;
+            self.intent_track = None;
+            self.assumed_context = None;
+            self.remote = None;
+            self.session_dirty = true;
+        }
+        let Some(apple) = &mut self.apple else {
+            return false;
+        };
+        let request = match action {
+            Action::SignIn => {
+                apple.loading = true;
+                json!({"type":"authorize"})
+            }
+            Action::CancelSignIn => {
+                apple.session += 1;
+                apple.clear_account();
+                json!({"type":"signOut"})
+            }
+            Action::AppleImportToken(path) => {
+                apple.reset_host();
+                self.local = LocalState::default();
+                self.local_ready = false;
+                self.backend.send(Command::AppleStart {
+                    generation: apple.generation,
+                    token_file: Some(path.clone()),
+                });
+                return true;
+            }
+            Action::AppleSend(request) => {
+                if request["type"] == "library" {
+                    apple.loading = true;
+                }
+                request.clone()
+            }
+            Action::ApplePlaySong(index) => {
+                let Some(request) = apple.play(*index) else {
+                    return true;
+                };
+                request
+            }
+            Action::PlayUris { uris, index } => {
+                let Some(request) = apple.play_uris(uris, *index as usize) else {
+                    return true;
+                };
+                request
+            }
+            Action::PlayFromRow {
+                context,
+                uri,
+                index,
+            } => {
+                if matches!(context, RowContext::Queue) {
+                    let position = if apple
+                        .order
+                        .upcoming
+                        .get(*index as usize)
+                        .and_then(|at| apple.queue.get(*at))
+                        .is_some_and(|song| song.uri() == *uri)
+                    {
+                        *index as usize
+                    } else if let Some(position) = apple
+                        .order
+                        .upcoming
+                        .iter()
+                        .position(|at| apple.queue[*at].uri() == *uri)
+                    {
+                        position
+                    } else {
+                        return true;
+                    };
+                    if !apple.jump(position) {
+                        return true;
+                    }
+                    let command = apple.selection_command(true);
+                    let request = apple.intent(command);
+                    self.local = apple.local.clone();
+                    self.backend.send(Command::AppleSend(request.to_string()));
+                    self.sync_apple_queue();
+                    return true;
+                }
+                let uris = match context {
+                    RowContext::Uris(uris) | RowContext::View { uris, .. } => uris.to_vec(),
+                    RowContext::Context { .. } => context_uris.clone().unwrap_or_default(),
+                    RowContext::Queue => unreachable!(),
+                };
+                let index = if uris.get(*index as usize) == Some(uri) {
+                    *index as usize
+                } else {
+                    uris.iter().position(|item| item == uri).unwrap_or(0)
+                };
+                let Some(request) = apple.play_uris(&uris, index) else {
+                    return true;
+                };
+                request
+            }
+            Action::PlayContext {
+                uri: _,
+                offset_uri,
+                offset_index,
+            } => {
+                let uris = context_uris.clone().unwrap_or_default();
+                if uris.is_empty() {
+                    apple.error = Some(
+                        "Open this collection and wait for its songs to load before playing."
+                            .into(),
+                    );
+                    return true;
+                }
+                let index = offset_uri
+                    .as_ref()
+                    .and_then(|uri| uris.iter().position(|item| item == uri))
+                    .unwrap_or(offset_index.unwrap_or(0) as usize);
+                let Some(request) = apple.play_uris(&uris, index) else {
+                    return true;
+                };
+                request
+            }
+            Action::SignOut => {
+                apple.session += 1;
+                apple.clear_account();
+                json!({"type":"signOut"})
+            }
+            Action::TogglePlay => apple.toggle_play(),
+            Action::Next => {
+                if !apple.skip(1) {
+                    return true;
+                }
+                apple.selection_command(apple.local.playback != Playback::Paused)
+            }
+            Action::Previous => {
+                if apple.local.position_now() > 3000 {
+                    apple.seek(0);
+                    json!({"type":"seek","seconds":0})
+                } else {
+                    if !apple.skip(-1) {
+                        return true;
+                    }
+                    apple.selection_command(apple.local.playback != Playback::Paused)
+                }
+            }
+            Action::Seek(ms) => {
+                apple.seek(*ms);
+                json!({"type":"seek","seconds":f64::from(*ms)/1000.0})
+            }
+            Action::SeekBy(ms) => {
+                let position = (i64::from(apple.local.position_now()) + ms).max(0);
+                apple.seek(position.min(i64::from(u32::MAX)) as u32);
+                json!({"type":"seek","seconds":position as f64/1000.0})
+            }
+            Action::SetVolume(percent) | Action::PreviewVolume(percent) => {
+                apple.local.volume = (u32::from(*percent) * 65535 / 100) as u16;
+                self.settings.volume = apple.local.volume;
+                self.settings_dirty = true;
+                json!({"type":"volume","value":f64::from(*percent)/100.0})
+            }
+            Action::VolumeBy(delta) => {
+                let percent = (i16::from(volume_to_percent(apple.local.volume)) + i16::from(*delta))
+                    .clamp(0, 100) as u8;
+                apple.local.volume = (u32::from(percent) * 65535 / 100) as u16;
+                self.settings.volume = apple.local.volume;
+                self.settings_dirty = true;
+                json!({"type":"volume","value":f64::from(percent)/100.0})
+            }
+            Action::ToggleMute => {
+                let percent = volume_to_percent(apple.local.volume);
+                let next = if percent == 0 {
+                    self.volume_before_mute.take().unwrap_or(50).max(5)
+                } else {
+                    self.volume_before_mute = Some(percent);
+                    0
+                };
+                apple.local.volume = (u32::from(next) * 65535 / 100) as u16;
+                self.settings.volume = apple.local.volume;
+                self.settings_dirty = true;
+                json!({"type":"volume","value":f64::from(next)/100.0})
+            }
+            Action::ClearQueue => {
+                self.pending_album_queues.clear();
+                self.last_album_queue = None;
+                apple.clear_manual();
+                apple.queue_command()
+            }
+            Action::MoveInQueue { from, to } => {
+                apple.move_manual(*from, *to);
+                apple.queue_command()
+            }
+            Action::ToggleShuffle | Action::SetShuffle(_) => {
+                self.shuffle_wanted = if let Action::SetShuffle(value) = action {
+                    *value
+                } else {
+                    !self.shuffle_wanted
+                };
+                apple.set_shuffle(self.shuffle_wanted);
+                apple.queue_command()
+            }
+            Action::CycleRepeat => {
+                apple.local.repeat = apple.local.repeat.next();
+                json!({"type":"repeat","mode":match apple.local.repeat { RepeatMode::Off => 0, RepeatMode::Track => 1, RepeatMode::Context => 2 }})
+            }
+            Action::SetRepeat(mode) => {
+                apple.local.repeat = *mode;
+                json!({"type":"repeat","mode":match mode { RepeatMode::Off=>0,RepeatMode::Track=>1,RepeatMode::Context=>2 }})
+            }
+            _ => return false,
+        };
+        let request = if matches!(
+            action,
+            Action::TogglePlay
+                | Action::Next
+                | Action::Previous
+                | Action::Seek(_)
+                | Action::SeekBy(_)
+                | Action::SetVolume(_)
+                | Action::PreviewVolume(_)
+                | Action::VolumeBy(_)
+                | Action::ToggleMute
+                | Action::CycleRepeat
+                | Action::SetRepeat(_)
+                | Action::SetShuffle(_)
+                | Action::ToggleShuffle
+                | Action::ClearQueue
+                | Action::MoveInQueue { .. }
+        ) {
+            apple.intent(request)
+        } else {
+            request
+        };
+        self.local = apple.local.clone();
+        self.local_ready = apple.authorized;
+        if let Some(uri) = context_uri {
+            self.assumed_context = Some(AssumedContext {
+                uri,
+                shuffle: self.shuffle_wanted.then_some(true),
+                at: Instant::now(),
+            });
+        }
+        self.backend.send(Command::AppleSend(request.to_string()));
+        self.sync_apple_queue();
+        true
+    }
+
     pub(crate) fn apply(&mut self, action: Action, ctx: &egui::Context) {
+        if self.apple.is_some() {
+            let before = self.apple.as_ref().and_then(|apple| apple.error.clone());
+            if self.apply_apple_action(&action) {
+                if let Some(error) = self
+                    .apple
+                    .as_ref()
+                    .and_then(|apple| apple.error.clone())
+                    .filter(|error| Some(error) != before.as_ref())
+                {
+                    self.toast_error(error);
+                }
+                return;
+            }
+        }
         if matches!(
             &action,
             Action::Open(_)
@@ -8239,6 +8802,7 @@ impl App {
             self.leave_lyrics_fullscreen(ctx);
         }
         match action {
+            Action::AppleImportToken(_) | Action::AppleSend(_) | Action::ApplePlaySong(_) => {}
             Action::Open(page) => self.open(page),
             Action::OpenSongRadio { uri, track } => self.open_song_radio(&uri, &track),
             Action::PrepareTint(url) => {
@@ -9817,9 +10381,9 @@ impl App {
     /// Keeps the current track in the window and taskbar title (#94).
     fn sync_window_title(&mut self, ctx: &egui::Context) {
         let title = match self.now_playing().filter(|now| now.playing) {
-            Some(now) if now.subtitle.is_empty() => format!("{} - Spotifast", now.title),
+            Some(now) if now.subtitle.is_empty() => format!("{} - Applifast", now.title),
             Some(now) => format!("{} - {}", now.subtitle, now.title),
-            None => "Spotifast".to_string(),
+            None => "Applifast".to_string(),
         };
         if title != self.window_title {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
@@ -9863,9 +10427,10 @@ impl App {
             }
         }
         // Switch to the main window when sign-in is required.
-        let needs_sign_in = !(self.is_connected() && self.user.is_some())
-            && !matches!(self.auth, AuthStatus::Connecting | AuthStatus::Starting)
-            && !(self.is_connected() && self.user.is_none());
+        let needs_sign_in = !self.account_ready()
+            && (self.apple.is_some()
+                || !matches!(self.auth, AuthStatus::Connecting | AuthStatus::Starting)
+                    && !(self.is_connected() && self.user.is_none()));
         if self.settings.winamp_window && needs_sign_in && !self.switch_intent {
             self.actions.push(Action::ToggleWinampWindow);
         }
@@ -10451,6 +11016,7 @@ fn cover_error(locale: Locale, error: &crate::api::client::ApiError) -> String {
     }
 }
 
+mod apple;
 mod radio;
 
 #[cfg(test)]
@@ -15089,7 +15655,7 @@ mod tests {
         }
     }
 
-    fn test_app(name: &str) -> App {
+    pub(super) fn test_app(name: &str) -> App {
         let root =
             std::env::temp_dir().join(format!("spotifast-{name}-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
@@ -16442,7 +17008,7 @@ mod tests {
 
     /// A replaced window, as when the mini player's taskbar setting
     /// changes, is titled with the playing song again, not left as
-    /// "Spotifast".
+    /// "Applifast".
     #[test]
     fn a_new_window_is_titled_with_the_playing_song() {
         let ctx = egui::Context::default();
@@ -18137,7 +18703,7 @@ mod tests {
         assert_eq!(app.update, None);
         assert_eq!(
             app.toasts.last().map(|toast| toast.message.as_str()),
-            Some("Spotifast is up to date")
+            Some("Applifast is up to date")
         );
 
         app.toasts.clear();
@@ -18186,7 +18752,7 @@ mod tests {
         );
         assert_eq!(
             app.toasts.last().map(|toast| toast.message.as_str()),
-            Some("Spotifast 1.2.3 is available")
+            Some("Applifast 1.2.3 is available")
         );
     }
 
@@ -20728,7 +21294,8 @@ mod tests {
         app: &mut App,
         uri: &str,
         events: Vec<egui::Event>,
-    ) {
+    ) -> egui::accesskit::TreeUpdate {
+        ctx.enable_accesskit();
         let mut output = ctx.run_ui(
             egui::RawInput {
                 screen_rect: Some(egui::Rect::from_min_size(
@@ -20762,14 +21329,31 @@ mod tests {
         );
         output.textures_delta.clear();
         app.apply_actions(ctx);
+        output
+            .platform_output
+            .accesskit_update
+            .expect("screen-reader tree")
     }
 
-    fn click_collection_action(
-        ctx: &egui::Context,
-        app: &mut App,
-        uri: &str,
-        position: egui::Pos2,
-    ) {
+    const HEADER_PLAY: &[&str] = &["Play", "Pause"];
+    const HEADER_SHUFFLE: &[&str] = &["Shuffle", "Shuffle off"];
+
+    /// Clicks the header button whose accessible name is one of `labels`.
+    fn click_collection_action(ctx: &egui::Context, app: &mut App, uri: &str, labels: &[&str]) {
+        let tree = draw_collection_actions(ctx, app, uri, vec![]);
+        let bounds = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| {
+                node.role() == egui::accesskit::Role::Button
+                    && node.label().is_some_and(|label| labels.contains(&label))
+            })
+            .and_then(|(_, node)| node.bounds())
+            .unwrap_or_else(|| panic!("missing header button {labels:?}"));
+        let position = egui::pos2(
+            ((bounds.x0 + bounds.x1) / 2.0) as f32,
+            ((bounds.y0 + bounds.y1) / 2.0) as f32,
+        );
         let click = vec![
             egui::Event::PointerMoved(position),
             egui::Event::PointerButton {
@@ -20785,7 +21369,6 @@ mod tests {
                 modifiers: egui::Modifiers::NONE,
             },
         ];
-        draw_collection_actions(ctx, app, uri, vec![]);
         draw_collection_actions(ctx, app, uri, click);
     }
 
@@ -20804,12 +21387,7 @@ mod tests {
         app.shuffle_wanted = false;
         assert!(matches!(app.target(), Target::Remote(None)));
 
-        click_collection_action(
-            &ctx,
-            &mut app,
-            "spotify:playlist:pl0",
-            egui::pos2(87.0, 28.0),
-        );
+        click_collection_action(&ctx, &mut app, "spotify:playlist:pl0", HEADER_SHUFFLE);
         assert!(app.playing_context_shuffle());
         assert!(app.remote.is_none(), "Shuffle must not start playback");
         assert!(app.backend.take_remote_play_requests().is_empty());
@@ -20831,12 +21409,7 @@ mod tests {
             .clone();
         assert_ne!(playing_context, "spotify:playlist:pl0");
         app.remote = Some(remote);
-        click_collection_action(
-            &ctx,
-            &mut app,
-            "spotify:playlist:pl0",
-            egui::pos2(28.0, 28.0),
-        );
+        click_collection_action(&ctx, &mut app, "spotify:playlist:pl0", HEADER_PLAY);
 
         let requests = app.backend.take_remote_play_requests();
         assert!(matches!(
@@ -20886,12 +21459,7 @@ mod tests {
         app.shuffle_wanted = false;
         assert!(app.now_playing().is_none());
 
-        click_collection_action(
-            &ctx,
-            &mut app,
-            "spotify:playlist:pl0",
-            egui::pos2(87.0, 28.0),
-        );
+        click_collection_action(&ctx, &mut app, "spotify:playlist:pl0", HEADER_SHUFFLE);
         assert!(app.playing_context_shuffle());
 
         draw_player_bar(&ctx, &mut app, Vec::new());
@@ -20946,12 +21514,7 @@ mod tests {
             .id = None;
         assert!(matches!(app.target(), Target::Remote(None)));
 
-        click_collection_action(
-            &ctx,
-            &mut app,
-            "spotify:playlist:pl0",
-            egui::pos2(87.0, 28.0),
-        );
+        click_collection_action(&ctx, &mut app, "spotify:playlist:pl0", HEADER_SHUFFLE);
         assert!(matches!(
             app.backend.take_remote_shuffle_requests().as_slice(),
             [ApiRequest::Remote {
@@ -21010,7 +21573,7 @@ mod tests {
         assert_ne!(playing_context, other_collection);
         app.open(Page::Playlist("pl0".into()));
 
-        click_collection_action(&ctx, &mut app, other_collection, egui::pos2(87.0, 28.0));
+        click_collection_action(&ctx, &mut app, other_collection, HEADER_SHUFFLE);
         assert!(!app.playing_context_shuffle());
         assert_eq!(
             app.playing_context_uri().as_deref(),
@@ -21021,7 +21584,7 @@ mod tests {
             "changing the global mode must not start the viewed collection"
         );
 
-        click_collection_action(&ctx, &mut app, other_collection, egui::pos2(28.0, 28.0));
+        click_collection_action(&ctx, &mut app, other_collection, HEADER_PLAY);
         let requests = app.backend.take_remote_play_requests();
         assert!(matches!(
             requests.as_slice(),

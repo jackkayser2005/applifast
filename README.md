@@ -1,8 +1,16 @@
+> This checkout is the **Applifast** development fork. Its Windows Apple Music
+> client now feeds Apple library, album, playlist and search data into the original
+> native interface, with MusicKit playback in an independent WebView2 host.
+> See [local setup, supported controls, and remaining checks](docs/applifast/listening-slice.md).
+> This development slice is not a release or feature-parity claim. The original
+> Spotifast documentation below describes upstream capabilities. Upstream credit
+> and the MIT license are preserved.
+
 <p align="center">
-  <img src="docs/assets/images/logo.svg" alt="Spotifast logo" width="88" height="88">
+  <img src="docs/assets/images/logo.svg" alt="Applifast logo" width="88" height="88">
 </p>
 
-<h1 align="center">Spotifast</h1>
+<h1 align="center">Applifast</h1>
 
 <p align="center"><strong>Spotify, native and fast.</strong><br>A lightweight music app for Linux, macOS, and Windows.</p>
 
@@ -19,18 +27,18 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-1ed760" alt="MIT license"></a>
 </p>
 
-Spotifast is a Spotify client written in Rust with
+Applifast is a Spotify client written in Rust with
 [egui](https://github.com/emilk/egui). It plays music through
 [librespot](https://github.com/librespot-org/librespot), typically uses
 100–250 MB of RAM, starts in well under a second, and has no browser engine.
 
 **Playback needs Spotify Premium.** Free accounts can browse and search, but
-cannot play music through Spotifast.
+cannot play music through Applifast.
 
-![Spotifast Home with the playlist library, recommendations, queue, and player visible](docs/screenshot.png)
+![Applifast Home with the playlist library, recommendations, queue, and player visible](docs/screenshot.png)
 
 <details>
-<summary><strong>Watch Spotifast in action</strong></summary>
+<summary><strong>Watch Applifast in action</strong></summary>
 
 https://github.com/user-attachments/assets/a5f669ce-b3b7-4f8e-9933-976a78876c7e
 
@@ -61,14 +69,14 @@ https://github.com/user-attachments/assets/a5f669ce-b3b7-4f8e-9933-976a78876c7e
 
 ## Start listening
 
-1. Open Spotifast and choose **Sign in with Spotify**. Approve access in your
+1. Open Applifast and choose **Sign in with Spotify**. Approve access in your
    browser, then return to the app to see your library.
 2. To listen on this computer, open the device menu in the bottom player bar
    and choose **Set up playback here**, also available in Settings.
 3. Complete the separate playback approval in your browser. Your computer
    appears as a Spotify Connect device named **Spotifast**.
 
-Library access and local playback have separate approvals. Spotifast remembers
+Library access and local playback have separate approvals. Applifast remembers
 both using your computer's protected storage. See
 [Getting started](https://spotifast.rocks/getting-started/) for the full walkthrough
 and [How it connects](https://spotifast.rocks/how-it-connects/) for the details.
@@ -80,7 +88,7 @@ a playlist, and animated sound displays. Switch with **Ctrl+M**
 (**Cmd+Shift+M** on macOS), the shrink button, or Settings.
 
 <p align="center">
-  <img src="docs/assets/images/winamp.png" alt="Spotifast's Winamp mini player with the built-in skin, equalizer, and playlist" width="320">
+  <img src="docs/assets/images/winamp.png" alt="Applifast's Winamp mini player with the built-in skin, equalizer, and playlist" width="320">
 </p>
 
 [Explore the mini player](https://spotifast.rocks/winamp/), including skins,
@@ -92,7 +100,7 @@ MilkDrop reacts to music playing on this computer, with more than 10,000
 presets downloaded on first use. Open it from the visualiser button,
 Settings, or the mini player's **V** menu.
 
-![MilkDrop visualiser displaying coloured concentric patterns in Spotifast](docs/assets/images/milkdrop-poster.jpg)
+![MilkDrop visualiser displaying coloured concentric patterns in Applifast](docs/assets/images/milkdrop-poster.jpg)
 
 Included on **Linux**, **macOS**, and **Windows Intel/AMD** builds.
 It is not included in the Windows on ARM download.
@@ -123,22 +131,22 @@ cargo run --features demo -- --demo
 ```
 
 Translations live in `assets/i18n/`; see
-[Translating Spotifast](docs/_reference/translating.md). Release packaging
+[Translating Applifast](docs/_reference/translating.md). Release packaging
 is described in [PACKAGING.md](PACKAGING.md).
 
 ## More native apps
 
 **Want WhatsApp just as fast and native?** [ZapFast](https://zapfast.rocks)
-is Spotifast's sibling. Both are built on
+is Applifast's sibling. Both are built on
 [fastframe](https://github.com/crmne/fastframe).
 
 ## Acknowledgements
 
-Spotifast uses [librespot](https://github.com/librespot-org/librespot),
+Applifast uses [librespot](https://github.com/librespot-org/librespot),
 [egui](https://github.com/emilk/egui), the [Inter](https://rsms.me/inter/)
 typeface (OFL), and [Lucide](https://lucide.dev) icons (ISC).
 
-Spotifast is an independent project and is not affiliated with Spotify.
+Applifast is an independent project and is not affiliated with Spotify.
 Spotify is a trademark of Spotify AB.
 
 Licensed under the [MIT License](LICENSE).

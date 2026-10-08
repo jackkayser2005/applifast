@@ -450,7 +450,7 @@ impl Default for Settings {
             playback_authorized: false,
             keep_playing_in_background: true,
             mac_notch_widget: false,
-            check_for_updates: true,
+            check_for_updates: false,
             download_updates_automatically: false,
             pinned_contexts: Vec::new(),
             liked_songs_pinned: true,

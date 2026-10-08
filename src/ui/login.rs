@@ -70,9 +70,13 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, connecting: bool) {
                     let (logo, _) = ui.allocate_exact_size(Vec2::splat(72.0), egui::Sense::hover());
                     theme::logo(ui, logo.center(), 72.0);
                     ui.add_space(6.0);
-                    theme::text(ui, "Spotifast", theme::bold(30.0), palette.text);
-                    theme::text(ui, gettext(locale, "A native Spotify client."), theme::regular(14.5), palette.secondary);
+                    theme::text(ui, "Applifast", theme::bold(30.0), palette.text);
+                    theme::text(ui, if app.apple.is_some() { "A native Apple Music client.".into() } else { gettext(locale, "A native Spotify client.") }, theme::regular(14.5), palette.secondary);
                     ui.add_space(22.0);
+                    if app.apple.is_some() {
+                        super::apple::login_contents(app, ui);
+                        return;
+                    }
                     match &app.auth {
                         AuthStatus::WaitingForBrowser { url } => {
                             let url = url.clone();
@@ -131,7 +135,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, connecting: bool) {
                             ui.add_space(10.0);
                             ui.add(
                                 egui::Label::new(
-                                    egui::RichText::new(gettext(locale, "Sign in through your browser. Spotifast never sees your password. Local playback needs Spotify Premium."))
+                                    egui::RichText::new(gettext(locale, "Sign in through your browser. Applifast never sees your password. Local playback needs Spotify Premium."))
                                         .font(theme::regular(12.5))
                                         .color(palette.secondary),
                                 )
@@ -185,7 +189,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, connecting: bool) {
                 pos2(rect.center().x, rect.bottom() - 24.0),
                 egui::Align2::CENTER_BOTTOM,
                 // Translators: {version} is the app's version number, such as 1.2.0.
-                gettext(locale, "Spotifast {version} • not affiliated with Spotify")
+                gettext(locale, "Applifast {version} • not affiliated with Spotify")
                     .replace("{version}", env!("CARGO_PKG_VERSION")),
                 theme::regular(11.5),
                 palette.dim,
@@ -262,7 +266,7 @@ fn proxy_fields(ui: &mut egui::Ui, app: &mut App) {
     }
 }
 
-fn big_button(ui: &mut egui::Ui, app: &App, label: &str) -> bool {
+pub(super) fn big_button(ui: &mut egui::Ui, app: &App, label: &str) -> bool {
     let palette = app.palette;
     let galley =
         ui.painter()

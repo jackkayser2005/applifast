@@ -28,7 +28,7 @@ pub enum SkinError {
     NotAnArchive,
     #[error("{0}")]
     Archive(zip::ZipError),
-    #[error("this is a modern Winamp skin, which Spotifast cannot draw; it needs a classic one")]
+    #[error("this is a modern Winamp skin, which Applifast cannot draw; it needs a classic one")]
     ModernSkin,
     #[error("no skin bitmaps were found inside")]
     Empty,
