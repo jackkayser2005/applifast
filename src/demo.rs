@@ -1237,6 +1237,14 @@ pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
         app.lyrics_uri = app.now_playing().map(|now| now.uri);
     }
     for flag in show.unwrap_or("").split(',').map(str::trim) {
+        if flag == "favorites-page" {
+            app.open(Page::Favorites);
+            continue;
+        }
+        if flag == "favorites-shelf-hidden" {
+            app.settings.favorite_shelf_count = 0;
+            continue;
+        }
         if matches!(
             flag,
             "apple-home-empty" | "apple-home-error" | "apple-home-loading"
@@ -1526,6 +1534,110 @@ mod tests {
             text.iter()
                 .any(|(text, _)| text == "Connection interrupted")
         );
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_favorites_shelf_and_page_keep_songs_navigation_and_playable_identity() {
+        let (ctx, mut app) = accessible_app("apple-favorites-shelf");
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        for song in &mut apple.songs {
+            song.in_favorites = Some(false);
+        }
+        apple.songs[0].in_favorites = Some(true);
+        apple.songs[1].in_favorites = None;
+        apple.songs[2].in_favorites = Some(true);
+        apple.songs[2].item.play_params = None;
+        apple.songs[4].in_favorites = Some(true);
+        let first = apple.songs[0].title.clone();
+        let unavailable = apple.songs[2].title.clone();
+        let wanted = vec![apple.songs[0].uri(), apple.songs[4].uri()];
+        app.open(Page::LikedSongs);
+        app.local = apple.local.clone();
+        app.apple = Some(apple);
+        app.remote = None;
+        app.apply(Action::SetFavoriteShelfCount(1), &ctx);
+        let draw = crate::ui::show;
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let shelf = |label: &str, rect: egui::Rect| {
+            label == first && rect.center().x < 250.0 && rect.center().y < 500.0
+        };
+        let song = text
+            .iter()
+            .find(|(label, rect)| shelf(label, *rect))
+            .unwrap()
+            .1;
+        assert!(!text.iter().any(|(label, rect)| label == &unavailable
+            && rect.center().x < 250.0
+            && rect.center().y < 500.0));
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(song.center(), egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            app.actions.iter().any(
+                |action| matches!(action, Action::PlayUris {uris, index:0} if uris == &wanted)
+            )
+        );
+        app.actions.clear();
+        let show_all = text
+            .iter()
+            .find(|(label, _)| label == "Show all favorites")
+            .unwrap()
+            .1;
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(show_all.center(), egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            app.actions
+                .iter()
+                .any(|action| matches!(action, Action::Open(Page::Favorites)))
+        );
+        app.actions.clear();
+        app.apply(Action::Open(Page::Favorites), &ctx);
+        assert!(!app.apple.as_ref().unwrap().favorites_only);
+        assert_eq!(Page::decode(&app.page().encode()), Some(Page::Favorites));
+        let draw_page = crate::ui::collection::liked;
+        view_frame(&ctx, &mut app, vec![], draw_page);
+        let text = view_frame(&ctx, &mut app, vec![], draw_page);
+        assert_eq!(app.table_rows[&Page::Favorites].items.len(), 3);
+        assert!(text.iter().any(|(label, _)| label == &unavailable));
+        assert!(!text.iter().any(|(label, _)| label == "Show only favorites"));
+        let play = text.iter().find(|(label, _)| label == "Play").unwrap().1;
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(play.center(), egui::PointerButton::Primary),
+            draw_page,
+        );
+        assert!(app.actions.iter().any(|action| matches!(action,
+            Action::PlayFromRow {context:RowContext::View {uris, context_uri, ..}, ..}
+                if uris.as_ref() == wanted && context_uri == "apple:collection:favorites")));
+        app.actions.clear();
+        app.apply(Action::Back, &ctx);
+        assert_eq!(app.page(), &Page::LikedSongs);
+        view_frame(&ctx, &mut app, vec![], draw_page);
+        assert_eq!(
+            app.table_rows[&Page::LikedSongs].items.len(),
+            app.library.liked.items.len()
+        );
+        app.apply(Action::SetFavoriteShelfCount(255), &ctx);
+        assert_eq!(app.settings.favorite_shelf_count, 10);
+        app.apply(Action::SetFavoriteShelfCount(0), &ctx);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(!text.iter().any(|(label, _)| label == "Show all favorites"));
+        assert!(!text.iter().any(|(label, rect)| shelf(label, *rect)));
+        app.apply(Action::SignOut, &ctx);
+        assert!(app.apple.as_ref().unwrap().songs.is_empty());
         app.backend.shutdown();
     }
 

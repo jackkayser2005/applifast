@@ -276,6 +276,8 @@ pub struct Settings {
     pub art_expanded: bool,
     /// Use compact single-line rows without cover art in the sidebar.
     pub sidebar_compact: bool,
+    /// Loaded Apple favorites in the sidebar. Zero hides the shelf; at most ten.
+    pub favorite_shelf_count: u8,
     /// Show the Library as responsive cover cards instead of rows.
     pub sidebar_grid: bool,
     pub sidebar_width: f32,
@@ -442,6 +444,7 @@ impl Default for Settings {
             sidebar_visible: true,
             art_expanded: false,
             sidebar_compact: false,
+            favorite_shelf_count: 5,
             sidebar_grid: false,
             sidebar_width: 250.0,
             lyrics_width: 360.0,
@@ -582,6 +585,7 @@ impl Settings {
                     Self::default()
                 });
                 settings.migrate_proxy(text);
+                settings.favorite_shelf_count = settings.favorite_shelf_count.min(10);
                 settings.proxy_password_legacy = !settings.proxy_password.is_empty();
                 settings
             }
@@ -1238,6 +1242,22 @@ mod tests {
         assert!(restored.ambient_pulse);
         assert!(restored.reduce_motion);
         assert_eq!(restored.volume, 0);
+    }
+
+    #[test]
+    fn favorite_shelf_count_defaults_and_round_trips_without_changing_other_preferences() {
+        let older: Settings = serde_json::from_str(r#"{"volume":37}"#).unwrap();
+        assert_eq!(older.favorite_shelf_count, 5);
+        for count in [0, 1, 10] {
+            let settings = Settings {
+                favorite_shelf_count: count,
+                ..older.clone()
+            };
+            let restored: Settings =
+                serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+            assert_eq!(restored.favorite_shelf_count, count);
+            assert_eq!(restored.volume, 37);
+        }
     }
 
     #[test]

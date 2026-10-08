@@ -2304,7 +2304,7 @@ impl App {
                 || match page {
                     Page::Playlist(id) => self.playlist_pages.contains_key(id),
                     Page::Album(id) => self.album_pages.contains_key(id),
-                    Page::LikedSongs | Page::TopSongs => true,
+                    Page::LikedSongs | Page::Favorites | Page::TopSongs => true,
                     _ => false,
                 }
         });
@@ -3901,7 +3901,7 @@ impl App {
             }
             Page::Radio(seed) => self.load_radio(&seed),
             Page::Queue => self.refresh_queue(true),
-            Page::Settings => {}
+            Page::Settings | Page::Favorites => {}
         }
     }
 
@@ -4064,7 +4064,10 @@ impl App {
 
     pub fn load_more(&mut self, page: Page) {
         if let Some(apple) = &mut self.apple {
-            if page == Page::LikedSongs && !apple.loading && apple.next.is_some() {
+            if matches!(page, Page::LikedSongs | Page::Favorites)
+                && !apple.loading
+                && apple.next.is_some()
+            {
                 apple.loading = true;
                 self.library.liked.loading = true;
                 self.backend.send(Command::AppleSend(
@@ -4348,7 +4351,7 @@ impl App {
                     }
                     return;
                 }
-                Page::LikedSongs => {
+                Page::LikedSongs | Page::Favorites => {
                     if let Some(apple) = &mut self.apple {
                         if apple.loading {
                             return;
@@ -9911,6 +9914,10 @@ impl App {
             Action::SettingsChanged => {
                 self.settings_dirty = true;
                 ctx.set_theme(self.theme_preference());
+            }
+            Action::SetFavoriteShelfCount(count) => {
+                self.settings.favorite_shelf_count = count.min(10);
+                self.settings_dirty = true;
             }
             Action::RestartEngine => {
                 self.save_settings();
