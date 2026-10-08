@@ -567,6 +567,14 @@ pub enum Command {
         token_file: Option<std::path::PathBuf>,
     },
     AppleSend(String),
+    LoadAppleCache {
+        generation: u64,
+        session: u64,
+        account_tag: String,
+        storefront: String,
+    },
+    SaveAppleCache(Box<crate::apple::cache::Snapshot>),
+    ClearAppleCache,
     OpenThemesFolder,
     ProxyRestored {
         lease: CredentialLease,
@@ -752,6 +760,11 @@ pub struct LyricsRequest {
 }
 
 pub enum Event {
+    AppleCache {
+        generation: u64,
+        session: u64,
+        snapshot: Option<Box<crate::apple::cache::Snapshot>>,
+    },
     Apple {
         generation: u64,
         value: serde_json::Value,
@@ -1615,6 +1628,44 @@ impl Worker {
                 Command::AppleSend(command) => {
                     if let Some(host) = &self.apple {
                         host.send(command);
+                    }
+                }
+                Command::LoadAppleCache {
+                    generation,
+                    session,
+                    account_tag,
+                    storefront,
+                } => {
+                    let path = self.dirs.state.join("apple-session.json");
+                    let snapshot = tokio::task::spawn_blocking(move || {
+                        crate::apple::cache::Snapshot::load(&path, &account_tag, &storefront)
+                    })
+                    .await
+                    .ok()
+                    .flatten()
+                    .map(Box::new);
+                    self.emit(Event::AppleCache {
+                        generation,
+                        session,
+                        snapshot,
+                    });
+                }
+                Command::SaveAppleCache(snapshot) => {
+                    let path = self.dirs.state.join("apple-session.json");
+                    if !matches!(
+                        tokio::task::spawn_blocking(move || snapshot.save(&path)).await,
+                        Ok(Ok(()))
+                    ) {
+                        self.emit(Event::Error("Could not save the Apple library and queue. Check available disk space and file permissions.".into()));
+                    }
+                }
+                Command::ClearAppleCache => {
+                    let path = self.dirs.state.join("apple-session.json");
+                    let result =
+                        tokio::task::spawn_blocking(move || crate::apple::cache::clear(&path))
+                            .await;
+                    if !matches!(result, Ok(Ok(()))) {
+                        self.emit(Event::Error("Could not remove the saved Apple library and queue. Check file permissions.".into()));
                     }
                 }
                 Command::OpenThemesFolder => {
@@ -5024,6 +5075,67 @@ fn playback_credentials(account: Option<AccountId>, access_token: String) -> Opt
 #[cfg(test)]
 mod authorization_tests {
     use super::*;
+
+    #[test]
+    fn apple_cache_writes_finish_before_signout_clear_and_shutdown() {
+        let (runtime, mut worker, events) = worker("apple-cache-lifecycle");
+        let root = worker.dirs.state.parent().unwrap().to_path_buf();
+        let path = worker.dirs.state.join("apple-session.json");
+        let snapshot = crate::apple::cache::Snapshot {
+            version: 1,
+            account_tag: "a".repeat(64),
+            storefront: "us".into(),
+            songs: Vec::new(),
+            next: None,
+            queue: Vec::new(),
+            order: Default::default(),
+            index: None,
+            position_ms: 0,
+            shuffle: false,
+            repeat: 0,
+        };
+        let (commands, receiver) = mpsc::unbounded_channel();
+        commands
+            .send(Command::SaveAppleCache(Box::new(snapshot)))
+            .unwrap();
+        commands
+            .send(Command::LoadAppleCache {
+                generation: 7,
+                session: 3,
+                account_tag: "a".repeat(64),
+                storefront: "us".into(),
+            })
+            .unwrap();
+        commands.send(Command::ClearAppleCache).unwrap();
+        commands
+            .send(Command::LoadAppleCache {
+                generation: 7,
+                session: 4,
+                account_tag: "a".repeat(64),
+                storefront: "us".into(),
+            })
+            .unwrap();
+        commands.send(Command::Shutdown).unwrap();
+        runtime.block_on(worker.run(receiver));
+        let results = events
+            .try_iter()
+            .filter_map(|event| match event {
+                Event::AppleCache {
+                    generation,
+                    session,
+                    snapshot,
+                } => Some((generation, session, snapshot.is_some())),
+                Event::Error(error) => panic!("{error}"),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(results, [(7, 3, true), (7, 4, false)]);
+        assert!(!path.exists());
+        std::fs::write(path.with_extension("json.tmp"), b"interrupted checkpoint").unwrap();
+        crate::apple::cache::clear(&path).unwrap();
+        assert!(!path.with_extension("json.tmp").exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn playlist_cache_store_does_not_hold_up_the_command_loop() {

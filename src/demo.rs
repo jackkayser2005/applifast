@@ -774,6 +774,12 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 };
             }
             "queue" => app.show_queue_panel = true,
+            // The first cover card as under the pointer.
+            "card-hover" => crate::ui::motion::force_hover("card"),
+            "ambient-pulse" => app.settings.ambient_pulse = true,
+            "reduce-motion" => app.settings.reduce_motion = true,
+            // The seek bar, the first slider drawn, as under the pointer.
+            "seek-hover" => crate::ui::motion::force_hover("slider"),
             "playing-next" => {
                 app.show_queue_panel = true;
                 if let Loadable::Loaded(queue) = &app.queue {
@@ -3389,6 +3395,38 @@ mod tests {
     }
 
     #[test]
+    fn apple_settings_offer_motion_and_hide_unsupported_audio_controls() {
+        let (ctx, mut app) = accessible_app("apple-settings-capabilities");
+        app.apple = Some(crate::apple::State::default());
+        for query in [
+            "Equalizer",
+            "MilkDrop",
+            "Normalize volume",
+            "Audio cache",
+            "Personal app",
+            "Spectrum analyser",
+        ] {
+            let text = settings_text(&ctx, &mut app, query);
+            assert!(
+                text.iter().any(|text| text.starts_with("No settings for")),
+                "{query}: {text:?}"
+            );
+        }
+        for query in [
+            "Ambient Pulse",
+            "Reduce motion",
+            "Keep music playing when the window closes",
+        ] {
+            let text = settings_text(&ctx, &mut app, query);
+            assert!(text.iter().any(|text| text == query), "{query}: {text:?}");
+        }
+        let text = settings_text(&ctx, &mut app, "developer token");
+        assert!(text.iter().any(|text| text == "Apple Music account"));
+        assert!(!text.iter().any(|text| text == "Account"));
+        app.backend.shutdown();
+    }
+
+    #[test]
     fn create_an_app_row_hides_once_the_personal_app_is_ready() {
         let (ctx, mut app) = accessible_app("settings-create-app");
         app.settings.web_client_id = None;
@@ -3747,6 +3785,69 @@ mod tests {
             "Tab must scroll through the virtual card grid instead of trapping focus in its first visible row"
         );
         app.backend.shutdown();
+    }
+
+    /// Hovering a card fades its Play button in on a rising cover, and
+    /// Reduce motion shows the button at once.
+    #[test]
+    fn a_hovered_cards_play_button_fades_in_unless_motion_is_reduced() {
+        use crate::ui::widgets::{CardCover, card};
+        for reduced in [false, true] {
+            let (ctx, mut app) = accessible_app(if reduced {
+                "card-hover-still"
+            } else {
+                "card-hover"
+            });
+            let accent = app.palette.accent;
+            let mut draw = |time: f64, pointer: Option<egui::Pos2>| {
+                let mut card_rect = egui::Rect::NOTHING;
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(time),
+                        events: pointer.map(egui::Event::PointerMoved).into_iter().collect(),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        crate::ui::motion::set_reduced(ui.ctx(), reduced);
+                        card_rect = card(
+                            ui,
+                            &mut app,
+                            None,
+                            "Album",
+                            "Artist",
+                            CardCover::square(false),
+                        )
+                        .response
+                        .rect;
+                    },
+                );
+                output.textures_delta.clear();
+                let disc = output
+                    .shapes
+                    .iter()
+                    .find_map(|clipped| match &clipped.shape {
+                        egui::epaint::Shape::Circle(circle)
+                            if (circle.radius - 22.0).abs() < 0.5 && circle.fill.a() > 0 =>
+                        {
+                            Some(circle.fill.a())
+                        }
+                        _ => None,
+                    });
+                (card_rect, disc)
+            };
+            let (rect, disc) = draw(0.0, None);
+            assert_eq!(disc, None, "no button before hovering");
+            let (_, disc) = draw(0.02, Some(rect.center()));
+            let disc = disc.expect("the Play button on hover");
+            if reduced {
+                assert_eq!(disc, accent.a());
+            } else {
+                assert!(disc < accent.a(), "fading in: {disc}");
+            }
+            let (_, disc) = draw(1.0, Some(rect.center()));
+            assert_eq!(disc, Some(accent.a()));
+            app.backend.shutdown();
+        }
     }
 
     #[test]
@@ -6305,6 +6406,137 @@ mod tests {
         }
     }
 
+    /// The next sung line lights up over a moment rather than at once;
+    /// Reduce motion lights it at once.
+    #[test]
+    fn the_next_sung_line_lights_up_gradually_unless_motion_is_reduced() {
+        for reduced in [false, true] {
+            let (ctx, mut app) = accessible_app(&format!("lyric-light-{reduced}"));
+            app.settings.reduce_motion = reduced;
+            app.show_lyrics_panel = true;
+            app.lyrics_fullscreen = Some(false);
+            app.lyrics = Loadable::Loaded(Some(sample_lyrics()));
+            app.lyrics_following = true;
+            let colour_at = |app: &mut App, time: f64, position: u32| {
+                let remote = app.remote.as_mut().unwrap();
+                remote.state.is_playing = false;
+                remote.state.progress_ms = Some(position);
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(time),
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(1280.0, 800.0),
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| app.frame_ui(ui),
+                );
+                output.textures_delta.clear();
+                output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::Shape::Text(text)
+                            if text.galley.job.text == "Every window holding someone's evening" =>
+                        {
+                            Some(text.galley.job.sections[0].format.color)
+                        }
+                        _ => None,
+                    })
+                    .expect("the next line is drawn")
+            };
+            let mut quiet = egui::Color32::TRANSPARENT;
+            for frame in 0..10 {
+                quiet = colour_at(&mut app, f64::from(frame) * 0.1, 41_000);
+            }
+            let early = colour_at(&mut app, 1.03, 47_000);
+            let mut lit = early;
+            for frame in 1..10 {
+                lit = colour_at(&mut app, 1.03 + f64::from(frame) * 0.1, 47_000);
+            }
+            assert_ne!(quiet, lit);
+            if reduced {
+                assert_eq!(early, lit);
+            } else {
+                assert!(
+                    early != quiet && early != lit,
+                    "{quiet:?} {early:?} {lit:?}"
+                );
+            }
+            app.backend.shutdown();
+        }
+    }
+
+    /// Full screen is a Now Playing screen: its own seek bar and transport
+    /// buttons sit under the cover, or under the song in a narrow window,
+    /// and they control playback like the player bar's.
+    #[cfg(feature = "demo")]
+    #[test]
+    fn full_screen_now_playing_has_its_own_controls() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        for (width, surface) in [
+            (1600.0, "lyrics-fullscreen-view"),
+            (820.0, "lyrics-fullscreen-view"),
+            (1600.0, "lyrics-fullscreen-instrumental"),
+        ] {
+            let (ctx, mut app) = accessible_app(&format!("now-playing-{width}-{surface}"));
+            apply_flags(&mut app, None, Some(surface));
+            let frame = |app: &mut App, events: Vec<egui::Event>| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(width, 900.0),
+                        )),
+                        events,
+                        ..Default::default()
+                    },
+                    // Drawn without applying, so the actions stay to be seen.
+                    |ui| crate::ui::show(app, ui),
+                );
+                output.textures_delta.clear();
+                output.platform_output.accesskit_update.unwrap()
+            };
+            frame(&mut app, vec![]);
+            let tree = frame(&mut app, vec![]);
+            let sliders = tree
+                .nodes
+                .iter()
+                .filter(|(_, node)| {
+                    node.role() == Role::Slider && node.label() == Some("Playback position (%)")
+                })
+                .count();
+            assert_eq!(sliders, 2, "{width} {surface}: player bar and full screen");
+            let nexts = tree
+                .nodes
+                .iter()
+                .filter(|(_, node)| node.label() == Some("Next") && node.role() == Role::Button)
+                .map(|(id, node)| (*id, node.bounds().map_or(0.0, |bounds| bounds.y0)))
+                .collect::<Vec<_>>();
+            assert_eq!(nexts.len(), 2, "{width} {surface}");
+            // The full-screen Next is the one above the player bar.
+            let (next, _) = nexts
+                .iter()
+                .min_by(|a, b| a.1.total_cmp(&b.1))
+                .copied()
+                .unwrap();
+            app.actions.clear();
+            frame(
+                &mut app,
+                vec![accessible_action(next, AccessibleAction::Click, None)],
+            );
+            assert!(
+                app.actions
+                    .iter()
+                    .any(|action| matches!(action, Action::Next)),
+                "{width} {surface}: {:?}",
+                app.actions
+            );
+            app.backend.shutdown();
+        }
+    }
+
     /// Full screen puts the cover and the lyrics side by side as one centred
     /// group, and a song without words gets its cover alone in the middle.
     #[cfg(feature = "demo")]
@@ -6318,12 +6550,19 @@ mod tests {
                 _ => None,
             })
         };
-        for (surface, words) in [
-            ("lyrics-fullscreen-view", true),
-            ("lyrics-fullscreen-instrumental", false),
+        for (surface, words, apple) in [
+            ("lyrics-fullscreen-view", true, false),
+            ("lyrics-fullscreen-instrumental", false, false),
+            ("lyrics-fullscreen-view", false, true),
         ] {
             let (ctx, mut app) = accessible_app(surface);
             apply_flags(&mut app, None, Some(surface));
+            if apple {
+                let state = crate::apple::State::demo(&app.library.liked.items);
+                app.local = state.local.clone();
+                app.local_ready = true;
+                app.apple = Some(state);
+            }
             let mut shapes = Vec::new();
             for frame in 0..30 {
                 let mut output = ctx.run_ui(
@@ -6349,8 +6588,13 @@ mod tests {
                 assert!(lyric.left() < 1000.0, "the group is centred: {lyric:?}");
             } else {
                 assert!(lyric.is_none());
-                let detail = detail.expect("why there are no words");
-                assert!((detail.center().x - 800.0).abs() < 2.0, "{detail:?}");
+                if apple {
+                    assert!(detail.is_none(), "Apple Now Playing has no lyrics panel");
+                    assert!(find(&shapes, "Rosewood").is_some(), "the playing song");
+                } else {
+                    let detail = detail.expect("why there are no words");
+                    assert!((detail.center().x - 800.0).abs() < 2.0, "{detail:?}");
+                }
             }
             app.backend.shutdown();
         }

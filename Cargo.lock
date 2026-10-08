@@ -321,6 +321,7 @@ dependencies = [
  "keyring-core",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "url",
  "webview2-com",
  "windows 0.62.2",

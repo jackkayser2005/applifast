@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast motion and restart preview</title>
+<style>
+  body { font: 16px system-ui; margin: 24px; background: #202022; color: #eee; }
+  p { max-width: 960px; line-height: 1.5; }
+  select, button { font: inherit; padding: 8px; margin: 4px; }
+  a { color: #ff7a80; }
+  img { display: block; max-width: 100%; height: auto; border: 1px solid #666; }
+</style>
+<h1>Applifast motion and restart preview</h1>
+<p>Candidate Windows x64 captures from <code>feat/apple-release-polish</code>
+  at <code>d2d3766</code>,
+  built with the demo feature. Every song and playlist is sample data.
+  Source motion comes from <a href="https://github.com/jackkayser2005/applifast/pull/13">PR #13</a>.
+  Ambient Pulse is enabled here to show the optional decorative animation.
+  The normal Songs capture has the queue open; the narrow capture has it closed.
+  Apple Now Playing shows the cover and transport controls. Apple lyrics are unsupported.</p>
+<p>This is a candidate gallery, not a matching before-and-after approval comparison.
+  A fresh build of baseline <code>72e6f74</code> is still needed for that comparison.
+  <a href="../review/index.html">The earlier listening comparison</a> predates the
+  palette and motion changes and cannot establish approval of this update.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<p id="description"></p>
+<img id="capture" alt="Apple Songs page and queue with decorative Ambient Pulse">
+<h2>Now Playing and settings</h2>
+<label>View <select id="view">
+  <option value="now-playing-dark-1100x760.png">Now Playing, dark, normal</option>
+  <option value="now-playing-light-760x760.png">Now Playing, light, narrow</option>
+  <option value="settings-dark-1100x760.png">Settings, dark, normal</option>
+  <option value="mini-playing.png">Mini player with Ambient Pulse</option>
+  <option value="forced-queue-dark-760x760.png">Forced below panel minimum, dark</option>
+  <option value="forced-queue-light-760x760.png">Forced below panel minimum, light</option>
+</select></label>
+<img id="interaction" alt="Selected Now Playing or settings capture">
+<p>The forced 760-point Songs captures bypass the native minimum width while both
+  side panels are open. They show clipped center content and toolbar controls at
+  that forced size. Ordinary native resizing raises its minimum with these panels;
+  window-manager and real resize coverage remain pending.
+  Stills do not establish animation timing, real playback, restart restoration,
+  window lifecycle, performance or a one-hour gaming session.
+  <a href="../listening-slice.md">Supported features and test results</a>.</p>
+<script>
+  const theme = document.getElementById('theme'), size = document.getElementById('size');
+  const view = document.getElementById('view');
+  function render() {
+    document.getElementById('capture').src = `after-${theme.value}-${size.value}.png`;
+    document.getElementById('description').textContent = `Candidate: ${theme.value}, ${size.value}`;
+    document.getElementById('interaction').src = view.value;
+  }
+  theme.onchange = size.onchange = view.onchange = render;
+  render();
+</script>
+</html>

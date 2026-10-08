@@ -125,6 +125,23 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   assert.equal(calls.at(-1).items[0].id,'i.upload');
   music.playbackState = 2;
 
+  // Restoration retains occurrences, uses library parameters and never plays.
+  played = false;
+  music.playbackState = 3;
+  const restoredOrder = { upcoming: [2, 1], manualCount: 1, context: [0, 1], history: [] };
+  await app.dispatch({ type: 'intent', generation: 12, command: {
+    type: 'restore', items: [uploaded, catalog, uploaded], index: 0,
+    order: restoredOrder, seconds: 42, shuffle: false, repeat: 0
+  } });
+  assert(!played);
+  assert.equal(lastState().position, 42);
+  assert.equal(lastState().requestGeneration, 12);
+  assert.equal(calls.at(-1).items[0].isLibrary, true);
+  assert.deepEqual(Array.from(lastState().order.upcoming), [2, 1]);
+  await app.dispatch({ type: 'next' });
+  assert(!played);
+  assert.equal(lastState().index, 2);
+
   let resolveRead;
   music.api.music = () => new Promise(resolve => {resolveRead=resolve;});
   const pendingRead=app.dispatch({type:'request',id:42,path:'/v1/me/library/albums?limit=100'});

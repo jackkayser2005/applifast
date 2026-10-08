@@ -1,0 +1,34 @@
+Applifast Windows development preview
+
+1. Quit the older build using its tray menu. Closing its window leaves it running.
+2. Extract this folder and run Applifast.exe. Keep the files together.
+3. A saved Apple authorization on this PC is reused. Otherwise, import your
+   developer-token.txt from Apple Account settings and sign in through Apple's
+   popup. The app never needs your .p8 signing key. Do not distribute that key.
+
+This preview requires Windows x64, the installed Evergreen WebView2 runtime,
+an Apple Music subscription and an unexpired developer token. It is a debug
+build, not a public release. Its inherited --version is still spotifast 0.12.0.
+The app uses separate Applifast settings and Windows Credential Manager entries.
+
+Try restart restoration: play a song, add a few queue entries (including a
+repeat), seek, then Quit from the tray. Reopen: the loaded song library, exact
+queue, current song, position, shuffle and repeat should return, paused.
+The library refreshes in the background. Sign-out removes the account snapshot.
+Audio is streamed. Collection detail pages still load when opened.
+
+Ctrl+M toggles the mini player. L or Ctrl+Shift+K opens Now Playing; Esc returns.
+Enable Ambient Pulse in Appearance. It is decorative, not an audio analyser.
+Reduce motion stops its animation. Ambient Pulse is off by default.
+
+Preview the design without signing in or changing your library from PowerShell:
+  .\Applifast.exe --demo --demo-page liked --demo-show queue,ambient-pulse
+
+Playlist writes, Apple favorites and public token onboarding remain unfinished.
+Cloud-only uploads are never replaced with catalog songs; their playback is
+not guaranteed. Runtime restart/window checks and the gaming soak are pending.
+See https://github.com/jackkayser2005/applifast/tree/feat/apple-release-polish
+for the source and docs/applifast/listening-slice.md for exact validation status.
+
+Applifast is an MIT-licensed fork of Spotifast by Carmine Paolino.
+The accompanying LICENSE preserves upstream credit.

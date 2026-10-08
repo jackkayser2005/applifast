@@ -1,12 +1,13 @@
 //! First Apple listening slice. UI state is separate from Spotify profile grants.
 use std::time::Instant;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::player::{LocalState, LocalTrack, Playback};
 use applifast_playback_probe::protocol::{PlaybackItem, QueueOrder};
 use rand::seq::SliceRandom;
+pub mod cache;
 pub mod models;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -24,7 +25,7 @@ pub enum Read {
     Search { serial: u64, library: bool },
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Song {
     #[serde(flatten)]
@@ -134,6 +135,12 @@ pub struct State {
     pending_index: Option<usize>,
     pending_playback: Option<Playback>,
     request_generation: u64,
+    pub account_tag: Option<String>,
+    pub cache_checked: bool,
+    cache_dirty: bool,
+    cache_position_ms: u32,
+    refresh_songs: Option<Vec<Song>>,
+    restore_position: Option<u32>,
 }
 
 impl Default for State {
@@ -163,6 +170,12 @@ impl Default for State {
             pending_index: None,
             pending_playback: None,
             request_generation: 0,
+            account_tag: None,
+            cache_checked: false,
+            cache_dirty: false,
+            cache_position_ms: 0,
+            refresh_songs: None,
+            restore_position: None,
         }
     }
 }
@@ -193,6 +206,11 @@ impl State {
         self.local = LocalState::default();
         self.error = None;
         self.request_generation = 0;
+        self.account_tag = None;
+        self.cache_checked = false;
+        self.cache_dirty = false;
+        self.refresh_songs = None;
+        self.restore_position = None;
     }
     pub fn play(&mut self, index: usize) -> Option<Value> {
         let uris = self.songs.iter().map(Song::uri).collect::<Vec<_>>();
@@ -227,6 +245,8 @@ impl State {
         let context_len = queue.len();
         queue.extend(manual);
         self.queue = queue;
+        self.cache_dirty = true;
+        self.restore_position = None;
         self.order = QueueOrder {
             upcoming: (context_len..self.queue.len()).collect(),
             manual_count: self.queue.len() - context_len,
@@ -391,6 +411,7 @@ impl State {
         self.known_songs
             .get(uri)
             .or_else(|| self.songs.iter().find(|song| song.uri() == uri))
+            .or_else(|| self.queue.iter().find(|song| song.uri() == uri))
     }
     pub fn read(&mut self, target: Read, path: String, offset: u32) -> Value {
         self.read_serial += 1;
@@ -400,6 +421,7 @@ impl State {
     fn select(&mut self, index: usize) {
         if let Some(song) = self.queue.get(index) {
             if self.index != Some(index) {
+                self.cache_dirty = true;
                 self.local.track_sequence += 1;
             }
             self.index = Some(index);
@@ -472,6 +494,10 @@ impl State {
         };
     }
     pub fn intent(&mut self, command: Value) -> Value {
+        if command["type"] != "volume" {
+            self.cache_dirty = true;
+        }
+        self.restore_position = None;
         self.request_generation += 1;
         json!({"type":"intent","generation":self.request_generation,"command":command})
     }
@@ -507,6 +533,10 @@ impl State {
         }
         match event.get("type").and_then(Value::as_str) {
             Some("ready") => {
+                self.account_tag = event["accountTag"]
+                    .as_str()
+                    .filter(|tag| cache::valid_tag(tag))
+                    .map(str::to_owned);
                 self.storefront = event["storefront"]
                     .as_str()
                     .filter(|value| {
@@ -524,6 +554,10 @@ impl State {
                 }
             }
             Some("authorized") => {
+                self.account_tag = event["accountTag"]
+                    .as_str()
+                    .filter(|tag| cache::valid_tag(tag))
+                    .map(str::to_owned);
                 if let Some(storefront) = event["storefront"].as_str().filter(|value| {
                     value.len() == 2 && value.bytes().all(|byte| byte.is_ascii_lowercase())
                 }) {
@@ -540,8 +574,25 @@ impl State {
                 let parsed: Result<Vec<Song>, _> = serde_json::from_value(event["items"].clone());
                 match parsed {
                     Ok(songs) if songs.iter().all(|song| song.item.validate().is_ok()) => {
-                        self.songs.extend(songs);
-                        self.next = event["next"].as_str().map(str::to_owned);
+                        let next = event["next"].as_str().map(str::to_owned);
+                        if let Some(fresh) = &mut self.refresh_songs {
+                            if songs.is_empty() && next.is_some() {
+                                self.error = Some("Apple returned an empty continuation page. Reload Songs to retry.".into());
+                                self.refresh_songs = None;
+                                return None;
+                            }
+                            fresh.extend(songs);
+                            // Keep cached rows visible until their loaded span is refreshed.
+                            if next.is_some() && fresh.len() < self.songs.len() {
+                                self.loading = true;
+                                return Some(json!({"type":"library","next":next}));
+                            }
+                            self.songs = self.refresh_songs.take().unwrap_or_default();
+                        } else {
+                            self.songs.extend(songs);
+                        }
+                        self.next = next;
+                        self.cache_dirty = true;
                     }
                     _ => {
                         self.error = Some(
@@ -584,6 +635,14 @@ impl State {
                     Some(10) => Playback::Paused,
                     _ => Playback::Stopped,
                 };
+                let position_ms =
+                    (event["position"].as_f64().unwrap_or(0.0).max(0.0) * 1000.0) as u32;
+                if let Some(expected) = self.restore_position {
+                    if playback != Playback::Paused || position_ms.abs_diff(expected) > 1000 {
+                        return None;
+                    }
+                    self.restore_position = None;
+                }
                 if let Some(expected) = self.pending_playback {
                     if playback != expected {
                         return None;
@@ -624,6 +683,9 @@ impl State {
                     return None;
                 }
                 self.loading = false;
+                if event.get("requestGeneration").is_none() {
+                    self.refresh_songs = None;
+                }
                 self.error = Some(
                     event["message"]
                         .as_str()
@@ -634,12 +696,98 @@ impl State {
                 );
                 self.pending_index = None;
                 self.pending_playback = None;
+                self.restore_position = None;
                 self.local.playback = Playback::Paused;
                 self.local.position_at = None;
             }
             _ => {}
         }
         None
+    }
+    pub fn restore_cache(&mut self, snapshot: Option<cache::Snapshot>) -> Option<Value> {
+        if !self.authorized || self.cache_checked {
+            return None;
+        }
+        self.cache_checked = true;
+        if self.request_generation != 0 {
+            return None;
+        }
+        let snapshot = snapshot.filter(|snapshot| {
+            self.account_tag
+                .as_deref()
+                .is_some_and(|tag| snapshot.valid_for(tag, &self.storefront))
+        })?;
+        self.songs = snapshot.songs;
+        self.next = snapshot.next;
+        self.refresh_songs = Some(Vec::new());
+        self.queue = snapshot.queue;
+        self.order = snapshot.order;
+        self.index = snapshot.index;
+        if let Some(index) = self.index {
+            self.select(index);
+        }
+        self.local.position_ms = self
+            .local
+            .track
+            .as_ref()
+            .filter(|song| song.duration_ms > 0)
+            .map_or(snapshot.position_ms, |song| {
+                snapshot.position_ms.min(song.duration_ms)
+            });
+        self.local.position_at = None;
+        self.local.playback = if self.index.is_some() {
+            Playback::Paused
+        } else {
+            Playback::Stopped
+        };
+        self.local.shuffle = snapshot.shuffle;
+        self.local.repeat = match snapshot.repeat {
+            1 => crate::player::RepeatMode::Track,
+            2 => crate::player::RepeatMode::Context,
+            _ => crate::player::RepeatMode::Off,
+        };
+        let request = json!({"type":"restore","items":self.queue.iter().map(|song| &song.item).collect::<Vec<_>>(),"index":self.index,"order":self.order,"seconds":f64::from(self.local.position_ms)/1000.0,"shuffle":snapshot.shuffle,"repeat":snapshot.repeat});
+        let request = self.intent(request);
+        self.restore_position = self.index.map(|_| self.local.position_ms);
+        self.pending_index = self.index;
+        self.pending_playback = self.index.map(|_| Playback::Paused);
+        Some(request)
+    }
+    pub fn cache_snapshot(&mut self, force: bool) -> Option<cache::Snapshot> {
+        let tag = self.account_tag.clone()?;
+        if !self.authorized || !self.cache_checked {
+            return None;
+        }
+        let elapsed = self.local.position_at.map_or(0, |at| {
+            at.elapsed().as_millis().min(u128::from(u32::MAX)) as u32
+        });
+        let position = self.local.position_ms.saturating_add(elapsed);
+        if !force && !self.cache_dirty && position.abs_diff(self.cache_position_ms) < 15_000 {
+            return None;
+        }
+        self.cache_dirty = false;
+        self.cache_position_ms = position;
+        Some(cache::Snapshot {
+            version: 1,
+            account_tag: tag,
+            storefront: self.storefront.clone(),
+            songs: self.songs.clone(),
+            next: self.next.clone(),
+            queue: self.queue.clone(),
+            order: self.order.clone(),
+            index: self.index,
+            position_ms: position,
+            shuffle: self.local.shuffle,
+            repeat: match self.local.repeat {
+                crate::player::RepeatMode::Off => 0,
+                crate::player::RepeatMode::Track => 1,
+                crate::player::RepeatMode::Context => 2,
+            },
+        })
+    }
+    pub fn refresh_library(&mut self) {
+        self.refresh_songs = Some(Vec::new());
+        self.loading = true;
     }
     #[cfg(feature = "demo")]
     pub fn demo(saved: &[crate::api::models::SavedTrack]) -> Self {
@@ -710,6 +858,100 @@ mod tests {
         };
         state.play(0).unwrap();
         state
+    }
+    #[test]
+    fn saved_library_and_occurrences_restore_paused_and_reject_other_grants() {
+        let mut source = queue_state();
+        source.authorized = true;
+        source.cache_checked = true;
+        source.account_tag = Some("a".repeat(64));
+        source.storefront = "us".into();
+        let catalog: Song = serde_json::from_value(json!({"kind":"catalog","id":"123","playParams":{"id":"123","kind":"song"},"title":"Catalog","artist":"Artist","album":"Album","durationMs":180000,"catalogId":"123"})).unwrap();
+        let catalog_uri = catalog.uri();
+        source.known_songs.insert(catalog_uri.clone(), catalog);
+        source.add_uris(
+            &[
+                source.songs[0].uri(),
+                source.songs[0].uri(),
+                catalog_uri.clone(),
+            ],
+            0,
+            std::time::Duration::ZERO,
+            true,
+        );
+        source.local.playback = Playback::Paused;
+        source.seek(42_000);
+        source.songs[2].item.play_params = None;
+        let snapshot = source.cache_snapshot(true).unwrap();
+        let root = std::env::temp_dir().join(format!(
+            "applifast-cache-{}-{:016x}",
+            std::process::id(),
+            rand::random::<u64>()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        let path = root.join("apple-session.json");
+        snapshot.save(&path).unwrap();
+        assert!(cache::Snapshot::load(&path, &"b".repeat(64), "us").is_none());
+        assert!(cache::Snapshot::load(&path, &"a".repeat(64), "gb").is_none());
+        let snapshot = cache::Snapshot::load(&path, &"a".repeat(64), "us").unwrap();
+        let mut restored = State {
+            authorized: true,
+            account_tag: source.account_tag.clone(),
+            storefront: "us".into(),
+            ..Default::default()
+        };
+        let command = restored.restore_cache(Some(snapshot.clone())).unwrap();
+        let parsed =
+            serde_json::from_value::<applifast_playback_probe::protocol::Command>(command.clone())
+                .unwrap();
+        assert!(parsed.validate().is_ok());
+        assert_eq!(restored.local.playback, Playback::Paused);
+        assert_eq!(restored.local.position_ms, 42_000);
+        assert_eq!(restored.order.upcoming, source.order.upcoming);
+        assert_eq!(restored.order.manual_count, 3);
+        assert_eq!(restored.queue[3].uri(), restored.queue[4].uri());
+        assert_eq!(command["command"]["items"][0]["playParams"]["id"], "i.a");
+        assert!(!restored.songs[2].available());
+        assert!(restored.known_songs.is_empty());
+        assert_eq!(restored.find_song(&catalog_uri).unwrap().item.id, "123");
+        restored.event(1, &json!({"type":"state","session":1,"requestGeneration":1,"index":0,"position":0,"status":3}));
+        assert_eq!(restored.local.position_ms, 42_000);
+        restored.event(1, &json!({"type":"state","session":1,"requestGeneration":1,"index":0,"position":42,"status":3}));
+        assert!(restored.restore_position.is_none());
+        assert!(restored.restore_cache(Some(snapshot.clone())).is_none());
+        restored.cache_snapshot(true).unwrap();
+        restored.play_uris(&[restored.songs[1].uri()], 0).unwrap();
+        assert!(restored.restore_position.is_none());
+        let replaced = restored.cache_snapshot(false).unwrap();
+        assert_eq!(replaced.queue[0].item.id, "i.b");
+        restored.clear_account();
+        assert!(restored.restore_cache(Some(snapshot.clone())).is_none());
+        assert!(restored.cache_snapshot(true).is_none());
+        let mut invalid = snapshot;
+        invalid.order.upcoming.push(9999);
+        assert!(invalid.save(&path).is_err());
+        std::fs::write(&path, b"not JSON").unwrap();
+        assert!(cache::Snapshot::load(&path, &"a".repeat(64), "us").is_none());
+        std::fs::remove_file(&path).unwrap();
+        std::fs::remove_dir(root).unwrap();
+    }
+    #[test]
+    fn cached_rows_stay_until_refresh_completes_and_cannot_undo_a_new_queue() {
+        let mut state = queue_state();
+        state.refresh_songs = Some(Vec::new());
+        let row = serde_json::to_value(&state.songs[0]).unwrap();
+        let next = state.event(1, &json!({"type":"library","session":1,"items":[row.clone()],"next":"/v1/me/library/songs?offset=100"}));
+        assert!(next.is_some());
+        assert_eq!(state.songs.len(), 3);
+        state.event(
+            1,
+            &json!({"type":"library","session":1,"items":[row],"next":null}),
+        );
+        assert_eq!(state.songs.len(), 2);
+        assert_eq!(state.queue.len(), 3);
+        state.authorized = true;
+        assert!(state.restore_cache(None).is_none());
+        assert!(state.cache_checked);
     }
     #[test]
     fn manual_occurrences_precede_context_and_survive_new_contexts() {
@@ -890,6 +1132,21 @@ mod tests {
             );
             await_event("state", &|event| {
                 event["requestGeneration"] == 3 && event["status"] == 3
+            });
+            assert!(ready["accountTag"].as_str().is_some_and(cache::valid_tag));
+            let order = QueueOrder {
+                upcoming: vec![1],
+                manual_count: 1,
+                context: vec![0],
+                history: Vec::new(),
+            };
+            host.send(json!({"type":"intent","generation":4,"command":{"type":"restore","items":[song.item,song.item],"index":0,"order":order,"seconds":30,"shuffle":false,"repeat":0}}).to_string());
+            await_event("state", &|event| {
+                event["requestGeneration"] == 4
+                    && event["status"] == 3
+                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 29.0
+                    && event["queueLength"] == 2
+                    && event["order"]["manualCount"] == 1
             });
             eprintln!(
                 "Embedded Windows host: restored authorization; {} library rows; real library shelves, library/catalog search, playback, seek and pause passed.",

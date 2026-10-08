@@ -44,16 +44,94 @@ new one. Authorization errors retain an explicit retry action.
 The first context contains at most 1,000 loaded songs, the host's validated queue
 limit. Collection playback currently uses the loaded prefix; complete context
 loading and streaming pagination need the queue slice. The existing queue view
-shows upcoming occurrences. Manual queue additions/reordering, queue/session
-restoration, Home/discovery/recommendations, favorites and playlist writes remain
-follow-up integration work. Controls for pending writes report that limitation.
+shows upcoming occurrences, including repeated songs. Manual queue additions,
+album additions, insertion, reordering, removal and clear use the local Apple
+occurrence queue. Library/queue restoration retains the current occurrence,
+position, manual additions, context, Previous history, shuffle and repeat.
+It restores paused. Home/discovery/recommendations,
+favorites and playlist writes remain follow-up integration work.
 The existing mini player uses the same playback actions, but its window lifecycle
 still needs real runtime acceptance. Cloud-only upload playback
 remains unverified; no upload is silently replaced with a catalog match.
 The player bar omits Spotify Connect, favorites and lyrics controls until supported.
-MilkDrop, spectrum and EQ are not supported because this engine does not expose PCM;
-their remaining legacy settings and mini-player controls still need capability cleanup.
+MilkDrop, spectrum, oscilloscope, EQ, mono and channel balance are not supported
+because this engine does not expose PCM. Their settings and mini-player actions
+are unavailable in Apple mode. Skin artwork can still contain a fixed EQ button;
+it does not open an unsupported effect. Bitrate/sample-rate labels stay blank
+instead of reporting the legacy decoder's values.
 Non-Windows builds report unsupported Apple playback.
+
+## Motion and Now Playing
+
+PR #13's motion is integrated on `feat/apple-release-polish`. It adds cover
+hover/lift, dancing playing indicators, seek hover, cover crossfade, heart pop,
+queue arrivals, art-colored headers, page fades and **Reduce motion**. Apple
+Now Playing shows artwork and transport controls without requesting legacy
+lyrics. Open it with **L** or **Ctrl+Shift+K**; **Esc** returns. **Ctrl+M** opens
+the mini-player.
+
+**Ambient Pulse** is an optional decorative animation shared by both players.
+Enable it in Appearance, click empty player-bar space, or use the mini-player's
+V menu. It follows the playhead and album colors, freezes while paused, changes
+phase on a seek, and works at zero volume. It does not analyze the audio.
+Reduce motion holds it still. Visible playing views request at most 30 pulse
+frames per second; off-screen and minimized views request none from the pulse.
+The default is off. This adds `ambient_pulse` to the existing settings JSON;
+older settings remain readable. No new files, dependencies or network endpoints
+are introduced by this animation.
+
+Apple Account settings provide developer-token renewal and sign-out. Unsupported
+legacy decoder, Spotify account, proxy, audio-cache and upstream-update settings
+are hidden. Artwork already uses a disk cache. Loaded Apple song metadata and
+the full local queue now persist across restarts; audio remains streamed by MusicKit.
+
+## Restart restoration
+
+`apple-session.json` in Applifast's state directory stores only metadata and the
+local occurrence queue, not audio or credentials. It is atomically replaced on
+the backend, with a 32 MiB ceiling. Playback checkpoints are saved approximately
+every 15 seconds and when either window closes or the app quits. Queue changes
+and library pages use the existing two-second session-save debounce.
+
+Restoration waits for the playback host's saved authorization. A SHA-256 tag of
+that grant, computed in the native host, and the storefront must match before
+rows are shown. A new authorization token can intentionally invalidate the old
+snapshot. Sign-out invalidates late cache responses and removes the snapshot;
+cache commands execute in order so a pending write cannot recreate it afterward.
+Tokens remain in Windows Credential Manager. The host uses the existing SHA-256
+dependency for this tag, with no additional crate versions or network endpoints.
+
+Cached songs remain visible while their loaded span refreshes. Collection detail
+pages still load from Apple when opened. Unavailable uploads and original playback
+parameters remain intact; restoration never substitutes a catalog match. A failed
+seek or item load retains the queue and reports a playback error. Restart
+restoration still needs a real-account Windows runtime check.
+
+For a deterministic preview without changing your account:
+
+```powershell
+cargo run --locked --features demo -- --demo --demo-page liked --demo-show queue,ambient-pulse
+```
+
+The combined Windows update passes strict default/demo Clippy, 972 default and
+996 demo library tests, the default/demo binary and integration suites, eight playback-boundary tests, the isolated
+native credential-store round trip, Node bridge/token checks and generated-catalog
+verification. Default Rustdoc with warnings denied and default doctests also pass.
+The older results below describe the preceding integration build.
+The [candidate gallery](review-polish/index.html) covers light/dark and narrow/normal
+Windows views. It is not a matching motion comparison: a baseline build is pending.
+Additional 760-point queue captures deliberately bypass the native panel minimum
+and show clipping at that forced size. Ordinary window resizing raises its minimum
+while the panels are open; real resize and window-manager coverage are pending.
+Matching motion comparisons and real app restart acceptance remain separate checks.
+The real-account restoration check was deferred while
+the older app was playing, to avoid interrupting it.
+
+`packaging/applifast-preview.txt` accompanies the local Windows development ZIP.
+It describes saved authorization, restart testing and the credential-free demo.
+The debug preview retains upstream package version 0.12.0 and is not a release.
+The Windows packaging-launcher attempt fails without the Unix `true` executable
+and Ruby YAML tooling; that contribution check has not passed here.
 
 ## Storage and network
 

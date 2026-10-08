@@ -86,7 +86,11 @@ pub fn handle(app: &mut App, ctx: &egui::Context) {
         key(
             Modifiers::COMMAND | Modifiers::SHIFT,
             Key::K,
-            Action::ToggleWinampMilkdrop,
+            if app.apple.is_some() {
+                Action::SetLyricsFullscreen(true)
+            } else {
+                Action::ToggleWinampMilkdrop
+            },
         );
         key(
             Modifiers::COMMAND,
@@ -124,7 +128,15 @@ pub fn handle(app: &mut App, ctx: &egui::Context) {
             key(Modifiers::NONE, Key::S, Action::ToggleShuffle);
             key(Modifiers::NONE, Key::R, Action::CycleRepeat);
             key(Modifiers::NONE, Key::Q, Action::ToggleQueuePanel);
-            key(Modifiers::NONE, Key::L, Action::ToggleLyricsPanel);
+            key(
+                Modifiers::NONE,
+                Key::L,
+                if app.apple.is_some() {
+                    Action::SetLyricsFullscreen(app.lyrics_fullscreen.is_none())
+                } else {
+                    Action::ToggleLyricsPanel
+                },
+            );
             key(Modifiers::NONE, Key::Slash, Action::FocusSearch);
         }
     });
@@ -184,9 +196,9 @@ pub fn handle(app: &mut App, ctx: &egui::Context) {
 /// The rows of the keyboard shortcuts dialog: the keys, then what they do.
 /// Key names stay as the keyboard prints them; words around them, and
 /// every description, are translated.
-pub fn shortcuts(locale: Locale) -> Vec<(Cow<'static, str>, Cow<'static, str>)> {
+pub fn shortcuts(locale: Locale, apple: bool) -> Vec<(Cow<'static, str>, Cow<'static, str>)> {
     let keys = |text: &'static str| Cow::Borrowed(text);
-    vec![
+    let mut rows = vec![
         (
             pgettext(locale, "key", "Space"),
             gettext(locale, "Play or pause"),
@@ -211,8 +223,22 @@ pub fn shortcuts(locale: Locale) -> Vec<(Cow<'static, str>, Cow<'static, str>)> 
         (keys("S"), gettext(locale, "Toggle shuffle")),
         (keys("R"), gettext(locale, "Cycle repeat")),
         (keys("Q"), gettext(locale, "Show the queue")),
-        (keys("L"), gettext(locale, "Show the lyrics")),
-        (keys("Esc"), gettext(locale, "Lyrics: leave full screen")),
+        (
+            keys("L"),
+            if apple {
+                gettext(locale, "Show Now Playing")
+            } else {
+                gettext(locale, "Show the lyrics")
+            },
+        ),
+        (
+            keys("Esc"),
+            if apple {
+                gettext(locale, "Now Playing: leave full screen")
+            } else {
+                gettext(locale, "Lyrics: leave full screen")
+            },
+        ),
         (
             keys("Shift+↑  /  Shift+↓"),
             gettext(locale, "Song list: extend or shrink the selection"),
@@ -267,25 +293,6 @@ pub fn shortcuts(locale: Locale) -> Vec<(Cow<'static, str>, Cow<'static, str>)> 
         ),
         (keys(WINAMP_SHORTCUT), gettext(locale, "Winamp mini player")),
         (
-            keys(MILKDROP_SHORTCUT),
-            gettext(locale, "MilkDrop, under the mini player"),
-        ),
-        (
-            // Translators: Keep the key name F. Translate "or" and "double-click".
-            gettext(locale, "F  or  double-click"),
-            gettext(locale, "MilkDrop: fill the screen"),
-        ),
-        (keys("→  /  N"), gettext(locale, "MilkDrop: next preset")),
-        (
-            keys("←  /  P"),
-            gettext(locale, "MilkDrop: previous preset"),
-        ),
-        (keys("L"), gettext(locale, "MilkDrop: keep this preset")),
-        (
-            keys("Esc"),
-            gettext(locale, "MilkDrop: leave full screen, or close"),
-        ),
-        (
             keys(platform_shortcut("Ctrl+,", "Cmd+,")),
             gettext(locale, "Settings"),
         ),
@@ -304,7 +311,33 @@ pub fn shortcuts(locale: Locale) -> Vec<(Cow<'static, str>, Cow<'static, str>)> 
             gettext(locale, "Close the window"),
         ),
         (keys(QUIT_SHORTCUT), gettext(locale, "Quit")),
-    ]
+    ];
+    if apple {
+        rows.push((keys(MILKDROP_SHORTCUT), gettext(locale, "Show Now Playing")));
+    } else {
+        rows.extend([
+            (
+                keys(MILKDROP_SHORTCUT),
+                gettext(locale, "MilkDrop, under the mini player"),
+            ),
+            (
+                // Translators: Keep the key name F. Translate "or" and "double-click".
+                gettext(locale, "F  or  double-click"),
+                gettext(locale, "MilkDrop: fill the screen"),
+            ),
+            (keys("→  /  N"), gettext(locale, "MilkDrop: next preset")),
+            (
+                keys("←  /  P"),
+                gettext(locale, "MilkDrop: previous preset"),
+            ),
+            (keys("L"), gettext(locale, "MilkDrop: keep this preset")),
+            (
+                keys("Esc"),
+                gettext(locale, "MilkDrop: leave full screen, or close"),
+            ),
+        ]);
+    }
+    rows
 }
 
 #[cfg(test)]
@@ -500,15 +533,32 @@ mod tests {
         } else {
             "Cmd+"
         };
-        for (keys, _) in shortcuts(Locale::English) {
+        for (keys, _) in shortcuts(Locale::English, false) {
             assert!(!keys.contains(other), "wrong modifier in {keys}");
         }
     }
 
     #[test]
+    fn apple_shortcuts_describe_now_playing_without_milkdrop() {
+        let rows = shortcuts(Locale::English, true);
+        assert!(
+            !rows
+                .iter()
+                .any(|(_, description)| description.contains("MilkDrop"))
+        );
+        assert!(
+            rows.iter()
+                .any(|(key, description)| key == "L" && description == "Show Now Playing")
+        );
+        assert!(rows.iter().any(
+            |(key, description)| key == MILKDROP_SHORTCUT && description == "Show Now Playing"
+        ));
+    }
+
+    #[test]
     fn shortcut_dialog_names_platform_reserved_alternatives() {
         let label = |description: &str| {
-            shortcuts(Locale::English)
+            shortcuts(Locale::English, false)
                 .into_iter()
                 .find(|(_, candidate)| candidate == description)
                 .map(|(keys, _)| keys)

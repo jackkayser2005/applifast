@@ -23,6 +23,27 @@ fn page<T>(items: Vec<T>, data: &Value, offset: u32) -> ApiPage<T> {
 }
 
 impl App {
+    pub(super) fn sync_apple_library(&mut self) {
+        let Some(apple) = &self.apple else { return };
+        self.library.liked.items = apple
+            .songs
+            .iter()
+            .map(|song| crate::api::models::SavedTrack {
+                added_at: None,
+                track: song.track(),
+            })
+            .collect();
+        self.library.liked.loaded_once = !apple.songs.is_empty() || !apple.loading;
+        self.library.liked.loading = apple.loading;
+        self.library.liked.total = Some(apple.songs.len() as u32);
+        self.library.liked.next_offset = apple.next.as_ref().map(|_| apple.songs.len() as u32);
+        self.library.liked.revision += 1;
+        for saved in &self.library.liked.items {
+            if let Some(id) = &saved.track.id {
+                self.track_cache.insert(id.clone(), saved.track.clone());
+            }
+        }
+    }
     pub(super) fn apple_queue_add(&mut self, uris: &[String], position: usize, album: bool) {
         let Some(apple) = &mut self.apple else { return };
         if !apple.authorized {

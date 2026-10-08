@@ -1,5 +1,5 @@
 //! Apple setup content inside the existing native sign-in card.
-use crate::{app::App, model::Action, theme};
+use crate::{app::App, i18n::gettext, model::Action, theme};
 
 pub(super) fn login_contents(app: &mut App, ui: &mut egui::Ui) {
     let (ready, loading, error) = {
@@ -60,13 +60,25 @@ pub(super) fn login_contents(app: &mut App, ui: &mut egui::Ui) {
         app.palette.secondary,
     );
     ui.add_space(12.0);
+    token_import(app, ui);
+}
+
+/// Import only a local JWT path. The private signing key never enters the app.
+pub(super) fn token_import(app: &mut App, ui: &mut egui::Ui) {
     let apple = app.apple.as_mut().expect("Apple sign-in");
     ui.add(
         egui::TextEdit::singleline(&mut apple.token_path)
-            .hint_text("Path to developer-token.txt")
+            .hint_text(gettext(app.locale, "Path to developer-token.txt"))
             .desired_width(ui.available_width()),
     );
-    if theme::pill_button(ui, &app.palette, "Import developer token", false).clicked() {
+    if theme::pill_button(
+        ui,
+        &app.palette,
+        &gettext(app.locale, "Import developer token"),
+        false,
+    )
+    .clicked()
+    {
         app.actions
             .push(Action::AppleImportToken(apple.token_path.clone().into()));
     }
