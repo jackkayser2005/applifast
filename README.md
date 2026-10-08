@@ -4,10 +4,11 @@
 > See [local setup, supported controls, and remaining checks](docs/applifast/listening-slice.md).
 > The development build saves loaded song metadata and the exact local queue on
 > restart, restores playback paused, and refreshes the library in the background.
-> Audio is streamed. Run the app from `apple-integration` with `cargo run --locked`;
-> Playlist creation and saving the current queue now use Apple Music, preserving
-> repeated songs. Real-account playlist-write acceptance is still pending.
-> the optional deterministic preview uses `--features demo -- --demo`.
+> Audio is streamed. Playlist creation, queue saving and appending selected songs,
+> whole albums or the queue now use Apple Music, preserving repeated songs.
+> Real-account playlist-write acceptance is still pending. Run the app from
+> `apple-integration` with `cargo run --locked`; the optional deterministic preview
+> uses `--features demo -- --demo`.
 > This development slice is not a release or feature-parity claim. The original
 > Spotifast documentation below describes upstream capabilities. Upstream credit
 > and the MIT license are preserved.

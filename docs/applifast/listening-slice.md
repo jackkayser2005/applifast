@@ -49,7 +49,8 @@ album additions, insertion, reordering, removal and clear use the local Apple
 occurrence queue. Library/queue restoration retains the current occurrence,
 position, manual additions, context, Previous history, shuffle and repeat.
 It restores paused. Home/discovery/recommendations,
-favorites and appending to existing playlists remain follow-up integration work.
+favorites remain follow-up integration work. Playlist creation and appending
+are implemented below, with real-account write acceptance pending.
 The existing mini player uses the same playback actions, but its window lifecycle
 still needs real runtime acceptance. Cloud-only upload playback
 remains unverified; no upload is silently replaced with a catalog match.
@@ -161,8 +162,8 @@ clears write state and prevents queued writes from running under another account
 Writes serialize independently of playback controls on the existing host. This
 adds no files, dependencies, credential storage or telemetry. Only transient
 pending-write/confirmation state is held in memory; playlist details are read
-from Apple again after restart. The host also validates the documented append
-endpoint, but adding to an existing playlist is not exposed by this slice.
+from Apple again after restart. This creation slice validates the documented
+append endpoint; the following slice exposes it in the interface.
 Rename, deletion, reorder, covers and collaborative controls remain unsupported.
 
 The deterministic demo accepts `--demo-show create`, `playlist-saving`,
@@ -193,6 +194,57 @@ The [playlist comparison](review-playlists/index.html) has matching light/dark,
 narrow/normal Windows captures plus saving, success and retry states. The common
 dialog captures match pixel-for-pixel; Apple playlist attribution no longer falls
 back to Spotify. These captures use sample resources rather than your account.
+
+## Appending songs, albums and the queue
+
+On `feat/apple-playlist-additions`, the existing **Add to playlist** picker offers
+only library playlists whose Apple `canEdit` attribute is true. Missing/false
+permission and catalog playlists are excluded. This grants appending only;
+rename, delete, remove, reorder and collaborative editing stay unavailable.
+The sidebar accepts selected-song drops on those writable playlists.
+An album's menu offers the same picker, including **New playlist**. Every album
+track page loads before any write or creation draft; a failed page adds nothing.
+Right-click the queue's **Save as a playlist** button to append the current song
+and every upcoming occurrence to an existing playlist. Left-click still creates
+a new playlist. Queue order and repeated songs are preserved.
+
+The destination's complete track list loads before checking duplicates. Songs
+already present use the existing **Add anyway** confirmation. Cancelling that
+dialog sends no write; sign-out cancels pending loads. Once a write starts, the added rows and
+count appear immediately. Original resource IDs go to Apple's
+`POST /v1/me/library/playlists/{id}/tracks`; catalog/playback IDs never replace
+uploaded/library identities. The existing 1,000-song request bound applies and
+an unknown selected song rejects the entire batch.
+
+On a successful response, the existing two-second, three-attempt paginated
+confirmation protects every expected occurrence against lagging reads. Failed
+writes roll back only the new suffix, ask you to inspect the playlist before
+retrying and never repeat a write automatically. Old reads, empty/repeating
+continuations and sign-out cannot confirm or silently drain an addition. Pending
+destination/album pages stay in memory until their operation finishes. Loading
+very large destinations currently holds their full metadata list for exact
+duplicate and occurrence checks; this still needs integrated memory measurement.
+No new dependencies, disk files, credentials or telemetry are introduced.
+
+API evidence: [append tracks](https://developer.apple.com/documentation/applemusicapi/add-tracks-to-a-library-playlist)
+and [library playlist permissions](https://developer.apple.com/documentation/applemusicapi/libraryplaylists/attributes-data.dictionary).
+Apple documents a successful append as HTTP 204 with no response body and notes
+that new resources can take time to appear. The existing host handles that empty
+response independently of playback commands.
+
+The demo exposes `playlist-appending`, `playlist-appended`, `playlist-append-error`
+and `playlist-duplicates`. These are sample responses, not real-account acceptance.
+Windows checks pass: 978 default and 1,004 demo library tests, all default/demo
+binary and integration targets, strict default/demo Clippy, formatting and Node
+bridge/token checks. Seven focused Apple app tests cover both creation and
+appending; keyboard picker and deterministic pending/confirmed/error/duplicate
+states also pass. The [comparison](review-playlist-additions/index.html) records
+matching light/dark, narrow/normal Windows frames and append states; open
+album/queue menu captures remain pending. Three common pairs are byte-identical;
+the dark/narrow pair differs only by one channel level at 80 toast-icon pixels.
+Existing all-feature projectM/vcpkg,
+packaging/site/Nix and hosted CI gates remain outstanding. Windows real-account writes, permission rejection,
+network interruption and restart acceptance remain unverified.
 
 ## Storage and network
 

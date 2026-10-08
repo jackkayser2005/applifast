@@ -1005,6 +1005,12 @@ pub enum Action {
         playlist_name: String,
         items: Vec<PlayableItem>,
     },
+    /// Load every Apple album track before choosing a new or existing playlist.
+    AddAlbumToPlaylist {
+        uri: String,
+        label: String,
+        playlist: Option<(String, String)>,
+    },
     /// Copy dragged songs into an open playlist at an absolute position.
     InsertInPlaylist {
         playlist_id: String,

@@ -1911,6 +1911,8 @@ impl App {
                         self.apple_response(&value);
                         self.apple_finish_pending_play();
                         self.apple_finish_album_queues();
+                        self.apple_finish_playlist_add();
+                        self.apple_finish_album_playlist();
                         continue;
                     }
                     if let Some(apple) = &mut self.apple {
@@ -4212,6 +4214,15 @@ impl App {
     }
 
     fn retry_window(&mut self, page: Page) {
+        if let Page::Playlist(id) = &page
+            && self
+                .apple
+                .as_ref()
+                .is_some_and(|apple| apple.playlist_confirms.contains_key(id))
+        {
+            self.reload(page);
+            return;
+        }
         match &page {
             Page::Playlist(id) => {
                 let Some(playlist) = self.playlist_pages.get_mut(id) else {
@@ -6624,8 +6635,23 @@ impl App {
         }
         if let Some(apple) = &self.apple {
             protected_playlists.extend(apple.playlist_confirms.keys().cloned());
+            if let Some(
+                Action::AddToPlaylist { playlist_id, .. }
+                | Action::ConfirmAddToPlaylist { playlist_id, .. },
+            ) = &apple.pending_playlist_add
+            {
+                protected_playlists.insert(playlist_id.clone());
+            }
         }
         let mut protected_albums = HashSet::new();
+        if let Some(Action::AddAlbumToPlaylist { uri, .. }) = self
+            .apple
+            .as_ref()
+            .and_then(|apple| apple.pending_album_playlist.as_ref())
+            && let Some(Page::Album(id)) = Page::from_uri(uri)
+        {
+            protected_albums.insert(id);
+        }
         let mut protected_artists = HashSet::new();
         let mut protected_shows = HashSet::new();
         let mut protected_radios = HashSet::new();
@@ -8486,6 +8512,14 @@ impl App {
 
     fn apply_apple_action(&mut self, action: &Action) -> bool {
         use serde_json::json;
+        if matches!(action, Action::CloseDialog | Action::ShowDialog(_)) {
+            let apple = self.apple.as_mut().unwrap();
+            if apple.pending_playlist_add.take().is_some()
+                | apple.pending_album_playlist.take().is_some()
+            {
+                self.playlist_busy = false;
+            }
+        }
         if let Action::PlayContext { uri, .. } | Action::ShufflePlay(uri) = action
             && self.apple_context_uris(uri).is_empty()
             && let Some(page) = Page::from_uri(uri)
@@ -8580,9 +8614,33 @@ impl App {
                 self.apple_create_playlist(name, *public, add_uris);
                 return true;
             }
+            Action::AddToPlaylist {
+                playlist_id,
+                playlist_name,
+                items,
+            } => {
+                self.apple_add_to_playlist(playlist_id, playlist_name, items, true);
+                return true;
+            }
+            Action::AddAlbumToPlaylist {
+                uri,
+                label,
+                playlist,
+            } => {
+                self.apple_album_to_playlist(uri, label, playlist.clone());
+                return true;
+            }
+            Action::ConfirmAddToPlaylist {
+                playlist_id,
+                playlist_name,
+                items,
+                position: None,
+            } => {
+                self.apple_add_to_playlist(playlist_id, playlist_name, items, false);
+                return true;
+            }
             Action::ToggleSaved(_)
             | Action::SetSavedMany { .. }
-            | Action::AddToPlaylist { .. }
             | Action::InsertInPlaylist { .. }
             | Action::ConfirmAddToPlaylist { .. }
             | Action::RemoveFromPlaylist { .. }
@@ -9247,6 +9305,9 @@ impl App {
                 position,
             } => {
                 self.add_to_playlist_now(playlist_id, playlist_name, items, position);
+            }
+            Action::AddAlbumToPlaylist { .. } => {
+                self.toast_error("Album-to-playlist is available in Apple Music mode.");
             }
             Action::RemoveFromPlaylist { playlist_id, uris } => {
                 let snapshot_id = self
@@ -10293,8 +10354,19 @@ impl App {
     /// owns it, Spotify flags it collaborative, or the rootlist says the
     /// account was invited to it.
     pub fn can_edit_playlist(&self, playlist: &Playlist) -> bool {
+        if self.apple.is_some() {
+            return false;
+        }
         let owned = self.user_id().is_some_and(|user| playlist.owned_by(user));
         owned || playlist.collaborative || self.editable_by_grant.contains(&playlist.uri)
+    }
+
+    /// Apple grants append permission only; other playlist edits remain unavailable.
+    pub fn can_append_playlist(&self, playlist: &Playlist) -> bool {
+        self.apple.as_ref().map_or_else(
+            || self.can_edit_playlist(playlist),
+            |apple| self.account_ready() && apple.writable_playlists.contains(&playlist.id),
+        )
     }
 
     /// The playing playlist as a row context, when the now-playing track
@@ -10321,7 +10393,7 @@ impl App {
 
     /// The library's playlists that take songs, as id and name pairs.
     pub fn editable_playlists(&self) -> Vec<(String, String)> {
-        if self.user_id().is_none() {
+        if self.apple.is_none() && self.user_id().is_none() {
             return Vec::new();
         }
         self.library
@@ -10330,7 +10402,7 @@ impl App {
             .map(|playlists| {
                 playlists
                     .iter()
-                    .filter(|playlist| self.can_edit_playlist(playlist))
+                    .filter(|playlist| self.can_append_playlist(playlist))
                     .map(|playlist| (playlist.id.clone(), playlist.name.clone()))
                     .collect()
             })

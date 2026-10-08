@@ -1235,7 +1235,14 @@ pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
     for flag in show.unwrap_or("").split(',').map(str::trim) {
         if !matches!(
             flag,
-            "create" | "playlist-saving" | "playlist-created" | "playlist-error"
+            "create"
+                | "playlist-saving"
+                | "playlist-created"
+                | "playlist-error"
+                | "playlist-appending"
+                | "playlist-appended"
+                | "playlist-append-error"
+                | "playlist-duplicates"
         ) {
             continue;
         }
@@ -1271,8 +1278,65 @@ pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
         else {
             continue;
         };
-        if flag == "playlist-created" {
+        if flag == "playlist-created"
+            || flag.starts_with("playlist-append")
+            || flag == "playlist-duplicates"
+        {
             app.apple_response(&serde_json::json!({"id":id,"data":{"data":[{"id":"p.demoCreated","type":"library-playlists","attributes":{"name":"Autumn drives","canEdit":true,"isPublic":false}}]}}));
+            if flag != "playlist-created" {
+                let song = app.apple.as_ref().unwrap().songs[0].clone();
+                let resource = serde_json::json!({"id":song.item.id,"type":"library-songs","attributes":{
+                    "name":song.title,"artistName":song.artist,"albumName":song.album,"durationInMillis":song.duration_ms,
+                    "playParams":song.item.play_params,"artwork":{"url":song.artwork}
+                }});
+                let read = app.apple.as_mut().unwrap().read(
+                    crate::apple::Read::PlaylistTracks("library.p.demoCreated".into()),
+                    "/v1/me/library/playlists/p.demoCreated/tracks?limit=100".into(),
+                    0,
+                );
+                app.apple_response(
+                    &serde_json::json!({"id":read["id"],"data":{"data":[resource.clone()]}}),
+                );
+                let items = vec![PlayableItem::Track(song.track()); 2];
+                let action = if flag == "playlist-duplicates" {
+                    Action::AddToPlaylist {
+                        playlist_id: "library.p.demoCreated".into(),
+                        playlist_name: "Autumn drives".into(),
+                        items,
+                    }
+                } else {
+                    Action::ConfirmAddToPlaylist {
+                        playlist_id: "library.p.demoCreated".into(),
+                        playlist_name: "Autumn drives".into(),
+                        items,
+                        position: None,
+                    }
+                };
+                app.apply(action, &egui::Context::default());
+                if flag == "playlist-append-error" || flag == "playlist-appended" {
+                    let request = *app
+                        .apple
+                        .as_ref()
+                        .unwrap()
+                        .playlist_appends
+                        .keys()
+                        .next()
+                        .unwrap();
+                    app.apple_response(&if flag == "playlist-append-error" {
+                        serde_json::json!({"id":request,"error":"Example connection failure"})
+                    } else {
+                        serde_json::json!({"id":request,"data":null})
+                    });
+                    if flag == "playlist-appended" {
+                        let read = app.apple.as_mut().unwrap().read(
+                            crate::apple::Read::PlaylistTracks("library.p.demoCreated".into()),
+                            "/v1/me/library/playlists/p.demoCreated/tracks?limit=100".into(),
+                            0,
+                        );
+                        app.apple_response(&serde_json::json!({"id":read["id"],"data":{"data":[resource.clone(), resource.clone(), resource]}}));
+                    }
+                }
+            }
         } else if flag == "playlist-error" {
             app.apple_response(&serde_json::json!({"id":id,"error":"Example connection failure"}));
         }
@@ -1315,6 +1379,108 @@ mod tests {
         (ctx, app)
     }
 
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_playlist_append_demo_draws_pending_confirmed_duplicate_and_error_states() {
+        for flag in [
+            "playlist-appending",
+            "playlist-appended",
+            "playlist-append-error",
+            "playlist-duplicates",
+        ] {
+            let (ctx, mut app) = accessible_app(flag);
+            app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+            apply_apple_flags(&mut app, Some(flag));
+            assert_eq!(app.playlist_busy, flag == "playlist-appending");
+            assert_eq!(
+                app.playlist_pages["library.p.demoCreated"]
+                    .items
+                    .items
+                    .len(),
+                if flag == "playlist-appending" || flag == "playlist-appended" {
+                    3
+                } else {
+                    1
+                }
+            );
+            assert_eq!(
+                matches!(app.dialog, Some(Dialog::ConfirmPlaylistDuplicates { .. })),
+                flag == "playlist-duplicates"
+            );
+            for _ in 0..3 {
+                frame(&ctx, &mut app);
+            }
+            app.backend.shutdown();
+        }
+    }
+    #[test]
+    fn apple_playlist_picker_filters_permissions_and_dispatches_whole_album_selection() {
+        let (ctx, mut app) = accessible_app("apple-playlist-picker");
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        let rows = vec![
+            serde_json::json!({"id":"p.writable","type":"library-playlists","attributes":{"name":"Night drive","canEdit":true}}),
+            serde_json::json!({"id":"p.readonly","type":"library-playlists","attributes":{"name":"Night locked","canEdit":false}}),
+        ];
+        state.remember_playlist_permissions(&rows);
+        app.apple = Some(state);
+        app.library.playlists =
+            Loadable::Loaded(rows.iter().map(crate::apple::models::playlist).collect());
+        let mut query = String::new();
+        let draw = |app: &mut App, query: &mut String, focus, events| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(760.0, 620.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    let field = crate::ui::widgets::playlist_picker(
+                        ui,
+                        app,
+                        &[],
+                        query,
+                        Some(("apple:album:library.l.test", "Album")),
+                    );
+                    if focus {
+                        field.request_focus();
+                    }
+                },
+            );
+            output.textures_delta.clear();
+            output
+        };
+        draw(&mut app, &mut query, true, vec![]);
+        let output = draw(
+            &mut app,
+            &mut query,
+            false,
+            vec![egui::Event::Text("Night".into())],
+        );
+        let tree = output.platform_output.accesskit_update.unwrap();
+        accessible_node(&tree, "Night drive", egui::accesskit::Role::Button);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .any(|(_, node)| node.label() == Some("Night locked"))
+        );
+        app.actions.clear();
+        draw(
+            &mut app,
+            &mut query,
+            false,
+            vec![keyboard(egui::Key::Enter, egui::Modifiers::NONE)],
+        );
+        assert!(
+            matches!(app.actions.as_slice(), [Action::AddAlbumToPlaylist { uri, playlist: Some((id, _)), .. }] if uri == "apple:album:library.l.test" && id == "library.p.writable")
+        );
+        app.backend.shutdown();
+    }
     #[cfg(feature = "demo")]
     #[test]
     fn apple_playlist_demo_draws_create_saving_success_and_retry_states() {
@@ -4301,7 +4467,8 @@ mod tests {
                         ..Default::default()
                     },
                     |ui| {
-                        let field = crate::ui::widgets::playlist_picker(ui, app, &items, query);
+                        let field =
+                            crate::ui::widgets::playlist_picker(ui, app, &items, query, None);
                         if focus {
                             field.request_focus();
                         }
@@ -4401,7 +4568,7 @@ mod tests {
                     ..Default::default()
                 },
                 |ui| {
-                    let field = crate::ui::widgets::playlist_picker(ui, app, &items, query);
+                    let field = crate::ui::widgets::playlist_picker(ui, app, &items, query, None);
                     if focus {
                         field.request_focus();
                     }

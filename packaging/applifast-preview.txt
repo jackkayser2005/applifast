@@ -30,11 +30,20 @@ if an error is ambiguous, check the library before retrying to avoid a duplicate
 Apple may take a few seconds to show the new playlist and its songs.
 Demo-only states: --demo-show playlist-saving, playlist-created or playlist-error.
 
-Appending to existing playlists, Apple favorites and public token onboarding
-remain unfinished. Real-account creation and uploaded members need acceptance.
+Add songs through Add to playlist in their menu or by dropping them on a writable
+sidebar playlist. An album's menu offers Add to playlist, including New playlist;
+every album track page loads first. Right-click the queue's Save as a playlist
+button to add its current and upcoming songs to an existing playlist.
+Only Apple playlists marked writable are offered. Repeated songs are preserved,
+with Add anyway confirmation for songs already in the destination.
+Demo-only states: --demo-show playlist-appending, playlist-appended,
+playlist-append-error or playlist-duplicates.
+
+Apple favorites and public token onboarding remain unfinished. Real-account
+creation, appending, permissions and uploaded members need acceptance.
 Cloud-only uploads are never replaced with catalog songs; their playback is
 not guaranteed. Runtime restart/window checks and the gaming soak are pending.
-See https://github.com/jackkayser2005/applifast/tree/feat/apple-playlists
+See https://github.com/jackkayser2005/applifast/tree/feat/apple-playlist-additions
 for the source and docs/applifast/listening-slice.md for exact validation status.
 
 Applifast is an MIT-licensed fork of Spotifast by Carmine Paolino.

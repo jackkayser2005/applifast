@@ -6,7 +6,7 @@ use egui::{Align, Frame, Layout, Margin};
 
 use crate::api::models::PlayableItem;
 use crate::app::App;
-use crate::i18n::{Locale, gettext};
+use crate::i18n::gettext;
 use crate::model::{Action, DragTrack, Loadable, QueueTab, RowContext};
 use crate::theme::{self, Icon};
 
@@ -40,7 +40,7 @@ pub fn page(app: &mut App, ui: &mut egui::Ui) {
             palette.text,
         );
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if save_button(ui, &palette, offer_save, app.locale) {
+            if save_button(app, ui, offer_save) {
                 app.actions.push(Action::SaveQueueAsPlaylist);
             }
         });
@@ -79,6 +79,7 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
         // Measure buttons first and give the remaining width to the chips.
         // Without `shrink_left`, wrapped chips can overlap the close button.
         let tab = app.queue_tab;
+        let locale = app.locale;
         let offer_save = tab == QueueTab::Queue && !app.queue_playlist_uris().is_empty();
         let mut picked = None;
         let mut close = false;
@@ -91,8 +92,8 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
                     ui,
                     &palette,
                     &[
-                        (QueueTab::Queue, &gettext(app.locale, "Queue")),
-                        (QueueTab::Recents, &gettext(app.locale, "Recent")),
+                        (QueueTab::Queue, &gettext(locale, "Queue")),
+                        (QueueTab::Recents, &gettext(locale, "Recent")),
                     ],
                     tab,
                 );
@@ -107,7 +108,7 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
                     &gettext(app.locale, "Close"),
                 )
                 .clicked();
-                save = save_button(ui, &palette, offer_save, app.locale);
+                save = save_button(app, ui, offer_save);
             },
         );
         if let Some(tab) = picked {
@@ -151,22 +152,34 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
 }
 
 /// Saves the current and upcoming queue as a playlist.
-fn save_button(
-    ui: &mut egui::Ui,
-    palette: &crate::theme::Palette,
-    offer: bool,
-    locale: Locale,
-) -> bool {
-    offer
-        && theme::icon_button(
-            ui,
-            Icon::ListPlus,
-            18.0,
-            palette.secondary,
-            palette.text,
-            &gettext(locale, "Save as a playlist"),
-        )
-        .clicked()
+fn save_button(app: &mut App, ui: &mut egui::Ui, offer: bool) -> bool {
+    if !offer {
+        return false;
+    }
+    let response = theme::icon_button(
+        ui,
+        Icon::ListPlus,
+        18.0,
+        app.palette.secondary,
+        app.palette.text,
+        &gettext(app.locale, "Save as a playlist"),
+    );
+    if app.apple.is_some() {
+        response.context_menu(|ui| {
+            let apple = app.apple.as_ref().unwrap();
+            let items = app
+                .queue_playlist_uris()
+                .iter()
+                .filter_map(|uri| {
+                    apple
+                        .find_song(uri)
+                        .map(|song| PlayableItem::Track(song.track()))
+                })
+                .collect::<Vec<_>>();
+            widgets::add_to_playlist_menu(ui, app, &items, None);
+        });
+    }
+    response.clicked()
 }
 
 /// Clears manual rows from the active local queue.

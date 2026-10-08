@@ -134,6 +134,10 @@ pub struct State {
     >,
     pub playlist_recheck_at: Option<Instant>,
     pub playlist_cards: std::collections::HashSet<String>,
+    pub writable_playlists: std::collections::HashSet<String>,
+    pub pending_playlist_add: Option<crate::model::Action>,
+    pub pending_album_playlist: Option<crate::model::Action>,
+    pub playlist_appends: std::collections::HashMap<u64, (String, usize)>,
     pub next_reads: std::collections::HashMap<Read, (String, u32)>,
     pub pending_play: Option<crate::model::Action>,
     read_serial: u64,
@@ -173,6 +177,10 @@ impl Default for State {
             playlist_confirms: Default::default(),
             playlist_recheck_at: None,
             playlist_cards: Default::default(),
+            writable_playlists: Default::default(),
+            pending_playlist_add: None,
+            pending_album_playlist: None,
+            playlist_appends: Default::default(),
             next_reads: Default::default(),
             pending_play: None,
             read_serial: 0,
@@ -209,6 +217,10 @@ impl State {
         self.playlist_confirms.clear();
         self.playlist_recheck_at = None;
         self.playlist_cards.clear();
+        self.writable_playlists.clear();
+        self.pending_playlist_add = None;
+        self.pending_album_playlist = None;
+        self.playlist_appends.clear();
         self.next_reads.clear();
         self.pending_play = None;
         self.queue.clear();
@@ -439,16 +451,7 @@ impl State {
         public: bool,
         uris: &[String],
     ) -> Result<(String, Value), String> {
-        let items = uris
-            .iter()
-            .map(|uri| {
-                self.find_song(uri)
-                    .map(|song| song.item.clone())
-                    .ok_or_else(|| {
-                        "Reload the selected songs before saving this playlist.".to_owned()
-                    })
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let items = self.playlist_items(uris)?;
         let id = self.read_serial + 1;
         let command = applifast_playback_probe::protocol::Command::CreatePlaylist {
             id,
@@ -464,6 +467,53 @@ impl State {
             temporary,
             serde_json::to_value(command).expect("playlist command serializes"),
         ))
+    }
+    pub fn playlist_items(&self, uris: &[String]) -> Result<Vec<PlaybackItem>, String> {
+        uris.iter()
+            .map(|uri| {
+                self.find_song(uri)
+                    .map(|song| song.item.clone())
+                    .ok_or_else(|| {
+                        "Reload the selected songs before saving this playlist.".to_owned()
+                    })
+            })
+            .collect()
+    }
+    pub fn append_playlist(
+        &mut self,
+        playlist: &str,
+        uris: &[String],
+        before: usize,
+    ) -> Result<Value, String> {
+        let id = self.read_serial + 1;
+        let command = applifast_playback_probe::protocol::Command::AppendPlaylist {
+            id,
+            playlist: playlist.strip_prefix("library.").unwrap_or("").into(),
+            items: self.playlist_items(uris)?,
+        };
+        command.validate()?;
+        self.read_serial = id;
+        self.playlist_appends.insert(id, (playlist.into(), before));
+        Ok(serde_json::to_value(command).expect("playlist command serializes"))
+    }
+    pub fn remember_playlist_permissions(&mut self, rows: &[Value]) {
+        for row in rows {
+            if row["type"] != "library-playlists" {
+                continue;
+            }
+            let Some(id) = row["id"]
+                .as_str()
+                .filter(|id| applifast_playback_probe::protocol::valid_library_playlist_id(id))
+            else {
+                continue;
+            };
+            let id = format!("library.{id}");
+            if row["attributes"]["canEdit"] == true {
+                self.writable_playlists.insert(id);
+            } else {
+                self.writable_playlists.remove(&id);
+            }
+        }
     }
     fn select(&mut self, index: usize) {
         if let Some(song) = self.queue.get(index) {

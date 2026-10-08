@@ -23,6 +23,304 @@ fn page<T>(items: Vec<T>, data: &Value, offset: u32) -> ApiPage<T> {
 }
 
 impl App {
+    pub(super) fn apple_album_to_playlist(
+        &mut self,
+        uri: &str,
+        label: &str,
+        playlist: Option<(String, String)>,
+    ) {
+        if self.playlist_busy || !self.account_ready() {
+            return;
+        }
+        let Some(Page::Album(id)) = Page::from_uri(uri) else {
+            return;
+        };
+        if self.apple_resource_path("albums", &id).is_none() {
+            self.toast_error("Apple Music could not resolve this album. Reload it and retry.");
+            return;
+        }
+        if playlist
+            .as_ref()
+            .is_some_and(|(id, _)| !self.apple.as_ref().unwrap().writable_playlists.contains(id))
+        {
+            self.toast_error("Refresh your library and choose a writable Apple playlist.");
+            return;
+        }
+        self.apple.as_mut().unwrap().pending_album_playlist = Some(Action::AddAlbumToPlaylist {
+            uri: uri.into(),
+            label: label.into(),
+            playlist,
+        });
+        self.playlist_busy = true;
+        self.apple_ensure_loaded(Page::Album(id.clone()));
+        if self
+            .album_pages
+            .get(&id)
+            .is_some_and(|page| page.tracks.loading)
+        {
+            self.toast("Loading every album track before adding it to a playlist.");
+        }
+        self.apple_finish_album_playlist();
+    }
+    pub(super) fn apple_finish_album_playlist(&mut self) {
+        let Some(Action::AddAlbumToPlaylist {
+            uri,
+            label,
+            playlist,
+        }) = self
+            .apple
+            .as_ref()
+            .and_then(|apple| apple.pending_album_playlist.clone())
+        else {
+            return;
+        };
+        let Some(Page::Album(id)) = Page::from_uri(&uri) else {
+            return;
+        };
+        let Some(page) = self.album_pages.get(&id) else {
+            return;
+        };
+        if page.tracks.loading {
+            return;
+        }
+        if let Some(error) = &page.tracks.error {
+            let error = error.clone();
+            self.apple.as_mut().unwrap().pending_album_playlist = None;
+            self.playlist_busy = false;
+            self.toast_error(error);
+        } else if page.tracks.is_complete() {
+            let items = page
+                .tracks
+                .items
+                .iter()
+                .cloned()
+                .map(PlayableItem::Track)
+                .collect::<Vec<_>>();
+            self.apple.as_mut().unwrap().pending_album_playlist = None;
+            self.playlist_busy = false;
+            if items.is_empty() {
+                self.toast_error("Apple returned no songs for this album.");
+                return;
+            }
+            if let Some((id, name)) = playlist {
+                self.apple_add_to_playlist(&id, &name, &items, true);
+            } else {
+                self.dialog = Some(Dialog::CreatePlaylist {
+                    name: label,
+                    public: false,
+                    add_uris: items.iter().map(|item| item.uri().to_owned()).collect(),
+                });
+            }
+        } else {
+            self.apple_load_more(Page::Album(id));
+        }
+    }
+    pub(super) fn apple_add_to_playlist(
+        &mut self,
+        id: &str,
+        name: &str,
+        items: &[PlayableItem],
+        check_duplicates: bool,
+    ) {
+        if self.playlist_busy {
+            return;
+        }
+        if !self.account_ready() || !self.apple.as_ref().unwrap().writable_playlists.contains(id) {
+            self.toast_error("Apple Music has not marked this playlist writable. Refresh your library and retry.");
+            return;
+        }
+        if self
+            .apple
+            .as_ref()
+            .unwrap()
+            .playlist_confirms
+            .contains_key(id)
+        {
+            self.toast_error(
+                "Wait for Apple to confirm this playlist, or refresh it before adding more songs.",
+            );
+            return;
+        }
+        let uris = items
+            .iter()
+            .map(|item| item.uri().to_owned())
+            .collect::<Vec<_>>();
+        let command = applifast_playback_probe::protocol::Command::AppendPlaylist {
+            id: 0,
+            playlist: id.strip_prefix("library.").unwrap_or("").into(),
+            items: match self.apple.as_ref().unwrap().playlist_items(&uris) {
+                Ok(items) => items,
+                Err(error) => {
+                    self.toast_error(error);
+                    return;
+                }
+            },
+        };
+        if let Err(error) = command.validate() {
+            self.toast_error(error);
+            return;
+        }
+        if !self
+            .playlist_pages
+            .get(id)
+            .is_some_and(|page| page.items.is_complete())
+        {
+            // ponytail: load the destination for exact duplicate/occurrence checks.
+            // Stream these checks if large playlists cause measured memory pressure.
+            self.apple.as_mut().unwrap().pending_playlist_add = Some(if check_duplicates {
+                Action::AddToPlaylist {
+                    playlist_id: id.into(),
+                    playlist_name: name.into(),
+                    items: items.to_vec(),
+                }
+            } else {
+                Action::ConfirmAddToPlaylist {
+                    playlist_id: id.into(),
+                    playlist_name: name.into(),
+                    items: items.to_vec(),
+                    position: None,
+                }
+            });
+            self.playlist_busy = true;
+            self.toast("Loading the destination playlist before adding songs.");
+            self.apple_ensure_loaded(Page::Playlist(id.into()));
+            self.apple_finish_playlist_add();
+            return;
+        }
+        if check_duplicates {
+            let duplicate_uris = self.local_playlist_duplicates(id, items).unwrap();
+            if !duplicate_uris.is_empty() {
+                self.dialog = Some(Dialog::ConfirmPlaylistDuplicates {
+                    playlist_id: id.into(),
+                    playlist_name: name.into(),
+                    items: items.to_vec(),
+                    position: None,
+                    duplicate_uris,
+                });
+                return;
+            }
+        }
+        let before = self.playlist_pages[id].items.items.len();
+        let command = match self
+            .apple
+            .as_mut()
+            .unwrap()
+            .append_playlist(id, &uris, before)
+        {
+            Ok(command) => command,
+            Err(error) => {
+                self.toast_error(error);
+                return;
+            }
+        };
+        let apple = self.apple.as_mut().unwrap();
+        // Requests issued before the edit describe the old rows and cannot confirm a write.
+        apple.reads.retain(|_, (target, _)| {
+            !matches!(target,
+            Read::Playlist(held) | Read::PlaylistTracks(held) if held == id)
+        });
+        apple.next_reads.remove(&Read::PlaylistTracks(id.into()));
+        let page = self.playlist_pages.get_mut(id).unwrap();
+        page.pending_writes = 1;
+        page.snapshot_rechecks = 0;
+        page.items
+            .items
+            .extend(items.iter().cloned().map(|item| PlaylistItem {
+                item: Some(item),
+                ..Default::default()
+            }));
+        page.items.total = Some(page.items.items.len() as u32);
+        page.items.revision = page.items.revision.wrapping_add(1);
+        self.apple_set_playlist_total(id);
+        self.playlist_busy = true;
+        self.dialog = None;
+        self.backend.send(Command::AppleSend(command.to_string()));
+    }
+    pub(super) fn apple_finish_playlist_add(&mut self) {
+        let Some(action) = self
+            .apple
+            .as_ref()
+            .and_then(|apple| apple.pending_playlist_add.clone())
+        else {
+            return;
+        };
+        let (id, name, items, check) = match &action {
+            Action::AddToPlaylist {
+                playlist_id,
+                playlist_name,
+                items,
+            } => (playlist_id, playlist_name, items, true),
+            Action::ConfirmAddToPlaylist {
+                playlist_id,
+                playlist_name,
+                items,
+                ..
+            } => (playlist_id, playlist_name, items, false),
+            _ => return,
+        };
+        let Some(page) = self.playlist_pages.get(id) else {
+            return;
+        };
+        if page.items.loading {
+            return;
+        }
+        if let Some(error) = &page.items.error {
+            let error = error.clone();
+            self.apple.as_mut().unwrap().pending_playlist_add = None;
+            self.playlist_busy = false;
+            self.toast_error(error);
+        } else if page.items.is_complete() {
+            self.apple.as_mut().unwrap().pending_playlist_add = None;
+            self.playlist_busy = false;
+            self.apple_add_to_playlist(id, name, items, check);
+        } else {
+            self.apple_load_more(Page::Playlist(id.clone()));
+        }
+    }
+    fn apple_set_playlist_total(&mut self, id: &str) {
+        let total = self.playlist_pages[id].items.items.len() as u32;
+        for playlist in self
+            .playlist_pages
+            .get_mut(id)
+            .unwrap()
+            .playlist
+            .get_mut()
+            .into_iter()
+            .chain(
+                self.library
+                    .playlists
+                    .get_mut()
+                    .into_iter()
+                    .flatten()
+                    .filter(|row| row.id == id),
+            )
+        {
+            playlist.tracks = Some(crate::api::models::TrackCount { total });
+        }
+    }
+    fn apple_playlist_appended(&mut self, id: String, before: usize, value: &Value) {
+        self.playlist_busy = false;
+        let Some(page) = self.playlist_pages.get_mut(&id) else {
+            return;
+        };
+        page.pending_writes = 0;
+        if !value["error"].is_null() {
+            page.items.items.truncate(before);
+            page.items.total = Some(before as u32);
+            page.items.revision = page.items.revision.wrapping_add(1);
+            self.apple_set_playlist_total(&id);
+            self.toast_error("Apple Music could not confirm the added songs. Check the playlist before retrying to avoid duplicates.");
+        } else {
+            self.apple
+                .as_mut()
+                .unwrap()
+                .playlist_confirms
+                .insert(id, Default::default());
+            self.toast("Songs added. Waiting for Apple to show the updated playlist.");
+        }
+        self.apple.as_mut().unwrap().playlist_recheck_at =
+            Some(Instant::now() + Duration::from_secs(2));
+    }
     pub(super) fn apple_create_playlist(&mut self, name: &str, public: bool, uris: &[String]) {
         if self.playlist_busy {
             return;
@@ -133,6 +431,10 @@ impl App {
             return;
         };
         let mut playlist = models::playlist(&resource);
+        self.apple
+            .as_mut()
+            .unwrap()
+            .remember_playlist_permissions(std::slice::from_ref(&resource));
         let submitted = entry.playlist.get().unwrap();
         let close_dialog = matches!(&self.dialog, Some(Dialog::CreatePlaylist { name, public, add_uris })
             if name.trim() == submitted.name && Some(*public) == submitted.public
@@ -271,6 +573,7 @@ impl App {
                 .remove(id)
                 .unwrap();
             self.playlist_pages.get_mut(id).unwrap().items = fresh;
+            self.apple_set_playlist_total(id);
         } else {
             self.apple_retry_playlist_confirmation(id);
         }
@@ -415,6 +718,12 @@ impl App {
             .map(str::to_owned)
             .collect();
         needed.extend(apple.queue.iter().map(crate::apple::Song::uri));
+        if let Some(
+            Action::AddToPlaylist { items, .. } | Action::ConfirmAddToPlaylist { items, .. },
+        ) = &apple.pending_playlist_add
+        {
+            needed.extend(items.iter().map(|item| item.uri().to_owned()));
+        }
         apple.known_songs.retain(|uri, _| {
             needed.contains(uri)
                 || util::uri_id(uri).is_some_and(|id| self.track_cache.contains_key(id))
@@ -552,8 +861,9 @@ impl App {
                 let Some(path) = self.apple_resource_path("playlists", &id) else {
                     return;
                 };
+                let listed = self.library_entry(&id).cloned();
                 let entry = self.playlist_pages.entry(id.clone()).or_default();
-                entry.playlist = Loadable::Loading;
+                entry.playlist = listed.map_or(Loadable::Loading, Loadable::Loaded);
                 entry.items.loading = true;
                 self.apple_read(Read::Playlist(id.clone()), path.clone(), 0);
                 self.apple_read(
@@ -672,6 +982,13 @@ impl App {
         }
     }
     pub(crate) fn apple_response(&mut self, value: &Value) {
+        if let Some((id, before)) = value["id"]
+            .as_u64()
+            .and_then(|id| self.apple.as_mut()?.playlist_appends.remove(&id))
+        {
+            self.apple_playlist_appended(id, before, value);
+            return;
+        }
         if let Some(temporary) = value["id"]
             .as_u64()
             .and_then(|id| self.apple.as_mut()?.playlist_creates.remove(&id))
@@ -810,6 +1127,18 @@ impl App {
             return;
         }
         let rows = resources(data);
+        self.apple
+            .as_mut()
+            .unwrap()
+            .remember_playlist_permissions(&rows);
+        let repeated_next = offset > 0
+            && self
+                .apple
+                .as_ref()
+                .unwrap()
+                .next_reads
+                .get(&target)
+                .is_some_and(|(path, _)| data["next"].as_str() == Some(path));
         self.apple.as_mut().unwrap().next_reads.remove(&target);
         if let Some(next) = data["next"]
             .as_str()
@@ -834,6 +1163,7 @@ impl App {
                     let ids = apple
                         .playlist_creates
                         .values()
+                        .chain(apple.playlist_appends.values().map(|(id, _)| id))
                         .chain(apple.playlist_confirms.keys())
                         .chain(&apple.playlist_cards)
                         .collect::<HashSet<_>>();
@@ -909,6 +1239,37 @@ impl App {
                 }
             }
             Read::AlbumTracks(id) => {
+                if matches!(&self.apple.as_ref().unwrap().pending_album_playlist,
+                    Some(Action::AddAlbumToPlaylist { uri, .. }) if Page::from_uri(uri) == Some(Page::Album(id.clone())))
+                    && (repeated_next
+                        || rows.iter().any(|row| models::song(row).is_none())
+                        || data["data"]
+                            .as_array()
+                            .is_none_or(|rows| rows.is_empty() && data["next"].is_string())
+                        || data
+                            .get("next")
+                            .filter(|value| !value.is_null())
+                            .is_some_and(|value| {
+                                value.as_str().is_none_or(|next| {
+                                    !applifast_playback_probe::protocol::valid_read_path(next)
+                                        || !self.apple_resource_path("albums", &id).is_some_and(
+                                            |path| next.starts_with(&format!("{path}/tracks?")),
+                                        )
+                                })
+                            }))
+                {
+                    let page = self.album_pages.get_mut(&id).unwrap();
+                    page.tracks.loading = false;
+                    page.tracks.error = Some(
+                        "Apple returned an invalid album page. Refresh the album and retry.".into(),
+                    );
+                    self.apple
+                        .as_mut()
+                        .unwrap()
+                        .next_reads
+                        .remove(&Read::AlbumTracks(id));
+                    return;
+                }
                 let tracks = self.apple_tracks(data);
                 self.album_pages
                     .entry(id)
@@ -917,18 +1278,21 @@ impl App {
                     .absorb(offset, page(tracks, data, offset));
             }
             Read::PlaylistTracks(id) => {
-                if self
+                let confirming = self
                     .apple
                     .as_ref()
                     .unwrap()
                     .playlist_confirms
-                    .contains_key(&id)
-                {
+                    .contains_key(&id);
+                let preparing = matches!(&self.apple.as_ref().unwrap().pending_playlist_add,
+                    Some(Action::AddToPlaylist { playlist_id, .. } | Action::ConfirmAddToPlaylist { playlist_id, .. }) if playlist_id == &id);
+                if confirming || preparing {
                     let prefix = self
                         .apple_resource_path("playlists", &id)
                         .map(|path| format!("{path}/tracks?"));
                     let next = data.get("next").filter(|value| !value.is_null());
-                    if !data["data"].is_array()
+                    if repeated_next
+                        || !data["data"].is_array()
                         || next.is_some_and(|value| {
                             value.as_str().is_none_or(|path| {
                                 !applifast_playback_probe::protocol::valid_read_path(path)
@@ -939,7 +1303,18 @@ impl App {
                         })
                         || next.is_some() && rows.is_empty()
                     {
-                        self.apple_retry_playlist_confirmation(&id);
+                        if confirming {
+                            self.apple_retry_playlist_confirmation(&id);
+                        } else {
+                            let entry = self.playlist_pages.get_mut(&id).unwrap();
+                            entry.items.loading = false;
+                            entry.items.error = Some("Apple returned an invalid playlist page. Refresh the playlist and retry adding songs.".into());
+                            self.apple
+                                .as_mut()
+                                .unwrap()
+                                .next_reads
+                                .remove(&Read::PlaylistTracks(id));
+                        }
                         return;
                     }
                 }
@@ -961,10 +1336,11 @@ impl App {
                     );
                     if let Some((path, offset)) = self
                         .apple
-                        .as_mut()
+                        .as_ref()
                         .unwrap()
                         .next_reads
-                        .remove(&Read::PlaylistTracks(id.clone()))
+                        .get(&Read::PlaylistTracks(id.clone()))
+                        .cloned()
                     {
                         self.apple_read(Read::PlaylistTracks(id.clone()), path, offset);
                     } else {
@@ -1052,6 +1428,325 @@ fn merge<T: Default>(held: &mut Option<ApiPage<T>>, fresh: Option<ApiPage<T>>) {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn album_playlist_add_waits_for_every_page_preserves_repeats_and_cancels_on_signout() {
+        let mut app = super::super::tests::test_app("apple-album-playlist");
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        state.storefront = "us".into();
+        app.apple = Some(state);
+        app.library.playlists = Loadable::Loaded(Vec::new());
+        let uri = "apple:album:library.l.test";
+        let resource =
+            json!({"id":"i.upload","type":"library-songs","attributes":{"name":"Upload"}});
+        let ctx = egui::Context::default();
+        app.apply(
+            Action::AddAlbumToPlaylist {
+                uri: "spotify:album:foreign".into(),
+                label: "Foreign".into(),
+                playlist: None,
+            },
+            &ctx,
+        );
+        assert!(!app.playlist_busy);
+        assert!(app.apple.as_ref().unwrap().pending_album_playlist.is_none());
+        app.apply(
+            Action::AddAlbumToPlaylist {
+                uri: uri.into(),
+                label: "Album".into(),
+                playlist: None,
+            },
+            &ctx,
+        );
+        assert!(app.playlist_busy);
+        let tracks_read = |app: &App| {
+            *app.apple
+                .as_ref()
+                .unwrap()
+                .reads
+                .iter()
+                .find(|(_, (target, _))| *target == Read::AlbumTracks("library.l.test".into()))
+                .unwrap()
+                .0
+        };
+        app.apple_response(&json!({"id":tracks_read(&app),"data":{"data":[resource.clone()],"next":"/v1/me/library/albums/l.test/tracks?offset=1"}}));
+        app.apple_finish_album_playlist();
+        assert!(app.dialog.is_none());
+        assert!(app.apple.as_ref().unwrap().playlist_creates.is_empty());
+        app.apple_response(&json!({"id":tracks_read(&app),"data":{"data":[resource.clone()]}}));
+        app.apple_finish_album_playlist();
+        let Some(Dialog::CreatePlaylist { name, add_uris, .. }) = &app.dialog else {
+            panic!("Complete album should open a playlist draft")
+        };
+        assert_eq!(name, "Album");
+        assert_eq!(
+            add_uris,
+            &vec!["apple:track:library.i.upload".to_owned(); 2]
+        );
+        assert!(!app.playlist_busy);
+        app.dialog = None;
+        app.apple
+            .as_mut()
+            .unwrap()
+            .writable_playlists
+            .insert("library.p.test".into());
+        app.playlist_pages
+            .entry("library.p.test".into())
+            .or_default()
+            .items
+            .absorb(0, page(Vec::new(), &json!({}), 0));
+        app.apply(
+            Action::AddAlbumToPlaylist {
+                uri: uri.into(),
+                label: "Album".into(),
+                playlist: Some(("library.p.test".into(), "Playlist".into())),
+            },
+            &ctx,
+        );
+        assert_eq!(app.playlist_pages["library.p.test"].items.items.len(), 2);
+        assert!(app.playlist_busy);
+        app.apply(Action::SignOut, &ctx);
+        assert!(app.apple.as_ref().unwrap().pending_album_playlist.is_none());
+        assert!(app.apple.as_ref().unwrap().playlist_appends.is_empty());
+        app.apple.as_mut().unwrap().authorized = true;
+        app.apple.as_mut().unwrap().ready = true;
+        app.library.playlists = Loadable::Loaded(Vec::new());
+        app.apply(
+            Action::AddAlbumToPlaylist {
+                uri: uri.into(),
+                label: "Album".into(),
+                playlist: None,
+            },
+            &ctx,
+        );
+        app.apple_response(&json!({"id":tracks_read(&app),"data":{"data":[resource.clone()],"next":"https://example.com/invalid"}}));
+        app.apple_finish_album_playlist();
+        assert!(!app.playlist_busy);
+        assert!(app.dialog.is_none());
+        app.album_pages.remove("library.l.test");
+        app.apply(
+            Action::AddAlbumToPlaylist {
+                uri: uri.into(),
+                label: "Album".into(),
+                playlist: None,
+            },
+            &ctx,
+        );
+        let stale = tracks_read(&app);
+        app.apply(Action::SignOut, &ctx);
+        app.apple_response(&json!({"id":stale,"data":{"data":[resource]}}));
+        app.apple_finish_album_playlist();
+        assert!(app.dialog.is_none());
+        assert!(!app.playlist_busy);
+        app.backend.shutdown();
+    }
+    #[test]
+    fn playlist_append_is_permission_scoped_atomic_and_preserves_duplicate_uploads() {
+        let mut app = super::super::tests::test_app("apple-playlist-append");
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        let catalog_row = json!({"id":"123","type":"songs","attributes":{"name":"Catalog","playParams":{"id":"456","kind":"song"}}});
+        let upload_row =
+            json!({"id":"i.upload","type":"library-songs","attributes":{"name":"Upload"}});
+        state.songs = vec![
+            models::song(&catalog_row).unwrap(),
+            models::song(&upload_row).unwrap(),
+        ];
+        let upload = PlayableItem::Track(state.songs[1].track());
+        let id = "library.p.test";
+        app.apple = Some(state);
+        let read = app.apple.as_mut().unwrap().read(
+            Read::Playlists,
+            "/v1/me/library/playlists?limit=100".into(),
+            0,
+        );
+        app.apple_response(&json!({"id":read["id"],"data":{"data":[
+            {"id":"p.test","type":"library-playlists","attributes":{"name":"Writable","canEdit":true}},
+            {"id":"p.locked","type":"library-playlists","attributes":{"name":"Locked","canEdit":false}},
+            {"id":"p.unknown","type":"library-playlists","attributes":{"name":"Unknown"}},
+            {"id":"pl.catalog","type":"playlists","attributes":{"name":"Catalog","canEdit":true}}
+        ]}}));
+        assert_eq!(
+            app.editable_playlists(),
+            vec![(id.into(), "Writable".into())]
+        );
+        let playlist = app.library.playlists.get().unwrap()[0].clone();
+        assert!(app.can_append_playlist(&playlist));
+        assert!(!app.can_edit_playlist(&playlist));
+        app.playlist_pages.entry(id.into()).or_default().playlist = Loadable::Loaded(playlist);
+        let read = app.apple.as_mut().unwrap().read(
+            Read::PlaylistTracks(id.into()),
+            "/v1/me/library/playlists/p.test/tracks?limit=100".into(),
+            0,
+        );
+        app.apple_response(&json!({"id":read["id"],"data":{"data":[catalog_row.clone()]}}));
+        let before = app.playlist_pages[id].items.items.clone();
+        app.apple_add_to_playlist(
+            "library.p.locked",
+            "Locked",
+            std::slice::from_ref(&upload),
+            true,
+        );
+        assert!(app.apple.as_ref().unwrap().playlist_appends.is_empty());
+        let unknown = PlayableItem::Track(Track {
+            uri: "apple:song:library.i.unknown".into(),
+            ..Default::default()
+        });
+        app.apple_add_to_playlist(id, "Writable", &[upload.clone(), unknown], true);
+        assert_eq!(app.playlist_pages[id].items.items, before);
+        let stale = app.apple.as_mut().unwrap().read(
+            Read::PlaylistTracks(id.into()),
+            "/v1/me/library/playlists/p.test/tracks?limit=100".into(),
+            0,
+        );
+        let items = vec![upload.clone(), upload.clone()];
+        app.apple_add_to_playlist(id, "Writable", &items, true);
+        assert_eq!(app.playlist_pages[id].items.items.len(), 3);
+        assert_eq!(
+            app.playlist_pages[id].playlist.get().unwrap().track_total(),
+            3
+        );
+        assert!(app.playlist_busy);
+        app.apple_response(&json!({"id":stale["id"],"data":{"data":[]}}));
+        assert_eq!(app.playlist_pages[id].items.items.len(), 3);
+        let request = *app
+            .apple
+            .as_ref()
+            .unwrap()
+            .playlist_appends
+            .keys()
+            .next()
+            .unwrap();
+        app.apple_response(&json!({"id":request,"error":"Example rejection"}));
+        assert!(!app.playlist_busy);
+        assert_eq!(app.playlist_pages[id].items.items, before);
+        assert_eq!(app.library.playlists.get().unwrap()[0].track_total(), 1);
+        assert!(app.apple.as_ref().unwrap().playlist_confirms.is_empty());
+        app.apple_add_to_playlist(id, "Writable", &items, true);
+        let request = *app
+            .apple
+            .as_ref()
+            .unwrap()
+            .playlist_appends
+            .keys()
+            .next()
+            .unwrap();
+        app.apple_response(&json!({"id":request,"data":null}));
+        assert!(!app.playlist_busy);
+        let ctx = egui::Context::default();
+        app.apple_recheck_playlists(&ctx, Instant::now() + Duration::from_secs(4));
+        let tracks_read = |app: &App| {
+            *app.apple
+                .as_ref()
+                .unwrap()
+                .reads
+                .iter()
+                .find(|(_, (target, _))| *target == Read::PlaylistTracks(id.into()))
+                .unwrap()
+                .0
+        };
+        app.apple_response(&json!({"id":tracks_read(&app),"data":{"data":[catalog_row.clone(), upload_row.clone()]}}));
+        assert_eq!(
+            app.playlist_pages[id].items.items.len(),
+            3,
+            "one uploaded occurrence must not confirm two"
+        );
+        assert!(
+            app.apple
+                .as_ref()
+                .unwrap()
+                .playlist_confirms
+                .contains_key(id)
+        );
+        app.apple_recheck_playlists(&ctx, Instant::now() + Duration::from_secs(4));
+        app.apple_response(&json!({"id":tracks_read(&app),"data":{"data":[catalog_row, upload_row.clone(), upload_row]}}));
+        assert!(
+            !app.apple
+                .as_ref()
+                .unwrap()
+                .playlist_confirms
+                .contains_key(id)
+        );
+        app.apple_add_to_playlist(id, "Writable", &items, true);
+        assert!(
+            matches!(&app.dialog, Some(Dialog::ConfirmPlaylistDuplicates { duplicate_uris, .. }) if duplicate_uris.len() == 2)
+        );
+        assert!(app.apple.as_ref().unwrap().playlist_appends.is_empty());
+        app.apply(Action::CloseDialog, &ctx);
+        assert!(app.dialog.is_none());
+        app.apply(
+            Action::ConfirmAddToPlaylist {
+                playlist_id: id.into(),
+                playlist_name: "Writable".into(),
+                items,
+                position: None,
+            },
+            &ctx,
+        );
+        assert_eq!(app.playlist_pages[id].items.items.len(), 5);
+        let request = *app
+            .apple
+            .as_ref()
+            .unwrap()
+            .playlist_appends
+            .keys()
+            .next()
+            .unwrap();
+        app.apply(Action::SignOut, &ctx);
+        app.apple_response(&json!({"id":request,"data":null}));
+        assert!(!app.playlist_busy);
+        assert!(app.playlist_pages.is_empty());
+        assert!(app.apple.as_ref().unwrap().writable_playlists.is_empty());
+        app.backend.shutdown();
+    }
+    #[test]
+    fn playlist_append_waits_for_all_destination_pages_and_stops_on_bad_continuation() {
+        let mut app = super::super::tests::test_app("apple-playlist-append-pages");
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        let song_row = json!({"id":"123","type":"songs","attributes":{"name":"Song","playParams":{"id":"123","kind":"song"}}});
+        state.songs = vec![models::song(&song_row).unwrap()];
+        let items = vec![PlayableItem::Track(state.songs[0].track())];
+        let id = "library.p.test";
+        state.writable_playlists.insert(id.into());
+        app.apple = Some(state);
+        app.library.playlists = Loadable::Loaded(Vec::new());
+        app.apple_add_to_playlist(id, "Test", &items, true);
+        assert!(app.playlist_busy);
+        let tracks_read = |app: &App| {
+            *app.apple
+                .as_ref()
+                .unwrap()
+                .reads
+                .iter()
+                .find(|(_, (target, _))| *target == Read::PlaylistTracks(id.into()))
+                .unwrap()
+                .0
+        };
+        app.apple_response(&json!({"id":tracks_read(&app),"data":{"data":[song_row.clone()],"next":"/v1/me/library/playlists/p.test/tracks?offset=1"}}));
+        app.apple_finish_playlist_add();
+        assert!(app.apple.as_ref().unwrap().playlist_appends.is_empty());
+        assert!(app.apple.as_ref().unwrap().pending_playlist_add.is_some());
+        app.apple_response(&json!({"id":tracks_read(&app),"data":{"data":[],"next":"/v1/me/library/playlists/p.test/tracks?offset=1"}}));
+        app.apple_finish_playlist_add();
+        assert!(!app.playlist_busy);
+        assert!(app.apple.as_ref().unwrap().pending_playlist_add.is_none());
+        assert!(app.apple.as_ref().unwrap().playlist_appends.is_empty());
+        assert!(app.playlist_pages[id].items.error.is_some());
+        app.playlist_pages.remove(id);
+        app.apple_add_to_playlist(id, "Test", &items, true);
+        let pending_read = tracks_read(&app);
+        app.apply(Action::SignOut, &egui::Context::default());
+        app.apple_response(&json!({"id":pending_read,"data":{"data":[song_row]}}));
+        app.apple_finish_playlist_add();
+        assert!(!app.playlist_busy);
+        assert!(app.apple.as_ref().unwrap().pending_playlist_add.is_none());
+        assert!(app.playlist_pages.is_empty());
+        app.backend.shutdown();
+    }
     #[test]
     fn playlist_creation_keeps_occurrences_until_all_apple_pages_confirm_them() {
         let mut app = super::super::tests::test_app("apple-playlist-create");
@@ -1187,7 +1882,7 @@ mod tests {
             app.apple.as_ref().unwrap().playlist_recheck_at.is_none(),
             "automatic confirmation stops after three attempts"
         );
-        app.reload(Page::Playlist(id.into()));
+        app.apply(Action::RetryWindow(Page::Playlist(id.into())), &ctx);
         app.apple_recheck_playlists(&ctx, Instant::now() + Duration::from_secs(5));
         app.apple_response(&json!({"id":tracks_read(&app),"data":{"data":[matched],"next":"/v1/me/library/playlists/p.test/tracks?offset=1"}}));
         assert_eq!(app.playlist_pages[id].items.items.len(), 3);
