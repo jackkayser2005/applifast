@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast Apple Home review</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
+<h1>Apple Home feeds and Recently Added</h1>
+<p>Visible change: Home replaces the inherited Spotify top-artist/top-song/discovery sections with Apple Recently Played, Recently Added, Heavy Rotation and Recommendations. Cards use the existing cover layout, play controls and navigation. Empty/error feeds have clear states. Library album sorting now retains Apple's added date. Songs removes the empty Date added column because Apple does not expose song add dates.</p>
+<p>Baseline: Windows preview <code>3a87e21</code> (PR #17). Candidate: <code>feat/apple-home</code>. All captures use the same saved-library demo fixture, scale, theme, window size and Reduce motion setting. Home comparisons include intentional feed-data changes: the baseline still populates legacy Spotify demo feeds, while the candidate uses bounded Apple song-card fixtures. They compare layout and navigation, not identical server responses. The Songs comparisons use matching rows and show the removed date column and reclaimed table width. Real-account Home screenshots and feed checks remain pending.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<label>Page <select id="page"><option value="home">Home</option><option value="liked">Songs (date column)</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Native Windows demo comparison at matching theme and size">
+<h2>Candidate states</h2>
+<label>State <select id="state"><option value="empty">Empty</option><option value="error">Error and Retry</option><option value="loading">Loading</option></select></label>
+<img id="state-shot" alt="Apple Home loading, empty or error state">
+<p>Candidate source: <code>1996c0e</code>, <a href="https://github.com/jackkayser2005/applifast/pull/18">PR #18</a>. All 28 frames were inspected; selector paths and PNG dimensions were checked. These are actual Windows egui captures. They do not establish real-account API results, audio playback, resource-budget acceptance, lyrics or Favorites shelf completion. Stills do not prove motion behavior. Contribution checks and known platform/tool blockers are recorded in the listening-slice document.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+byId('page').value+'-'+suffix+'.png';byId('label').textContent=phase+' / '+byId('page').value+' / '+suffix;byId('state-shot').src=byId('state').value+'-'+suffix+'.png';}
+for(const id of ['theme','size','page','state'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

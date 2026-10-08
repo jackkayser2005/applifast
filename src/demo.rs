@@ -1233,6 +1233,24 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
 #[cfg(feature = "demo")]
 pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
     for flag in show.unwrap_or("").split(',').map(str::trim) {
+        if matches!(
+            flag,
+            "apple-home-empty" | "apple-home-error" | "apple-home-loading"
+        ) {
+            if let Some(apple) = &mut app.apple {
+                for shelf in crate::apple::HomeShelf::ALL {
+                    apple.home.insert(
+                        shelf,
+                        match flag {
+                            "apple-home-empty" => Loadable::Loaded(Vec::new()),
+                            "apple-home-error" => Loadable::Failed("Connection interrupted".into()),
+                            _ => Loadable::Loading,
+                        },
+                    );
+                }
+            }
+            continue;
+        }
         if flag == "favorites" || flag == "favorites-empty" {
             if let Some(apple) = &mut app.apple {
                 if flag == "favorites-empty" {
@@ -1395,6 +1413,65 @@ mod tests {
 
     #[cfg(feature = "demo")]
     #[test]
+    fn apple_home_cards_play_and_empty_shelves_do_not_spin_forever() {
+        let (ctx, mut app) = accessible_app("apple-home-cards");
+        let mut state = crate::apple::State::demo(&app.library.liked.items);
+        let uri = state.songs[0].uri();
+        let title = state.songs[0].title.clone();
+        for shelf in crate::apple::HomeShelf::ALL {
+            state.home.insert(shelf, Loadable::Loaded(Vec::new()));
+        }
+        state.home.insert(
+            crate::apple::HomeShelf::Recent,
+            Loadable::Loaded(vec![crate::apple::HomeCard {
+                name: title.clone(),
+                subtitle: "Sample artist".into(),
+                image: None,
+                uri: uri.clone(),
+                page: None,
+                playable: true,
+            }]),
+        );
+        app.apple = Some(state);
+        let draw = crate::ui::home::show;
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(
+            text.iter()
+                .any(|(text, _)| text == "No items in this shelf yet.")
+        );
+        assert!(
+            !text
+                .iter()
+                .any(|(text, _)| text == "Loading…" || text == "Your top artists")
+        );
+        let position = text
+            .iter()
+            .find(|(text, _)| text == &title)
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(position, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(app.actions.iter().any(
+            |action| matches!(action, Action::PlayUris { uris, index:0 } if uris == std::slice::from_ref(&uri))
+        ));
+        apply_apple_flags(&mut app, Some("apple-home-error"));
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(
+            text.iter()
+                .any(|(text, _)| text == "Connection interrupted")
+        );
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
     fn apple_favorites_filter_keeps_unknowns_distinct_and_plays_the_shuffled_view() {
         let (ctx, mut app) = accessible_app("apple-favorites");
         let mut apple = crate::apple::State::demo(&app.library.liked.items);
@@ -1424,6 +1501,7 @@ mod tests {
         let draw = crate::ui::collection::liked;
         view_frame(&ctx, &mut app, vec![], draw);
         let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(!text.iter().any(|(label, _)| label == "DATE ADDED"));
         let toggle = text
             .iter()
             .find(|(label, _)| label == "Show only favorites")

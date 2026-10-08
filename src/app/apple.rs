@@ -802,7 +802,7 @@ impl App {
             .collect();
         self.session_dirty = true;
     }
-    fn apple_read(&mut self, target: Read, path: String, offset: u32) {
+    pub(super) fn apple_read(&mut self, target: Read, path: String, offset: u32) {
         let Some(apple) = &mut self.apple else { return };
         if !apple.authorized || apple.reads.values().any(|(pending, _)| pending == &target) {
             return;
@@ -839,6 +839,24 @@ impl App {
             );
         }
         match page {
+            Page::Home => {
+                for shelf in crate::apple::HomeShelf::ALL {
+                    if shelf == crate::apple::HomeShelf::Recommendations
+                        && !self.settings.home.recommendations.visible
+                    {
+                        continue;
+                    }
+                    if self.apple.as_ref().unwrap().home.contains_key(&shelf) {
+                        continue;
+                    }
+                    self.apple
+                        .as_mut()
+                        .unwrap()
+                        .home
+                        .insert(shelf, Loadable::Loading);
+                    self.apple_read(Read::Home(shelf), shelf.path().into(), 0);
+                }
+            }
             Page::Albums if !self.library.albums.loaded_once && !self.library.albums.loading => {
                 self.library.albums.loading = true;
                 self.apple_read(Read::Albums, "/v1/me/library/albums?limit=100".into(), 0);
@@ -907,6 +925,32 @@ impl App {
         }
     }
     pub(super) fn apple_load_more(&mut self, page: Page) {
+        if page == Page::Home {
+            for shelf in crate::apple::HomeShelf::ALL {
+                let target = Read::Home(shelf);
+                if self
+                    .apple
+                    .as_ref()
+                    .unwrap()
+                    .reads
+                    .values()
+                    .any(|(read, _)| *read == target)
+                {
+                    continue;
+                }
+                if let Some((path, offset)) = self
+                    .apple
+                    .as_ref()
+                    .unwrap()
+                    .next_reads
+                    .get(&target)
+                    .cloned()
+                {
+                    self.apple_read(target, path, offset);
+                }
+            }
+            return;
+        }
         let initial = match &page {
             Page::Albums => !self.library.albums.loaded_once,
             Page::Artists => !self.library.artists.loaded_once,
@@ -1002,6 +1046,90 @@ impl App {
         else {
             return;
         };
+        if let Read::Home(shelf) = target {
+            if let Some(error) = value["error"].as_str() {
+                // A failed later page keeps the playable cards already shown.
+                if self
+                    .apple
+                    .as_ref()
+                    .unwrap()
+                    .home
+                    .get(&shelf)
+                    .and_then(Loadable::get)
+                    .is_some()
+                {
+                    self.toast_error(error);
+                } else {
+                    self.apple
+                        .as_mut()
+                        .unwrap()
+                        .home
+                        .insert(shelf, Loadable::Failed(error.into()));
+                }
+                return;
+            }
+            let data = &value["data"];
+            if !data["data"].is_array() {
+                let error = "Apple Music returned an incomplete shelf. Retry.";
+                if self
+                    .apple
+                    .as_ref()
+                    .unwrap()
+                    .home
+                    .get(&shelf)
+                    .and_then(Loadable::get)
+                    .is_some()
+                {
+                    self.toast_error(error);
+                } else {
+                    self.apple
+                        .as_mut()
+                        .unwrap()
+                        .home
+                        .insert(shelf, Loadable::Failed(error.into()));
+                }
+                return;
+            }
+            let raw = resources(data);
+            let rows = if shelf == crate::apple::HomeShelf::Recommendations {
+                raw.iter()
+                    .flat_map(|row| resources(&row["relationships"]["contents"]))
+                    .collect::<Vec<_>>()
+            } else {
+                raw.clone()
+            };
+            self.apple_tracks(&serde_json::json!({"data":rows}));
+            let cards = rows
+                .iter()
+                .filter_map(models::home_card)
+                .collect::<Vec<_>>();
+            let apple = self.apple.as_mut().unwrap();
+            let held = apple.home.entry(shelf).or_default();
+            if offset == 0 || held.get().is_none() {
+                *held = Loadable::Loaded(Vec::new());
+            }
+            let held = held.get_mut().unwrap();
+            for card in cards {
+                if held.len() < 64 && !held.iter().any(|row| row.uri == card.uri) {
+                    held.push(card);
+                }
+            }
+            let target = Read::Home(shelf);
+            let previous = apple.next_reads.remove(&target);
+            if held.len() < 64
+                && !raw.is_empty()
+                && let Some(next) = data["next"].as_str().filter(|next| {
+                    applifast_playback_probe::protocol::valid_read_path(next)
+                        && next.split('?').next() == shelf.path().split('?').next()
+                        && previous.as_ref().is_none_or(|(path, _)| path != next)
+                })
+            {
+                apple
+                    .next_reads
+                    .insert(target, (next.into(), offset + raw.len() as u32));
+            }
+            return;
+        }
         if let Some(error) = value["error"].as_str() {
             match &target {
                 Read::Playlists if self.library.playlists.get().is_none() => {
@@ -1151,6 +1279,7 @@ impl App {
                 .insert(target.clone(), (next.into(), offset + rows.len() as u32));
         }
         match target {
+            Read::Home(_) => unreachable!("home responses are handled above"),
             Read::Playlists => {
                 let mut playlists = rows.iter().map(models::playlist).collect::<Vec<_>>();
                 self.apple
@@ -1201,7 +1330,7 @@ impl App {
                 page(
                     rows.iter()
                         .map(|row| SavedAlbum {
-                            added_at: None,
+                            added_at: models::added_at(row),
                             album: models::album(row),
                         })
                         .collect(),
@@ -1407,6 +1536,7 @@ fn resources(data: &Value) -> Vec<Value> {
 }
 pub(super) fn read_for_page(target: &Read, page: &Page) -> bool {
     match (page, target) {
+        (Page::Home, Read::Home(_)) => true,
         (Page::Album(id), Read::Album(held) | Read::AlbumTracks(held))
         | (Page::Playlist(id), Read::Playlist(held) | Read::PlaylistTracks(held))
         | (
@@ -1428,6 +1558,107 @@ fn merge<T: Default>(held: &mut Option<ApiPage<T>>, fresh: Option<ApiPage<T>>) {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn apple_home_reads_paginate_refresh_and_ignore_stale_answers() {
+        use crate::apple::HomeShelf;
+        let mut app = super::super::tests::test_app("apple-home");
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        app.apple = Some(state);
+        app.library.playlists = Loadable::Loaded(Vec::new());
+        app.ensure_loaded(Page::Home);
+        assert_eq!(app.apple.as_ref().unwrap().reads.len(), 4);
+        app.ensure_loaded(Page::Home);
+        assert_eq!(app.apple.as_ref().unwrap().reads.len(), 4);
+        let id = |app: &App, shelf| {
+            *app.apple
+                .as_ref()
+                .unwrap()
+                .reads
+                .iter()
+                .find(|(_, (read, _))| *read == Read::Home(shelf))
+                .unwrap()
+                .0
+        };
+        let recent_id = id(&app, HomeShelf::Recent);
+        let upload = json!({"id":"i.upload","type":"library-songs","attributes":{"name":"Upload"}});
+        let song = json!({"id":"123","type":"songs","attributes":{"name":"Catalog", "playParams":{"id":"123","kind":"song"}}});
+        app.apple_response(&json!({"id":recent_id,"data":{"data":[upload,song],"next":"/v1/me/recent/played?offset=10"}}));
+        let state = app.apple.as_ref().unwrap();
+        let cards = state.home[&HomeShelf::Recent].get().unwrap();
+        assert_eq!(cards.len(), 2);
+        assert!(!cards[0].playable);
+        assert_eq!(cards[0].uri, "apple:track:library.i.upload");
+        assert_eq!(state.known_songs[&cards[0].uri].item.id, "i.upload");
+        app.load_more(Page::Home);
+        let next = id(&app, HomeShelf::Recent);
+        app.apple_response(&json!({"id":next,"error":"offline"}));
+        assert_eq!(
+            app.apple.as_ref().unwrap().home[&HomeShelf::Recent]
+                .get()
+                .unwrap()
+                .len(),
+            2
+        );
+        app.load_more(Page::Home);
+        let next = id(&app, HomeShelf::Recent);
+        app.apple_response(
+            &json!({"id":next,"data":{"data":[song],"next":"/v1/me/recent/played?offset=10"}}),
+        );
+        assert!(
+            !app.apple
+                .as_ref()
+                .unwrap()
+                .next_reads
+                .contains_key(&Read::Home(HomeShelf::Recent)),
+            "repeated pagination stops"
+        );
+        let recommendation = id(&app, HomeShelf::Recommendations);
+        app.apple_response(&json!({"id":recommendation,"data":{"data":[{"id":"rec","relationships":{"contents":{"data":[song,{"id":"station","type":"stations"}]}}}]}}));
+        assert_eq!(
+            app.apple.as_ref().unwrap().home[&HomeShelf::Recommendations]
+                .get()
+                .unwrap()
+                .len(),
+            1
+        );
+        let added = id(&app, HomeShelf::Added);
+        app.apple_response(&json!({"id":added,"data":{"data":[]}}));
+        assert!(
+            app.apple.as_ref().unwrap().home[&HomeShelf::Added]
+                .get()
+                .unwrap()
+                .is_empty()
+        );
+        let stale = id(&app, HomeShelf::HeavyRotation);
+        app.reload(Page::Home);
+        assert_eq!(
+            app.apple.as_ref().unwrap().home[&HomeShelf::Recent]
+                .get()
+                .unwrap()
+                .len(),
+            2,
+            "refresh keeps shown cards"
+        );
+        app.apple_response(&json!({"id":stale,"data":{"data":[song]}}));
+        assert!(
+            app.apple.as_ref().unwrap().home[&HomeShelf::HeavyRotation]
+                .get()
+                .is_none()
+        );
+        let failed = id(&app, HomeShelf::HeavyRotation);
+        app.apple_response(&json!({"id":failed,"error":"offline"}));
+        assert!(matches!(
+            app.apple.as_ref().unwrap().home[&HomeShelf::HeavyRotation],
+            Loadable::Failed(_)
+        ));
+        let late = id(&app, HomeShelf::Recent);
+        app.apple.as_mut().unwrap().clear_account();
+        app.apple_response(&json!({"id":late,"data":{"data":[song]}}));
+        assert!(app.apple.as_ref().unwrap().home.is_empty());
+        app.backend.shutdown();
+    }
     #[test]
     fn album_playlist_add_waits_for_every_page_preserves_repeats_and_cancels_on_signout() {
         let mut app = super::super::tests::test_app("apple-album-playlist");

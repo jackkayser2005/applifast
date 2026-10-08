@@ -245,6 +245,7 @@ fn safe_music_data(value: &Value, depth: usize) -> Value {
                         "type",
                         "attributes",
                         "relationships",
+                        "contents",
                         "name",
                         "artistName",
                         "albumName",
@@ -262,6 +263,7 @@ fn safe_music_data(value: &Value, depth: usize) -> Value {
                         "short",
                         "trackCount",
                         "releaseDate",
+                        "dateAdded",
                         "genreNames",
                         "curatorName",
                         "canEdit",
@@ -1251,6 +1253,18 @@ mod tests {
                 assert!(!attribute.to_string().contains("SECRET"));
             }
         }
+    }
+    #[test]
+    fn recommendation_contents_and_added_dates_survive_the_bridge_without_credentials() {
+        let value = sanitized_event(&json!({"type":"response","session":1,"id":2,
+            "data":{"data":[{"relationships":{"contents":{"data":[{"id":"l.1","type":"library-albums",
+                "attributes":{"name":"Album","dateAdded":"2026-10-08","userToken":"SECRET"}}]}}}],
+                "developerToken":"SECRET"}})).unwrap();
+        assert_eq!(
+            value["data"]["data"][0]["relationships"]["contents"]["data"][0]["attributes"]["dateAdded"],
+            "2026-10-08"
+        );
+        assert!(!value.to_string().contains("SECRET"));
     }
     #[test]
     fn page_commands_use_the_validated_native_command_path() {

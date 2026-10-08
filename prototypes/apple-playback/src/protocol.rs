@@ -319,6 +319,10 @@ pub fn valid_read_path(path: &str) -> bool {
     }
     let resources = ["songs", "albums", "artists", "playlists", "search"];
     let valid = match parts.as_slice() {
+        ["v1", "me", "recent", "played"]
+        | ["v1", "me", "history", "heavy-rotation"]
+        | ["v1", "me", "recommendations"]
+        | ["v1", "me", "library", "recently-added"] => true,
         ["v1", "me", "library", resource, tail @ ..] => {
             resources.contains(resource)
                 && tail.len() <= 2
@@ -425,6 +429,9 @@ mod tests {
             "/v1/me/library/songs?token=secret",
             "/v1/me/library/songs#fragment",
             "/v1/catalog/us/artists/id/anything",
+            "/v1/me/recommendations/anything",
+            "/v1/me/history/heavy-rotation?token=secret",
+            "/v1/me/library/recently-added/anything",
         ] {
             assert!(!valid_read_path(path), "{path}");
         }
@@ -433,6 +440,10 @@ mod tests {
             "/v1/me/library/playlists/p.1/tracks?offset=100",
             "/v1/catalog/us/artists/123/view/top-songs?limit=20",
             "/v1/catalog/us/search?term=Some%20song&types=songs,albums",
+            "/v1/me/recent/played?types=albums,playlists&limit=10",
+            "/v1/me/history/heavy-rotation?offset=10",
+            "/v1/me/recommendations?limit=10",
+            "/v1/me/library/recently-added?offset=10",
         ] {
             assert!(valid_read_path(path), "{path}");
         }

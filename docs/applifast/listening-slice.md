@@ -48,8 +48,7 @@ shows upcoming occurrences, including repeated songs. Manual queue additions,
 album additions, insertion, reordering, removal and clear use the local Apple
 occurrence queue. Library/queue restoration retains the current occurrence,
 position, manual additions, context, Previous history, shuffle and repeat.
-It restores paused. Home/discovery/recommendations,
-favorite writes remain follow-up integration work. Playlist creation and appending
+It restores paused. Favorite writes remain follow-up integration work. Playlist creation and appending
 are implemented below, with real-account write acceptance pending.
 The existing mini player uses the same playback actions, but its window lifecycle
 still needs real runtime acceptance. Cloud-only upload playback
@@ -85,6 +84,70 @@ Apple Account settings provide developer-token renewal and sign-out. Unsupported
 legacy decoder, Spotify account, proxy, audio-cache and upstream-update settings
 are hidden. Artwork already uses a disk cache. Loaded Apple song metadata and
 the full local queue now persist across restarts; audio remains streamed by MusicKit.
+
+## Apple Home and recently added albums
+
+Home uses the documented Apple Music feeds for Recently Played, Recently Added,
+Heavy Rotation and Recommendations. It replaces the inherited Spotify top-artist,
+top-song and discovery requests. Albums and playlists open their Apple detail
+pages; song cards preserve their original catalog or library identity. Artist
+cards navigate without pretending to play an unsupported artist context. Stations
+and other unsupported resource types are omitted. Empty feeds explain that no
+items were returned; errors offer Retry instead of remaining on Loading.
+
+A Home visit reads the four feeds once per signed-in session. Refresh replaces
+those reads, retains shown cards, and rejects late responses. Load more requests
+one additional page per unfinished feed, retaining at most 64 distinct cards per
+feed. Recommendations use Apple's included contents (a preview, not every nested
+relationship page). These metadata reads use the existing isolated MusicKit host
+and no extra credentials, dependencies or app-operated service. Home metadata
+stays in memory and is cleared on sign-out.
+
+The library's Recently added album sort retains Apple's optional `dateAdded`.
+Full timestamps and date-only values are accepted; a year-only date sorts at the
+start of that year. Missing or invalid dates remain unknown and sort last, rather
+than substituting the album's release date. Real-account feed and sorting checks
+remain pending; automated fixtures do not establish that acceptance.
+
+Apple's documented library song attributes do not include a song add date. The
+Songs table omits the inherited empty Date added column in Apple mode. Album
+add dates are not silently assigned to individual songs. Use the Home Recently
+Added feed or the library album sort for the supported chronological views.
+
+Sources: [recently played resources](https://developer.apple.com/documentation/applemusicapi/get-recently-played-resources),
+[recently added resources](https://developer.apple.com/documentation/applemusicapi/get-recently-added-resources),
+[heavy rotation](https://developer.apple.com/documentation/applemusicapi/get-heavy-rotation-content),
+[default recommendations](https://developer.apple.com/documentation/applemusicapi/get-all-recommendations),
+and [library album added date](https://developer.apple.com/documentation/applemusicapi/libraryalbums/attributes-data.dictionary).
+
+### Home validation on Windows
+
+The default all-target suite passes (981 library tests, 2 ignored), as does demo
+(1,009 library tests, 2 ignored). Strict default/demo all-target Clippy,
+formatting, gettext checks, default Rustdoc/doc tests, Node bridge/token
+self-checks and 11 host tests pass. Both isolated Windows Credential Manager
+dummy-grant round trips pass. An unrelated temporary-filesystem credential test
+failed in the first full attempt; its isolated run and the complete rerun passed.
+No lint or test was relaxed. Optional all-feature projectM checks remain blocked
+by the missing vcpkg installation; Ruby/Bundler/Jekyll/Nix and non-Windows
+runtime/compilation coverage remain unavailable here. Real-account Home results
+and album sorting are not claimed from these fixtures.
+
+The [Home review](review-home/index.html) compares Windows light/dark and
+narrow/normal frames and records the intentional Home feed-data change separately
+from matching Songs rows. It also shows loading, empty and error states. The user
+requested these Home/date fixes and chose the left sidebar for the upcoming
+Favorites shelf. Lyrics and that shelf remain unfinished in this preview.
+
+The focused draft is [PR #18](https://github.com/jackkayser2005/applifast/pull/18),
+stacked on #17. The local development ZIP is
+`dist/applifast-windows-preview-1996c0e.zip` (23,036,311 bytes), SHA256
+`786440d16f7295e2ff9378da1bd3162674fe707d7c20034011b6624a18c4d326`.
+Its executable SHA256 is
+`63b0f4db6702d0ca899a581ae0a0adc9d3dc7d0a0348b033c37aa64c696760bf`.
+The ZIP contains only the executable, MIT license and usage/build notes. It is
+a debug/demo Windows x64 build with static CRT and inherited version 0.12.0,
+not a public release. Earlier preview packages do not contain the Home fixes.
 
 ## Reading favorites
 
