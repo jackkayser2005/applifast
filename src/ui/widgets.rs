@@ -622,10 +622,15 @@ pub fn picked_menu(
             uris: uris.clone(),
         });
     }
-    add_to_playlist_menu(ui, app, songs);
+    add_to_playlist_menu(ui, app, songs, None);
 }
 
-fn add_to_playlist_menu(ui: &mut Ui, app: &mut App, items: &[PlayableItem]) {
+pub(crate) fn add_to_playlist_menu(
+    ui: &mut Ui,
+    app: &mut App,
+    items: &[PlayableItem],
+    album: Option<(&str, &str)>,
+) {
     let query_id = ui.make_persistent_id("add-to-playlist-query");
     let palette = app.palette;
     let opened = menu_submenu_with_field(
@@ -640,7 +645,7 @@ fn add_to_playlist_menu(ui: &mut Ui, app: &mut App, items: &[PlayableItem]) {
                 .filter(|(last_frame, _)| frame.saturating_sub(*last_frame) <= 1);
             let fresh = previous.is_none();
             let mut query = previous.map(|(_, query)| query).unwrap_or_default();
-            let field = playlist_picker(ui, app, items, &mut query);
+            let field = playlist_picker(ui, app, items, &mut query, album);
             if fresh {
                 field.request_focus();
             }
@@ -659,6 +664,7 @@ pub(crate) fn playlist_picker(
     app: &mut App,
     items: &[PlayableItem],
     query: &mut String,
+    album: Option<(&str, &str)>,
 ) -> egui::Response {
     let palette = app.palette;
     let locale = app.locale;
@@ -730,11 +736,19 @@ pub(crate) fn playlist_picker(
         Some(Icon::Plus),
         &gettext(locale, "New playlist"),
     ) {
-        app.actions.push(Action::ShowDialog(Dialog::CreatePlaylist {
-            name: String::new(),
-            public: false,
-            add_uris: items.iter().map(|item| item.uri().to_string()).collect(),
-        }));
+        app.actions.push(if let Some((uri, label)) = album {
+            Action::AddAlbumToPlaylist {
+                uri: uri.into(),
+                label: label.into(),
+                playlist: None,
+            }
+        } else {
+            Action::ShowDialog(Dialog::CreatePlaylist {
+                name: String::new(),
+                public: false,
+                add_uris: items.iter().map(|item| item.uri().to_string()).collect(),
+            })
+        });
     }
     menu_separator(ui, &palette);
     let needle = query.trim().to_lowercase();
@@ -745,10 +759,18 @@ pub(crate) fn playlist_picker(
     highlighted = highlighted.filter(|index| *index < matches.len());
     ui.data_mut(|data| data.insert_temp(highlight_id, (frame, highlighted, query.clone())));
     if enter && let Some((id, name)) = highlighted.and_then(|index| matches.get(index)) {
-        app.actions.push(Action::AddToPlaylist {
-            playlist_id: id.clone(),
-            playlist_name: name.clone(),
-            items: items.to_vec(),
+        app.actions.push(if let Some((uri, label)) = album {
+            Action::AddAlbumToPlaylist {
+                uri: uri.into(),
+                label: label.into(),
+                playlist: Some((id.clone(), name.clone())),
+            }
+        } else {
+            Action::AddToPlaylist {
+                playlist_id: id.clone(),
+                playlist_name: name.clone(),
+                items: items.to_vec(),
+            }
         });
         ui.close();
     }
@@ -784,10 +806,18 @@ pub(crate) fn playlist_picker(
                         row.scroll_to_me(None);
                     }
                     if clicked {
-                        app.actions.push(Action::AddToPlaylist {
-                            playlist_id: id.clone(),
-                            playlist_name: name.clone(),
-                            items: items.to_vec(),
+                        app.actions.push(if let Some((uri, label)) = album {
+                            Action::AddAlbumToPlaylist {
+                                uri: uri.into(),
+                                label: label.into(),
+                                playlist: Some((id.clone(), name.clone())),
+                            }
+                        } else {
+                            Action::AddToPlaylist {
+                                playlist_id: id.clone(),
+                                playlist_name: name.clone(),
+                                items: items.to_vec(),
+                            }
                         });
                     }
                 });
@@ -834,7 +864,7 @@ pub fn item_menu(
         if menu_item(ui, &palette, Some(icon), &text) {
             app.actions.push(Action::ToggleSaved(uri.clone()));
         }
-        add_to_playlist_menu(ui, app, std::slice::from_ref(item));
+        add_to_playlist_menu(ui, app, std::slice::from_ref(item), None);
     } else if menu_item(
         ui,
         &palette,
@@ -1028,6 +1058,9 @@ pub fn context_menu_items(
             uri: uri.to_string(),
             label: name.to_string(),
         });
+    }
+    if kind == "album" && app.apple.is_some() {
+        add_to_playlist_menu(ui, app, &[], Some((uri, name)));
     }
     let saved = app.is_saved(uri).unwrap_or(false);
     let (icon, text) = match (kind, saved) {

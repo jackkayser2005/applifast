@@ -718,7 +718,7 @@ fn folder_rows(app: &App, user_id: &str, entries: &mut Vec<Entry>) {
                     playlist,
                     *index,
                     user_id,
-                    app.can_edit_playlist(playlist),
+                    app.can_append_playlist(playlist),
                     depth,
                 ));
             }
@@ -733,7 +733,7 @@ fn folder_rows(app: &App, user_id: &str, entries: &mut Vec<Entry>) {
                 playlist,
                 index,
                 user_id,
-                app.can_edit_playlist(playlist),
+                app.can_append_playlist(playlist),
                 0,
             ));
         }
@@ -1064,7 +1064,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                             playlist,
                             index,
                             &user_id,
-                            app.can_edit_playlist(playlist),
+                            app.can_append_playlist(playlist),
                             0,
                         ));
                     }
