@@ -1419,6 +1419,10 @@ msgstr "Özel başlık çubuğu"
 msgid "Player bar visualizer"
 msgstr "Çalar çubuğu görselleştiricisi"
 
+#: src/ui/settings.rs:808
+msgid "Reduce motion"
+msgstr "Hareketi azalt"
+
 #: src/ui/settings.rs:818
 msgid "Follow system uses your Omarchy colours."
 msgstr "Sistemi takip et seçeneği Omarchy renklerinizi kullanır."
@@ -1485,6 +1489,10 @@ msgid ""
 msgstr ""
 "Şarkı burada çalarken çalar çubuğu kontrollerinin arkasında hareket eden "
 "dalga formunu gösterir."
+
+#: src/ui/settings.rs:890
+msgid "Show changes at once, without fades, pops or moving bars."
+msgstr "Değişiklikleri solma, zıplama veya hareketli çubuklar olmadan hemen gösterir."
 
 #: src/ui/settings.rs:1017
 msgid "Off"

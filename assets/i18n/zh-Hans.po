@@ -1378,6 +1378,10 @@ msgstr "自定义标题栏"
 msgid "Player bar visualizer"
 msgstr "播放栏可视化效果"
 
+#: src/ui/settings.rs:808
+msgid "Reduce motion"
+msgstr "减弱动态效果"
+
 #: src/ui/settings.rs:818
 msgid "Follow system uses your Omarchy colours."
 msgstr "“跟随系统”会使用你的 Omarchy 配色。"
@@ -1437,6 +1441,10 @@ msgstr "使用 Spotifast 自己的标题栏和窗口按钮，而不是 Windows �
 msgid ""
 "Show the song moving behind the player bar's controls while it plays here."
 msgstr "歌曲在本机播放时，在播放栏控件后方显示它的律动。"
+
+#: src/ui/settings.rs:890
+msgid "Show changes at once, without fades, pops or moving bars."
+msgstr "立即显示变化，不使用淡入淡出、弹跳或跳动的条形。"
 
 #: src/ui/settings.rs:1017
 msgid "Off"

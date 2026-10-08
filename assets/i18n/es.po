@@ -1421,6 +1421,10 @@ msgstr "Barra de título personalizada"
 msgid "Player bar visualizer"
 msgstr "Visualizador en la barra de reproducción"
 
+#: src/ui/settings.rs:808
+msgid "Reduce motion"
+msgstr "Reducir movimiento"
+
 #: src/ui/settings.rs:818
 msgid "Follow system uses your Omarchy colours."
 msgstr "Seguir el sistema usa tus colores de Omarchy."
@@ -1488,6 +1492,10 @@ msgid ""
 msgstr ""
 "Muestra la canción en movimiento detrás de los controles de la barra de "
 "reproducción mientras suena aquí."
+
+#: src/ui/settings.rs:890
+msgid "Show changes at once, without fades, pops or moving bars."
+msgstr "Muestra los cambios al instante, sin fundidos, rebotes ni barras en movimiento."
 
 #: src/ui/settings.rs:1017
 msgid "Off"

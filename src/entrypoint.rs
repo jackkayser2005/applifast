@@ -476,6 +476,7 @@ pub(crate) fn run() -> eframe::Result<()> {
             restore_sign_in: false,
             tray: false,
         };
+        spotifast::ui::motion::hold_still();
     }
     #[cfg(windows)]
     let desktop_surfaces = options.media_controls;

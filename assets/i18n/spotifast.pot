@@ -1389,6 +1389,10 @@ msgstr ""
 msgid "Player bar visualizer"
 msgstr ""
 
+#: src/ui/settings.rs:808
+msgid "Reduce motion"
+msgstr ""
+
 #: src/ui/settings.rs:818
 msgid "Follow system uses your Omarchy colours."
 msgstr ""
@@ -1445,6 +1449,10 @@ msgstr ""
 #: src/ui/settings.rs:882
 msgid ""
 "Show the song moving behind the player bar's controls while it plays here."
+msgstr ""
+
+#: src/ui/settings.rs:890
+msgid "Show changes at once, without fades, pops or moving bars."
 msgstr ""
 
 #: src/ui/settings.rs:1017

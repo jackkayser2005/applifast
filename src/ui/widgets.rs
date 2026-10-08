@@ -15,6 +15,8 @@ use crate::util;
 pub const CARD_WIDTH: f32 = 172.0;
 pub const CARD_GAP: f32 = 14.0;
 pub const PAGE_PADDING: f32 = 24.0;
+/// How far a hovered card's cover rises.
+const CARD_LIFT: f32 = 4.0;
 
 /// Draws an image (or a placeholder) in a square.
 pub fn cover(
@@ -1370,8 +1372,8 @@ fn track_row_contents(
                 Icon::PlayFilled
             };
             theme::paint_icon(ui, icon, cell, 14.0, palette.text);
-        } else if playing {
-            theme::paint_icon(ui, Icon::AudioLines, cell, 16.0, palette.accent);
+        } else if is_current {
+            super::motion::playing_bars(ui, cell, palette.accent, playing);
         } else {
             let color = if is_current {
                 palette.accent
@@ -1435,9 +1437,9 @@ fn track_row_contents(
                     Icon::PlayFilled
                 };
                 theme::paint_icon(ui, icon, cover_rect, 16.0, Color32::WHITE);
-            } else if playing {
+            } else if is_current {
                 scrim(110);
-                theme::paint_icon(ui, Icon::AudioLines, cover_rect, 16.0, palette.accent);
+                super::motion::playing_bars(ui, cover_rect, palette.accent, playing);
             }
         }
         x += cols.cover;
@@ -1737,7 +1739,21 @@ fn track_row_contents(
             } else {
                 gettext(app.locale, "Save to Liked Songs")
             };
-            if theme::icon_button(&mut child, icon, 16.0, color, palette.text, &tooltip).clicked() {
+            let scale = super::motion::heart_scale(ui.ctx(), row.item.uri());
+            if theme::icon_button_scaled(
+                &mut child,
+                icon,
+                16.0,
+                scale,
+                color,
+                palette.text,
+                &tooltip,
+            )
+            .clicked()
+            {
+                if saved != Some(true) {
+                    super::motion::pop_heart(ui.ctx(), row.item.uri());
+                }
                 app.actions
                     .push(Action::ToggleSaved(row.item.uri().to_string()));
             }
@@ -2361,7 +2377,8 @@ pub fn card(
     }
     let mut play = false;
     if ui.is_rect_visible(rect) {
-        let hovered = ui.rect_contains_pointer(rect);
+        let hovered =
+            ui.rect_contains_pointer(rect) || super::motion::forced_hover(ui.ctx(), "card");
         if hovered {
             ui.painter().rect_filled(
                 rect,
@@ -2371,9 +2388,23 @@ pub fn card(
                     .gamma_multiply(if palette.dark { 0.8 } else { 1.0 }),
             );
         }
-        let image_rect = Rect::from_min_size(rect.min + vec2(PAD, PAD), Vec2::splat(image_size));
+        let lift = super::motion::animate_bool(ui.ctx(), response.id.with("lift"), hovered, 0.16);
+        let image_rect = Rect::from_min_size(
+            rect.min + vec2(PAD, PAD - CARD_LIFT * lift),
+            Vec2::splat(image_size),
+        );
         let radius = if circular { image_size / 2.0 } else { 6.0 };
         paint_shadow(ui, &palette, image_rect, radius);
+        if lift > 0.0 {
+            let shadow = egui::epaint::Shadow {
+                offset: [0, 8],
+                blur: 20,
+                spread: 0,
+                color: Color32::from_black_alpha((70.0 * lift) as u8),
+            };
+            ui.painter()
+                .add(shadow.as_shape(image_rect, CornerRadius::same(radius as u8)));
+        }
         paint_cover(
             ui,
             &palette,
@@ -2415,9 +2446,13 @@ pub fn card(
         ui.painter()
             .galley(subtitle_pos, subtitle_galley, palette.secondary);
 
-        if playable && hovered {
+        if playable && lift > 0.0 {
+            // It rises into place as it fades in.
             let button_rect = Rect::from_center_size(
-                pos2(image_rect.right() - 26.0, image_rect.bottom() - 26.0),
+                pos2(
+                    image_rect.right() - 26.0,
+                    image_rect.bottom() - 26.0 + 6.0 * (1.0 - lift),
+                ),
                 Vec2::splat(44.0),
             );
             let mut child = ui.new_child(
@@ -2425,6 +2460,7 @@ pub fn card(
                     .max_rect(button_rect)
                     .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
             );
+            child.multiply_opacity(lift);
             play = theme::circle_button(
                 &mut child,
                 if playing {
@@ -2667,23 +2703,30 @@ pub fn thin_slider(
         let active = response.hovered()
             || response.has_focus()
             || response.dragged()
-            || dragging_value.is_some();
-        let bar = Rect::from_center_size(rect.center(), vec2(rect.width(), 4.0));
+            || dragging_value.is_some()
+            || super::motion::forced_hover(ui.ctx(), "slider");
+        // Under the pointer the bar fills out and its knob grows in.
+        let grown = super::motion::animate_bool(ui.ctx(), id.with("grown"), active, 0.15);
+        let thickness = 4.0 + 2.0 * grown;
+        let bar = Rect::from_center_size(rect.center(), vec2(rect.width(), thickness));
         let track_color = if palette.dark {
             Color32::from_white_alpha(50)
         } else {
             Color32::from_black_alpha(40)
         };
-        ui.painter().rect_filled(bar, 2.0, track_color);
+        ui.painter().rect_filled(bar, thickness / 2.0, track_color);
         let filled = Rect::from_min_max(
             bar.min,
             pos2(bar.left() + bar.width() * shown.clamp(0.0, 1.0), bar.max.y),
         );
-        let fill = if active { palette.accent } else { palette.text };
-        ui.painter().rect_filled(filled, 2.0, fill);
-        if active {
-            ui.painter()
-                .circle_filled(pos2(filled.right(), bar.center().y), 6.0, palette.text);
+        let fill = palette.text.lerp_to_gamma(palette.accent, grown);
+        ui.painter().rect_filled(filled, thickness / 2.0, fill);
+        if grown > 0.0 {
+            ui.painter().circle_filled(
+                pos2(filled.right(), bar.center().y),
+                6.0 * grown,
+                palette.text,
+            );
         }
     }
     event
