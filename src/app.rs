@@ -960,6 +960,11 @@ impl App {
         };
         app.local.volume = app.settings.volume;
         if let Some(apple) = &mut app.apple {
+            app.resume_queue.clear();
+            app.resume_track = None;
+            app.resume_context = None;
+            app.recent_contexts.clear();
+            app.queue = Loadable::default();
             app.history = vec![Page::LikedSongs];
             app.history_index = 0;
             apple.local.volume = app.settings.volume;
@@ -1864,6 +1869,32 @@ impl App {
                 continue;
             }
             match event {
+                Event::AppleCache {
+                    generation,
+                    session,
+                    snapshot,
+                } => {
+                    let Some(apple) = &mut self.apple else {
+                        continue;
+                    };
+                    if apple.generation != generation
+                        || apple.session != session
+                        || !apple.authorized
+                        || apple.cache_checked
+                    {
+                        continue;
+                    }
+                    if let Some(request) = apple.restore_cache(snapshot.map(|snapshot| *snapshot)) {
+                        self.backend.send(Command::AppleSend(request.to_string()));
+                    }
+                    self.local = apple.local.clone();
+                    self.shuffle_wanted = apple.local.shuffle;
+                    self.backend.send(Command::AppleSend(
+                        serde_json::json!({"type":"library","next":null}).to_string(),
+                    ));
+                    self.sync_apple_library();
+                    self.sync_apple_queue();
+                }
                 Event::Auth(_) | Event::Playback(_) | Event::Local(_) | Event::Api(_)
                     if self.apple.is_some() => {}
                 Event::Apple { generation, value } => {
@@ -1886,35 +1917,33 @@ impl App {
                         let request = apple.event(generation, &value);
                         self.local = apple.local.clone();
                         self.local_ready = apple.authorized;
-                        if value["type"] == "library" {
-                            self.library.liked.items = apple
-                                .songs
-                                .iter()
-                                .map(|song| crate::api::models::SavedTrack {
-                                    added_at: None,
-                                    track: song.track(),
-                                })
-                                .collect();
-                            self.library.liked.loaded_once = true;
-                            self.library.liked.loading = apple.loading;
-                            self.library.liked.total = Some(apple.songs.len() as u32);
-                            self.library.liked.next_offset =
-                                apple.next.as_ref().map(|_| apple.songs.len() as u32);
-                            self.library.liked.revision += 1;
-                            for saved in &self.library.liked.items {
-                                if let Some(id) = &saved.track.id {
-                                    self.track_cache.insert(id.clone(), saved.track.clone());
-                                }
-                            }
-                        }
                         if let Some(request) = request {
+                            let mut load_cache = false;
                             if matches!(value["type"].as_str(), Some("ready" | "authorized")) {
                                 apple.local.volume = self.settings.volume;
                                 self.local.volume = self.settings.volume;
                                 self.backend.send(Command::AppleSend(serde_json::json!({"type":"volume","value":f64::from(self.settings.volume)/65535.0}).to_string()));
+                                if !apple.cache_checked
+                                    && let Some(tag) = &apple.account_tag
+                                {
+                                    self.backend.send(Command::LoadAppleCache {
+                                        generation,
+                                        session: apple.session,
+                                        account_tag: tag.clone(),
+                                        storefront: apple.storefront.clone(),
+                                    });
+                                    load_cache = true;
+                                } else {
+                                    apple.cache_checked = true;
+                                }
                             }
-                            self.backend.send(Command::AppleSend(request.to_string()));
+                            if !load_cache {
+                                self.backend.send(Command::AppleSend(request.to_string()));
+                            }
                         }
+                    }
+                    if value["type"] == "library" {
+                        self.sync_apple_library();
                     }
                     if matches!(value["type"].as_str(), Some("ready" | "authorized")) {
                         self.apple_ensure_loaded(self.page().clone());
@@ -4249,9 +4278,7 @@ impl App {
                         if apple.loading {
                             return;
                         }
-                        apple.songs.clear();
-                        apple.next = None;
-                        apple.loading = true;
+                        apple.refresh_library();
                         self.library.liked.loading = true;
                         self.backend.send(Command::AppleSend(
                             serde_json::json!({"type":"library","next":null}).to_string(),
@@ -8552,6 +8579,9 @@ impl App {
             action,
             Action::SignOut | Action::CancelSignIn | Action::AppleImportToken(_)
         ) {
+            if !matches!(action, Action::AppleImportToken(_)) {
+                self.backend.send(Command::ClearAppleCache);
+            }
             self.reset_data();
             self.track_cache.clear();
             self.manual_queue.clear();
@@ -10533,11 +10563,27 @@ impl App {
     /// Persist state when a window closes (to the tray or for good).
     pub fn save_state(&mut self) {
         self.save_settings();
+        if let Some(snapshot) = self
+            .apple
+            .as_mut()
+            .and_then(|apple| apple.cache_snapshot(true))
+        {
+            self.backend
+                .send(Command::SaveAppleCache(Box::new(snapshot)));
+        }
         self.save_session();
     }
 
     /// Write the restorable session: page, recents, resume point, sorts.
     fn save_session(&mut self) {
+        if let Some(snapshot) = self
+            .apple
+            .as_mut()
+            .and_then(|apple| apple.cache_snapshot(false))
+        {
+            self.backend
+                .send(Command::SaveAppleCache(Box::new(snapshot)));
+        }
         self.session_dirty = false;
         self.last_session_save = Instant::now();
         if let Some(now) = self.now_playing() {
@@ -10548,23 +10594,40 @@ impl App {
         if !self.offline {
             SessionState {
                 last_page: Some(self.page().encode()),
-                recent_contexts: self.recent_contexts.clone(),
-                last_context: self.resume_context.clone(),
-                last_track: self.resume_track.clone(),
+                recent_contexts: if self.apple.is_some() {
+                    Vec::new()
+                } else {
+                    self.recent_contexts.clone()
+                },
+                last_context: if self.apple.is_some() {
+                    None
+                } else {
+                    self.resume_context.clone()
+                },
+                last_track: if self.apple.is_some() {
+                    None
+                } else {
+                    self.resume_track.clone()
+                },
                 last_position_ms: self.resume_position_ms,
                 collapsed_folders: self.collapsed_folders.clone(),
                 rootlist: self.rootlist_cache.clone(),
-                last_added_queue: if self.resume_queue.is_empty() {
+                last_added_queue: if self.apple.is_some() {
+                    Vec::new()
+                } else if self.resume_queue.is_empty() {
                     self.manual_queue.clone()
                 } else {
                     // Never resumed this session; the owed queue carries over.
                     self.resume_queue.clone()
                 },
-                last_queue_rows: self
-                    .queue
-                    .get()
-                    .map(|queue| queue.queue.iter().take(30).cloned().collect())
-                    .unwrap_or_default(),
+                last_queue_rows: if self.apple.is_some() {
+                    Vec::new()
+                } else {
+                    self.queue
+                        .get()
+                        .map(|queue| queue.queue.iter().take(30).cloned().collect())
+                        .unwrap_or_default()
+                },
                 shuffle_on: self.shuffle_wanted,
                 sorts: self
                     .table_sorts

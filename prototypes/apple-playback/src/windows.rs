@@ -30,6 +30,14 @@ const AUTH_DISMISSED: u32 = WM_APP + 3;
 const VIEW_CHANGED: u32 = WM_APP + 4;
 const MAX_MESSAGE: usize = 1024 * 1024;
 
+fn authorization_tag(token: &str) -> String {
+    use sha2::{Digest, Sha256};
+    format!(
+        "{:x}",
+        Sha256::digest(format!("applifast-cache-v1\0{token}"))
+    )
+}
+
 enum Output {
     Diagnostic(Value),
     Ready(u32),
@@ -411,6 +419,7 @@ fn serve(
             },
         )
     };
+    let mut account_tag = user.as_deref().map(authorization_tag);
     let (out_tx, out_rx) = mpsc::channel();
     let (cmd_tx, cmd_rx) = mpsc::channel();
     let sta_tx = out_tx.clone();
@@ -512,6 +521,7 @@ fn serve(
                             }
                             if matches!(command, Command::SignOut) {
                                 epoch += 1;
+                                account_tag = None;
                                 if let Err(error) = mark_signed_out() {
                                     report(json!({"type":"error","message":error}));
                                     credentials_failed = true;
@@ -554,6 +564,7 @@ fn serve(
                         {
                             write_secret("music-user-token", token)?;
                             clear_revocation_marker()?;
+                            account_tag = Some(authorization_tag(token));
                             let storefront = value["storefront"]
                                 .as_str()
                                 .filter(|value| {
@@ -562,7 +573,7 @@ fn serve(
                                 })
                                 .unwrap_or_default();
                             report(
-                                json!({"type":"authorized","session":epoch,"storefront":storefront}),
+                                json!({"type":"authorized","session":epoch,"storefront":storefront,"accountTag":account_tag}),
                             );
                         }
                     }
@@ -586,7 +597,11 @@ fn serve(
                         "ready" | "library" | "state" | "probe" | "report" | "signedOut"
                         | "response",
                     ) => {
-                        if let Some(value) = sanitized_event(&value) {
+                        if let Some(mut value) = sanitized_event(&value) {
+                            // The tag comes from the native credential store, never JS.
+                            if value["type"] == "ready" && value["authorized"] == true {
+                                value["accountTag"] = json!(account_tag);
+                            }
                             report(value);
                         }
                     }
@@ -1173,6 +1188,15 @@ mod tests {
     }
     #[test]
     fn events_never_echo_arbitrary_credential_fields() {
+        let ready = sanitized_event(
+            &json!({"type":"ready","session":1,"authorized":true,"accountTag":"forged"}),
+        )
+        .unwrap();
+        assert!(ready.get("accountTag").is_none());
+        let tag = authorization_tag("dummy-only");
+        assert_eq!(tag.len(), 64);
+        assert_eq!(tag, authorization_tag("dummy-only"));
+        assert_ne!(tag, authorization_tag("other-dummy"));
         let value = sanitized_event(&json!({"type":"state","session":1,"status":2,"token":"SECRET","unexpected":{"token":"SECRET"}})).unwrap();
         assert_eq!(value, json!({"type":"state","session":1,"status":2}));
         let value = sanitized_event(&json!({"type":"library","session":1,"next":null,"items":[{"kind":"library","id":"i.1","token":"SECRET","playParams":{"id":"i.1","isLibrary":true,"token":"SECRET"}}]})).unwrap();

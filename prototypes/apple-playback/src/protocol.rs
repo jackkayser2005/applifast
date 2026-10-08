@@ -132,6 +132,14 @@ pub enum Command {
         index: Option<usize>,
         order: QueueOrder,
     },
+    Restore {
+        items: Vec<PlaybackItem>,
+        index: Option<usize>,
+        order: QueueOrder,
+        seconds: f64,
+        shuffle: bool,
+        repeat: u8,
+    },
     Jump {
         position: usize,
     },
@@ -209,10 +217,21 @@ impl Command {
                 }
                 Ok(())
             }
+            Self::Restore {
+                seconds, repeat, ..
+            } if !seconds.is_finite() || *seconds < 0.0 || *repeat > 2 => {
+                Err("Invalid saved playback settings.".into())
+            }
             Self::Queue {
                 items,
                 index,
                 order,
+            }
+            | Self::Restore {
+                items,
+                index,
+                order,
+                ..
             } => {
                 if items.len() > 1000 {
                     return Err("The queue supports at most 1000 occurrences.".into());

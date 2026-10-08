@@ -46,7 +46,9 @@ limit. Collection playback currently uses the loaded prefix; complete context
 loading and streaming pagination need the queue slice. The existing queue view
 shows upcoming occurrences, including repeated songs. Manual queue additions,
 album additions, insertion, reordering, removal and clear use the local Apple
-occurrence queue. Queue/session restoration, Home/discovery/recommendations,
+occurrence queue. Library/queue restoration retains the current occurrence,
+position, manual additions, context, Previous history, shuffle and repeat.
+It restores paused. Home/discovery/recommendations,
 favorites and playlist writes remain follow-up integration work.
 The existing mini player uses the same playback actions, but its window lifecycle
 still needs real runtime acceptance. Cloud-only upload playback
@@ -80,8 +82,30 @@ are introduced by this animation.
 
 Apple Account settings provide developer-token renewal and sign-out. Unsupported
 legacy decoder, Spotify account, proxy, audio-cache and upstream-update settings
-are hidden. Artwork already uses a disk cache. Persistent Apple library metadata
-and full queue restoration are still pending; audio remains streamed by MusicKit.
+are hidden. Artwork already uses a disk cache. Loaded Apple song metadata and
+the full local queue now persist across restarts; audio remains streamed by MusicKit.
+
+## Restart restoration
+
+`apple-session.json` in Applifast's state directory stores only metadata and the
+local occurrence queue, not audio or credentials. It is atomically replaced on
+the backend, with a 32 MiB ceiling. Playback checkpoints are saved approximately
+every 15 seconds and when either window closes or the app quits. Queue changes
+and library pages use the existing two-second session-save debounce.
+
+Restoration waits for the playback host's saved authorization. A SHA-256 tag of
+that grant, computed in the native host, and the storefront must match before
+rows are shown. A new authorization token can intentionally invalidate the old
+snapshot. Sign-out invalidates late cache responses and removes the snapshot;
+cache commands execute in order so a pending write cannot recreate it afterward.
+Tokens remain in Windows Credential Manager. The host uses the existing SHA-256
+dependency for this tag, with no additional crate versions or network endpoints.
+
+Cached songs remain visible while their loaded span refreshes. Collection detail
+pages still load from Apple when opened. Unavailable uploads and original playback
+parameters remain intact; restoration never substitutes a catalog match. A failed
+seek or item load retains the queue and reports a playback error. Restart
+restoration still needs a real-account Windows runtime check.
 
 For a deterministic preview without changing your account:
 
@@ -89,8 +113,13 @@ For a deterministic preview without changing your account:
 cargo run --locked --features demo -- --demo --demo-page liked --demo-show queue,ambient-pulse
 ```
 
-Motion integration, pulse regressions and updated visual evidence require a fresh
-check run; the older results below describe the preceding integration build.
+The combined Windows update passes strict default/demo Clippy, 972 library tests,
+the default binary/integration suites, eight playback-boundary tests, the isolated
+native credential-store round trip, Node bridge/token checks and generated-catalog
+verification. The older results below describe the preceding integration build.
+Full demo testing, matching motion comparisons, and real app restart acceptance
+remain separate checks. The real-account restoration check was deferred while
+the older app was playing, to avoid interrupting it.
 
 ## Storage and network
 

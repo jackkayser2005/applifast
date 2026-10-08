@@ -2,6 +2,10 @@
 > client now feeds Apple library, album, playlist and search data into the original
 > native interface, with MusicKit playback in an independent WebView2 host.
 > See [local setup, supported controls, and remaining checks](docs/applifast/listening-slice.md).
+> The development build saves loaded song metadata and the exact local queue on
+> restart, restores playback paused, and refreshes the library in the background.
+> Audio is streamed. Run the app from `apple-integration` with `cargo run --locked`;
+> the optional deterministic preview uses `--features demo -- --demo`.
 > This development slice is not a release or feature-parity claim. The original
 > Spotifast documentation below describes upstream capabilities. Upstream credit
 > and the MIT license are preserved.

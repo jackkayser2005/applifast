@@ -20,7 +20,7 @@
     document.dispatchEvent(new CustomEvent('applifast-event', { detail: event }));
   };
   const error = (code, generation, intent = requestGeneration) => send('error', {
-    code, ...(['intent', 'play', 'next', 'previous', 'pause', 'resume', 'seek', 'volume', 'repeat', 'playback'].includes(code) ? { requestGeneration: intent } : {}),
+    code, ...(['intent', 'play', 'restore', 'next', 'previous', 'pause', 'resume', 'seek', 'volume', 'repeat', 'playback'].includes(code) ? { requestGeneration: intent } : {}),
     message: 'Operation failed. Check authorization, subscription, connection, or song availability.'
   }, generation);
   const number = value => Number.isFinite(value) ? value : 0;
@@ -188,6 +188,26 @@
         nativeQueue = !!command.order;
 
         return playAt(command.index, generation);
+      case 'restore': {
+        if (!Array.isArray(command.items) || command.items.length > 1000 ||
+            (command.index !== null && (!Number.isInteger(command.index) || command.index < 0 || command.index >= command.items.length)) ||
+            !Number.isFinite(command.seconds) || command.seconds < 0 || typeof command.shuffle !== 'boolean' ||
+            ![0, 1, 2].includes(command.repeat)) throw new Error('restore');
+        command.items.forEach(song);
+        order = queueOrder(command.order, command.items, command.index);
+        queue = structuredClone(command.items);
+        index = command.index ?? -1;
+        nativeQueue = true;
+        shuffle = command.shuffle;
+        repeat = command.repeat;
+        desiredPlaying = false;
+        if (index >= 0) {
+          await playAt(index, generation, false);
+          if (generation !== session) return;
+          return perform({ type: 'seek', seconds: command.seconds }, generation);
+        }
+        break;
+      }
       case 'queue': {
         if (!Array.isArray(command.items) || command.items.length > 1000 ||
             (command.index !== null && (!Number.isInteger(command.index) || command.index < 0 || command.index >= command.items.length))) throw new Error('queue');
