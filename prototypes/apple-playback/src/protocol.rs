@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ItemKind {
     Catalog,
@@ -119,6 +119,17 @@ pub enum Command {
         id: u64,
         path: String,
     },
+    CreatePlaylist {
+        id: u64,
+        name: String,
+        public: bool,
+        items: Vec<PlaybackItem>,
+    },
+    AppendPlaylist {
+        id: u64,
+        playlist: String,
+        items: Vec<PlaybackItem>,
+    },
     Play {
         items: Vec<PlaybackItem>,
         index: usize,
@@ -183,6 +194,8 @@ impl Command {
                             | Self::Authorize
                             | Self::Library { .. }
                             | Self::Request { .. }
+                            | Self::CreatePlaylist { .. }
+                            | Self::AppendPlaylist { .. }
                             | Self::SignOut
                             | Self::Shutdown
                     )
@@ -198,6 +211,24 @@ impl Command {
             }
             Self::Request { id, path } if *id > 9_007_199_254_740_991 || !valid_read_path(path) => {
                 Err("Only an Apple Music catalog or library read is accepted.".into())
+            }
+            Self::CreatePlaylist {
+                id, name, items, ..
+            } => {
+                if name.trim().is_empty() || name.len() > 1024 {
+                    return Err("Enter a playlist name of at most 1024 bytes.".into());
+                }
+                validate_playlist_items(*id, items, true)
+            }
+            Self::AppendPlaylist {
+                id,
+                playlist,
+                items,
+            } => {
+                if !valid_library_playlist_id(playlist) {
+                    return Err("Choose a library playlist.".into());
+                }
+                validate_playlist_items(*id, items, false)
             }
             Self::Play {
                 items,
@@ -251,6 +282,22 @@ impl Command {
             _ => Ok(()),
         }
     }
+}
+
+pub fn valid_library_playlist_id(id: &str) -> bool {
+    id.starts_with("p.")
+        && id.len() > 2
+        && id.len() <= 128
+        && id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
+}
+
+fn validate_playlist_items(id: u64, items: &[PlaybackItem], empty: bool) -> Result<(), String> {
+    if id > 9_007_199_254_740_991 || items.len() > 1000 || (!empty && items.is_empty()) {
+        return Err("A playlist request supports at most 1000 song occurrences.".into());
+    }
+    items.iter().try_for_each(PlaybackItem::validate)
 }
 
 /// Restrict MusicKit reads to known collections, never external URLs or credentials.
@@ -410,6 +457,57 @@ mod tests {
             play_params: Some(json!({"id":"123", "isLibrary":true})),
         };
         assert!(item.validate().is_err());
+    }
+
+    #[test]
+    fn playlist_writes_keep_song_occurrences_and_reject_other_routes() {
+        let create = json!({"type":"createPlaylist","id":7,"name":"Queue","public":false,"items":[
+            {"kind":"library","id":"i.upload","playParams":null},
+            {"kind":"catalog","id":"123","playParams":{"id":"456","kind":"song"}},
+            {"kind":"library","id":"i.upload","playParams":null}
+        ]});
+        let command: Command = serde_json::from_value(create.clone()).unwrap();
+        command.validate().unwrap();
+        assert_eq!(serde_json::to_value(command).unwrap(), create);
+        for playlist in ["p.editable", "p.Mixed_1-2"] {
+            let command: Command = serde_json::from_value(json!({"type":"appendPlaylist","id":8,
+                "playlist":playlist,"items":[{"kind":"library","id":"i.upload","playParams":null}]})).unwrap();
+            command.validate().unwrap();
+        }
+        for playlist in [
+            "",
+            "p.",
+            "pl.catalog",
+            "https://evil.example",
+            "p.x/../tracks",
+            "p.x?token=secret",
+        ] {
+            assert!(!valid_library_playlist_id(playlist), "{playlist}");
+        }
+        for patch in [
+            json!({"name":" "}),
+            json!({"name":"a".repeat(1025)}),
+            json!({"id":9_007_199_254_740_992u64}),
+            json!({"items":vec![create["items"][0].clone();1001]}),
+        ] {
+            let mut input = create.clone();
+            for (key, value) in patch.as_object().unwrap() {
+                input[key] = value.clone();
+            }
+            assert!(
+                serde_json::from_value::<Command>(input)
+                    .unwrap()
+                    .validate()
+                    .is_err()
+            );
+        }
+        let intent: Command =
+            serde_json::from_value(json!({"type":"intent","generation":1,"command":create}))
+                .unwrap();
+        assert!(
+            intent.validate().is_err(),
+            "account writes cannot share playback intents"
+        );
     }
 
     #[test]

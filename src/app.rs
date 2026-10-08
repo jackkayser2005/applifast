@@ -2239,6 +2239,7 @@ impl App {
     }
 
     fn reset_data(&mut self) {
+        self.playlist_busy = false;
         self.local_transfer_sequence = None;
         self.queue_start_pending = None;
         self.pending_album_queues.clear();
@@ -2864,6 +2865,7 @@ impl App {
     fn tick(&mut self, ctx: &egui::Context) {
         self.poll_custom_themes(ctx);
         let now = Instant::now();
+        self.apple_recheck_playlists(ctx, now);
         if self.winamp_level_reassert > 0 {
             self.winamp_level_reassert -= 1;
             self.push_winamp_level(ctx);
@@ -4292,6 +4294,26 @@ impl App {
                     self.album_pages.remove(id);
                 }
                 Page::Playlist(id) => {
+                    if self
+                        .playlist_pages
+                        .get(id)
+                        .is_some_and(|page| page.pending_writes > 0)
+                    {
+                        return;
+                    }
+                    if self
+                        .apple
+                        .as_ref()
+                        .unwrap()
+                        .playlist_confirms
+                        .contains_key(id)
+                    {
+                        let entry = self.playlist_pages.get_mut(id).unwrap();
+                        entry.snapshot_rechecks = 0;
+                        entry.items.error = None;
+                        self.apple.as_mut().unwrap().playlist_recheck_at = Some(Instant::now());
+                        return;
+                    }
                     self.playlist_pages.remove(id);
                 }
                 Page::Artist(id) => {
@@ -4602,8 +4624,17 @@ impl App {
         self.toast(gettext(self.locale, "Queue cleared"));
     }
 
-    /// Current and upcoming track URIs, deduplicated in playback order.
+    /// Current and upcoming songs. Apple preserves every queue occurrence.
     pub fn queue_playlist_uris(&self) -> Vec<String> {
+        if let Some(apple) = &self.apple {
+            return apple
+                .index
+                .into_iter()
+                .chain(apple.order.upcoming.iter().copied())
+                .filter_map(|index| apple.queue.get(index))
+                .map(crate::apple::Song::uri)
+                .collect();
+        }
         let mut seen = std::collections::HashSet::new();
         let mut uris = Vec::new();
         let queued = self.queue.get();
@@ -6591,6 +6622,9 @@ impl App {
                 protected_playlists.insert(id.clone());
             }
         }
+        if let Some(apple) = &self.apple {
+            protected_playlists.extend(apple.playlist_confirms.keys().cloned());
+        }
         let mut protected_albums = HashSet::new();
         let mut protected_artists = HashSet::new();
         let mut protected_shows = HashSet::new();
@@ -8538,6 +8572,14 @@ impl App {
                 self.apple_load_more(Page::Artist(id.clone()));
                 return true;
             }
+            Action::CreatePlaylist {
+                name,
+                public,
+                add_uris,
+            } => {
+                self.apple_create_playlist(name, *public, add_uris);
+                return true;
+            }
             Action::ToggleSaved(_)
             | Action::SetSavedMany { .. }
             | Action::AddToPlaylist { .. }
@@ -8545,12 +8587,10 @@ impl App {
             | Action::ConfirmAddToPlaylist { .. }
             | Action::RemoveFromPlaylist { .. }
             | Action::MoveInPlaylist { .. }
-            | Action::CreatePlaylist { .. }
             | Action::ChoosePlaylistCover(_)
             | Action::UploadPlaylistCover(_)
             | Action::UpdatePlaylist { .. }
             | Action::DeletePlaylist(_)
-            | Action::SaveQueueAsPlaylist
             | Action::Transfer(_)
             | Action::ActivateReceiver(_)
             | Action::RefreshDevices
@@ -8583,6 +8623,7 @@ impl App {
                 self.backend.send(Command::ClearAppleCache);
             }
             self.reset_data();
+            self.dialog = None;
             self.track_cache.clear();
             self.manual_queue.clear();
             self.recent_contexts.clear();

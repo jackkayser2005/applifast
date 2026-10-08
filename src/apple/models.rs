@@ -123,12 +123,19 @@ pub fn playlist(resource: &Value) -> Playlist {
         uri: format!("apple:playlist:{id}"),
         id,
         name: text(attributes, "name"),
+        public: attributes["isPublic"].as_bool(),
         images: images(resource),
         description: attributes["description"]["standard"]
             .as_str()
             .map(str::to_owned),
         owner: Owner {
-            display_name: attributes["curatorName"].as_str().map(str::to_owned),
+            display_name: Some(
+                attributes["curatorName"]
+                    .as_str()
+                    .filter(|name| !name.is_empty())
+                    .unwrap_or("Apple Music")
+                    .into(),
+            ),
             ..Default::default()
         },
         tracks: attributes["trackCount"].as_u64().map(|total| TrackCount {

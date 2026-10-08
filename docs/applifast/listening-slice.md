@@ -49,7 +49,7 @@ album additions, insertion, reordering, removal and clear use the local Apple
 occurrence queue. Library/queue restoration retains the current occurrence,
 position, manual additions, context, Previous history, shuffle and repeat.
 It restores paused. Home/discovery/recommendations,
-favorites and playlist writes remain follow-up integration work.
+favorites and appending to existing playlists remain follow-up integration work.
 The existing mini player uses the same playback actions, but its window lifecycle
 still needs real runtime acceptance. Cloud-only upload playback
 remains unverified; no upload is silently replaced with a catalog match.
@@ -132,6 +132,67 @@ It describes saved authorization, restart testing and the credential-free demo.
 The debug preview retains upstream package version 0.12.0 and is not a release.
 The Windows packaging-launcher attempt fails without the Unix `true` executable
 and Ruby YAML tooling; that contribution check has not passed here.
+
+## Playlist creation and queue saving
+
+On `feat/apple-playlists`, the library's **+** dialog creates an Apple library
+playlist. The queue's **Save as a playlist** button saves the current song followed
+by every upcoming occurrence in play order, including repeated songs. Selected
+songs can also use **New playlist** in the existing playlist picker. The Public
+choice uses Apple's documented `isPublic` attribute.
+
+Creation posts once to `/v1/me/library/playlists`, with an optional tracks
+relationship. Catalog resources use `songs` and their original resource ID;
+uploaded/library resources use `library-songs` and their original library ID.
+Playback parameters and catalog matches never replace those identities. The
+existing 1,000-occurrence boundary also applies to one playlist request. Unknown
+selected songs stop the whole request and ask for a reload; none are silently lost.
+
+The new row and submitted songs appear immediately. After Apple's acknowledgement,
+the app reads the library and every track page after a two-second delay. Lagging
+answers cannot erase the submitted occurrences. A catalog song may legitimately
+return as a library song carrying the same catalog ID; an upload must retain its
+library ID. Confirmation stops after three attempts and offers Refresh while
+keeping the songs visible. It never automatically repeats a write. An ambiguous
+failure asks you to inspect the library before retrying, since Apple may already
+have accepted it. Sign-out invalidates late replies, aborts pending write fetches,
+clears write state and prevents queued writes from running under another account.
+
+Writes serialize independently of playback controls on the existing host. This
+adds no files, dependencies, credential storage or telemetry. Only transient
+pending-write/confirmation state is held in memory; playlist details are read
+from Apple again after restart. The host also validates the documented append
+endpoint, but adding to an existing playlist is not exposed by this slice.
+Rename, deletion, reorder, covers and collaborative controls remain unsupported.
+
+The deterministic demo accepts `--demo-show create`, `playlist-saving`,
+`playlist-created` or `playlist-error` (alongside theme flags). These use sample
+resources and establish UI behavior only. Boundary and app regressions cover
+duplicate occurrences, original IDs, pagination, stale reads, rollback, bounded
+confirmation, cancellation and sign-out. Real-account creation/public state,
+uploaded members and server consistency still require Windows runtime acceptance.
+
+API evidence: [create a playlist](https://developer.apple.com/documentation/applemusicapi/create-a-new-library-playlist),
+[creation request](https://developer.apple.com/documentation/applemusicapi/libraryplaylistcreationrequest),
+[allowed track types](https://developer.apple.com/documentation/applemusicapi/libraryplaylisttracksrequest/data-data.dictionary).
+MusicKit JS v3's current APISession accepts `fetchOptions` in the third argument
+to `music.api.music`; the checked implementation uses POST JSON there.
+The SDK script fetched on October 8, 2026 from Apple's `js-cdn.music.apple.com`
+has SHA-256 `21908b72bdcdeea3ec91fa40b105d0b9a2ba07c2a3fe32ea77edcd26e735012c`.
+No SDK source is copied into this repository; the existing host loads Apple's CDN.
+
+Windows validation for this slice: 974 default and 999 demo library tests pass,
+along with all default/demo binary and integration targets, strict default/demo
+Clippy, nine host boundary tests, the isolated native credential-store round trip,
+Node bridge/token checks, formatting and generated-catalog verification. Default
+doctests and Rustdoc with warnings denied pass. All-feature Clippy, tests,
+doctests and Rustdoc stop at the optional projectM build because
+`VCPKG_INSTALLATION_ROOT` is unset. Linux/macOS builds,
+real-account playlist writes and release acceptance are not claimed.
+The [playlist comparison](review-playlists/index.html) has matching light/dark,
+narrow/normal Windows captures plus saving, success and retry states. The common
+dialog captures match pixel-for-pixel; Apple playlist attribution no longer falls
+back to Spotify. These captures use sample resources rather than your account.
 
 ## Storage and network
 

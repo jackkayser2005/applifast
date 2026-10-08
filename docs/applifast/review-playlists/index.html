@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast playlist creation review</title>
+<style>
+body { font: 16px system-ui; margin: 24px; background: #202022; color: #eee; }
+p { max-width: 950px; line-height: 1.5; } select, button { font: inherit; padding: 8px; margin: 4px; }
+a { color: #ff7a80; } img { display: block; max-width: 100%; height: auto; border: 1px solid #666; }
+</style>
+<h1>Playlist creation and queue saving</h1>
+<p>The existing dialog, playlist page and queue button now write to Apple Music.
+Apple playlist attribution now says Apple Music when Apple supplies no curator.
+No navigation, spacing or palette changes are included. The normal and narrow,
+light and dark comparisons show the same creation dialog and sample song.
+Saving, success and error captures show the new behavior with sample responses.
+They do not establish real-account writes.</p>
+<p>Windows x64 captures. Baseline: the preserved <code>d2d3766</code> preview,
+whose application source is unchanged at PR #14 head <code>e74ad44</code>.
+Candidate: <code>feat/apple-playlists</code>. This review is separate from the
+<a href="../review-polish/index.html">motion candidate gallery</a> and its pending baseline comparison.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<button id="before">Before</button><button id="after">After</button>
+<p id="label"></p>
+<img id="capture" alt="The existing New playlist dialog with one sample song">
+<h2>New interaction states</h2>
+<label>State <select id="state">
+<option value="saving-dark-1100x760">Saving, dark / normal</option>
+<option value="created-light-760x760">Created, light / narrow</option>
+<option value="error-light-1100x760">Retry after an error, light / normal</option>
+</select></label>
+<p>Saving keeps the dialog busy and adds the row immediately. Success opens the
+new playlist. An ambiguous error removes the temporary row, preserves the draft
+and asks you to check the library before retrying. The demo has no network writes.</p>
+<img id="interaction" alt="A sample Apple playlist write state">
+<script>
+let side = 'after';
+const byId = id => document.getElementById(id);
+function draw() {
+  const theme = byId('theme').value, size = byId('size').value;
+  byId('capture').src = `${side}-create-${theme}-${size}.png`;
+  byId('label').textContent = `${side === 'before' ? 'Before' : 'After'}: ${theme}, ${size}`;
+  byId('interaction').src = `${byId('state').value}.png`;
+  byId('before').disabled = side === 'before'; byId('after').disabled = side === 'after';
+}
+for (const id of ['theme', 'size', 'state']) byId(id).onchange = draw;
+byId('before').onclick = () => { side = 'before'; draw(); };
+byId('after').onclick = () => { side = 'after'; draw(); };
+draw();
+</script>
+</html>

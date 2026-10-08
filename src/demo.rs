@@ -1229,6 +1229,56 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
     }
 }
 
+/// Apple write states use the real action/response path with sample resources only.
+#[cfg(feature = "demo")]
+pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
+    for flag in show.unwrap_or("").split(',').map(str::trim) {
+        if !matches!(
+            flag,
+            "create" | "playlist-saving" | "playlist-created" | "playlist-error"
+        ) {
+            continue;
+        }
+        let Some(apple) = &app.apple else {
+            return;
+        };
+        let uris = apple
+            .songs
+            .iter()
+            .take(1)
+            .map(crate::apple::Song::uri)
+            .collect::<Vec<_>>();
+        if flag == "create" {
+            app.dialog = Some(Dialog::CreatePlaylist {
+                name: "Autumn drives".into(),
+                public: false,
+                add_uris: uris,
+            });
+            continue;
+        }
+        app.apply(
+            Action::CreatePlaylist {
+                name: "Autumn drives".into(),
+                public: false,
+                add_uris: uris,
+            },
+            &egui::Context::default(),
+        );
+        let Some(id) = app
+            .apple
+            .as_ref()
+            .and_then(|apple| apple.playlist_creates.keys().next().copied())
+        else {
+            continue;
+        };
+        if flag == "playlist-created" {
+            app.apple_response(&serde_json::json!({"id":id,"data":{"data":[{"id":"p.demoCreated","type":"library-playlists","attributes":{"name":"Autumn drives","canEdit":true,"isPublic":false}}]}}));
+        } else if flag == "playlist-error" {
+            app.apple_response(&serde_json::json!({"id":id,"error":"Example connection failure"}));
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1263,6 +1313,39 @@ mod tests {
         // These frames never advance the clock or take pictures.
         app.reveal_theme_changes = false;
         (ctx, app)
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_playlist_demo_draws_create_saving_success_and_retry_states() {
+        for flag in [
+            "create",
+            "playlist-saving",
+            "playlist-created",
+            "playlist-error",
+        ] {
+            let (ctx, mut app) = accessible_app(flag);
+            let state = crate::apple::State::demo(&app.library.liked.items);
+            app.local = state.local.clone();
+            app.apple = Some(state);
+            apply_apple_flags(&mut app, Some(flag));
+            assert_eq!(app.playlist_busy, flag == "playlist-saving");
+            assert_eq!(app.dialog.is_none(), flag == "playlist-created");
+            if flag == "playlist-created" {
+                assert_eq!(*app.page(), Page::Playlist("library.p.demoCreated".into()));
+                assert_eq!(
+                    app.playlist_pages["library.p.demoCreated"]
+                        .items
+                        .items
+                        .len(),
+                    1
+                );
+            }
+            for _ in 0..3 {
+                frame(&ctx, &mut app);
+            }
+            app.backend.shutdown();
+        }
     }
 
     /// The open page's sidebar row sits on a rounded highlight, so the

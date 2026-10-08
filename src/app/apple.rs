@@ -23,6 +23,273 @@ fn page<T>(items: Vec<T>, data: &Value, offset: u32) -> ApiPage<T> {
 }
 
 impl App {
+    pub(super) fn apple_create_playlist(&mut self, name: &str, public: bool, uris: &[String]) {
+        if self.playlist_busy {
+            return;
+        }
+        if !self.account_ready() {
+            self.toast_error("Sign in to Apple Music before creating a playlist.");
+            return;
+        }
+        let result = self
+            .apple
+            .as_mut()
+            .unwrap()
+            .create_playlist(name, public, uris);
+        let (id, command) = match result {
+            Ok(value) => value,
+            Err(error) => {
+                self.toast_error(error);
+                return;
+            }
+        };
+        let tracks = uris
+            .iter()
+            .map(|uri| PlaylistItem {
+                item: Some(PlayableItem::Track(
+                    self.apple.as_ref().unwrap().find_song(uri).unwrap().track(),
+                )),
+                ..Default::default()
+            })
+            .collect::<Vec<_>>();
+        let playlist = Playlist {
+            id: id.clone(),
+            uri: format!("apple:playlist:{id}"),
+            name: name.trim().into(),
+            public: Some(public),
+            owner: crate::api::models::Owner {
+                display_name: Some("Apple Music".into()),
+                ..Default::default()
+            },
+            tracks: Some(crate::api::models::TrackCount {
+                total: tracks.len() as u32,
+            }),
+            ..Default::default()
+        };
+        let mut entry = PlaylistPage {
+            playlist: Loadable::Loaded(playlist.clone()),
+            pending_writes: 1,
+            ..Default::default()
+        };
+        entry
+            .items
+            .absorb(0, page(tracks, &serde_json::json!({}), 0));
+        self.playlist_pages.insert(id, entry);
+        if self.library.playlists.get().is_none() {
+            self.library.playlists = Loadable::Loaded(Vec::new());
+        }
+        self.library
+            .playlists
+            .get_mut()
+            .unwrap()
+            .insert(0, playlist);
+        self.dialog = Some(Dialog::CreatePlaylist {
+            name: name.into(),
+            public,
+            add_uris: uris.to_vec(),
+        });
+        self.playlist_busy = true;
+        self.backend.send(Command::AppleSend(command.to_string()));
+    }
+
+    fn apple_playlist_created(&mut self, temporary: String, value: &Value) {
+        self.playlist_busy = false;
+        let Some(mut entry) = self.playlist_pages.remove(&temporary) else {
+            return;
+        };
+        let created = resources(&value["data"]).into_iter().find(|row| {
+            row["type"] == "library-playlists"
+                && row["id"]
+                    .as_str()
+                    .is_some_and(applifast_playback_probe::protocol::valid_library_playlist_id)
+        });
+        let Some(resource) = created.filter(|_| value["error"].is_null()) else {
+            if let Some(rows) = self.library.playlists.get_mut() {
+                rows.retain(|row| row.id != temporary);
+            }
+            for page in &mut self.history {
+                if *page == Page::Playlist(temporary.clone()) {
+                    *page = Page::Home;
+                }
+            }
+            if self
+                .assumed_context
+                .as_ref()
+                .is_some_and(|held| held.uri == format!("apple:playlist:{temporary}"))
+            {
+                self.assumed_context = None;
+            }
+            if self
+                .selection
+                .as_ref()
+                .is_some_and(|(page, _, _)| *page == Page::Playlist(temporary.clone()))
+            {
+                self.selection = None;
+            }
+            self.table_rows.remove(&Page::Playlist(temporary));
+            self.toast_error("Apple Music could not confirm the new playlist. Check your library before retrying to avoid creating a duplicate.");
+            self.apple.as_mut().unwrap().playlist_recheck_at =
+                Some(Instant::now() + Duration::from_secs(2));
+            return;
+        };
+        let mut playlist = models::playlist(&resource);
+        let submitted = entry.playlist.get().unwrap();
+        let close_dialog = matches!(&self.dialog, Some(Dialog::CreatePlaylist { name, public, add_uris })
+            if name.trim() == submitted.name && Some(*public) == submitted.public
+                && *add_uris == entry.items.items.iter().filter_map(|item| item.playable().map(|item| item.uri().to_owned())).collect::<Vec<_>>());
+        // Creation already accepted these occurrences. A lagging read must not erase them.
+        playlist.tracks = submitted.tracks.clone();
+        entry.playlist = Loadable::Loaded(playlist.clone());
+        entry.pending_writes = 0;
+        if let Some(rows) = self.library.playlists.get_mut() {
+            rows.retain(|row| row.id != playlist.id);
+            if let Some(row) = rows.iter_mut().find(|row| row.id == temporary) {
+                *row = playlist.clone();
+            } else {
+                rows.insert(0, playlist.clone());
+            }
+        }
+        for page in &mut self.history {
+            if *page == Page::Playlist(temporary.clone()) {
+                *page = Page::Playlist(playlist.id.clone());
+            }
+        }
+        if let Some(held) = &mut self.assumed_context
+            && held.uri == format!("apple:playlist:{temporary}")
+        {
+            held.uri = playlist.uri.clone();
+        }
+        if let Some((page, _, _)) = &mut self.selection
+            && *page == Page::Playlist(temporary.clone())
+        {
+            *page = Page::Playlist(playlist.id.clone());
+        }
+        self.table_rows.remove(&Page::Playlist(temporary));
+        self.playlist_pages.insert(playlist.id.clone(), entry);
+        let apple = self.apple.as_mut().unwrap();
+        apple.playlist_cards.insert(playlist.id.clone());
+        apple
+            .playlist_confirms
+            .insert(playlist.id.clone(), Default::default());
+        apple.playlist_recheck_at = Some(Instant::now() + Duration::from_secs(2));
+        self.toast(gettext(self.locale, "Created {name}").replace("{name}", &playlist.name));
+        if close_dialog {
+            self.dialog = None;
+            self.open(Page::Playlist(playlist.id));
+        }
+    }
+
+    pub(super) fn apple_recheck_playlists(&mut self, ctx: &egui::Context, now: Instant) {
+        let Some(apple) = &mut self.apple else {
+            return;
+        };
+        let Some(due) = apple.playlist_recheck_at else {
+            return;
+        };
+        if now < due {
+            ctx.request_repaint_after(due - now);
+            return;
+        }
+        apple.playlist_recheck_at = None;
+        let ids = apple.playlist_confirms.keys().cloned().collect::<Vec<_>>();
+        self.apple_read(
+            Read::Playlists,
+            "/v1/me/library/playlists?limit=100".into(),
+            0,
+        );
+        for id in ids {
+            if self
+                .apple
+                .as_ref()
+                .unwrap()
+                .reads
+                .values()
+                .any(|(target, _)| *target == Read::PlaylistTracks(id.clone()))
+            {
+                continue;
+            }
+            let Some(path) = self.apple_resource_path("playlists", &id) else {
+                continue;
+            };
+            let Some(entry) = self.playlist_pages.get_mut(&id) else {
+                continue;
+            };
+            if entry.snapshot_rechecks >= 3 {
+                continue;
+            }
+            entry.snapshot_rechecks += 1;
+            self.apple
+                .as_mut()
+                .unwrap()
+                .playlist_confirms
+                .insert(id.clone(), Default::default());
+            self.apple_read(
+                Read::PlaylistTracks(id),
+                format!("{path}/tracks?limit=100"),
+                0,
+            );
+        }
+    }
+
+    fn apple_confirm_playlist(&mut self, id: &str) {
+        let apple = self.apple.as_ref().unwrap();
+        let fresh = &apple.playlist_confirms[id];
+        if !fresh.is_complete() {
+            return;
+        }
+        let entry = &self.playlist_pages[id];
+        let matches = fresh.items.len() >= entry.items.items.len()
+            && entry
+                .items
+                .items
+                .iter()
+                .zip(&fresh.items)
+                .all(|(expected, actual)| {
+                    let Some(expected) = expected
+                        .playable()
+                        .and_then(|item| apple.find_song(item.uri()))
+                    else {
+                        return false;
+                    };
+                    let Some(actual) = actual
+                        .playable()
+                        .and_then(|item| apple.find_song(item.uri()))
+                    else {
+                        return false;
+                    };
+                    expected.item.kind == actual.item.kind && expected.item.id == actual.item.id
+                        || expected.item.kind
+                            == applifast_playback_probe::protocol::ItemKind::Catalog
+                            && actual.catalog_id.as_deref() == Some(expected.item.id.as_str())
+                });
+        if matches {
+            let fresh = self
+                .apple
+                .as_mut()
+                .unwrap()
+                .playlist_confirms
+                .remove(id)
+                .unwrap();
+            self.playlist_pages.get_mut(id).unwrap().items = fresh;
+        } else {
+            self.apple_retry_playlist_confirmation(id);
+        }
+    }
+
+    fn apple_retry_playlist_confirmation(&mut self, id: &str) {
+        self.apple
+            .as_mut()
+            .unwrap()
+            .next_reads
+            .remove(&Read::PlaylistTracks(id.into()));
+        if self.playlist_pages[id].snapshot_rechecks < 3 {
+            self.apple.as_mut().unwrap().playlist_recheck_at =
+                Some(Instant::now() + Duration::from_secs(2));
+        } else {
+            self.playlist_pages.get_mut(id).unwrap().items.error =
+                Some("Apple has not shown the saved tracks yet. Refresh to check again.".into());
+        }
+    }
     pub(super) fn sync_apple_library(&mut self) {
         let Some(apple) = &self.apple else { return };
         self.library.liked.items = apple
@@ -404,7 +671,14 @@ impl App {
             self.apple_read(Read::Search {serial,library:false}, format!("/v1/catalog/{storefront}/search?term={term}&types=songs,albums,artists,playlists&limit=25"),0);
         }
     }
-    pub(super) fn apple_response(&mut self, value: &Value) {
+    pub(crate) fn apple_response(&mut self, value: &Value) {
+        if let Some(temporary) = value["id"]
+            .as_u64()
+            .and_then(|id| self.apple.as_mut()?.playlist_creates.remove(&id))
+        {
+            self.apple_playlist_created(temporary, value);
+            return;
+        }
         let Some((target, offset)) = value["id"]
             .as_u64()
             .and_then(|id| self.apple.as_mut()?.reads.remove(&id))
@@ -413,7 +687,10 @@ impl App {
         };
         if let Some(error) = value["error"].as_str() {
             match &target {
-                Read::Playlists => self.library.playlists = Loadable::Failed(error.into()),
+                Read::Playlists if self.library.playlists.get().is_none() => {
+                    self.library.playlists = Loadable::Failed(error.into())
+                }
+                Read::Playlists => self.toast_error(error),
                 Read::Albums => {
                     self.library.albums.loading = false;
                     self.library.albums.error = Some(error.into());
@@ -439,6 +716,16 @@ impl App {
                     }
                 }
                 Read::PlaylistTracks(id) => {
+                    if self
+                        .apple
+                        .as_ref()
+                        .unwrap()
+                        .playlist_confirms
+                        .contains_key(id)
+                    {
+                        self.apple_retry_playlist_confirmation(id);
+                        return;
+                    }
                     if let Some(page) = self.playlist_pages.get_mut(id) {
                         page.items.loading = false;
                         page.items.error = Some(error.into());
@@ -536,11 +823,38 @@ impl App {
         }
         match target {
             Read::Playlists => {
-                let playlists = rows.iter().map(models::playlist).collect::<Vec<_>>();
+                let mut playlists = rows.iter().map(models::playlist).collect::<Vec<_>>();
+                self.apple
+                    .as_mut()
+                    .unwrap()
+                    .playlist_cards
+                    .retain(|id| !playlists.iter().any(|row| row.id == *id));
                 if offset == 0 {
+                    let apple = self.apple.as_ref().unwrap();
+                    let ids = apple
+                        .playlist_creates
+                        .values()
+                        .chain(apple.playlist_confirms.keys())
+                        .chain(&apple.playlist_cards)
+                        .collect::<HashSet<_>>();
+                    let held = self
+                        .library
+                        .playlists
+                        .get()
+                        .into_iter()
+                        .flatten()
+                        .filter(|row| ids.contains(&row.id))
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    playlists.retain(|row| !held.iter().any(|held| held.id == row.id));
+                    playlists.splice(0..0, held);
                     self.library.playlists = Loadable::Loaded(playlists);
                 } else if let Some(held) = self.library.playlists.get_mut() {
-                    held.extend(playlists);
+                    for row in playlists {
+                        if !held.iter().any(|held| held.id == row.id) {
+                            held.push(row);
+                        }
+                    }
                 }
                 if let Some((path, offset)) = self
                     .apple
@@ -603,7 +917,61 @@ impl App {
                     .absorb(offset, page(tracks, data, offset));
             }
             Read::PlaylistTracks(id) => {
+                if self
+                    .apple
+                    .as_ref()
+                    .unwrap()
+                    .playlist_confirms
+                    .contains_key(&id)
+                {
+                    let prefix = self
+                        .apple_resource_path("playlists", &id)
+                        .map(|path| format!("{path}/tracks?"));
+                    let next = data.get("next").filter(|value| !value.is_null());
+                    if !data["data"].is_array()
+                        || next.is_some_and(|value| {
+                            value.as_str().is_none_or(|path| {
+                                !applifast_playback_probe::protocol::valid_read_path(path)
+                                    || prefix
+                                        .as_ref()
+                                        .is_none_or(|prefix| !path.starts_with(prefix))
+                            })
+                        })
+                        || next.is_some() && rows.is_empty()
+                    {
+                        self.apple_retry_playlist_confirmation(&id);
+                        return;
+                    }
+                }
                 let tracks = self.apple_tracks(data);
+                if let Some(held) = self.apple.as_mut().unwrap().playlist_confirms.get_mut(&id) {
+                    held.absorb(
+                        offset,
+                        page(
+                            tracks
+                                .into_iter()
+                                .map(|track| PlaylistItem {
+                                    item: Some(PlayableItem::Track(track)),
+                                    ..Default::default()
+                                })
+                                .collect(),
+                            data,
+                            offset,
+                        ),
+                    );
+                    if let Some((path, offset)) = self
+                        .apple
+                        .as_mut()
+                        .unwrap()
+                        .next_reads
+                        .remove(&Read::PlaylistTracks(id.clone()))
+                    {
+                        self.apple_read(Read::PlaylistTracks(id.clone()), path, offset);
+                    } else {
+                        self.apple_confirm_playlist(&id);
+                    }
+                    return;
+                }
                 self.playlist_pages.entry(id).or_default().items.absorb(
                     offset,
                     page(
@@ -684,6 +1052,225 @@ fn merge<T: Default>(held: &mut Option<ApiPage<T>>, fresh: Option<ApiPage<T>>) {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn playlist_creation_keeps_occurrences_until_all_apple_pages_confirm_them() {
+        let mut app = super::super::tests::test_app("apple-playlist-create");
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        state.loading = false;
+        let catalog = models::song(&json!({"id":"123","type":"songs","attributes":{"name":"Catalog","playParams":{"id":"456","kind":"song"}}})).unwrap();
+        let upload = models::song(
+            &json!({"id":"i.upload","type":"library-songs","attributes":{"name":"Upload"}}),
+        )
+        .unwrap();
+        let uris = vec![catalog.uri(), upload.uri(), upload.uri()];
+        state.queue = vec![catalog, upload.clone(), upload];
+        state.index = Some(0);
+        state.order.upcoming = vec![1, 2];
+        let read = state.read(Read::Albums, "/v1/me/library/albums?limit=100".into(), 0);
+        let (_, payload) = state.create_playlist("Test", false, &uris).unwrap();
+        assert!(payload["id"].as_u64().unwrap() > read["id"].as_u64().unwrap());
+        assert_eq!(payload["items"][0]["id"], "123");
+        assert_eq!(payload["items"][0]["playParams"]["id"], "456");
+        assert_eq!(payload["items"][1], payload["items"][2]);
+        state.playlist_creates.clear();
+        app.apple = Some(state);
+        assert_eq!(app.queue_playlist_uris(), uris);
+        let ctx = egui::Context::default();
+        app.apply(
+            Action::CreatePlaylist {
+                name: "Test".into(),
+                public: false,
+                add_uris: uris.clone(),
+            },
+            &ctx,
+        );
+        let (&request, temporary) = app
+            .apple
+            .as_ref()
+            .unwrap()
+            .playlist_creates
+            .iter()
+            .next()
+            .unwrap();
+        let temporary = temporary.clone();
+        assert_eq!(app.library.playlists.get().unwrap()[0].id, temporary);
+        assert_eq!(
+            app.library.playlists.get().unwrap()[0].owner_name(),
+            "Apple Music"
+        );
+        assert_eq!(app.playlist_pages[&temporary].items.items.len(), 3);
+        app.reload(Page::Playlist(temporary.clone()));
+        assert!(app.playlist_pages.contains_key(&temporary));
+        let read = app.apple.as_mut().unwrap().read(
+            Read::Playlists,
+            "/v1/me/library/playlists?limit=100".into(),
+            0,
+        );
+        app.apple_response(&json!({"id":read["id"],"data":{"data":[]}}));
+        assert_eq!(app.library.playlists.get().unwrap()[0].id, temporary);
+        app.assumed_context = Some(AssumedContext {
+            uri: format!("apple:playlist:{temporary}"),
+            shuffle: None,
+            at: Instant::now(),
+        });
+        app.apple_response(&json!({"id":request,"data":{"data":[{"id":"p.test","type":"library-playlists","attributes":{"name":"Test","isPublic":false,"canEdit":true}}]}}));
+        let id = "library.p.test";
+        assert!(!app.playlist_busy);
+        assert!(app.dialog.is_none());
+        assert_eq!(*app.page(), Page::Playlist(id.into()));
+        assert_eq!(
+            app.playlist_pages[id].playlist.get().unwrap().owner_name(),
+            "Apple Music"
+        );
+        assert_eq!(
+            app.assumed_context.as_ref().unwrap().uri,
+            format!("apple:playlist:{id}")
+        );
+        assert!(
+            app.apple
+                .as_ref()
+                .unwrap()
+                .playlist_confirms
+                .contains_key(id)
+        );
+        // An incomplete/stale response never replaces the submitted queue.
+        app.reload(Page::Playlist(id.into()));
+        app.apple_recheck_playlists(&ctx, Instant::now() + Duration::from_secs(5));
+        let tracks_read = |app: &App| {
+            *app.apple
+                .as_ref()
+                .unwrap()
+                .reads
+                .iter()
+                .find(|(_, (target, _))| *target == Read::PlaylistTracks(id.into()))
+                .unwrap()
+                .0
+        };
+        app.apple_response(&json!({"id":tracks_read(&app),"data":{"data":[],"next":"/v1/me/library/playlists/p.test/tracks?offset=0"}}));
+        assert_eq!(app.playlist_pages[id].items.items.len(), 3);
+        assert!(
+            !app.apple
+                .as_ref()
+                .unwrap()
+                .reads
+                .values()
+                .any(|(target, _)| *target == Read::PlaylistTracks(id.into())),
+            "an empty continuation must not spin indefinitely"
+        );
+        assert!(
+            !app.apple
+                .as_ref()
+                .unwrap()
+                .next_reads
+                .contains_key(&Read::PlaylistTracks(id.into()))
+        );
+        app.apple_recheck_playlists(&ctx, Instant::now() + Duration::from_secs(5));
+        let matched = json!({"id":"i.matched","type":"library-songs","attributes":{"name":"Catalog","playParams":{"id":"i.matched","isLibrary":true,"catalogId":"123"}}});
+        let wrong = json!({"id":"i.other","type":"library-songs","attributes":{"name":"Upload","playParams":{"id":"i.other","isLibrary":true,"catalogId":"123"}}});
+        app.apple_response(
+            &json!({"id":tracks_read(&app),"data":{"data":[matched.clone(),wrong.clone(),wrong]}}),
+        );
+        assert!(
+            app.apple
+                .as_ref()
+                .unwrap()
+                .playlist_confirms
+                .contains_key(id),
+            "an upload cannot be replaced by a catalog match"
+        );
+        app.apple_recheck_playlists(&ctx, Instant::now() + Duration::from_secs(5));
+        app.apple_response(&json!({"id":tracks_read(&app),"error":"Not ready"}));
+        assert!(app.playlist_pages[id].items.error.is_some());
+        assert!(
+            app.apple.as_ref().unwrap().playlist_recheck_at.is_none(),
+            "automatic confirmation stops after three attempts"
+        );
+        app.reload(Page::Playlist(id.into()));
+        app.apple_recheck_playlists(&ctx, Instant::now() + Duration::from_secs(5));
+        app.apple_response(&json!({"id":tracks_read(&app),"data":{"data":[matched],"next":"/v1/me/library/playlists/p.test/tracks?offset=1"}}));
+        assert_eq!(app.playlist_pages[id].items.items.len(), 3);
+        let upload = json!({"id":"i.upload","type":"library-songs","attributes":{"name":"Upload"}});
+        app.apple_response(
+            &json!({"id":tracks_read(&app),"data":{"data":[upload.clone(),upload]}}),
+        );
+        assert!(
+            !app.apple
+                .as_ref()
+                .unwrap()
+                .playlist_confirms
+                .contains_key(id)
+        );
+        assert_eq!(app.playlist_pages[id].items.items.len(), 3);
+        assert!(app.playlist_pages[id].items.is_complete());
+        // A slower library listing can still predate the successful track read.
+        let listing = *app
+            .apple
+            .as_ref()
+            .unwrap()
+            .reads
+            .iter()
+            .find(|(_, (target, _))| *target == Read::Playlists)
+            .unwrap()
+            .0;
+        app.apple_response(&json!({"id":listing,"data":{"data":[]}}));
+        assert_eq!(app.library.playlists.get().unwrap()[0].id, id);
+        assert_eq!(
+            app.queue_playlist_uris(),
+            uris,
+            "playlist writes do not alter playback"
+        );
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn playlist_creation_failure_and_signout_cannot_leave_a_row_or_busy_state() {
+        let mut app = super::super::tests::test_app("apple-playlist-failure");
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        state.loading = false;
+        app.apple = Some(state);
+        app.apple_create_playlist("", false, &[]);
+        app.apple_create_playlist("Missing", false, &["apple:track:library.i.missing".into()]);
+        assert!(app.apple.as_ref().unwrap().playlist_creates.is_empty());
+        assert!(!app.playlist_busy);
+        app.apple_create_playlist("Retry", false, &[]);
+        let (&request, temporary) = app
+            .apple
+            .as_ref()
+            .unwrap()
+            .playlist_creates
+            .iter()
+            .next()
+            .unwrap();
+        let temporary = temporary.clone();
+        app.open(Page::Playlist(temporary.clone()));
+        app.apple_response(&json!({"id":request,"error":"Network error"}));
+        assert!(!app.playlist_busy);
+        assert!(matches!(app.dialog, Some(Dialog::CreatePlaylist { .. })));
+        assert!(!app.playlist_pages.contains_key(&temporary));
+        assert!(app.library.playlists.get().unwrap().is_empty());
+        assert_eq!(*app.page(), Page::Home);
+        app.apple_create_playlist("Later", true, &[]);
+        let request = *app
+            .apple
+            .as_ref()
+            .unwrap()
+            .playlist_creates
+            .keys()
+            .next()
+            .unwrap();
+        app.apply(Action::SignOut, &egui::Context::default());
+        app.apple_response(&json!({"id":request,"data":{"data":[{"id":"p.late","type":"library-playlists","attributes":{"name":"Later"}}]}}));
+        assert!(!app.playlist_busy);
+        assert!(app.playlist_pages.is_empty());
+        assert!(app.dialog.is_none());
+        assert!(app.apple.as_ref().unwrap().playlist_creates.is_empty());
+        assert!(app.apple.as_ref().unwrap().playlist_confirms.is_empty());
+        app.backend.shutdown();
+    }
     #[test]
     fn mini_player_queue_actions_preserve_occurrences_and_album_adds_are_atomic() {
         let mut app = super::super::tests::test_app("apple-mini-queue");

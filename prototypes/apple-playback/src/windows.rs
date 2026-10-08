@@ -262,6 +262,8 @@ fn safe_music_data(value: &Value, depth: usize) -> Value {
                         "releaseDate",
                         "genreNames",
                         "curatorName",
+                        "canEdit",
+                        "isPublic",
                         "isCompilation",
                         "isSingle",
                         "discNumber",
@@ -1200,6 +1202,10 @@ mod tests {
         let value = sanitized_event(&json!({"type":"state","session":1,"status":2,"token":"SECRET","unexpected":{"token":"SECRET"}})).unwrap();
         assert_eq!(value, json!({"type":"state","session":1,"status":2}));
         let value = sanitized_event(&json!({"type":"library","session":1,"next":null,"items":[{"kind":"library","id":"i.1","token":"SECRET","playParams":{"id":"i.1","isLibrary":true,"token":"SECRET"}}]})).unwrap();
+        assert!(!value.to_string().contains("SECRET"));
+        let value = sanitized_event(&json!({"type":"response","session":1,"id":5,"data":{"data":[{"id":"p.test","type":"library-playlists","attributes":{"canEdit":true,"isPublic":false,"token":"SECRET"}}]}})).unwrap();
+        assert_eq!(value["data"]["data"][0]["attributes"]["canEdit"], true);
+        assert_eq!(value["data"]["data"][0]["attributes"]["isPublic"], false);
         assert!(!value.to_string().contains("SECRET"));
         assert!(
             sanitized_event(&json!({"type":"authorized","session":1,"token":"SECRET"})).is_none()
