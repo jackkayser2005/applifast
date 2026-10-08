@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-07 23:09-0400\n"
+"POT-Creation-Date: 2026-10-07 23:51-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Dutch\n"
@@ -214,7 +214,7 @@ msgstr "{name}, map, uitgevouwen"
 msgid "Click to change the visualizer"
 msgstr "Klik om de visualisatie te wisselen"
 
-#: src/ui/player_bar.rs:498 src/ui/lyrics.rs:131 src/ui/lyrics.rs:809
+#: src/ui/player_bar.rs:498 src/ui/lyrics.rs:131 src/ui/lyrics.rs:810
 msgid "Nothing playing"
 msgstr "Er wordt niets afgespeeld"
 
@@ -232,12 +232,12 @@ msgstr "Verwijderen uit Gelikete nummers"
 msgid "Save to Liked Songs"
 msgstr "Opslaan in Gelikete nummers"
 
-#: src/ui/player_bar.rs:736 src/ui/player_bar.rs:743 src/ui/lyrics.rs:601
-#: src/ui/lyrics.rs:608 src/ui/collection.rs:209 src/ui/collection.rs:280
+#: src/ui/player_bar.rs:736 src/ui/player_bar.rs:743 src/ui/lyrics.rs:602
+#: src/ui/lyrics.rs:609 src/ui/collection.rs:209 src/ui/collection.rs:280
 msgid "Shuffle"
 msgstr "Willekeurige volgorde"
 
-#: src/ui/player_bar.rs:757 src/ui/lyrics.rs:620
+#: src/ui/player_bar.rs:757 src/ui/lyrics.rs:621
 msgid "Previous"
 msgstr "Vorige"
 
@@ -245,23 +245,23 @@ msgstr "Vorige"
 msgid "Pause"
 msgstr "Pauzeren"
 
-#: src/ui/player_bar.rs:808 src/ui/lyrics.rs:658
+#: src/ui/player_bar.rs:808 src/ui/lyrics.rs:659
 msgid "Next"
 msgstr "Volgende"
 
-#: src/ui/player_bar.rs:816 src/ui/lyrics.rs:571
+#: src/ui/player_bar.rs:816 src/ui/lyrics.rs:572
 msgid "Repeat"
 msgstr "Herhalen"
 
-#: src/ui/player_bar.rs:820 src/ui/lyrics.rs:572
+#: src/ui/player_bar.rs:820 src/ui/lyrics.rs:573
 msgid "Repeat one"
 msgstr "Eén nummer herhalen"
 
-#: src/ui/player_bar.rs:825 src/ui/lyrics.rs:573
+#: src/ui/player_bar.rs:825 src/ui/lyrics.rs:574
 msgid "Repeat off"
 msgstr "Herhalen uit"
 
-#: src/ui/player_bar.rs:886 src/ui/lyrics.rs:540
+#: src/ui/player_bar.rs:886 src/ui/lyrics.rs:541
 msgid "Playback position (%)"
 msgstr "Afspeelpositie (%)"
 
@@ -313,7 +313,7 @@ msgstr "Wachtrij wissen"
 msgid "Playing from"
 msgstr "Afspelen uit"
 
-#: src/ui/queue.rs:276 src/ui/lyrics.rs:732 src/ui/topbar.rs:499
+#: src/ui/queue.rs:276 src/ui/lyrics.rs:733 src/ui/topbar.rs:499
 msgid "Now playing"
 msgstr "Wordt afgespeeld"
 
@@ -356,48 +356,48 @@ msgstr "Meer laden"
 msgid "Full screen lyrics"
 msgstr "Songtekst op volledig scherm"
 
-#: src/ui/lyrics.rs:102 src/ui/lyrics.rs:755
+#: src/ui/lyrics.rs:102 src/ui/lyrics.rs:756
 msgctxt "lyrics"
 msgid "Follow"
 msgstr "Volgen"
 
-#: src/ui/lyrics.rs:132 src/ui/lyrics.rs:810
+#: src/ui/lyrics.rs:132 src/ui/lyrics.rs:811
 msgid "Play a song to see its lyrics."
 msgstr "Speel een nummer af om de songtekst te zien."
 
 #. Translators: Keep {error} unchanged. It is the original failure detail.
-#: src/ui/lyrics.rs:145 src/ui/lyrics.rs:403 src/ui/lyrics.rs:823
+#: src/ui/lyrics.rs:145 src/ui/lyrics.rs:404 src/ui/lyrics.rs:824
 #, rust-format
 msgid "Couldn't fetch the lyrics: {error}"
 msgstr "Kan de songtekst niet ophalen: {error}"
 
-#: src/ui/lyrics.rs:151 src/ui/lyrics.rs:430 src/ui/lyrics.rs:829
+#: src/ui/lyrics.rs:151 src/ui/lyrics.rs:431 src/ui/lyrics.rs:830
 #: src/ui/settings.rs:454 src/ui/login.rs:110
 msgid "Try again"
 msgstr "Opnieuw proberen"
 
-#: src/ui/lyrics.rs:162 src/ui/lyrics.rs:396 src/ui/lyrics.rs:840
+#: src/ui/lyrics.rs:162 src/ui/lyrics.rs:397 src/ui/lyrics.rs:841
 msgid "No lyrics"
 msgstr "Geen songtekst"
 
-#: src/ui/lyrics.rs:163 src/ui/lyrics.rs:397 src/ui/lyrics.rs:841
+#: src/ui/lyrics.rs:163 src/ui/lyrics.rs:398 src/ui/lyrics.rs:842
 msgid "No lyrics found for this track."
 msgstr "Geen songtekst gevonden voor dit nummer."
 
-#: src/ui/lyrics.rs:172 src/ui/lyrics.rs:392 src/ui/lyrics.rs:850
+#: src/ui/lyrics.rs:172 src/ui/lyrics.rs:393 src/ui/lyrics.rs:851
 msgid "Instrumental"
 msgstr "Instrumentaal"
 
-#: src/ui/lyrics.rs:173 src/ui/lyrics.rs:393 src/ui/lyrics.rs:851
+#: src/ui/lyrics.rs:173 src/ui/lyrics.rs:394 src/ui/lyrics.rs:852
 msgid "No timed lyrics for this track."
 msgstr "Geen gesynchroniseerde songtekst voor dit nummer."
 
-#: src/ui/lyrics.rs:410 src/ui/widgets.rs:2543 src/app.rs:10795
+#: src/ui/lyrics.rs:411 src/ui/widgets.rs:2543 src/app.rs:10795
 #: src/ui/collection.rs:754
 msgid "Loading…"
 msgstr "Laden…"
 
-#: src/ui/lyrics.rs:743
+#: src/ui/lyrics.rs:744
 msgid "Leave full screen (Esc)"
 msgstr "Volledig scherm verlaten (Esc)"
 

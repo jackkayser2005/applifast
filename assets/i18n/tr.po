@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-07 23:09-0400\n"
+"POT-Creation-Date: 2026-10-07 23:51-0400\n"
 "PO-Revision-Date: 2026-10-02 20:30+0300\n"
 "Last-Translator: Barış Berke Çetin <brsberkectn@gmail.com>\n"
 "Language-Team: Turkish\n"
@@ -214,7 +214,7 @@ msgstr "{name}, klasör, genişletilmiş"
 msgid "Click to change the visualizer"
 msgstr "Görselleştiriciyi değiştirmek için tıklayın"
 
-#: src/ui/player_bar.rs:498 src/ui/lyrics.rs:131 src/ui/lyrics.rs:809
+#: src/ui/player_bar.rs:498 src/ui/lyrics.rs:131 src/ui/lyrics.rs:810
 msgid "Nothing playing"
 msgstr "Hiçbir şey çalmıyor"
 
@@ -232,12 +232,12 @@ msgstr "Beğenilenler'den kaldır"
 msgid "Save to Liked Songs"
 msgstr "Beğenilenler'e kaydet"
 
-#: src/ui/player_bar.rs:736 src/ui/player_bar.rs:743 src/ui/lyrics.rs:601
-#: src/ui/lyrics.rs:608 src/ui/collection.rs:209 src/ui/collection.rs:280
+#: src/ui/player_bar.rs:736 src/ui/player_bar.rs:743 src/ui/lyrics.rs:602
+#: src/ui/lyrics.rs:609 src/ui/collection.rs:209 src/ui/collection.rs:280
 msgid "Shuffle"
 msgstr "Karışık çal"
 
-#: src/ui/player_bar.rs:757 src/ui/lyrics.rs:620
+#: src/ui/player_bar.rs:757 src/ui/lyrics.rs:621
 msgid "Previous"
 msgstr "Önceki"
 
@@ -245,23 +245,23 @@ msgstr "Önceki"
 msgid "Pause"
 msgstr "Duraklat"
 
-#: src/ui/player_bar.rs:808 src/ui/lyrics.rs:658
+#: src/ui/player_bar.rs:808 src/ui/lyrics.rs:659
 msgid "Next"
 msgstr "Sonraki"
 
-#: src/ui/player_bar.rs:816 src/ui/lyrics.rs:571
+#: src/ui/player_bar.rs:816 src/ui/lyrics.rs:572
 msgid "Repeat"
 msgstr "Tekrarla"
 
-#: src/ui/player_bar.rs:820 src/ui/lyrics.rs:572
+#: src/ui/player_bar.rs:820 src/ui/lyrics.rs:573
 msgid "Repeat one"
 msgstr "Tek şarkıyı tekrarla"
 
-#: src/ui/player_bar.rs:825 src/ui/lyrics.rs:573
+#: src/ui/player_bar.rs:825 src/ui/lyrics.rs:574
 msgid "Repeat off"
 msgstr "Tekrarlamayı kapat"
 
-#: src/ui/player_bar.rs:886 src/ui/lyrics.rs:540
+#: src/ui/player_bar.rs:886 src/ui/lyrics.rs:541
 msgid "Playback position (%)"
 msgstr "Çalma konumu (%)"
 
@@ -313,7 +313,7 @@ msgstr "Sırayı temizle"
 msgid "Playing from"
 msgstr "Şuradan çalınıyor"
 
-#: src/ui/queue.rs:276 src/ui/lyrics.rs:732 src/ui/topbar.rs:499
+#: src/ui/queue.rs:276 src/ui/lyrics.rs:733 src/ui/topbar.rs:499
 msgid "Now playing"
 msgstr "Şu an çalınıyor"
 
@@ -356,48 +356,48 @@ msgstr "Daha fazla yükle"
 msgid "Full screen lyrics"
 msgstr "Tam ekran şarkı sözleri"
 
-#: src/ui/lyrics.rs:102 src/ui/lyrics.rs:755
+#: src/ui/lyrics.rs:102 src/ui/lyrics.rs:756
 msgctxt "lyrics"
 msgid "Follow"
 msgstr "Takip et"
 
-#: src/ui/lyrics.rs:132 src/ui/lyrics.rs:810
+#: src/ui/lyrics.rs:132 src/ui/lyrics.rs:811
 msgid "Play a song to see its lyrics."
 msgstr "Şarkı sözlerini görmek için bir şarkı çalın."
 
 #. Translators: Keep {error} unchanged. It is the original failure detail.
-#: src/ui/lyrics.rs:145 src/ui/lyrics.rs:403 src/ui/lyrics.rs:823
+#: src/ui/lyrics.rs:145 src/ui/lyrics.rs:404 src/ui/lyrics.rs:824
 #, rust-format
 msgid "Couldn't fetch the lyrics: {error}"
 msgstr "Şarkı sözleri alınamadı: {error}"
 
-#: src/ui/lyrics.rs:151 src/ui/lyrics.rs:430 src/ui/lyrics.rs:829
+#: src/ui/lyrics.rs:151 src/ui/lyrics.rs:431 src/ui/lyrics.rs:830
 #: src/ui/settings.rs:454 src/ui/login.rs:110
 msgid "Try again"
 msgstr "Tekrar dene"
 
-#: src/ui/lyrics.rs:162 src/ui/lyrics.rs:396 src/ui/lyrics.rs:840
+#: src/ui/lyrics.rs:162 src/ui/lyrics.rs:397 src/ui/lyrics.rs:841
 msgid "No lyrics"
 msgstr "Şarkı sözü yok"
 
-#: src/ui/lyrics.rs:163 src/ui/lyrics.rs:397 src/ui/lyrics.rs:841
+#: src/ui/lyrics.rs:163 src/ui/lyrics.rs:398 src/ui/lyrics.rs:842
 msgid "No lyrics found for this track."
 msgstr "Bu parça için şarkı sözü bulunamadı."
 
-#: src/ui/lyrics.rs:172 src/ui/lyrics.rs:392 src/ui/lyrics.rs:850
+#: src/ui/lyrics.rs:172 src/ui/lyrics.rs:393 src/ui/lyrics.rs:851
 msgid "Instrumental"
 msgstr "Enstrümantal"
 
-#: src/ui/lyrics.rs:173 src/ui/lyrics.rs:393 src/ui/lyrics.rs:851
+#: src/ui/lyrics.rs:173 src/ui/lyrics.rs:394 src/ui/lyrics.rs:852
 msgid "No timed lyrics for this track."
 msgstr "Bu parça için senkronize şarkı sözü yok."
 
-#: src/ui/lyrics.rs:410 src/ui/widgets.rs:2543 src/app.rs:10795
+#: src/ui/lyrics.rs:411 src/ui/widgets.rs:2543 src/app.rs:10795
 #: src/ui/collection.rs:754
 msgid "Loading…"
 msgstr "Yükleniyor…"
 
-#: src/ui/lyrics.rs:743
+#: src/ui/lyrics.rs:744
 msgid "Leave full screen (Esc)"
 msgstr "Tam ekrandan çık (Esc)"
 

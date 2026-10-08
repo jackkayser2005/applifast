@@ -6550,12 +6550,19 @@ mod tests {
                 _ => None,
             })
         };
-        for (surface, words) in [
-            ("lyrics-fullscreen-view", true),
-            ("lyrics-fullscreen-instrumental", false),
+        for (surface, words, apple) in [
+            ("lyrics-fullscreen-view", true, false),
+            ("lyrics-fullscreen-instrumental", false, false),
+            ("lyrics-fullscreen-view", false, true),
         ] {
             let (ctx, mut app) = accessible_app(surface);
             apply_flags(&mut app, None, Some(surface));
+            if apple {
+                let state = crate::apple::State::demo(&app.library.liked.items);
+                app.local = state.local.clone();
+                app.local_ready = true;
+                app.apple = Some(state);
+            }
             let mut shapes = Vec::new();
             for frame in 0..30 {
                 let mut output = ctx.run_ui(
@@ -6581,8 +6588,13 @@ mod tests {
                 assert!(lyric.left() < 1000.0, "the group is centred: {lyric:?}");
             } else {
                 assert!(lyric.is_none());
-                let detail = detail.expect("why there are no words");
-                assert!((detail.center().x - 800.0).abs() < 2.0, "{detail:?}");
+                if apple {
+                    assert!(detail.is_none(), "Apple Now Playing has no lyrics panel");
+                    assert!(find(&shapes, "Rosewood").is_some(), "the playing song");
+                } else {
+                    let detail = detail.expect("why there are no words");
+                    assert!((detail.center().x - 800.0).abs() < 2.0, "{detail:?}");
+                }
             }
             app.backend.shutdown();
         }

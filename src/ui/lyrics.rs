@@ -356,7 +356,8 @@ fn with_cover(app: &mut App, ui: &mut egui::Ui, rect: Rect, top: f32) {
     // The cover moves aside only for words to read. While they load it
     // stays in the middle, so a song that turns out to have none never
     // moves at all.
-    let words = matches!(&app.lyrics, Loadable::Loaded(Some(lyrics)) if !lyrics.instrumental);
+    let words = app.apple.is_none()
+        && matches!(&app.lyrics, Loadable::Loaded(Some(lyrics)) if !lyrics.instrumental);
     if words {
         // The cover and the lyrics are one group, centred in the window.
         let gap = 64.0;
