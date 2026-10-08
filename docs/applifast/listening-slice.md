@@ -72,7 +72,8 @@ the mini-player.
 
 ### Apple lyrics
 
-On `feat/apple-lyrics`, the player-bar Lyrics button opens the existing side panel.
+In [PR #19](https://github.com/jackkayser2005/applifast/pull/19), on
+`feat/apple-lyrics`, the player-bar Lyrics button opens the existing side panel.
 Full-screen Now Playing shows a large cover beside lyrics at normal widths and
 stacks a small cover, controls and lyrics in narrow windows. Timed lines seek
 through the existing Apple player commands. Follow, manual scrolling, smooth
@@ -123,6 +124,16 @@ lyrics lookup or player-bar entry. Stills do not prove animation or audio.
 All 32 images were inspected, and the gallery selectors and PNG dimensions
 were checked. The existing narrow side-panel layout remains cramped in both
 the baseline and candidate; this slice improves full-screen lyric layout.
+
+The local combined preview is `dist/applifast-windows-preview-2c6c576.zip`
+(23,031,492 bytes), built from `2c6c576b3ad77bcf45782233386a857c5a39d790`.
+ZIP SHA256: `699571e0fb473ec13c6cc589c9c40998aeb57f8c73f6e641cd05eb59effa7acf`.
+Executable SHA256: `5df1d68253691479b4ff5fae4b00252df42c4939eaa677e7fcff382cfa367781`.
+The archive contains only Applifast.exe, LICENSE, README.txt and BUILD.txt.
+It includes the Home/album-date fixes and these lyrics, but the compact sidebar
+Favorites shelf and public token onboarding remain unfinished. This is a
+debug/demo Windows x64 development preview with static CRT and inherited
+version 0.12.0, not a public release.
 
 **Ambient Pulse** is an optional decorative animation shared by both players.
 Enable it in Appearance, click empty player-bar space, or use the mini-player's
