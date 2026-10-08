@@ -1237,6 +1237,47 @@ pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
         app.lyrics_uri = app.now_playing().map(|now| now.uri);
     }
     for flag in show.unwrap_or("").split(',').map(str::trim) {
+        if flag == "apple-search-empty" {
+            app.search = crate::model::SearchState::default();
+            app.settings.search_history.clear();
+            app.open(Page::Search);
+            continue;
+        }
+        if matches!(
+            flag,
+            "apple-search-pages" | "apple-search-error" | "apple-search-loading"
+        ) {
+            let songs = app
+                .apple
+                .as_ref()
+                .unwrap()
+                .songs
+                .iter()
+                .take(3)
+                .map(crate::apple::Song::track)
+                .collect();
+            app.search.results = Loadable::Loaded(SearchResults {
+                tracks: Some(page(songs)),
+                ..Default::default()
+            });
+            app.search.filter = SearchFilter::Songs;
+            app.search.catalogue_pending = flag == "apple-search-loading";
+            app.search.error =
+                (flag == "apple-search-error").then(|| "Connection interrupted".into());
+            app.apple.as_mut().unwrap().next_reads.insert(
+                crate::apple::Read::SearchPage {
+                    serial: app.search.serial,
+                    library: true,
+                    filter: SearchFilter::Songs,
+                },
+                (
+                    "/v1/me/library/search?term=Bonobo&types=library-songs&offset=3".into(),
+                    3,
+                ),
+            );
+            app.open(Page::Search);
+            continue;
+        }
         if flag == "favorites-page" {
             app.open(Page::Favorites);
             continue;
@@ -5196,6 +5237,108 @@ mod tests {
         events: Vec<egui::Event>,
     ) -> Vec<(String, egui::Rect)> {
         view_frame(ctx, app, events, crate::ui::search::show)
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_search_controls_load_pages_and_play_tracks_with_original_identity() {
+        let (ctx, mut app) = accessible_app("apple-search-controls");
+        app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+        app.remote = None;
+        apply_apple_flags(&mut app, Some("apple-search-pages"));
+        search_frame(&ctx, &mut app, vec![]);
+        let labels = search_frame(&ctx, &mut app, vec![]);
+        assert!(
+            !labels
+                .iter()
+                .any(|(label, _)| matches!(label.as_str(), "Podcasts" | "Episodes"))
+        );
+        let more = labels
+            .iter()
+            .find(|(label, _)| label == "Load more")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        search_frame(
+            &ctx,
+            &mut app,
+            pointer_click(more, egui::PointerButton::Primary),
+        );
+        assert!(matches!(
+            app.actions.as_slice(),
+            [Action::LoadMore(Page::Search)]
+        ));
+        app.search.catalogue_pending = true;
+        search_frame(&ctx, &mut app, vec![]);
+        let labels = search_frame(&ctx, &mut app, vec![]);
+        let more = labels
+            .iter()
+            .find(|(label, _)| label == "Load more")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        search_frame(
+            &ctx,
+            &mut app,
+            pointer_click(more, egui::PointerButton::Primary),
+        );
+        assert!(
+            app.actions.is_empty(),
+            "pending pages cannot be requested again"
+        );
+        app.search.catalogue_pending = false;
+        app.search.filter = SearchFilter::All;
+        let song = app.apple.as_ref().unwrap().songs[0].track();
+        app.search.results = Loadable::Loaded(SearchResults {
+            tracks: Some(page(vec![song.clone()])),
+            ..Default::default()
+        });
+        search_frame(&ctx, &mut app, vec![]);
+        let labels = search_frame(&ctx, &mut app, vec![]);
+        let title = labels
+            .iter()
+            .find(|(label, _)| label == &song.name)
+            .unwrap()
+            .1
+            .center();
+        search_frame(&ctx, &mut app, vec![egui::Event::PointerMoved(title)]);
+        let output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(1280.0, 2200.0),
+                )),
+                events: vec![egui::Event::PointerMoved(title)],
+                ..Default::default()
+            },
+            |ui| crate::ui::search::show(&mut app, ui),
+        );
+        let tree = output.platform_output.accesskit_update.unwrap();
+        let play = accessible_node(&tree, "Play", egui::accesskit::Role::Button);
+        app.actions.clear();
+        search_frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(
+                play,
+                egui::accesskit::Action::Click,
+                None,
+            )],
+        );
+        assert!(
+            matches!(app.actions.as_slice(), [Action::PlayUris {uris, index: 0}] if uris == &[song.uri])
+        );
+        apply_apple_flags(&mut app, Some("apple-search-empty"));
+        search_frame(&ctx, &mut app, vec![]);
+        let labels = search_frame(&ctx, &mut app, vec![]);
+        assert!(
+            labels
+                .iter()
+                .any(|(label, _)| label == "Search Apple Music")
+        );
+        app.backend.shutdown();
     }
 
     #[test]

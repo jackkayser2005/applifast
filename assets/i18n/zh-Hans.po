@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-08 14:11-0400\n"
+"POT-Creation-Date: 2026-10-08 14:48-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -63,7 +63,7 @@ msgid "Folder"
 msgstr "文件夹"
 
 #. Translators: {owner} is the name of the playlist's owner.
-#: src/ui/sidebar.rs:785 src/ui/search.rs:214
+#: src/ui/sidebar.rs:785 src/ui/search.rs:240
 #, rust-format
 msgid "Playlist • {owner}"
 msgstr "歌单 • {owner}"
@@ -109,22 +109,22 @@ msgstr "搜索音乐库"
 msgid "Library"
 msgstr "音乐库"
 
-#: src/ui/sidebar.rs:988 src/app.rs:6252 src/model.rs:642 src/ui/search.rs:648
+#: src/ui/sidebar.rs:988 src/app.rs:6252 src/model.rs:652 src/ui/search.rs:678
 msgid "Playlists"
 msgstr "歌单"
 
-#: src/ui/sidebar.rs:989 src/model.rs:641 src/model.rs:755 src/ui/library.rs:17
-#: src/ui/search.rs:576
+#: src/ui/sidebar.rs:989 src/model.rs:651 src/model.rs:765 src/ui/library.rs:17
+#: src/ui/search.rs:606
 msgid "Albums"
 msgstr "专辑"
 
-#: src/ui/sidebar.rs:990 src/model.rs:640 src/ui/library.rs:22
-#: src/ui/search.rs:509
+#: src/ui/sidebar.rs:990 src/model.rs:650 src/ui/library.rs:22
+#: src/ui/search.rs:539
 msgid "Artists"
 msgstr "艺人"
 
-#: src/ui/sidebar.rs:991 src/model.rs:643 src/ui/library.rs:27
-#: src/ui/search.rs:698
+#: src/ui/sidebar.rs:991 src/model.rs:653 src/ui/library.rs:27
+#: src/ui/search.rs:728
 msgid "Podcasts"
 msgstr "播客"
 
@@ -134,12 +134,12 @@ msgstr "在音乐库中搜索"
 
 #: src/ui/sidebar.rs:1140 src/app.rs:2578 src/ui/artist.rs:204
 #: src/ui/artist.rs:312 src/ui/home.rs:678 src/ui/library.rs:100
-#: src/ui/search.rs:145 src/ui/search.rs:473 src/ui/winamp/playlist.rs:729
+#: src/ui/search.rs:170 src/ui/search.rs:499 src/ui/winamp/playlist.rs:729
 msgid "Artist"
 msgstr "艺人"
 
 #. Translators: {publisher} is the podcast's publisher.
-#: src/ui/sidebar.rs:1176 src/ui/search.rs:239
+#: src/ui/sidebar.rs:1176 src/ui/search.rs:265
 #, rust-format
 msgid "Podcast • {publisher}"
 msgstr "播客 • {publisher}"
@@ -166,7 +166,7 @@ msgstr "按最近播放排序"
 
 #: src/ui/sidebar.rs:1991 src/ui/player_bar.rs:792 src/ui/widgets.rs:1032
 #: src/ui/artist.rs:327 src/ui/collection.rs:210 src/ui/collection.rs:216
-#: src/ui/search.rs:390 src/ui/show.rs:140 src/ui/show.rs:315
+#: src/ui/search.rs:416 src/ui/show.rs:140 src/ui/show.rs:315
 msgid "Play"
 msgstr "播放"
 
@@ -357,6 +357,7 @@ msgid "Played songs appear here."
 msgstr "播放过的歌曲会显示在这里。"
 
 #: src/ui/queue.rs:608 src/ui/artist.rs:186 src/ui/home.rs:138
+#: src/ui/search.rs:95
 msgid "Load more"
 msgstr "加载更多"
 
@@ -1864,7 +1865,7 @@ msgstr "单曲"
 msgid "Compilation"
 msgstr "合辑"
 
-#: src/api/models.rs:258 src/model.rs:757
+#: src/api/models.rs:258 src/model.rs:767
 msgid "Appears On"
 msgstr "参与作品"
 
@@ -1878,20 +1879,20 @@ msgstr "不限制"
 msgid "{rate} fps, your screen"
 msgstr "{rate} fps，与屏幕一致"
 
-#: src/model.rs:638 src/model.rs:754
+#: src/model.rs:648 src/model.rs:764
 msgctxt "filter"
 msgid "All"
 msgstr "全部"
 
-#: src/model.rs:639 src/ui/collection.rs:1922 src/ui/search.rs:425
+#: src/model.rs:649 src/ui/collection.rs:1922 src/ui/search.rs:451
 msgid "Songs"
 msgstr "歌曲"
 
-#: src/model.rs:644 src/ui/library.rs:32 src/ui/search.rs:272
+#: src/model.rs:654 src/ui/library.rs:32 src/ui/search.rs:298
 msgid "Episodes"
 msgstr "单集"
 
-#: src/model.rs:756
+#: src/model.rs:766
 msgid "Singles & EPs"
 msgstr "单曲和 EP"
 
@@ -2352,7 +2353,7 @@ msgid "Couldn't load this shelf"
 msgstr "无法加载此栏目"
 
 #. Translators: {owner} is the name of the playlist's owner.
-#: src/ui/home.rs:353 src/ui/search.rs:603
+#: src/ui/home.rs:353 src/ui/search.rs:633
 #, rust-format
 msgid "By {owner}"
 msgstr "创建者：{owner}"
@@ -2666,39 +2667,47 @@ msgid "With {first}, {second}, {third} and more"
 msgstr "包含 {first}、{second}、{third} 等"
 
 #. Translators: {query} is the text the user searched for.
-#: src/ui/search.rs:66
+#: src/ui/search.rs:77
 #, rust-format
 msgid "No results for “{query}”"
 msgstr "没有“{query}”的相关结果"
 
-#: src/ui/search.rs:68
+#: src/ui/search.rs:79
 msgid "Check the spelling, or try fewer words."
 msgstr "请检查拼写，或减少字词。"
 
-#: src/ui/search.rs:91 src/ui/winamp/playlist.rs:647
+#: src/ui/search.rs:109
+msgid "Search Apple Music"
+msgstr "搜索 Apple Music"
+
+#: src/ui/search.rs:110
+msgid "Find songs, artists, albums, and playlists."
+msgstr "查找歌曲、艺人、专辑和播放列表。"
+
+#: src/ui/search.rs:114 src/ui/winamp/playlist.rs:647
 msgid "Search Spotify"
 msgstr "搜索 Spotify"
 
-#: src/ui/search.rs:94
+#: src/ui/search.rs:117
 msgid "Find songs, artists, albums, playlists, and podcasts."
 msgstr "查找歌曲、艺人、专辑、歌单和播客。"
 
-#: src/ui/search.rs:99
+#: src/ui/search.rs:124
 msgid "Recent searches"
 msgstr "最近搜索"
 
-#: src/ui/search.rs:137
+#: src/ui/search.rs:162
 msgid "Top result"
 msgstr "最佳结果"
 
 #. Translators: {artists} is the album's artist names.
-#: src/ui/search.rs:188
+#: src/ui/search.rs:214
 #, rust-format
 msgid "Album • {artists}"
 msgstr "专辑 • {artists}"
 
 #. Translators: Precedes the song's artist names, which follow as links.
-#: src/ui/search.rs:349
+#: src/ui/search.rs:375
 msgid "Song • "
 msgstr "歌曲 • "
 

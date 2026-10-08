@@ -925,6 +925,30 @@ impl App {
         }
     }
     pub(super) fn apple_load_more(&mut self, page: Page) {
+        if page == Page::Search {
+            let serial = self.search.serial;
+            let filter = self.search.filter;
+            let reads = self
+                .apple
+                .as_ref()
+                .unwrap()
+                .next_reads
+                .iter()
+                .filter(|(read, _)| {
+                    matches!(read, Read::SearchPage {serial: held, filter: kind, ..}
+                    if *held == serial && (filter == SearchFilter::All || filter == *kind))
+                })
+                .map(|(read, (path, offset))| (read.clone(), path.clone(), *offset))
+                .collect::<Vec<_>>();
+            if !reads.is_empty() {
+                self.search.error = None;
+                for (read, path, offset) in reads {
+                    self.apple_read(read, path, offset);
+                }
+                self.search.catalogue_pending = self.apple_search_pending();
+            }
+            return;
+        }
         if page == Page::Home {
             for shelf in crate::apple::HomeShelf::ALL {
                 let target = Read::Home(shelf);
@@ -1020,7 +1044,16 @@ impl App {
         }
     }
     pub(super) fn apple_search(&mut self, query: &str) {
+        if let Some(apple) = &mut self.apple {
+            apple.reads.retain(|_, (read, _)| {
+                !matches!(read, Read::Search { .. } | Read::SearchPage { .. })
+            });
+            apple
+                .next_reads
+                .retain(|read, _| !matches!(read, Read::Search { .. } | Read::SearchPage { .. }));
+        }
         if query.is_empty() {
+            self.search.catalogue_pending = false;
             return;
         }
         let term = urlencoding::encode(query);
@@ -1033,6 +1066,145 @@ impl App {
             .filter(|value| !value.is_empty())
         {
             self.apple_read(Read::Search {serial,library:false}, format!("/v1/catalog/{storefront}/search?term={term}&types=songs,albums,artists,playlists&limit=25"),0);
+        }
+        self.search.catalogue_pending = self.apple_search_pending();
+        if !self.search.catalogue_pending {
+            let error = "Apple Music search could not start. Check your authorization and use a shorter query.";
+            self.search.error = Some(error.into());
+            self.search.results = Loadable::Failed(error.into());
+        }
+    }
+    fn apple_search_pending(&self) -> bool {
+        self.apple.as_ref().is_some_and(|apple| apple.reads.values().any(|(read, _)| {
+            matches!(read, Read::Search {serial, ..} | Read::SearchPage {serial, ..} if *serial == self.search.serial)
+        }))
+    }
+    pub(crate) fn apple_search_has_more(&self) -> bool {
+        self.apple.as_ref().is_some_and(|apple| {
+            apple.next_reads.keys().any(|read| {
+            matches!(read, Read::SearchPage {serial, filter, ..} if *serial == self.search.serial
+                && (self.search.filter == SearchFilter::All || self.search.filter == *filter))
+        })
+        })
+    }
+    fn apple_search_response(
+        &mut self,
+        serial: u64,
+        library: bool,
+        filter: Option<SearchFilter>,
+        offset: u32,
+        value: &Value,
+    ) {
+        if serial != self.search.serial {
+            return;
+        }
+        self.search.catalogue_pending = self.apple_search_pending();
+        let results = &value["data"]["results"];
+        let prefix = if library { "library-" } else { "" };
+        let malformed = !results.is_object()
+            || filter.is_some_and(|filter| {
+                !results[format!("{prefix}{}", filter.apple_kind().unwrap())]["data"].is_array()
+            });
+        if let Some(error) = value["error"].as_str().or_else(|| {
+            malformed.then_some("Apple Music returned incomplete search results. Retry the search.")
+        }) {
+            self.search.error = Some(error.into());
+            self.search.results.refresh::<String>(Err(error.into()));
+            return;
+        }
+        if self.search.results_serial != serial || self.search.results.get().is_none() {
+            self.search.results = Loadable::Loaded(Default::default());
+            self.search.results_serial = serial;
+        }
+        for kind in SearchFilter::ALL.into_iter().filter(|kind| {
+            kind.apple_kind().is_some() && filter.is_none_or(|filter| filter == *kind)
+        }) {
+            let resource_type = format!("{prefix}{}", kind.apple_kind().unwrap());
+            let bucket = &results[&resource_type];
+            if !bucket["data"].is_array() {
+                continue;
+            }
+            let rows = resources(bucket);
+            if rows.iter().any(|row| {
+                row["type"] != resource_type || row["id"].as_str().is_none_or(str::is_empty)
+            }) {
+                self.search.error = Some(
+                    "Apple Music returned incomplete search results. Retry the search.".into(),
+                );
+                continue;
+            }
+            let tracks = (kind == SearchFilter::Songs).then(|| self.apple_tracks(bucket));
+            let held = self.search.results.get_mut().unwrap();
+            let added = match kind {
+                SearchFilter::Songs => merge(
+                    &mut held.tracks,
+                    page(tracks.unwrap(), bucket, offset),
+                    |row| &row.uri,
+                ),
+                SearchFilter::Albums => merge(
+                    &mut held.albums,
+                    page(rows.iter().map(models::album).collect(), bucket, offset),
+                    |row| &row.uri,
+                ),
+                SearchFilter::Artists => merge(
+                    &mut held.artists,
+                    page(rows.iter().map(models::artist).collect(), bucket, offset),
+                    |row| &row.uri,
+                ),
+                SearchFilter::Playlists => merge(
+                    &mut held.playlists,
+                    page(rows.iter().map(models::playlist).collect(), bucket, offset),
+                    |row| &row.uri,
+                ),
+                _ => unreachable!(),
+            };
+            let read = Read::SearchPage {
+                serial,
+                library,
+                filter: kind,
+            };
+            let apple = self.apple.as_mut().unwrap();
+            let previous = apple.next_reads.remove(&read);
+            if !rows.is_empty()
+                && (offset == 0 || added > 0)
+                && let Some(next) = bucket["next"].as_str().filter(|next| {
+                    if !applifast_playback_probe::protocol::valid_read_path(next) {
+                        return false;
+                    }
+                    let Ok(url) =
+                        reqwest::Url::parse(&format!("https://api.music.apple.com{next}"))
+                    else {
+                        return false;
+                    };
+                    let expected = if library {
+                        "/v1/me/library/search".into()
+                    } else {
+                        format!("/v1/catalog/{}/search", apple.storefront)
+                    };
+                    let params = url.query_pairs().collect::<Vec<_>>();
+                    url.path() == expected
+                        && params
+                            .iter()
+                            .filter(|(key, _)| key == "term")
+                            .map(|(_, value)| value.as_ref())
+                            .eq([self.search.committed.as_str()])
+                        && params
+                            .iter()
+                            .filter(|(key, _)| key == "types")
+                            .map(|(_, value)| value.as_ref())
+                            .eq([resource_type.as_str()])
+                        && params.iter().filter(|(key, _)| key == "offset").count() == 1
+                        && params
+                            .iter()
+                            .any(|(key, value)| key == "offset" && !value.is_empty())
+                        && previous.as_ref().is_none_or(|(path, _)| path != next)
+                })
+            {
+                apple.next_reads.insert(
+                    read,
+                    (next.into(), offset.saturating_add(rows.len() as u32)),
+                );
+            }
         }
     }
     pub(crate) fn apple_response(&mut self, value: &Value) {
@@ -1140,6 +1312,21 @@ impl App {
             }
             return;
         }
+        match target {
+            Read::Search { serial, library } => {
+                self.apple_search_response(serial, library, None, offset, value);
+                return;
+            }
+            Read::SearchPage {
+                serial,
+                library,
+                filter,
+            } => {
+                self.apple_search_response(serial, library, Some(filter), offset, value);
+                return;
+            }
+            _ => {}
+        }
         if let Some(error) = value["error"].as_str() {
             match &target {
                 Read::Playlists if self.library.playlists.get().is_none() => {
@@ -1206,64 +1393,11 @@ impl App {
                         list.error = Some(error.into());
                     }
                 }
-                Read::Search { serial, .. } if *serial == self.search.serial => {
-                    self.search.error = Some(error.into());
-                    self.search.catalogue_pending = false;
-                    self.search.results.refresh::<String>(Err(error.into()));
-                }
                 _ => {}
             }
             return;
         }
         let data = &value["data"];
-        if let Read::Search { serial, library } = target {
-            if serial != self.search.serial {
-                return;
-            }
-            let prefix = if library { "library-" } else { "" };
-            let results = &data["results"];
-            let tracks = self.apple_tracks(&results[format!("{prefix}songs")]);
-            let fresh = crate::api::models::SearchResults {
-                tracks: Some(page(tracks, &results[format!("{prefix}songs")], 0)),
-                albums: Some(page(
-                    resources(&results[format!("{prefix}albums")])
-                        .iter()
-                        .map(models::album)
-                        .collect(),
-                    &results[format!("{prefix}albums")],
-                    0,
-                )),
-                artists: Some(page(
-                    resources(&results[format!("{prefix}artists")])
-                        .iter()
-                        .map(models::artist)
-                        .collect(),
-                    &results[format!("{prefix}artists")],
-                    0,
-                )),
-                playlists: Some(page(
-                    resources(&results[format!("{prefix}playlists")])
-                        .iter()
-                        .map(models::playlist)
-                        .collect(),
-                    &results[format!("{prefix}playlists")],
-                    0,
-                )),
-                ..Default::default()
-            };
-            if self.search.results_serial != serial || self.search.results.get().is_none() {
-                self.search.results = Loadable::Loaded(Default::default());
-                self.search.results_serial = serial;
-            }
-            if let Some(held) = self.search.results.get_mut() {
-                merge(&mut held.tracks, fresh.tracks);
-                merge(&mut held.albums, fresh.albums);
-                merge(&mut held.artists, fresh.artists);
-                merge(&mut held.playlists, fresh.playlists);
-            }
-            self.search.catalogue_pending=self.apple.as_ref().is_some_and(|apple| apple.reads.values().any(|(target,_)| matches!(target,Read::Search {serial:pending,..} if *pending==serial)));
-            return;
-        }
         let rows = resources(data);
         self.apple
             .as_mut()
@@ -1519,7 +1653,7 @@ impl App {
                 let tracks = self.apple_tracks(data);
                 self.artist_pages.entry(id).or_default().top_tracks = Loadable::Loaded(tracks);
             }
-            Read::Search { .. } => {}
+            Read::Search { .. } | Read::SearchPage { .. } => {}
         }
     }
     fn apple_tracks(&mut self, data: &Value) -> Vec<Track> {
@@ -1556,12 +1690,26 @@ pub(super) fn read_for_page(target: &Read, page: &Page) -> bool {
         _ => false,
     }
 }
-fn merge<T: Default>(held: &mut Option<ApiPage<T>>, fresh: Option<ApiPage<T>>) {
-    if let Some(fresh) = fresh {
-        let held = held.get_or_insert_with(ApiPage::default);
-        held.items.extend(fresh.items);
-        held.total = held.items.len() as u32;
-    }
+fn merge<T: Default>(
+    held: &mut Option<ApiPage<T>>,
+    fresh: ApiPage<T>,
+    key: impl Fn(&T) -> &str,
+) -> usize {
+    let held = held.get_or_insert_with(ApiPage::default);
+    let before = held.items.len();
+    let mut seen = held
+        .items
+        .iter()
+        .map(|row| key(row).to_owned())
+        .collect::<HashSet<_>>();
+    held.items.extend(
+        fresh
+            .items
+            .into_iter()
+            .filter(|row| seen.insert(key(row).to_owned())),
+    );
+    held.total = held.items.len() as u32;
+    held.items.len() - before
 }
 
 #[cfg(test)]
@@ -1693,6 +1841,188 @@ mod tests {
         if let Err(error) = result {
             std::panic::resume_unwind(error);
         }
+    }
+
+    #[test]
+    fn apple_search_pages_keep_both_identities_retry_failures_and_cancel_stale_reads() {
+        let mut app = super::super::tests::test_app("apple-search-pages");
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        state.loading = false;
+        state.storefront = "us".into();
+        app.apple = Some(state);
+        app.run_search("mix".into());
+        let initial = |app: &App, library| {
+            *app.apple.as_ref().unwrap().reads.iter()
+            .find(|(_, (read, _))| matches!(read, Read::Search {library: held, ..} if *held == library)).unwrap().0
+        };
+        let upload = json!({"id":"i.upload","type":"library-songs","attributes":{"name":"Upload"}});
+        let catalog = json!({"id":"123","type":"songs","attributes":{"name":"Catalog","playParams":{"id":"123","kind":"song"}}});
+        let next = "/v1/me/library/search?offset=1&term=mix&types=library-songs";
+        let read = initial(&app, true);
+        app.apple_response(
+            &json!({"id":read,"data":{"results":{"library-songs":{"data":[upload],"next":next}}}}),
+        );
+        assert!(
+            app.search.catalogue_pending,
+            "the catalog response is still pending"
+        );
+        let read = initial(&app, false);
+        app.apple_response(&json!({"id":read,"data":{"results":{"songs":{"data":[catalog],"next":"/v1/catalog/us/search?offset=1&term=mix&types=songs"}}}}));
+        assert!(!app.search.catalogue_pending);
+        let tracks = &app
+            .search
+            .results
+            .get()
+            .unwrap()
+            .tracks
+            .as_ref()
+            .unwrap()
+            .items;
+        assert_eq!(
+            tracks
+                .iter()
+                .map(|row| row.uri.as_str())
+                .collect::<Vec<_>>(),
+            ["apple:track:library.i.upload", "apple:track:catalog.123"]
+        );
+        assert_eq!(tracks[0].is_playable, Some(false));
+        assert!(app.apple_search_has_more());
+        app.search.filter = SearchFilter::Albums;
+        assert!(!app.apple_search_has_more());
+        app.load_more(Page::Search);
+        assert!(app.apple.as_ref().unwrap().reads.is_empty());
+        app.search.filter = SearchFilter::Songs;
+        app.load_more(Page::Search);
+        assert_eq!(app.apple.as_ref().unwrap().reads.len(), 2);
+        app.load_more(Page::Search);
+        assert_eq!(
+            app.apple.as_ref().unwrap().reads.len(),
+            2,
+            "no duplicated request"
+        );
+        let page_read = |app: &App, library| {
+            *app.apple.as_ref().unwrap().reads.iter()
+            .find(|(_, (read, _))| matches!(read, Read::SearchPage {library: held, ..} if *held == library)).unwrap().0
+        };
+        let failed = page_read(&app, true);
+        app.apple_response(&json!({"id":failed,"error":"offline"}));
+        assert!(app.search.catalogue_pending);
+        assert_eq!(
+            app.search
+                .results
+                .get()
+                .unwrap()
+                .tracks
+                .as_ref()
+                .unwrap()
+                .items
+                .len(),
+            2
+        );
+        let read = page_read(&app, false);
+        app.apple_response(&json!({"id":read,"data":{"results":{"songs":{"data":[catalog]}}}}));
+        assert!(!app.search.catalogue_pending);
+        assert!(app.search.error.is_some());
+        app.load_more(Page::Search);
+        assert!(app.search.error.is_none());
+        let read = page_read(&app, true);
+        let second =
+            json!({"id":"i.second","type":"library-songs","attributes":{"name":"Second upload"}});
+        app.apple_response(&json!({"id":read,"data":{"results":{"library-songs":{"data":[upload,second],"next":next}}}}));
+        assert_eq!(
+            app.search
+                .results
+                .get()
+                .unwrap()
+                .tracks
+                .as_ref()
+                .unwrap()
+                .items
+                .len(),
+            3
+        );
+        assert!(!app.apple_search_has_more(), "a repeated cursor stops");
+        app.apple_response(
+            &json!({"id":read,"data":{"results":{"library-songs":{"data":[second]}}}}),
+        );
+        assert_eq!(
+            app.search
+                .results
+                .get()
+                .unwrap()
+                .tracks
+                .as_ref()
+                .unwrap()
+                .items
+                .len(),
+            3,
+            "duplicate response ignored"
+        );
+        app.run_search("new".into());
+        let stale = initial(&app, true);
+        app.run_search(String::new());
+        assert!(app.apple.as_ref().unwrap().reads.is_empty());
+        assert!(app.apple.as_ref().unwrap().next_reads.is_empty());
+        app.apple_response(
+            &json!({"id":stale,"data":{"results":{"library-songs":{"data":[upload]}}}}),
+        );
+        assert!(app.search.results.get().is_none());
+        app.run_search("x".repeat(2200));
+        assert!(!app.search.catalogue_pending);
+        assert!(app.search.error.is_some());
+        assert!(app.apple.as_ref().unwrap().reads.is_empty());
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn apple_search_cursors_reject_other_queries_types_storefronts_and_urls() {
+        let mut app = super::super::tests::test_app("apple-search-cursors");
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        state.storefront = "us".into();
+        app.apple = Some(state);
+        app.search.committed = "mix".into();
+        let song = json!({"id":"123","type":"songs","attributes":{"name":"Song"}});
+        for next in [
+            "https://example.com/search?term=mix&types=songs&offset=1",
+            "/v1/catalog/gb/search?term=mix&types=songs&offset=1",
+            "/v1/catalog/us/search?term=other&types=songs&offset=1",
+            "/v1/catalog/us/search?term=mix&types=albums&offset=1",
+            "/v1/catalog/us/search?term=mix&term=other&types=songs&offset=1",
+            "/v1/catalog/us/search?term=mix&types=songs",
+            "/v1/catalog/us/search?term=mix&types=songs&offset=",
+            "/v1/catalog/us/songs?term=mix&types=songs&offset=1",
+        ] {
+            let command = app.apple.as_mut().unwrap().read(
+                Read::Search {
+                    serial: 0,
+                    library: false,
+                },
+                "/v1/catalog/us/search?term=mix".into(),
+                0,
+            );
+            app.apple_response(&json!({"id":command["id"],"data":{"results":{"songs":{"data":[song],"next":next}}}}));
+            assert!(!app.apple_search_has_more(), "{next}");
+        }
+        let command = app.apple.as_mut().unwrap().read(
+            Read::Search {
+                serial: 0,
+                library: true,
+            },
+            "/v1/me/library/search?term=mix".into(),
+            0,
+        );
+        app.apple_response(&json!({"id":command["id"],"error":"offline"}));
+        assert!(
+            app.search.results.get().is_some(),
+            "keep the successful catalog results"
+        );
+        app.apply(Action::SignOut, &egui::Context::default());
+        assert!(app.apple.as_ref().unwrap().next_reads.is_empty());
+        app.backend.shutdown();
     }
 
     #[test]

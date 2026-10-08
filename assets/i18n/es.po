@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-08 14:11-0400\n"
+"POT-Creation-Date: 2026-10-08 14:48-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Spanish\n"
@@ -63,7 +63,7 @@ msgid "Folder"
 msgstr "Carpeta"
 
 #. Translators: {owner} is the name of the playlist's owner.
-#: src/ui/sidebar.rs:785 src/ui/search.rs:214
+#: src/ui/sidebar.rs:785 src/ui/search.rs:240
 #, rust-format
 msgid "Playlist • {owner}"
 msgstr "Playlist • {owner}"
@@ -109,22 +109,22 @@ msgstr "Buscar en la biblioteca"
 msgid "Library"
 msgstr "Biblioteca"
 
-#: src/ui/sidebar.rs:988 src/app.rs:6252 src/model.rs:642 src/ui/search.rs:648
+#: src/ui/sidebar.rs:988 src/app.rs:6252 src/model.rs:652 src/ui/search.rs:678
 msgid "Playlists"
 msgstr "Playlists"
 
-#: src/ui/sidebar.rs:989 src/model.rs:641 src/model.rs:755 src/ui/library.rs:17
-#: src/ui/search.rs:576
+#: src/ui/sidebar.rs:989 src/model.rs:651 src/model.rs:765 src/ui/library.rs:17
+#: src/ui/search.rs:606
 msgid "Albums"
 msgstr "Álbumes"
 
-#: src/ui/sidebar.rs:990 src/model.rs:640 src/ui/library.rs:22
-#: src/ui/search.rs:509
+#: src/ui/sidebar.rs:990 src/model.rs:650 src/ui/library.rs:22
+#: src/ui/search.rs:539
 msgid "Artists"
 msgstr "Artistas"
 
-#: src/ui/sidebar.rs:991 src/model.rs:643 src/ui/library.rs:27
-#: src/ui/search.rs:698
+#: src/ui/sidebar.rs:991 src/model.rs:653 src/ui/library.rs:27
+#: src/ui/search.rs:728
 msgid "Podcasts"
 msgstr "Pódcasts"
 
@@ -134,12 +134,12 @@ msgstr "Buscar en tu biblioteca"
 
 #: src/ui/sidebar.rs:1140 src/app.rs:2578 src/ui/artist.rs:204
 #: src/ui/artist.rs:312 src/ui/home.rs:678 src/ui/library.rs:100
-#: src/ui/search.rs:145 src/ui/search.rs:473 src/ui/winamp/playlist.rs:729
+#: src/ui/search.rs:170 src/ui/search.rs:499 src/ui/winamp/playlist.rs:729
 msgid "Artist"
 msgstr "Artista"
 
 #. Translators: {publisher} is the podcast's publisher.
-#: src/ui/sidebar.rs:1176 src/ui/search.rs:239
+#: src/ui/sidebar.rs:1176 src/ui/search.rs:265
 #, rust-format
 msgid "Podcast • {publisher}"
 msgstr "Pódcast • {publisher}"
@@ -166,7 +166,7 @@ msgstr "Ordenar por reproducido recientemente"
 
 #: src/ui/sidebar.rs:1991 src/ui/player_bar.rs:792 src/ui/widgets.rs:1032
 #: src/ui/artist.rs:327 src/ui/collection.rs:210 src/ui/collection.rs:216
-#: src/ui/search.rs:390 src/ui/show.rs:140 src/ui/show.rs:315
+#: src/ui/search.rs:416 src/ui/show.rs:140 src/ui/show.rs:315
 msgid "Play"
 msgstr "Reproducir"
 
@@ -361,6 +361,7 @@ msgid "Played songs appear here."
 msgstr "Las canciones reproducidas aparecen aquí."
 
 #: src/ui/queue.rs:608 src/ui/artist.rs:186 src/ui/home.rs:138
+#: src/ui/search.rs:95
 msgid "Load more"
 msgstr "Cargar más"
 
@@ -1943,7 +1944,7 @@ msgstr "Sencillo"
 msgid "Compilation"
 msgstr "Recopilatorio"
 
-#: src/api/models.rs:258 src/model.rs:757
+#: src/api/models.rs:258 src/model.rs:767
 msgid "Appears On"
 msgstr "Aparece en"
 
@@ -1957,20 +1958,20 @@ msgstr "Sin límite"
 msgid "{rate} fps, your screen"
 msgstr "{rate} fps, tu pantalla"
 
-#: src/model.rs:638 src/model.rs:754
+#: src/model.rs:648 src/model.rs:764
 msgctxt "filter"
 msgid "All"
 msgstr "Todo"
 
-#: src/model.rs:639 src/ui/collection.rs:1922 src/ui/search.rs:425
+#: src/model.rs:649 src/ui/collection.rs:1922 src/ui/search.rs:451
 msgid "Songs"
 msgstr "Canciones"
 
-#: src/model.rs:644 src/ui/library.rs:32 src/ui/search.rs:272
+#: src/model.rs:654 src/ui/library.rs:32 src/ui/search.rs:298
 msgid "Episodes"
 msgstr "Episodios"
 
-#: src/model.rs:756
+#: src/model.rs:766
 msgid "Singles & EPs"
 msgstr "Sencillos y EP"
 
@@ -2457,7 +2458,7 @@ msgid "Couldn't load this shelf"
 msgstr "No se pudo cargar esta sección"
 
 #. Translators: {owner} is the name of the playlist's owner.
-#: src/ui/home.rs:353 src/ui/search.rs:603
+#: src/ui/home.rs:353 src/ui/search.rs:633
 #, rust-format
 msgid "By {owner}"
 msgstr "De {owner}"
@@ -2772,39 +2773,47 @@ msgid "With {first}, {second}, {third} and more"
 msgstr "Con {first}, {second}, {third} y más"
 
 #. Translators: {query} is the text the user searched for.
-#: src/ui/search.rs:66
+#: src/ui/search.rs:77
 #, rust-format
 msgid "No results for “{query}”"
 msgstr "Sin resultados para “{query}”"
 
-#: src/ui/search.rs:68
+#: src/ui/search.rs:79
 msgid "Check the spelling, or try fewer words."
 msgstr "Revisa la ortografía o prueba con menos palabras."
 
-#: src/ui/search.rs:91 src/ui/winamp/playlist.rs:647
+#: src/ui/search.rs:109
+msgid "Search Apple Music"
+msgstr "Buscar en Apple Music"
+
+#: src/ui/search.rs:110
+msgid "Find songs, artists, albums, and playlists."
+msgstr "Encuentra canciones, artistas, álbumes y listas de reproducción."
+
+#: src/ui/search.rs:114 src/ui/winamp/playlist.rs:647
 msgid "Search Spotify"
 msgstr "Buscar en Spotify"
 
-#: src/ui/search.rs:94
+#: src/ui/search.rs:117
 msgid "Find songs, artists, albums, playlists, and podcasts."
 msgstr "Busca canciones, artistas, álbumes, playlists y pódcasts."
 
-#: src/ui/search.rs:99
+#: src/ui/search.rs:124
 msgid "Recent searches"
 msgstr "Búsquedas recientes"
 
-#: src/ui/search.rs:137
+#: src/ui/search.rs:162
 msgid "Top result"
 msgstr "Mejor resultado"
 
 #. Translators: {artists} is the album's artist names.
-#: src/ui/search.rs:188
+#: src/ui/search.rs:214
 #, rust-format
 msgid "Album • {artists}"
 msgstr "Álbum • {artists}"
 
 #. Translators: Precedes the song's artist names, which follow as links.
-#: src/ui/search.rs:349
+#: src/ui/search.rs:375
 msgid "Song • "
 msgstr "Canción • "
 
