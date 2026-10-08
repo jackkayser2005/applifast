@@ -77,6 +77,44 @@ pub fn progress(ctx: &Context, id: Id, seconds: f32) -> Option<f32> {
     Some(t)
 }
 
+/// Hover states a demo capture asks for, since a screenshot has no pointer.
+#[cfg(feature = "demo")]
+static FORCED_HOVER: std::sync::Mutex<Vec<&'static str>> = std::sync::Mutex::new(Vec::new());
+
+/// Show the first `what` drawn each frame as hovered, for demo captures.
+#[cfg(feature = "demo")]
+pub fn force_hover(what: &'static str) {
+    FORCED_HOVER
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .push(what);
+}
+
+/// Whether a demo capture shows this, the first `what` of the frame, as
+/// hovered. Always false outside demo builds.
+pub fn forced_hover(ctx: &Context, what: &'static str) -> bool {
+    #[cfg(feature = "demo")]
+    {
+        let wanted = FORCED_HOVER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .contains(&what);
+        if !wanted {
+            return false;
+        }
+        let pass = ctx.cumulative_pass_nr();
+        let id = Id::new(("motion-forced-hover", what));
+        let first = ctx.data(|data| data.get_temp::<u64>(id)) != Some(pass);
+        ctx.data_mut(|data| data.insert_temp(id, pass));
+        first
+    }
+    #[cfg(not(feature = "demo"))]
+    {
+        let _ = (ctx, what);
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

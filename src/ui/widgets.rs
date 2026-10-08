@@ -15,6 +15,8 @@ use crate::util;
 pub const CARD_WIDTH: f32 = 172.0;
 pub const CARD_GAP: f32 = 14.0;
 pub const PAGE_PADDING: f32 = 24.0;
+/// How far a hovered card's cover rises.
+const CARD_LIFT: f32 = 4.0;
 
 /// Draws an image (or a placeholder) in a square.
 pub fn cover(
@@ -2361,7 +2363,8 @@ pub fn card(
     }
     let mut play = false;
     if ui.is_rect_visible(rect) {
-        let hovered = ui.rect_contains_pointer(rect);
+        let hovered =
+            ui.rect_contains_pointer(rect) || super::motion::forced_hover(ui.ctx(), "card");
         if hovered {
             ui.painter().rect_filled(
                 rect,
@@ -2371,9 +2374,23 @@ pub fn card(
                     .gamma_multiply(if palette.dark { 0.8 } else { 1.0 }),
             );
         }
-        let image_rect = Rect::from_min_size(rect.min + vec2(PAD, PAD), Vec2::splat(image_size));
+        let lift = super::motion::animate_bool(ui.ctx(), response.id.with("lift"), hovered, 0.16);
+        let image_rect = Rect::from_min_size(
+            rect.min + vec2(PAD, PAD - CARD_LIFT * lift),
+            Vec2::splat(image_size),
+        );
         let radius = if circular { image_size / 2.0 } else { 6.0 };
         paint_shadow(ui, &palette, image_rect, radius);
+        if lift > 0.0 {
+            let shadow = egui::epaint::Shadow {
+                offset: [0, 8],
+                blur: 20,
+                spread: 0,
+                color: Color32::from_black_alpha((70.0 * lift) as u8),
+            };
+            ui.painter()
+                .add(shadow.as_shape(image_rect, CornerRadius::same(radius as u8)));
+        }
         paint_cover(
             ui,
             &palette,
@@ -2415,9 +2432,13 @@ pub fn card(
         ui.painter()
             .galley(subtitle_pos, subtitle_galley, palette.secondary);
 
-        if playable && hovered {
+        if playable && lift > 0.0 {
+            // It rises into place as it fades in.
             let button_rect = Rect::from_center_size(
-                pos2(image_rect.right() - 26.0, image_rect.bottom() - 26.0),
+                pos2(
+                    image_rect.right() - 26.0,
+                    image_rect.bottom() - 26.0 + 6.0 * (1.0 - lift),
+                ),
                 Vec2::splat(44.0),
             );
             let mut child = ui.new_child(
@@ -2425,6 +2446,7 @@ pub fn card(
                     .max_rect(button_rect)
                     .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
             );
+            child.multiply_opacity(lift);
             play = theme::circle_button(
                 &mut child,
                 if playing {

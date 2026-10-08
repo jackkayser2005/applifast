@@ -774,6 +774,8 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 };
             }
             "queue" => app.show_queue_panel = true,
+            // The first cover card as under the pointer.
+            "card-hover" => crate::ui::motion::force_hover("card"),
             "playing-next" => {
                 app.show_queue_panel = true;
                 if let Loadable::Loaded(queue) = &app.queue {
@@ -3477,6 +3479,69 @@ mod tests {
             "Tab must scroll through the virtual card grid instead of trapping focus in its first visible row"
         );
         app.backend.shutdown();
+    }
+
+    /// Hovering a card fades its Play button in on a rising cover, and
+    /// Reduce motion shows the button at once.
+    #[test]
+    fn a_hovered_cards_play_button_fades_in_unless_motion_is_reduced() {
+        use crate::ui::widgets::{CardCover, card};
+        for reduced in [false, true] {
+            let (ctx, mut app) = accessible_app(if reduced {
+                "card-hover-still"
+            } else {
+                "card-hover"
+            });
+            let accent = app.palette.accent;
+            let mut draw = |time: f64, pointer: Option<egui::Pos2>| {
+                let mut card_rect = egui::Rect::NOTHING;
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(time),
+                        events: pointer.map(egui::Event::PointerMoved).into_iter().collect(),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        crate::ui::motion::set_reduced(ui.ctx(), reduced);
+                        card_rect = card(
+                            ui,
+                            &mut app,
+                            None,
+                            "Album",
+                            "Artist",
+                            CardCover::square(false),
+                        )
+                        .response
+                        .rect;
+                    },
+                );
+                output.textures_delta.clear();
+                let disc = output
+                    .shapes
+                    .iter()
+                    .find_map(|clipped| match &clipped.shape {
+                        egui::epaint::Shape::Circle(circle)
+                            if (circle.radius - 22.0).abs() < 0.5 && circle.fill.a() > 0 =>
+                        {
+                            Some(circle.fill.a())
+                        }
+                        _ => None,
+                    });
+                (card_rect, disc)
+            };
+            let (rect, disc) = draw(0.0, None);
+            assert_eq!(disc, None, "no button before hovering");
+            let (_, disc) = draw(0.02, Some(rect.center()));
+            let disc = disc.expect("the Play button on hover");
+            if reduced {
+                assert_eq!(disc, accent.a());
+            } else {
+                assert!(disc < accent.a(), "fading in: {disc}");
+            }
+            let (_, disc) = draw(1.0, Some(rect.center()));
+            assert_eq!(disc, Some(accent.a()));
+            app.backend.shutdown();
+        }
     }
 
     #[test]
