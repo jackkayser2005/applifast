@@ -1739,7 +1739,21 @@ fn track_row_contents(
             } else {
                 gettext(app.locale, "Save to Liked Songs")
             };
-            if theme::icon_button(&mut child, icon, 16.0, color, palette.text, &tooltip).clicked() {
+            let scale = super::motion::heart_scale(ui.ctx(), row.item.uri());
+            if theme::icon_button_scaled(
+                &mut child,
+                icon,
+                16.0,
+                scale,
+                color,
+                palette.text,
+                &tooltip,
+            )
+            .clicked()
+            {
+                if saved != Some(true) {
+                    super::motion::pop_heart(ui.ctx(), row.item.uri());
+                }
                 app.actions
                     .push(Action::ToggleSaved(row.item.uri().to_string()));
             }

@@ -77,6 +77,24 @@ pub fn progress(ctx: &Context, id: Id, seconds: f32) -> Option<f32> {
     Some(t)
 }
 
+/// How long a heart takes to pop when a song is liked.
+const HEART_POP_SECONDS: f32 = 0.2;
+
+fn heart_pop_id(uri: &str) -> Id {
+    Id::new(("heart-pop", uri))
+}
+
+/// Pop every heart of `uri`: the song was just liked.
+pub fn pop_heart(ctx: &Context, uri: &str) {
+    start(ctx, heart_pop_id(uri));
+}
+
+/// How large `uri`'s heart is drawn: past its size and back while it pops.
+pub fn heart_scale(ctx: &Context, uri: &str) -> f32 {
+    progress(ctx, heart_pop_id(uri), HEART_POP_SECONDS)
+        .map_or(1.0, |t| 1.0 + 0.35 * (std::f32::consts::PI * t).sin())
+}
+
 const BARS: usize = 4;
 const BARS_CLOCK: &str = "playing-bars-clock";
 /// How often moving bars are redrawn: thirty times a second is smooth at
@@ -212,6 +230,30 @@ mod tests {
             assert_eq!(progress(ctx, id.with(2), 0.2), None);
         });
         assert_eq!(seen, [0.0, 1.0, 4.0, 9.0]);
+    }
+
+    /// A liked song's heart swells and settles back within its pop, and
+    /// only that song's; Reduce motion leaves it still.
+    #[test]
+    fn a_liked_hearts_pop_swells_and_settles() {
+        for reduced in [false, true] {
+            let ctx = Context::default();
+            frame(&ctx, 0.0, reduced, |ctx| pop_heart(ctx, "spotify:track:a"));
+            let mut scales = Vec::new();
+            for time in [0.1, 0.15, 0.5] {
+                frame(&ctx, time, reduced, |ctx| {
+                    scales.push(heart_scale(ctx, "spotify:track:a"));
+                    assert_eq!(heart_scale(ctx, "spotify:track:b"), 1.0);
+                });
+            }
+            if reduced {
+                assert_eq!(scales, [1.0, 1.0, 1.0]);
+            } else {
+                assert!(scales[0] > 1.3, "{scales:?}");
+                assert!(scales[1] > 1.0 && scales[1] < scales[0], "{scales:?}");
+                assert_eq!(scales[2], 1.0);
+            }
+        }
     }
 
     /// Bars stay within their cell and keep moving apart from each other.

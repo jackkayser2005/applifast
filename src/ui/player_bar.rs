@@ -644,7 +644,21 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
                 .max_rect(heart_rect)
                 .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
         );
-        if theme::icon_button(&mut heart_ui, icon, 17.0, color, palette.text, &tooltip).clicked() {
+        let scale = super::motion::heart_scale(ui.ctx(), &now.uri);
+        if theme::icon_button_scaled(
+            &mut heart_ui,
+            icon,
+            17.0,
+            scale,
+            color,
+            palette.text,
+            &tooltip,
+        )
+        .clicked()
+        {
+            if !saved {
+                super::motion::pop_heart(ui.ctx(), &now.uri);
+            }
             app.actions.push(Action::ToggleSaved(now.uri.clone()));
         }
     }
