@@ -186,7 +186,7 @@
           manualCount: 0, context: command.items.map((_, at) => at)}, command.items, command.index);
         queue = structuredClone(command.items);
         nativeQueue = !!command.order;
-        
+
         return playAt(command.index, generation);
       case 'queue': {
         if (!Array.isArray(command.items) || command.items.length > 1000 ||
@@ -249,7 +249,7 @@
       const generation = ++session;
       signingOut = true;
       desiredPlaying = false;
-      queue = []; index = -1; order = { upcoming: [], manualCount: 0, context: [], history: [] }; 
+      queue = []; index = -1; order = { upcoming: [], manualCount: 0, context: [], history: [] };
       const result = (async () => {
         await initializing;
         await music.pause();
