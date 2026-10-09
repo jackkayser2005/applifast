@@ -3,6 +3,7 @@
 <title>Applifast supported Apple controls review</title>
 <style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
 <h1>Supported Apple controls</h1>
+<p><a href="https://github.com/jackkayser2005/applifast/pull/30">PR #30</a>, implementation <code>746415d</code>, stacked on PR #29.</p>
 <p>Visible changes: hide unsupported album save, artist follow, track hearts, radio and advanced playlist edits. The sidebar omits Podcasts and Spotify custom order. Catalog menus use Open in Apple Music; library links remain internal. Supported playlist additions, playback and queue actions remain.</p>
 <p>Candidate: <code>feat/apple-supported-controls</code>, stacked on PR #29, baseline <code>7e6e984</code>. Matching Windows native captures use the same deterministic album, artist or playlist, theme, size, zoom, neutral pointer and Reduce motion. Sample fixture content retains upstream names; these captures do not claim real account playback.</p>
 <label>View <select id="view"><option value="album">Album</option><option value="artist">Artist</option><option value="playlist">Playlist</option></select></label>
@@ -12,7 +13,7 @@
 <img id="capture" alt="Matching native Windows Apple controls comparison">
 <p>Menu, selection and keyboard actions have deterministic accessibility/dispatch checks. The captures show collection controls and the sidebar; popup menus are covered by those tests. HTML browser rendering and real-account playback remain separate checks.</p>
 <p>All 24 native captures were inspected, and selector paths and PNG dimensions pass. Formatting, strict default/demo Clippy, 1,005 default and 1,038 demo library tests, binary/integration suites, default doctests, strict demo Rustdoc, the build, gettext and Node bridge/signer checks pass. Earlier intermittent Windows cache/session file-save failures remain documented in the listening-slice evidence despite passing reruns.</p>
-<p>Scope ledger: the maintainer's release checklist authorizes hiding unsupported Spotify controls and settings in Apple mode. This slice preserves the shell and available controls. It does not establish broader redesign approval or release acceptance.</p>
+<p>PR #30 scope ledger: the maintainer's release checklist authorizes hiding unsupported Spotify controls and settings in Apple mode. This slice preserves the shell and available controls. It does not establish broader redesign approval or release acceptance.</p>
 <script>
 const byId=id=>document.getElementById(id);let phase='after';
 function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
