@@ -35,7 +35,10 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, connecting: bool) {
                 .ctx()
                 .data(|data| data.get_temp::<bool>(proxy_id))
                 .unwrap_or(false);
-            let card_height: f32 = if !proxy_open {
+            let card_height: f32 = if let Some(apple) = &app.apple {
+                480.0 + if apple.error.is_some() { 80.0 } else { 0.0 }
+                    + if apple.loading { 80.0 } else { 0.0 }
+            } else if !proxy_open {
                 400.0
             } else if app.settings.proxy_mode.is_manual() {
                 720.0

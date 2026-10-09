@@ -2,6 +2,7 @@
 > client now feeds Apple library, album, playlist and search data into the original
 > native interface, with MusicKit playback in an independent WebView2 host.
 > See [local setup, supported controls, and remaining checks](docs/applifast/listening-slice.md).
+> Invited Windows testers can follow the [private tester setup and troubleshooting guide](docs/applifast/testing.md).
 > The development build saves loaded song metadata and the exact local queue on
 > restart, restores playback paused, and refreshes the library in the background.
 > Audio is streamed. Playlist creation, queue saving and appending selected songs,

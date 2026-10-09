@@ -1898,6 +1898,12 @@ impl App {
                 }
                 Event::Auth(_) | Event::Playback(_) | Event::Local(_) | Event::Api(_)
                     if self.apple.is_some() => {}
+                Event::AppleTokenSelected {
+                    generation,
+                    session,
+                    request,
+                    result,
+                } => self.apple_token_selected(generation, session, request, result),
                 Event::Apple { generation, value } => {
                     if self.apple.as_ref().is_none_or(|apple| {
                         apple.generation != generation
@@ -8574,6 +8580,20 @@ impl App {
 
     fn apply_apple_action(&mut self, action: &Action) -> bool {
         use serde_json::json;
+        if let Action::AppleTokenReady {
+            generation,
+            session,
+            request,
+            ..
+        } = action
+            && !self.apple.as_ref().is_some_and(|apple| {
+                apple.generation == *generation
+                    && apple.session == *session
+                    && apple.token_request == Some(*request)
+            })
+        {
+            return true;
+        }
         if let Action::AppleShowFavorites(only) = action {
             self.apple.as_mut().unwrap().favorites_only = *only;
             // The existing row cache and selection must rebuild for the new subset.
@@ -8743,9 +8763,9 @@ impl App {
         let context_uris = context_uri.as_ref().map(|uri| self.apple_context_uris(uri));
         if matches!(
             action,
-            Action::SignOut | Action::CancelSignIn | Action::AppleImportToken(_)
+            Action::SignOut | Action::CancelSignIn | Action::AppleTokenReady { .. }
         ) {
-            if !matches!(action, Action::AppleImportToken(_)) {
+            if !matches!(action, Action::AppleTokenReady { .. }) {
                 self.backend.send(Command::ClearAppleCache);
             }
             self.reset_data();
@@ -8766,6 +8786,9 @@ impl App {
         };
         let request = match action {
             Action::SignIn => {
+                if apple.token_request.is_some() {
+                    return true;
+                }
                 apple.loading = true;
                 json!({"type":"authorize"})
             }
@@ -8775,6 +8798,18 @@ impl App {
                 json!({"type":"signOut"})
             }
             Action::AppleImportToken(path) => {
+                if let Some(request) = apple.begin_token_import() {
+                    self.backend.import_apple_token(
+                        apple.generation,
+                        apple.session,
+                        request,
+                        path.clone(),
+                    );
+                }
+                return true;
+            }
+            Action::AppleTokenReady { path, .. } => {
+                apple.token_path = path.to_string_lossy().into_owned();
                 apple.reset_host();
                 self.local = LocalState::default();
                 self.local_ready = false;
@@ -9029,6 +9064,7 @@ impl App {
         }
         match action {
             Action::AppleImportToken(_)
+            | Action::AppleTokenReady { .. }
             | Action::AppleSend(_)
             | Action::ApplePlaySong(_)
             | Action::AppleShowFavorites(_) => {}

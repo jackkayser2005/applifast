@@ -34,6 +34,12 @@ does not print tokens or contact a server. Re-run it when the token expires.
 
 ## Build and run on Windows
 
+For the desktop app rather than this diagnostic console, use the
+[private tester guide](../../docs/applifast/testing.md). Its Import developer token
+button opens a file chooser when the path is blank and checks the file before
+restarting a current session. Both the probe and desktop host share the bounded
+JWT reader; `.p8` paths are rejected before opening, and errors omit file contents.
+
 Install the [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
 and a Rust MSVC toolchain. From the repository root:
 

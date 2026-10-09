@@ -936,6 +936,12 @@ pub struct Toast {
 #[derive(Clone, Debug)]
 pub enum Action {
     AppleImportToken(std::path::PathBuf),
+    AppleTokenReady {
+        generation: u64,
+        session: u64,
+        request: u64,
+        path: std::path::PathBuf,
+    },
     AppleSend(serde_json::Value),
     ApplePlaySong(usize),
     AppleShowFavorites(bool),

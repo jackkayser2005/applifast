@@ -23,6 +23,38 @@ fn page<T>(items: Vec<T>, data: &Value, offset: u32) -> ApiPage<T> {
 }
 
 impl App {
+    pub(super) fn apple_token_selected(
+        &mut self,
+        generation: u64,
+        session: u64,
+        request: u64,
+        result: Result<Option<std::path::PathBuf>, String>,
+    ) {
+        let Some(apple) = &mut self.apple else {
+            return;
+        };
+        if apple.generation != generation
+            || apple.session != session
+            || apple.token_request != Some(request)
+        {
+            return;
+        }
+        match result {
+            Ok(Some(path)) => self.actions.push(Action::AppleTokenReady {
+                generation,
+                session,
+                request,
+                path,
+            }),
+            Ok(None) => apple.token_request = None,
+            Err(error) => {
+                apple.token_request = None;
+                apple.error = Some(error.clone());
+                self.toast_error(error);
+            }
+        }
+    }
+
     pub(super) fn apple_album_to_playlist(
         &mut self,
         uri: &str,
@@ -1716,6 +1748,87 @@ fn merge<T: Default>(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn token_preflight_preserves_playback_and_ignores_obsolete_imports() {
+        let mut app = super::super::tests::test_app("apple-token-preflight");
+        app.backend.set_offline(true);
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        state.loading = false;
+        state.songs.push(
+            models::song(&json!({
+                "id":"i.upload", "type":"library-songs", "attributes":{
+                    "name":"Upload", "playParams":{"id":"i.upload", "kind":"song", "isLibrary":true}
+                }
+            }))
+            .unwrap(),
+        );
+        state.play(0).unwrap();
+        app.apple = Some(state);
+        app.local.playback = crate::player::Playback::Playing;
+        let ctx = egui::Context::default();
+        let import = Action::AppleImportToken("token.txt".into());
+        for result in [Ok(None), Err("Cannot open developer token file.".into())] {
+            app.apply(import.clone(), &ctx);
+            let apple = app.apple.as_ref().unwrap();
+            let (generation, session, request) = (
+                apple.generation,
+                apple.session,
+                apple.token_request.unwrap(),
+            );
+            app.apply(import.clone(), &ctx);
+            assert_eq!(app.apple.as_ref().unwrap().token_request, Some(request));
+            app.apple_token_selected(generation, session, request, result);
+            let apple = app.apple.as_ref().unwrap();
+            assert!(apple.authorized && apple.ready && !apple.loading);
+            assert_eq!(apple.token_request, None);
+            assert_eq!(apple.songs.len(), 1);
+            assert_eq!(apple.queue.len(), 1);
+            assert_eq!(apple.index, Some(0));
+            assert_eq!(app.local.playback, crate::player::Playback::Playing);
+        }
+        app.apply(import.clone(), &ctx);
+        let apple = app.apple.as_ref().unwrap();
+        let (generation, session, request) = (
+            apple.generation,
+            apple.session,
+            apple.token_request.unwrap(),
+        );
+        app.apple_token_selected(generation, session, request, Ok(Some("valid.txt".into())));
+        let ready = app.actions.pop().unwrap();
+        app.apply(Action::SignOut, &ctx);
+        let session = app.apple.as_ref().unwrap().session;
+        app.apply(ready, &ctx);
+        let apple = app.apple.as_ref().unwrap();
+        assert_eq!(apple.generation, generation);
+        assert_eq!(apple.session, session);
+        assert!(!apple.authorized);
+        assert!(apple.token_path.is_empty());
+        app.apply(import.clone(), &ctx);
+        let next = app.apple.as_ref().unwrap().token_request.unwrap();
+        assert_ne!(next, request);
+        app.apple_token_selected(generation, session, request, Ok(Some("old.txt".into())));
+        app.apple_token_selected(generation + 1, session, next, Err("old error".into()));
+        assert_eq!(app.apple.as_ref().unwrap().token_request, Some(next));
+        app.apple_token_selected(generation, session, next, Ok(Some("valid.txt".into())));
+        let ready = app.actions.pop().unwrap();
+        app.apply(ready, &ctx);
+        let apple = app.apple.as_ref().unwrap();
+        assert_eq!(apple.generation, generation + 1);
+        assert_eq!(apple.token_path, "valid.txt");
+        assert_eq!(apple.token_request, None);
+        assert!(apple.loading && !apple.ready && !apple.authorized);
+        app.apple.as_mut().unwrap().ready = true;
+        app.apply(import, &ctx);
+        assert_eq!(
+            app.apple.as_ref().unwrap().token_request,
+            None,
+            "authorization popup owns setup until cancelled"
+        );
+        app.backend.shutdown();
+    }
 
     #[cfg(windows)]
     #[tokio::test]
