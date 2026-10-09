@@ -2,7 +2,7 @@ use spotifast::{app, backend, paths, settings, single_instance, util};
 
 use clap::{CommandFactory, FromArgMatches, Parser};
 
-/// A fast, native Spotify client.
+/// Apple Music for Windows, with a native Rust interface.
 #[derive(Debug, Parser)]
 #[command(name = env!("CARGO_BIN_NAME"), version, about)]
 struct Cli {
@@ -20,11 +20,11 @@ struct Cli {
     #[arg(long)]
     device_name: Option<String>,
 
-    /// Log more from librespot and the Web API client.
+    /// Enable detailed application logging. Credentials remain redacted.
     #[arg(short, long)]
     verbose: bool,
 
-    /// Start with sample data and no Spotify connection (for screenshots).
+    /// Start with sample data and no account connection (for screenshots).
     #[cfg(feature = "demo")]
     #[arg(long)]
     demo: bool,
@@ -401,7 +401,7 @@ pub(crate) fn run() -> eframe::Result<()> {
         match single_instance::acquire(&waker, link.as_deref()) {
             single_instance::Outcome::Only(guard) => Some(guard),
             single_instance::Outcome::Surfaced => {
-                log::info!("Spotifast is already running; asked it to show its window");
+                log::info!("Applifast is already running; asked it to show its window");
                 return Ok(());
             }
         }
@@ -430,7 +430,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     // Launched from a desktop, stderr goes nowhere; keep the run's log where
     // a bug report can find it, and a line per panic in the panic log (with
     // any link in its message removed: a URL can carry a token).
-    if let Err(error) = fastframe_log::Logging::new("spotifast", env!("CARGO_PKG_VERSION"))
+    if let Err(error) = fastframe_log::Logging::new("applifast", env!("CARGO_PKG_VERSION"))
         .filter(default_filter)
         .file(dirs.log_file())
         .panic_log(dirs.panic_log())
@@ -615,7 +615,7 @@ pub(crate) fn run() -> eframe::Result<()> {
             #[cfg(target_os = "linux")]
             let hide_from_taskbar = options.viewport.taskbar == Some(false);
             eframe::run_native(
-                "Spotifast",
+                "Applifast",
                 options,
                 Box::new(move |cc| {
                     if let Some(gl) = &cc.gl {
@@ -804,7 +804,7 @@ fn native_options(
     #[cfg(target_os = "linux")]
     let app_id = desktop_entry();
     #[cfg(not(target_os = "linux"))]
-    let app_id = "spotifast";
+    let app_id = "applifast";
     let icon = if cfg!(target_os = "macos") {
         // macOS takes the dock icon from the bundle's .icns, which is the
         // 1024px drawing with the platform's rounding. Setting a window
@@ -873,7 +873,8 @@ fn native_options(
 
 fn profile_options(mut options: eframe::NativeOptions) -> eframe::NativeOptions {
     if options.persist_window {
-        options.persistence_path = eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"));
+        // Keep window geometry and egui memory out of the upstream profile too.
+        options.persistence_path = Some(paths::AppDirs::discover().state.join("window.ron"));
     }
     options
 }
@@ -917,6 +918,10 @@ mod native_window_tests {
         let main = profile_options(native_options(false, None, None));
         assert_eq!(
             main.persistence_path,
+            Some(paths::AppDirs::discover().state.join("window.ron"))
+        );
+        assert_ne!(
+            main.persistence_path,
             eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"))
         );
         let demo_path = std::path::PathBuf::from("temporary/demo.ron");
@@ -925,6 +930,19 @@ mod native_window_tests {
             demo_path.clone(),
         ));
         assert_eq!(demo.persistence_path, Some(demo_path));
+        let mini_path = std::path::PathBuf::from("cache/winamp.ron");
+        let mini = profile_options(native_options(
+            false,
+            Some(MiniWindow {
+                size: egui::vec2(550.0, 232.0),
+                position: None,
+                on_top: false,
+                taskbar: true,
+                storage_path: mini_path.clone(),
+            }),
+            None,
+        ));
+        assert_eq!(mini.persistence_path, Some(mini_path));
     }
 
     #[test]
@@ -954,7 +972,7 @@ mod native_window_tests {
         }
         #[cfg(not(target_os = "linux"))]
         {
-            assert_eq!(main.viewport.app_id.as_deref(), Some("spotifast"));
+            assert_eq!(main.viewport.app_id.as_deref(), Some("applifast"));
             assert_eq!(mini.viewport.app_id, main.viewport.app_id);
             assert_eq!(main.persistence_path, None);
         }

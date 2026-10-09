@@ -1,4 +1,4 @@
-//! Where Spotifast keeps its files.
+//! Where Applifast keeps its files.
 //!
 //! Configuration, durable non-secret state, and disposable caches live in the
 //! platform's conventional directories. Spotify grants use the platform store;
@@ -81,7 +81,7 @@ impl AppDirs {
 
     /// The log of the current run, replaced at every start.
     pub fn log_file(&self) -> PathBuf {
-        self.state.join("spotifast.log")
+        self.state.join("applifast.log")
     }
 
     /// Where a panic is recorded before the process dies of it.
