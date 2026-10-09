@@ -6,6 +6,17 @@ can report the inherited version `spotifast 0.12.0`; use its `BUILD.txt` source
 revision when reporting a problem. The original Spotifast downloads are a
 different product.
 
+## Open shared music
+
+Paste an Apple Music song, album, artist or playlist share URL into Search and
+press Enter. This opens its page without changing playback. A song opens its
+album when Apple supplies one. You can also launch `Applifast.exe` with a quoted
+link; it forwards to an existing instance or waits for sign-in. To start the
+linked music explicitly, run `Applifast.exe play-uri "https://music.apple.com/…"`.
+Use a complete share URL, not the shortened example here. The signed-in account's
+storefront determines availability. Shortened URLs and registering a Windows
+default URL handler are not supported yet.
+
 ## Start listening
 
 1. Get the portable Applifast preview and its checksum from the maintainer.

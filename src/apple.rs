@@ -12,6 +12,7 @@ pub mod models;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Read {
+    Song(String),
     Home(HomeShelf),
     Playlists,
     Albums,

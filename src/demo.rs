@@ -3945,6 +3945,60 @@ mod tests {
             .collect()
     }
 
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_search_enter_opens_a_link_without_starting_or_replacing_playback() {
+        let (ctx, mut app) = accessible_app("apple-search-link");
+        app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+        app.user = None;
+        app.search.query.clear();
+        app.search.committed.clear();
+        let queue = app
+            .apple
+            .as_ref()
+            .unwrap()
+            .queue
+            .iter()
+            .map(crate::apple::Song::uri)
+            .collect::<Vec<_>>();
+        accessible_frame(&ctx, &mut app, vec![]);
+        ctx.memory_mut(|memory| memory.request_focus(egui::Id::new("global-search")));
+        accessible_frame(&ctx, &mut app, vec![]);
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::Text("apple:track:library.i.demo0".into())],
+        );
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::Key {
+                key: egui::Key::Enter,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+        );
+        assert_eq!(*app.page(), Page::Album("alb0".into()));
+        assert!(app.search.typed_at.is_none());
+        assert_eq!(
+            app.apple
+                .as_ref()
+                .unwrap()
+                .queue
+                .iter()
+                .map(crate::apple::Song::uri)
+                .collect::<Vec<_>>(),
+            queue
+        );
+        app.actions.push(Action::Search("Bonobo".into()));
+        accessible_frame(&ctx, &mut app, vec![]);
+        assert_eq!(*app.page(), Page::Search);
+        assert_eq!(app.search.committed, "Bonobo");
+        app.backend.shutdown();
+    }
+
     #[test]
     fn apple_settings_header_opens_shortcuts_without_scrolling() {
         use egui::accesskit::{Action as AccessibleAction, Role};

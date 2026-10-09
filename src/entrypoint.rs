@@ -10,9 +10,8 @@ struct Cli {
     #[command(subcommand)]
     control: Option<Control>,
 
-    /// A Spotify link to open: spotify:track:…, or an open.spotify.com
-    /// address. The running Applifast opens it when there is one, which
-    /// is how the desktop hands links over.
+    /// An Apple Music share URL or apple:<kind>:catalog.<id> URI to open.
+    /// An existing instance opens it; otherwise it waits for Apple sign-in.
     #[arg(value_name = "LINK")]
     link: Option<String>,
 
@@ -127,7 +126,7 @@ enum Control {
     Repeat { mode: Option<Repeat> },
     /// Save the playing track to your library, or take it back out
     Like,
-    /// Play a Spotify URI: a track, album, playlist, artist, or show
+    /// Play an Apple Music share URL or internal song/album/playlist/artist URI
     PlayUri { uri: String },
     /// List the Spotify Connect devices
     Devices {
@@ -204,7 +203,13 @@ fn run_control(control: Control) -> i32 {
             format!("repeat-set {mode}")
         }
         Control::Like => "save-toggle".to_owned(),
-        Control::PlayUri { uri } => format!("play-uri {uri}"),
+        Control::PlayUri { uri } => {
+            let Some(uri) = spotifast::link::parse_apple(&uri) else {
+                eprintln!("not a supported Apple Music link");
+                return 2;
+            };
+            format!("play-uri {uri}")
+        }
         Control::Devices { .. } => "devices".to_owned(),
         Control::Transfer { device_id } => format!("transfer {device_id}"),
         Control::NowPlaying { .. } => "nowplaying".to_owned(),
@@ -371,15 +376,15 @@ pub(crate) fn run() -> eframe::Result<()> {
     if let Some(control) = cli.control {
         std::process::exit(run_control(control));
     }
-    // A link is read before anything starts: one that is not a Spotify
+    // A link is read before anything starts: one that is not an Apple Music
     // link ends the launch here rather than reaching the running instance.
     let link = cli
         .link
         .as_deref()
-        .map(|text| match spotifast::link::parse(text) {
+        .map(|text| match spotifast::link::parse_apple(text) {
             Some(uri) => uri,
             None => {
-                eprintln!("not a Spotify link: {text}");
+                eprintln!("not a supported Apple Music link");
                 std::process::exit(2);
             }
         });
@@ -1443,17 +1448,14 @@ mod tests {
     #[test]
     fn a_link_and_a_verb_are_told_apart() {
         // #given / #when / #then
-        let launch = Cli::try_parse_from(["spotifast", "spotify:track:4uLU6hMCjMI75M1A2tKUQC"])
+        let launch = Cli::try_parse_from(["spotifast", "apple:track:library.i.upload"])
             .expect("a link parses");
-        assert_eq!(
-            launch.link.as_deref(),
-            Some("spotify:track:4uLU6hMCjMI75M1A2tKUQC")
-        );
+        assert_eq!(launch.link.as_deref(), Some("apple:track:library.i.upload"));
         assert!(launch.control.is_none());
 
         let launch = Cli::try_parse_from([
             "spotifast",
-            "https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3?si=x",
+            "https://music.apple.com/us/album/name/123?i=456",
             "--verbose",
         ])
         .expect("a web address parses");

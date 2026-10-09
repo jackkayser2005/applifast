@@ -86,6 +86,59 @@ restoration test. It did not reproduce in 20 isolated repetitions or the final
 full run; its cause is unresolved and no test or credential handling was weakened.
 Optional projectM/vcpkg, Ruby/Bundler, Nix and other-platform checks remain pending.
 
+## Shared Apple Music links
+
+Paste a `https://music.apple.com/` song, album, artist or playlist link into
+Search and press Enter to open it. Launching the app with the quoted link does
+the same, forwarding to an existing instance or waiting for Apple authorization.
+Opening a link navigates without starting playback. A song opens its album when
+Apple provides that relationship. `play-uri` explicitly starts playback instead:
+
+```powershell
+cargo run --locked -- "https://music.apple.com/us/album/trying/1616728060?i=1616728064"
+cargo run --locked -- play-uri "https://music.apple.com/us/album/trying/1616728060?i=1616728064"
+```
+
+Internal `apple:track:library.i.…` and `apple:track:catalog.…` identifiers also
+work. Library identity and Apple's original playback parameters remain intact;
+a library song is never resolved by substituting a catalog ID. Album links with
+an `i` query select that song, matching [Apple's documented share URLs](https://developer.apple.com/documentation/applemusicapi/get-a-catalog-album).
+The authorized account's storefront is used, even when the shared URL names a
+different country. Availability can differ. Shortened links, stations, videos,
+HTTP URLs and automatic OS URL-handler registration are outside this slice.
+
+Unknown songs request only their exact Apple song resource and album/artist
+relationships through the existing asynchronous MusicKit read channel. Opening
+does not depend on a Spotify account profile. Duplicate reads are coalesced;
+newer links or navigation supersede older navigation, and newer playback or
+transport actions cancel pending playback. Failed or mismatched song responses
+leave existing playback and queue occurrences intact. Sign-out/cancellation
+clear pending links and reads; late answers cannot revive them. A developer-token
+renewal retains the pending navigation until authorization succeeds.
+
+Input validation bounds identifiers, refuses ambiguous song parameters and
+path/host injection, and never follows a redirect. Rejected input is not echoed
+to logs or the terminal. No dependency, storage format, credential entry,
+network destination, hosted service or telemetry is added. Retained Spotify
+parsing remains available to legacy internal callers; the normal CLI accepts
+Apple links. The interface layout and styling are unchanged.
+
+Parser, control-channel, exact-song failure, authorization, stale-response and
+queue-preservation regressions cover these rules. The demo test submits a link
+through the actual Search field with Enter, then checks ordinary text search.
+Windows formatting, strict default/demo all-target Clippy, 999 default and
+1,031 demo library tests (four opt-in checks ignored in each), binary/integration
+suites, default doctests, strict demo Rustdoc, demo build, gettext and Node
+bridge/signer checks pass. The standalone host's isolated dummy Credential
+Manager round trip passes. All eight matching native album captures were
+inspected; selector paths and PNG dimensions pass. See the
+[shared-links comparison](review-links/index.html). The baseline opens the
+album directly, while the candidate reaches it through the library-song link.
+Fixtures retain some inherited Spotify labels; captures do not establish live
+account behavior. Real-account link playback is pending while an older app
+owns the playback profile. HTML browser rendering, optional projectM/vcpkg,
+Ruby/Bundler, Nix and other-platform compilation remain unverified.
+
 ## Keyboard shortcuts
 
 Open **Settings > Keyboard shortcuts** beside the page heading, or press

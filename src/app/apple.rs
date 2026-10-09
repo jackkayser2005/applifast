@@ -768,18 +768,18 @@ impl App {
         let Some(action) = &apple.pending_play else {
             return;
         };
-        let page = match action {
-            Action::PlayContext { uri, .. } | Action::ShufflePlay(uri) => Page::from_uri(uri),
-            _ => None,
+        let waiting = match action {
+            Action::PlayContext { uri, .. } | Action::ShufflePlay(uri) => {
+                apple.reads.values().any(|(target, _)| {
+                    *target == Read::Song(uri.clone())
+                        || Page::from_uri(uri).is_some_and(|page| read_for_page(target, &page))
+                })
+            }
+            _ => false,
         };
-        if page.is_none_or(|page| {
-            !apple
-                .reads
-                .values()
-                .any(|(target, _)| read_for_page(target, &page))
-        }) && let Some(action) = apple.pending_play.take()
-        {
-            self.actions.push(action);
+        if !waiting && let Some(action) = apple.pending_play.take() {
+            // Resolve now, before a later UI action can supersede this intent.
+            self.apply_apple_action(&action);
         }
     }
     pub(super) fn apple_artist_filters(&mut self, id: &str) {
@@ -857,6 +857,44 @@ impl App {
         };
         let path = format!("{prefix}/{resource}/{id}");
         applifast_playback_probe::protocol::valid_read_path(&path).then_some(path)
+    }
+    pub(super) fn apple_read_song(&mut self, uri: &str) {
+        if let Some(id) = uri.strip_prefix("apple:track:")
+            && crate::link::parse_apple(uri).as_deref() == Some(uri)
+            && let Some(path) = self.apple_resource_path("songs", id)
+        {
+            self.apple_read(
+                Read::Song(uri.into()),
+                format!("{path}?include=albums,artists"),
+                0,
+            );
+        }
+    }
+    pub(super) fn apple_open_pending_link(&mut self, uri: &str) {
+        let Some(uri) = crate::link::parse_apple(uri) else {
+            self.pending_link = None;
+            self.toast_error("Applifast cannot open this Apple Music link.");
+            return;
+        };
+        if !self.account_ready() {
+            return;
+        }
+        if let Some(page) = Page::from_uri(&uri) {
+            self.pending_link = None;
+            self.open(page);
+        } else if let Some(song) = self.apple.as_ref().and_then(|apple| apple.find_song(&uri)) {
+            let album = song.album_id.clone();
+            self.pending_link = None;
+            if let Some(album) = album {
+                self.open(Page::Album(album));
+            } else {
+                self.toast_error("Apple Music provided no album page for this song. Use play-uri to play its link.");
+            }
+        } else {
+            // Keep the canonical target so a response can only finish this link.
+            self.pending_link = Some(uri.clone());
+            self.apple_read_song(&uri);
+        }
     }
     pub(super) fn apple_ensure_loaded(&mut self, page: Page) {
         if !self.account_ready() {
@@ -1033,6 +1071,14 @@ impl App {
         }
     }
     pub(super) fn apple_context_uris(&self, uri: &str) -> Vec<String> {
+        if uri.starts_with("apple:track:")
+            && self
+                .apple
+                .as_ref()
+                .is_some_and(|apple| apple.find_song(uri).is_some())
+        {
+            return vec![uri.into()];
+        }
         if matches!(
             uri,
             "apple:collection:library" | "apple:collection:favorites"
@@ -1260,6 +1306,31 @@ impl App {
         else {
             return;
         };
+        if let Read::Song(uri) = target {
+            let data = &value["data"];
+            let rows = resources(data);
+            let exact =
+                rows.len() == 1 && models::song(&rows[0]).is_some_and(|song| song.uri() == uri);
+            if value["error"].is_string() || !exact {
+                let apple = self.apple.as_mut().unwrap();
+                let playing = matches!(&apple.pending_play,
+                    Some(Action::PlayContext { uri: held, .. } | Action::ShufflePlay(held)) if *held == uri);
+                if playing {
+                    apple.pending_play = None;
+                }
+                let opening = self.pending_link.as_deref() == Some(&uri);
+                if opening {
+                    self.pending_link = None;
+                }
+                if playing || opening {
+                    self.toast_error("Cannot load this Apple Music song. Check your connection and try its link again.");
+                }
+            } else {
+                self.apple_tracks(data);
+                self.open_pending_link();
+            }
+            return;
+        }
         if let Read::Home(shelf) = target {
             if let Some(error) = value["error"].as_str() {
                 // A failed later page keeps the playable cards already shown.
@@ -1455,7 +1526,9 @@ impl App {
                 .insert(target.clone(), (next.into(), offset + rows.len() as u32));
         }
         match target {
-            Read::Home(_) => unreachable!("home responses are handled above"),
+            Read::Home(_) | Read::Song(_) => {
+                unreachable!("individual song and home responses are handled above")
+            }
             Read::Playlists => {
                 let mut playlists = rows.iter().map(models::playlist).collect::<Vec<_>>();
                 self.apple
@@ -1748,6 +1821,176 @@ fn merge<T: Default>(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    fn linked_song(id: &str, library: bool) -> Value {
+        json!({"id":id,"type":if library {"library-songs"} else {"songs"},
+            "attributes":{"name":"Linked song","playParams":{"id":id,"kind":"song","isLibrary":library}},
+            "relationships":{"albums":{"data":[{"id":if library {"l.upload"} else {"789"},
+                "type":if library {"library-albums"} else {"albums"}}]}}})
+    }
+
+    fn song_request(app: &App, uri: &str) -> u64 {
+        *app.apple
+            .as_ref()
+            .unwrap()
+            .reads
+            .iter()
+            .find(|(_, (read, _))| *read == Read::Song(uri.into()))
+            .unwrap()
+            .0
+    }
+
+    #[test]
+    fn apple_links_wait_for_apple_authorization_without_a_spotify_profile() {
+        let mut app = super::super::tests::test_app("apple-link-auth");
+        app.backend.set_offline(true);
+        app.apple = Some(crate::apple::State::default());
+        let ctx = egui::Context::default();
+        app.apply(
+            Action::OpenLink("https://music.apple.com/us/album/name/123".into()),
+            &ctx,
+        );
+        assert_eq!(*app.page(), Page::Home);
+        assert!(app.apple.as_ref().unwrap().reads.is_empty());
+        app.apple.as_mut().unwrap().authorized = true;
+        app.apple.as_mut().unwrap().storefront = "us".into();
+        app.open_pending_link();
+        assert!(app.user.is_none());
+        assert_eq!(*app.page(), Page::Album("catalog.123".into()));
+        assert!(app.pending_link.is_none());
+        app.apply(
+            Action::OpenLink("apple:track:library.i.upload".into()),
+            &ctx,
+        );
+        let id = song_request(&app, "apple:track:library.i.upload");
+        app.open_pending_link();
+        assert_eq!(id, song_request(&app, "apple:track:library.i.upload"));
+        app.apple_response(&json!({"id":id,"data":{"data":[linked_song("i.upload",true)]}}));
+        assert_eq!(*app.page(), Page::Album("library.l.upload".into()));
+        assert!(app.pending_link.is_none());
+        assert!(
+            app.apple.as_ref().unwrap().queue.is_empty(),
+            "opening a link never starts playback"
+        );
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn linked_song_answers_cannot_replace_a_newer_link_or_navigation() {
+        let mut app = super::super::tests::test_app("apple-link-stale");
+        app.backend.set_offline(true);
+        let mut apple = crate::apple::State::default();
+        apple.authorized = true;
+        apple.storefront = "us".into();
+        app.apple = Some(apple);
+        let ctx = egui::Context::default();
+        app.apply(Action::OpenLink("apple:track:catalog.123".into()), &ctx);
+        let old = song_request(&app, "apple:track:catalog.123");
+        app.apply(Action::OpenLink("apple:track:catalog.456".into()), &ctx);
+        let next = song_request(&app, "apple:track:catalog.456");
+        app.apple_response(&json!({"id":old,"data":{"data":[linked_song("123",false)]}}));
+        assert_eq!(app.pending_link.as_deref(), Some("apple:track:catalog.456"));
+        assert_eq!(*app.page(), Page::Home);
+        app.apply(Action::Open(Page::Favorites), &ctx);
+        app.apple_response(&json!({"id":next,"data":{"data":[linked_song("456",false)]}}));
+        assert_eq!(*app.page(), Page::Favorites);
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn linked_playback_keeps_uploads_and_cancels_old_play_intents() {
+        let mut app = super::super::tests::test_app("apple-link-play");
+        app.backend.set_offline(true);
+        let mut apple = crate::apple::State::default();
+        apple.authorized = true;
+        apple.storefront = "us".into();
+        app.apple = Some(apple);
+        let ctx = egui::Context::default();
+        let play = |uri: &str| Action::PlayContext {
+            uri: uri.into(),
+            offset_uri: None,
+            offset_index: None,
+        };
+        app.apply(play("apple:track:catalog.123"), &ctx);
+        let old = song_request(&app, "apple:track:catalog.123");
+        app.apply(play("apple:track:library.i.upload"), &ctx);
+        let upload = song_request(&app, "apple:track:library.i.upload");
+        app.apple_response(&json!({"id":old,"data":{"data":[linked_song("123",false)]}}));
+        app.apple_finish_pending_play();
+        assert!(app.apple.as_ref().unwrap().queue.is_empty());
+        app.apple_response(&json!({"id":upload,"data":{"data":[linked_song("i.upload",true)]}}));
+        app.apple_finish_pending_play();
+        app.apply_actions(&ctx);
+        let apple = app.apple.as_ref().unwrap();
+        assert_eq!(apple.queue.len(), 1);
+        assert_eq!(apple.queue[0].uri(), "apple:track:library.i.upload");
+        assert_eq!(
+            apple.queue[0].item.play_params.as_ref().unwrap()["id"],
+            "i.upload"
+        );
+        app.apply(play("apple:track:catalog.999"), &ctx);
+        let cancelled = song_request(&app, "apple:track:catalog.999");
+        app.apply(Action::TogglePlay, &ctx);
+        app.apple_response(&json!({"id":cancelled,"data":{"data":[linked_song("999",false)]}}));
+        app.apple_finish_pending_play();
+        app.apply_actions(&ctx);
+        assert_eq!(
+            app.apple.as_ref().unwrap().queue[0].uri(),
+            "apple:track:library.i.upload"
+        );
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn linked_song_failures_never_substitute_a_different_song_or_drain_the_queue() {
+        let mut app = super::super::tests::test_app("apple-link-failure");
+        app.backend.set_offline(true);
+        let mut apple = crate::apple::State::default();
+        apple.authorized = true;
+        apple.storefront = "us".into();
+        apple
+            .songs
+            .push(models::song(&linked_song("i.upload", true)).unwrap());
+        apple.play(0).unwrap();
+        app.apple = Some(apple);
+        let ctx = egui::Context::default();
+        for data in [
+            json!({"data":[]}),
+            json!({"data":[linked_song("456",false)]}),
+        ] {
+            app.apply(
+                Action::PlayContext {
+                    uri: "apple:track:catalog.123".into(),
+                    offset_uri: None,
+                    offset_index: None,
+                },
+                &ctx,
+            );
+            let id = song_request(&app, "apple:track:catalog.123");
+            app.apple_response(&json!({"id":id,"data":data}));
+            app.apple_finish_pending_play();
+            app.apply_actions(&ctx);
+            let apple = app.apple.as_ref().unwrap();
+            assert!(apple.pending_play.is_none());
+            assert_eq!(apple.queue.len(), 1);
+            assert_eq!(apple.queue[0].uri(), "apple:track:library.i.upload");
+            assert!(!apple.known_songs.contains_key("apple:track:catalog.456"));
+        }
+        app.apply(
+            Action::Search("https://music.apple.com/us/song/123".into()),
+            &ctx,
+        );
+        let id = song_request(&app, "apple:track:catalog.123");
+        app.apple_response(&json!({"id":id,"error":"timeout"}));
+        assert!(app.pending_link.is_none());
+        app.apply(Action::OpenLink("apple:track:catalog.123".into()), &ctx);
+        let id = song_request(&app, "apple:track:catalog.123");
+        app.apply(Action::SignOut, &ctx);
+        app.apple_response(&json!({"id":id,"data":{"data":[linked_song("123",false)]}}));
+        assert!(app.pending_link.is_none());
+        assert!(app.apple.as_ref().unwrap().known_songs.is_empty());
+        app.backend.shutdown();
+    }
 
     #[test]
     fn token_preflight_preserves_playback_and_ignores_obsolete_imports() {
