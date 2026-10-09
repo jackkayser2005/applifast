@@ -289,7 +289,9 @@ pub fn actions_row(
             }
             ui.spacing_mut().item_spacing.x = 18.0;
         }
-        if let Some((uri, saved)) = &actions.saved {
+        if app.apple.is_none()
+            && let Some((uri, saved)) = &actions.saved
+        {
             let (icon, tooltip, color) = if *saved {
                 (
                     actions.saved_icons.1,
@@ -952,7 +954,7 @@ fn list_shortcuts(
         | RowContext::View {
             editable_playlist: Some((id, _)),
             ..
-        } => Some(id.clone()),
+        } if app.apple.is_none() => Some(id.clone()),
         _ => None,
     };
     let can_delete = editable.is_some()
@@ -3016,6 +3018,46 @@ mod tests {
 
     /// Cut copies the picked songs and removes them from a playlist the
     /// account can edit; elsewhere it does nothing to the list (#539).
+    #[test]
+    fn apple_playlist_shortcuts_keep_copy_but_do_not_cut_paste_or_delete() {
+        let mut table = KeyboardTable::new();
+        table.app.apple = Some(crate::apple::State::default());
+        table.editable = true;
+        table.frame(vec![]);
+        let command = if cfg!(target_os = "macos") {
+            egui::Modifiers::MAC_CMD | egui::Modifiers::COMMAND
+        } else {
+            egui::Modifiers::CTRL | egui::Modifiers::COMMAND
+        };
+        table.frame(vec![egui::Event::Key {
+            key: egui::Key::A,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: command,
+        }]);
+        table.app.actions.clear();
+        for event in [
+            egui::Event::Cut,
+            egui::Event::Paste("apple:track:library.i.upload".into()),
+            egui::Event::Key {
+                key: egui::Key::Delete,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ] {
+            table.frame(vec![event]);
+            assert!(table.app.actions.is_empty());
+        }
+        table.frame(vec![egui::Event::Copy]);
+        assert!(
+            matches!(table.app.actions.as_slice(), [Action::CopySongs(items)] if items.len() == table.items.len())
+        );
+        table.app.backend.shutdown();
+    }
+
     #[test]
     fn cut_copies_and_removes_songs_from_an_editable_playlist() {
         let command = if cfg!(target_os = "macos") {

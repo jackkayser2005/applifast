@@ -59,6 +59,20 @@ mini player, **Ctrl+Shift+Q** opens the queue, and **F5** refreshes music pages.
 The [current capabilities and pending checks](listening-slice.md) distinguish
 implemented controls from verified real-account behavior.
 
+Song and collection menus show supported Apple actions. Favorites are readable,
+but changing favorites, artist follow, radio, playlist removal/reordering and
+editing playlist details remain unavailable in this preview. Use Apple Music
+for those changes, then refresh here. Playlist creation and adding songs remain
+available. Cut, Paste and Delete do not edit Apple playlists; Copy still works.
+
+**Copy link** gives catalog items a public `music.apple.com` URL in your account's
+storefront. Library items retain an internal `apple:` link with their exact ID;
+these links require access to that library and are not public sharing links.
+**Open in Apple Music** opens the browser for catalog items only. Uploaded songs
+are never substituted with catalog matches to create a link. Connect/device and
+favorite-write commands are absent from CLI help and return an unsupported error
+if invoked explicitly.
+
 ## If setup fails
 
 | What you see | What to do |

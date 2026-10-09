@@ -353,17 +353,18 @@ fn artist_actions(app: &mut App, ui: &mut egui::Ui, artist: &Artist) {
                 offset_index: None,
             });
         }
-        if theme::pill_button(
-            ui,
-            &palette,
-            &if following {
-                pgettext(locale, "artist", "Following")
-            } else {
-                pgettext(locale, "artist", "Follow")
-            },
-            false,
-        )
-        .clicked()
+        if app.apple.is_none()
+            && theme::pill_button(
+                ui,
+                &palette,
+                &if following {
+                    pgettext(locale, "artist", "Following")
+                } else {
+                    pgettext(locale, "artist", "Follow")
+                },
+                false,
+            )
+            .clicked()
         {
             app.actions.push(Action::ToggleSaved(artist.uri.clone()));
         }

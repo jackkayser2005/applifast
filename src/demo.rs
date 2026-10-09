@@ -4000,6 +4000,28 @@ mod tests {
     }
 
     #[test]
+    fn apple_sidebar_hides_podcasts_and_recovers_a_stale_filter() {
+        let (ctx, mut app) = accessible_app("apple-supported-sidebar");
+        app.apple = Some(crate::apple::State::default());
+        app.apple.as_mut().unwrap().authorized = true;
+        let filter = egui::Id::new("sidebar-filter");
+        ctx.data_mut(|data| data.insert_temp(filter, crate::settings::LibraryShelf::Podcasts));
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .any(|(_, node)| node.label() == Some("Podcasts"))
+        );
+        assert_eq!(
+            ctx.data(|data| data.get_temp::<crate::settings::LibraryShelf>(filter)),
+            Some(crate::settings::LibraryShelf::Playlists)
+        );
+        app.backend.shutdown();
+    }
+
+    #[test]
     fn apple_settings_header_opens_shortcuts_without_scrolling() {
         use egui::accesskit::{Action as AccessibleAction, Role};
         let (ctx, mut app) = accessible_app("apple-settings-shortcuts");

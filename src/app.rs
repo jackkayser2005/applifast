@@ -1117,6 +1117,21 @@ impl App {
         )
     }
 
+    pub(crate) fn external_music_url(&self, uri: &str) -> Option<String> {
+        match &self.apple {
+            Some(apple) => crate::link::public_apple_url(uri, &apple.storefront),
+            None => util::open_spotify_url(uri),
+        }
+    }
+
+    pub(crate) fn music_link(&self, uri: &str) -> Option<String> {
+        self.external_music_url(uri).or_else(|| {
+            self.apple
+                .as_ref()
+                .and_then(|_| crate::link::parse_apple(uri))
+        })
+    }
+
     pub fn songs_context_uri(&self) -> Option<String> {
         if self.apple.is_some() {
             Some("apple:collection:library".into())
@@ -8782,6 +8797,16 @@ impl App {
             }
             Action::ToggleSaved(_)
             | Action::SetSavedMany { .. }
+            | Action::OpenSongRadio { .. }
+            | Action::SaveRadio(_)
+            | Action::PasteSongs { .. }
+            | Action::Open(Page::Radio(_) | Page::Podcasts | Page::Episodes | Page::Show(_))
+            | Action::ShowDialog(
+                Dialog::EditPlaylist { .. }
+                | Dialog::ConfirmDeletePlaylist { .. }
+                | Dialog::PremiumNeeded
+                | Dialog::PersonalAppIntro,
+            )
             | Action::InsertInPlaylist { .. }
             | Action::ConfirmAddToPlaylist { .. }
             | Action::RemoveFromPlaylist { .. }
@@ -8796,7 +8821,7 @@ impl App {
             | Action::ToggleDevicesPopup
             | Action::RestartEngine
             | Action::ConfigurePersonalWebApp => {
-                self.toast_error("This Apple Music control is still being integrated.");
+                self.toast_error("This action is not supported in this preview. Use Apple Music to make this change.");
                 return true;
             }
             _ => {}
@@ -9679,7 +9704,7 @@ impl App {
             Action::SaveRadio(seed) => self.save_radio(&seed),
             Action::RefreshQueue => self.refresh_queue(true),
             Action::CopyLink(uri) => {
-                if let Some(url) = util::open_spotify_url(&uri) {
+                if let Some(url) = self.music_link(&uri) {
                     ctx.copy_text(url);
                     self.toast(gettext(self.locale, "Link copied"));
                 }
@@ -9687,7 +9712,7 @@ impl App {
             Action::CopySongs(items) => {
                 let links: Vec<String> = items
                     .iter()
-                    .filter_map(|item| util::open_spotify_url(item.uri()))
+                    .filter_map(|item| self.music_link(item.uri()))
                     .collect();
                 if !links.is_empty() {
                     // One link a line, in the platform's own line breaks.
@@ -9709,7 +9734,7 @@ impl App {
             }
             Action::PasteSongs { playlist_id, text } => self.paste_songs(playlist_id, &text),
             Action::OpenInSpotify(uri) => {
-                if let Some(url) = util::open_spotify_url(&uri) {
+                if let Some(url) = self.external_music_url(&uri) {
                     ctx.open_url(egui::OpenUrl::new_tab(url));
                 }
             }
@@ -18025,6 +18050,105 @@ mod tests {
         );
         app.apply(Action::SetLyricsFullscreen(false), &ctx);
         assert!(app.lyrics_fullscreen.is_none());
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn apple_clipboard_and_browser_links_preserve_library_identity() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        app.apple = Some(crate::apple::State::default());
+        app.apple.as_mut().unwrap().storefront = "de".into();
+        let catalog = "apple:track:catalog.123";
+        let upload = "apple:track:library.i.upload";
+        assert_eq!(
+            app.external_music_url(catalog).as_deref(),
+            Some("https://music.apple.com/de/song/123")
+        );
+        assert_eq!(app.external_music_url(upload), None);
+        assert_eq!(app.music_link(upload).as_deref(), Some(upload));
+        assert_eq!(app.music_link("spotify:track:123"), None);
+        let ctx = egui::Context::default();
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            app.apply(Action::CopyLink(upload.into()), ui.ctx());
+            app.apply(
+                Action::CopySongs(
+                    [catalog, upload]
+                        .map(|uri| {
+                            PlayableItem::Track(Track {
+                                uri: uri.into(),
+                                ..Default::default()
+                            })
+                        })
+                        .to_vec(),
+                ),
+                ui.ctx(),
+            );
+            app.apply(Action::OpenInSpotify(catalog.into()), ui.ctx());
+            app.apply(Action::OpenInSpotify(upload.into()), ui.ctx());
+        });
+        output.textures_delta.clear();
+        let commands = &output.platform_output.commands;
+        assert!(commands.contains(&egui::OutputCommand::CopyText(upload.into())));
+        assert!(commands.contains(&egui::OutputCommand::CopyText(
+            ["https://music.apple.com/de/song/123", upload].join(if cfg!(windows) {
+                "\r\n"
+            } else {
+                "\n"
+            })
+        )));
+        assert_eq!(
+            commands
+                .iter()
+                .filter(|command| matches!(command, egui::OutputCommand::OpenUrl(_)))
+                .count(),
+            1
+        );
+        assert!(commands.iter().any(|command| matches!(command, egui::OutputCommand::OpenUrl(url) if url.url == "https://music.apple.com/de/song/123")));
+        app.apple = None;
+        assert_eq!(
+            app.music_link("spotify:track:123").as_deref(),
+            Some("https://open.spotify.com/track/123")
+        );
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn apple_unsupported_actions_do_not_open_legacy_pages_or_modify_library() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        app.apple = Some(crate::apple::State::default());
+        let ctx = egui::Context::default();
+        let page = app.page().clone();
+        for action in [
+            Action::Open(Page::Podcasts),
+            Action::Open(Page::Radio("apple:track:catalog.123".into())),
+            Action::OpenSongRadio {
+                uri: "apple:track:library.i.upload".into(),
+                track: Box::default(),
+            },
+            Action::SaveRadio("apple:track:catalog.123".into()),
+            Action::ToggleSaved("apple:track:catalog.123".into()),
+            Action::PasteSongs {
+                playlist_id: "library.p.test".into(),
+                text: "spotify:track:123".into(),
+            },
+            Action::ShowDialog(Dialog::ConfirmDeletePlaylist {
+                id: "library.p.test".into(),
+                name: "Example".into(),
+                owned: true,
+            }),
+        ] {
+            app.apply(action, &ctx);
+            assert_eq!(*app.page(), page);
+            assert!(app.dialog.is_none());
+            assert!(app.apple.as_ref().unwrap().reads.is_empty());
+            assert!(
+                app.toasts
+                    .last()
+                    .is_some_and(|toast| toast.message.contains("not supported in this preview"))
+            );
+        }
         app.backend.shutdown();
     }
 
