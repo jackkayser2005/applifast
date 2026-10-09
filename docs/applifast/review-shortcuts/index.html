@@ -3,6 +3,7 @@
 <title>Applifast keyboard shortcuts review</title>
 <style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
 <h1>Settings and keyboard shortcuts</h1>
+<p><a href="https://github.com/jackkayser2005/applifast/pull/26">PR #26</a>, candidate code <code>5892d57</code>, stacked on PR #25.</p>
 <p>Visible change: Keyboard shortcuts moves from the bottom About section to the Settings header. Apple mode lists quick navigation, refresh and queue keys, calls its mini player and Songs page by their Apple names, and omits unsupported favorite and playlist-editing bindings.</p>
 <p>Baseline: Windows demo build <code>01c4a3a</code>. Candidate: <code>feat/apple-shortcuts</code>. Captures match Apple sample data, Settings page, theme, window size, zoom, neutral pointer and Reduce motion. The open-dialog view uses the same fixture. These captures do not establish account playback or installer acceptance.</p>
 <label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
@@ -11,6 +12,7 @@
 <button id="before">Before</button><button id="after">After</button><p id="label"></p>
 <img id="capture" alt="Matching native Windows Settings and shortcut dialog comparison">
 <p>All 24 native Windows captures were inspected, including scrolling to the bottom of each dialog with the built-in demo input. Selector paths and PNG dimensions pass. Windows captures and keyboard regressions are separate from other-platform compilation and live MusicKit checks. No dependency, credential, storage setting or network destination is added. HTML selector checks are separate from browser rendering.</p>
+<p>PR #26 scope ledger: the maintainer requested a shortcut menu in Settings and additional useful shortcuts on October 8. This covers the visible header entry and updated shortcut list. The request does not establish broader redesign approval, fresh-account sign-in or release acceptance.</p>
 <script>
 const byId=id=>document.getElementById(id);let phase='after';
 function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
