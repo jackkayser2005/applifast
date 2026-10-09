@@ -170,6 +170,7 @@ pub struct State {
     pub songs: Vec<Song>,
     pub next: Option<String>,
     pub token_path: String,
+    pub token_request: Option<u64>,
     pub filter: String,
     pub favorites_only: bool,
     pub home: std::collections::HashMap<HomeShelf, crate::model::Loadable<Vec<HomeCard>>>,
@@ -219,6 +220,7 @@ impl Default for State {
             songs: Vec::new(),
             next: None,
             token_path: String::new(),
+            token_request: None,
             filter: String::new(),
             favorites_only: false,
             home: Default::default(),
@@ -264,6 +266,7 @@ impl State {
         self.loading = true;
     }
     pub fn clear_account(&mut self) {
+        self.token_request = None;
         self.authorized = false;
         self.loading = false;
         self.songs.clear();
@@ -297,6 +300,14 @@ impl State {
         self.cache_dirty = false;
         self.refresh_songs = None;
         self.restore_position = None;
+    }
+    pub fn begin_token_import(&mut self) -> Option<u64> {
+        if self.token_request.is_some() || (self.ready && self.loading && !self.authorized) {
+            return None;
+        }
+        self.read_serial += 1;
+        self.token_request = Some(self.read_serial);
+        self.token_request
     }
     pub fn play(&mut self, index: usize) -> Option<Value> {
         let uris = self.songs.iter().map(Song::uri).collect::<Vec<_>>();

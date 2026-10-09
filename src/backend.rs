@@ -567,6 +567,19 @@ pub enum Command {
         token_file: Option<std::path::PathBuf>,
     },
     AppleSend(String),
+    CheckAppleToken {
+        generation: u64,
+        session: u64,
+        request: u64,
+        path: std::path::PathBuf,
+    },
+    ChooseAppleToken {
+        generation: u64,
+        session: u64,
+        request: u64,
+        selected:
+            std::pin::Pin<Box<dyn std::future::Future<Output = Option<rfd::FileHandle>> + Send>>,
+    },
     LoadAppleCache {
         generation: u64,
         session: u64,
@@ -762,6 +775,12 @@ pub struct LyricsRequest {
 }
 
 pub enum Event {
+    AppleTokenSelected {
+        generation: u64,
+        session: u64,
+        request: u64,
+        result: Result<Option<std::path::PathBuf>, String>,
+    },
     AppleCache {
         generation: u64,
         session: u64,
@@ -1058,6 +1077,39 @@ impl Backend {
             request,
             selected: Box::pin(selected),
         });
+    }
+
+    /// The native picker is created on the UI thread, as for playlist covers.
+    /// Validation and file reads run on the runtime, never in the drawn view.
+    pub fn import_apple_token(
+        &self,
+        generation: u64,
+        session: u64,
+        request: u64,
+        path: std::path::PathBuf,
+    ) {
+        if self.offline {
+            return;
+        }
+        if path.as_os_str().is_empty() {
+            let selected = rfd::AsyncFileDialog::new()
+                .set_title("Import developer token")
+                .add_filter("MusicKit token file", &["txt"])
+                .pick_file();
+            self.send(Command::ChooseAppleToken {
+                generation,
+                session,
+                request,
+                selected: Box::pin(selected),
+            });
+        } else {
+            self.send(Command::CheckAppleToken {
+                generation,
+                session,
+                request,
+                path,
+            });
+        }
     }
 
     pub fn api(&self, request: ApiRequest) {
@@ -1461,6 +1513,36 @@ impl Worker {
         self.waker.wake();
     }
 
+    fn check_apple_token(
+        &self,
+        generation: u64,
+        session: u64,
+        request: u64,
+        selected: impl std::future::Future<Output = Option<std::path::PathBuf>> + Send + 'static,
+    ) {
+        let events = self.events.clone();
+        let waker = self.waker.clone();
+        tokio::spawn(async move {
+            let result = if let Some(path) = selected.await {
+                tokio::task::spawn_blocking(move || {
+                    applifast_playback_probe::protocol::read_developer_token_file(&path)
+                        .map(|_| Some(path))
+                })
+                .await
+                .unwrap_or_else(|_| Err("Cannot validate developer token file.".into()))
+            } else {
+                Ok(None)
+            };
+            let _ = events.send(Event::AppleTokenSelected {
+                generation,
+                session,
+                request,
+                result,
+            });
+            waker.wake();
+        });
+    }
+
     /// Build before replacing either transport configuration. A rejected
     /// change leaves the existing connection in place and is reported to the UI.
     fn apply_proxy(&mut self, proxy: ProxyConfig) -> Result<bool, String> {
@@ -1635,6 +1717,24 @@ impl Worker {
                     if let Some(host) = &self.apple {
                         host.send(command);
                     }
+                }
+                Command::CheckAppleToken {
+                    generation,
+                    session,
+                    request,
+                    path,
+                } => {
+                    self.check_apple_token(generation, session, request, async move { Some(path) });
+                }
+                Command::ChooseAppleToken {
+                    generation,
+                    session,
+                    request,
+                    selected,
+                } => {
+                    self.check_apple_token(generation, session, request, async move {
+                        selected.await.map(|file| file.path().to_path_buf())
+                    });
                 }
                 Command::LoadAppleCache {
                     generation,
@@ -5095,6 +5195,45 @@ fn playback_credentials(account: Option<AccountId>, access_token: String) -> Opt
 #[cfg(test)]
 mod authorization_tests {
     use super::*;
+
+    #[test]
+    fn apple_token_picker_wait_does_not_block_other_preflight_results() {
+        let (runtime, worker, events) = worker("apple-token-preflight");
+        runtime.block_on(async {
+            worker.check_apple_token(7, 3, 1, std::future::pending());
+            worker.check_apple_token(7, 3, 2, async { None });
+            worker.check_apple_token(7, 3, 3, async { Some("missing-signing-key.P8".into()) });
+            let mut replies = Vec::new();
+            tokio::time::timeout(Duration::from_secs(2), async {
+                while replies.len() < 2 {
+                    replies.extend(events.try_iter());
+                    tokio::task::yield_now().await;
+                }
+            })
+            .await
+            .unwrap();
+            for event in replies {
+                let Event::AppleTokenSelected {
+                    generation,
+                    session,
+                    request,
+                    result,
+                } = event
+                else {
+                    panic!("unexpected preflight event")
+                };
+                assert_eq!((generation, session), (7, 3));
+                match request {
+                    2 => assert_eq!(result.unwrap(), None),
+                    3 => assert_eq!(
+                        result.unwrap_err(),
+                        "Expected a signed MusicKit developer JWT, not a .p8 signing key."
+                    ),
+                    _ => panic!("pending picker must not emit a result"),
+                }
+            }
+        });
+    }
 
     #[test]
     fn apple_cache_writes_finish_before_signout_clear_and_shutdown() {

@@ -45,9 +45,10 @@ pub(super) fn login_contents(app: &mut App, ui: &mut egui::Ui) {
         }
     }
     if ui
-        .add_enabled_ui(ready && !loading, |ui| {
-            super::login::big_button(ui, app, "Sign in with Apple")
-        })
+        .add_enabled_ui(
+            ready && !loading && app.apple.as_ref().unwrap().token_request.is_none(),
+            |ui| super::login::big_button(ui, app, "Sign in with Apple"),
+        )
         .inner
     {
         app.actions.push(Action::SignIn);
@@ -71,15 +72,23 @@ pub(super) fn token_import(app: &mut App, ui: &mut egui::Ui) {
             .hint_text(gettext(app.locale, "Path to developer-token.txt"))
             .desired_width(ui.available_width()),
     );
-    if theme::pill_button(
-        ui,
-        &app.palette,
-        &gettext(app.locale, "Import developer token"),
-        false,
-    )
-    .clicked()
+    if ui
+        .add_enabled_ui(
+            apple.token_request.is_none() && !(apple.ready && apple.loading && !apple.authorized),
+            |ui| {
+                theme::pill_button(
+                    ui,
+                    &app.palette,
+                    &gettext(app.locale, "Import developer token"),
+                    false,
+                )
+            },
+        )
+        .inner
+        .clicked()
     {
-        app.actions
-            .push(Action::AppleImportToken(apple.token_path.clone().into()));
+        app.actions.push(Action::AppleImportToken(
+            apple.token_path.trim().trim_matches('"').into(),
+        ));
     }
 }

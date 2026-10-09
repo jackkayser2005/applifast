@@ -1237,6 +1237,12 @@ pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
         app.lyrics_uri = app.now_playing().map(|now| now.uri);
     }
     for flag in show.unwrap_or("").split(',').map(str::trim) {
+        if flag == "apple-token-pending" {
+            if let Some(apple) = &mut app.apple {
+                apple.begin_token_import();
+            }
+            continue;
+        }
         if flag == "apple-search-empty" {
             app.search = crate::model::SearchState::default();
             app.settings.search_history.clear();
@@ -3970,6 +3976,53 @@ mod tests {
         app.dialog = None;
         let text = settings_text(&ctx, &mut app, "keyboard shortcuts");
         assert!(!text.iter().any(|text| text.starts_with("No settings for")));
+        app.backend.shutdown();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn apple_token_setup_disables_overlapping_import_and_signin_controls() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        let (ctx, mut app) = accessible_app("apple-token-setup");
+        let mut apple = crate::apple::State::default();
+        apple.ready = true;
+        apple.loading = false;
+        app.apple = Some(apple);
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let import = accessible_node(&tree, "Import developer token", Role::Button);
+        let button = &tree.nodes.iter().find(|(id, _)| *id == import).unwrap().1;
+        assert!(!button.is_disabled());
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(import, AccessibleAction::Click, None)],
+        );
+        assert!(app.apple.as_ref().unwrap().token_request.is_some());
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        for label in ["Import developer token", "Sign in with Apple"] {
+            let id = accessible_node(&tree, label, Role::Button);
+            assert!(
+                tree.nodes
+                    .iter()
+                    .find(|(held, _)| *held == id)
+                    .unwrap()
+                    .1
+                    .is_disabled()
+            );
+        }
+        app.apple.as_mut().unwrap().token_request = None;
+        app.apple.as_mut().unwrap().loading = true;
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let id = accessible_node(&tree, "Import developer token", Role::Button);
+        assert!(
+            tree.nodes
+                .iter()
+                .find(|(held, _)| *held == id)
+                .unwrap()
+                .1
+                .is_disabled()
+        );
         app.backend.shutdown();
     }
 

@@ -1,5 +1,5 @@
 //! Temporary gate host. Every COM object lives on the dedicated STA thread.
-use crate::protocol::{Command, validate_developer_token};
+use crate::protocol::{Command, read_developer_token_file, validate_developer_token};
 use keyring_core::api::CredentialStoreApi;
 use serde_json::{Value, json};
 use std::result::Result;
@@ -350,19 +350,7 @@ pub fn run() -> Result<(), String> {
             "--self-check" => self_check = true,
             "--token-file" => {
                 let path = args.next().ok_or("--token-file needs a path")?;
-                let file =
-                    std::fs::File::open(path).map_err(|_| "Cannot open developer token file.")?;
-                let mut bytes = Vec::new();
-                file.take(32769)
-                    .read_to_end(&mut bytes)
-                    .map_err(|_| "Cannot read developer token file.")?;
-                if bytes.len() > 32768 {
-                    return Err("Developer token file exceeds 32 KiB.".into());
-                }
-                let token =
-                    String::from_utf8(bytes).map_err(|_| "Developer token must be UTF-8.")?;
-                validate_developer_token(token.trim())?;
-                imported = Some(token.trim().to_owned());
+                imported = Some(read_developer_token_file(std::path::Path::new(&path))?);
             }
             _ => {
                 return Err(
@@ -381,20 +369,7 @@ pub fn attach(
     emit: impl Fn(Value) + Send + Sync + 'static,
 ) -> Result<(), String> {
     let imported = token_file
-        .map(|path| {
-            let file =
-                std::fs::File::open(path).map_err(|_| "Cannot open developer token file.")?;
-            let mut bytes = Vec::new();
-            file.take(32769)
-                .read_to_end(&mut bytes)
-                .map_err(|_| "Cannot read developer token file.")?;
-            if bytes.len() > 32768 {
-                return Err("Developer token file exceeds 32 KiB.".to_owned());
-            }
-            let token = String::from_utf8(bytes).map_err(|_| "Developer token must be UTF-8.")?;
-            validate_developer_token(token.trim())?;
-            Ok(token.trim().to_owned())
-        })
+        .map(|path| read_developer_token_file(&path))
         .transpose()?;
     serve(imported, false, Some(input), Arc::new(emit))
 }

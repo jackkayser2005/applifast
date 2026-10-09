@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast token setup review</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
+<h1>Developer-token setup</h1>
+<p>Candidate: <code>feat/apple-token-onboarding</code>, stacked on PR #26. Baseline: native Windows demo build <code>c8064fe</code>.</p>
+<p>Visible change: Import developer token opens the existing native file chooser when the path is empty. Import is disabled while selection or validation is pending, and Sign in waits for it. The Account settings control uses the same behavior. The Apple sign-in card has more room for token controls, loading and errors, fixing a clipped Import button. Labels and navigation remain intact.</p>
+<p>Matching sample data, themes, sizes, neutral pointer and Reduce motion. The baseline ignores the new pending fixture and keeps Import enabled. No real credentials or playback host are used. The error view uses the same fixed demo error in both builds.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<label>View <select id="view"><option value="setup">Signed-out setup</option><option value="setup-pending">Selection/validation pending</option><option value="setup-error">Setup error</option><option value="setup-authorizing">Apple authorization pending</option><option value="account-pending">Account settings pending</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Matching native Windows developer-token setup comparison">
+<p>All 40 native Windows captures were inspected, including the complete Import button in normal, error and authorization states. HTML selector paths and PNG dimensions pass. Browser rendering of this HTML remains unchecked because the browser plugin could not load its local module due to file permissions.</p>
+<p>UI captures and local lifecycle tests do not prove the OS file chooser, Apple authorization popup, accepted credentials on a fresh Windows account or clean-machine installation. These remain runtime acceptance checks. No dependency, network destination or settings format is added. The local file read is asynchronous and bounded, and signing-key paths are rejected before opening.</p>
+<p>Scope ledger: the maintainer requested working sign-in and better tester documentation. This covers file selection, pending controls, room for usable token controls and preserving the current session on invalid imports. It does not approve a broader redesign or establish release acceptance.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['theme','size','view'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script>

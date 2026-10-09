@@ -8,17 +8,49 @@ the playback host. Apple authorization is the only visible browser popup.
 
 ## Local setup
 
-Follow the [developer-token setup](../../prototypes/apple-playback/README.md).
+Invited testers: follow the [Windows setup and troubleshooting guide](testing.md).
+Maintainers: follow the [developer-token setup](../../prototypes/apple-playback/README.md).
 Keep the `.p8` key and generated JWT in ignored `.secrets/apple-music/`, never
 in a commit or chat. The app imports the JWT file, not the signing key. On
 Windows, run `cargo run --locked`. The executable is still named `spotifast.exe`
 during this development slice; its window and local identity are Applifast.
 
-If no saved grant exists, enter the absolute path to `developer-token.txt`, click
-**Import token**, then **Sign in with Apple**. Enter the subscriber's credentials
+If no saved grant exists, leave the path empty and click **Import developer token**
+to choose `developer-token.txt`, or enter its absolute path. Quoted Windows paths
+are accepted. Then click **Sign in with Apple**. Enter the subscriber's credentials
 only in Apple's popup. Existing grants from the playback probe restore without
 another import. An expired developer JWT requires generating and importing a
 new one. Authorization errors retain an explicit retry action.
+
+Token selection and bounded local validation run asynchronously before resetting
+the host. Cancelled selection, unreadable/expired/invalid files and late results
+after sign-out leave the current session untouched. Import and sign-in controls
+prevent overlapping setup requests. The sign-in card leaves enough room for
+token controls, loading and errors. A current accepted token restarts the host;
+the host validates the file again before writing credentials. A changed file or
+Apple-rejected signature can still fail that final step. No JWT appears in UI
+events, no signing key is imported, and `.p8` paths are rejected before opening.
+This adds no dependency, network destination or settings format. Public token
+delivery and clean-machine authorization acceptance remain pending.
+
+The token regressions use dummy data: bounded/expired/non-UTF-8 files, signing-key
+path rejection, cancelled selection, request generations, delayed success after
+sign-out and disabled setup controls. Windows default/demo tests cover the
+native sign-in card; its UI regression is Windows-only because other targets
+show unsupported playback. The standalone host's dummy Credential Manager
+round trip also passes. See the [40 matching native setup captures](review-token-onboarding/index.html).
+Browser rendering of that HTML remains unchecked due to local plugin file
+permissions. Native picker interaction and fresh-account Apple authorization
+remain separate runtime gates.
+
+Available Windows checks pass: formatting, strict default/demo all-target Clippy,
+992 default and 1,023 demo library tests (four opt-in checks ignored in each),
+binary/integration tests, doctests, strict demo Rustdoc, gettext and Node checks.
+The standalone host passes 12 tests plus its opt-in dummy credential-store test.
+One preceding demo run had a filesystem error in the existing protected-grant
+restoration test. It did not reproduce in 20 isolated repetitions or the final
+full run; its cause is unresolved and no test or credential handling was weakened.
+Optional projectM/vcpkg, Ruby/Bundler, Nix and other-platform checks remain pending.
 
 ## Keyboard shortcuts
 

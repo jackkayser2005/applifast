@@ -3,6 +3,7 @@
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::io::Read;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -369,6 +370,27 @@ pub fn validate_developer_token(token: &str) -> Result<(), String> {
     validate_token_at(token, now)
 }
 
+/// Read a bounded local JWT. Errors never contain file contents or signing inputs.
+pub fn read_developer_token_file(path: &std::path::Path) -> Result<String, String> {
+    if path
+        .extension()
+        .is_some_and(|extension| extension.as_encoded_bytes().eq_ignore_ascii_case(b"p8"))
+    {
+        return Err("Expected a signed MusicKit developer JWT, not a .p8 signing key.".into());
+    }
+    let file = std::fs::File::open(path).map_err(|_| "Cannot open developer token file.")?;
+    let mut bytes = Vec::new();
+    file.take(32769)
+        .read_to_end(&mut bytes)
+        .map_err(|_| "Cannot read developer token file.")?;
+    if bytes.len() > 32768 {
+        return Err("Developer token file exceeds 32 KiB.".into());
+    }
+    let token = String::from_utf8(bytes).map_err(|_| "Developer token must be UTF-8.")?;
+    validate_developer_token(token.trim())?;
+    Ok(token.trim().to_owned())
+}
+
 // This only checks format and expiry. Apple verifies the signature and access.
 fn validate_token_at(token: &str, now: u64) -> Result<(), String> {
     let invalid = || "Expected a signed MusicKit developer JWT, not a .p8 signing key.".to_string();
@@ -614,5 +636,62 @@ mod tests {
         assert!(validate_token_at(&token(100), 100).is_err());
         assert!(validate_token_at("-----BEGIN PRIVATE KEY-----", 100).is_err());
         assert!(validate_token_at("fake.fake.fake", 100).is_err());
+    }
+
+    #[test]
+    fn token_file_is_bounded_private_and_rejects_signing_keys_before_opening() {
+        let root =
+            std::env::temp_dir().join(format!("applifast-token-read-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let path = root.join("developer-token.txt");
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"ES256","kid":"TEST"}"#);
+        let claims = |expires| {
+            URL_SAFE_NO_PAD.encode(
+                json!({
+                    "iss":"TEST", "iat":now - 20, "exp":expires,
+                    "origin":["https://applifast.invalid"]
+                })
+                .to_string(),
+            )
+        };
+        let signed = |expires| {
+            format!(
+                "{header}.{}.{}",
+                claims(expires),
+                URL_SAFE_NO_PAD.encode([0u8; 64])
+            )
+        };
+        let valid = signed(now + 3600);
+        std::fs::write(&path, format!(" \r\n{valid}\r\n ")).unwrap();
+        assert_eq!(read_developer_token_file(&path).unwrap(), valid);
+        std::fs::write(&path, signed(now - 1)).unwrap();
+        assert_eq!(
+            read_developer_token_file(&path).unwrap_err(),
+            "Developer token expired. Generate and import a fresh token."
+        );
+        for (bytes, message) in [
+            (vec![0xff], "Developer token must be UTF-8."),
+            (vec![b'x'; 32769], "Developer token file exceeds 32 KiB."),
+            (
+                b"private fixture contents".to_vec(),
+                "Expected a signed MusicKit developer JWT, not a .p8 signing key.",
+            ),
+        ] {
+            std::fs::write(&path, bytes).unwrap();
+            assert_eq!(read_developer_token_file(&path).unwrap_err(), message);
+        }
+        assert_eq!(
+            read_developer_token_file(&root.join("missing.P8")).unwrap_err(),
+            "Expected a signed MusicKit developer JWT, not a .p8 signing key."
+        );
+        assert_eq!(
+            read_developer_token_file(&root.join("missing.txt")).unwrap_err(),
+            "Cannot open developer token file."
+        );
+        std::fs::remove_dir_all(root).unwrap();
     }
 }
