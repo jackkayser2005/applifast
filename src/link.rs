@@ -89,6 +89,18 @@ fn apple_uri(kind: &str, source: &str, id: &str) -> Option<String> {
     valid.then(|| format!("apple:{kind}:{source}.{id}"))
 }
 
+/// Public catalog URL. Private library IDs never become catalog matches.
+pub fn public_apple_url(uri: &str, storefront: &str) -> Option<String> {
+    let uri = parse_apple(uri)?;
+    let (kind, identity) = uri.strip_prefix("apple:")?.split_once(':')?;
+    let id = identity.strip_prefix("catalog.")?;
+    if storefront.len() != 2 || !storefront.bytes().all(|byte| byte.is_ascii_lowercase()) {
+        return None;
+    }
+    let kind = if kind == "track" { "song" } else { kind };
+    Some(format!("https://music.apple.com/{storefront}/{kind}/{id}"))
+}
+
 /// The canonical form of a context URI Spotify reports as playing.
 /// Personalized playlists report their context with the owner embedded,
 /// `spotify:user:NAME:playlist:ID`, while the app's models hold the plain
@@ -234,6 +246,36 @@ fn is_id(id: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn public_apple_links_only_share_catalog_ids_in_the_selected_storefront() {
+        for (uri, path) in [
+            ("apple:track:catalog.123", "song/123"),
+            ("apple:album:catalog.456", "album/456"),
+            ("apple:artist:catalog.789", "artist/789"),
+            ("apple:playlist:catalog.pl.example", "playlist/pl.example"),
+        ] {
+            let url = public_apple_url(uri, "de").unwrap();
+            assert_eq!(url, format!("https://music.apple.com/de/{path}"));
+            assert_eq!(parse_apple(&url).as_deref(), Some(uri));
+        }
+        for uri in [
+            "apple:track:library.i.upload",
+            "apple:album:library.l.album",
+            "apple:artist:library.l.artist",
+            "apple:playlist:library.p.playlist",
+            "spotify:track:123",
+            "apple:track:catalog.123/extra",
+        ] {
+            assert_eq!(public_apple_url(uri, "us"), None, "{uri}");
+        }
+        for storefront in ["", "USA", "US", "u/", "é"] {
+            assert_eq!(
+                public_apple_url("apple:track:catalog.123", storefront),
+                None
+            );
+        }
+    }
 
     #[test]
     fn apple_share_urls_and_internal_ids_remain_distinct() {

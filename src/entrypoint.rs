@@ -16,7 +16,7 @@ struct Cli {
     link: Option<String>,
 
     /// Spotify Connect device name for this session.
-    #[arg(long)]
+    #[arg(long, hide = true)]
     device_name: Option<String>,
 
     /// Enable detailed application logging. Credentials remain redacted.
@@ -125,16 +125,19 @@ enum Control {
     /// Cycle the repeat mode, or set it outright
     Repeat { mode: Option<Repeat> },
     /// Save the playing track to your library, or take it back out
+    #[command(hide = true)]
     Like,
     /// Play an Apple Music share URL or internal song/album/playlist/artist URI
     PlayUri { uri: String },
     /// List the Spotify Connect devices
+    #[command(hide = true)]
     Devices {
         /// Print the JSON the running instance sent instead.
         #[arg(long)]
         raw: bool,
     },
     /// Move playback to a device, by the id `devices` prints
+    #[command(hide = true)]
     Transfer { device_id: String },
     /// Print the playing track
     NowPlaying {
@@ -169,6 +172,13 @@ enum Repeat {
 /// Sends one control verb to the running instance over the
 /// single-instance channel.
 fn run_control(control: Control) -> i32 {
+    if matches!(
+        control,
+        Control::Like | Control::Devices { .. } | Control::Transfer { .. }
+    ) {
+        eprintln!("this control is not supported in the Apple Music preview");
+        return 2;
+    }
     let raw = matches!(
         control,
         Control::NowPlaying { raw: true } | Control::Devices { raw: true }
@@ -357,6 +367,10 @@ pub(crate) fn run() -> eframe::Result<()> {
 
     let cli = Cli::from_arg_matches(&Cli::command().get_matches_from(&launch.arguments))
         .unwrap_or_else(|error| error.exit());
+    if cli.device_name.is_some() {
+        eprintln!("this control is not supported in the Apple Music preview");
+        std::process::exit(2);
+    }
     // Demo mode invents plays, settings, and a signed-in account. Without a
     // folder of its own it would write them into the real profile, where
     // they would pass for the user's history.
@@ -449,10 +463,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     if let Err(error) = dirs_ready {
         log::warn!("unable to create the application directories: {error}");
     }
-    let mut settings = settings::Settings::load(&dirs.settings_file());
-    if let Some(name) = cli.device_name {
-        settings.device_name = name;
-    }
+    let settings = settings::Settings::load(&dirs.settings_file());
     spotifast::window::set_custom_titlebar(settings.custom_titlebar);
     // Colour emoji: the fonts are found off this thread. A demo capture
     // draws every picture in the frame that shows it.

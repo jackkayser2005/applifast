@@ -40,6 +40,58 @@ parse as YAML and README/tester-guide local links exist. HTML browser rendering,
 fresh-account/runtime acceptance, optional projectM/vcpkg, Ruby/Bundler, Nix and
 other-platform compilation remain unverified in this slice.
 
+## Supported Apple controls
+
+Apple song, selection, album, artist and playlist menus now hide unavailable
+favorite/save/follow writes, Spotify radio and advanced playlist edits. Header
+save/follow buttons and track-row hearts are also hidden until Apple writes are
+implemented. Favorites remain readable through the existing page and sidebar
+shelf. Playlist creation and appending songs/albums/queue remain supported.
+Apple playlists keep Copy and selection, while Cut, Paste and Delete cannot
+dispatch unsupported edits. Old/direct unsupported actions produce a clear
+preview error instead of opening legacy pages or Spotify editing dialogs.
+
+The sidebar omits Podcasts and Spotify custom order in Apple mode. A stale
+podcast filter returns to Playlists; an old Spotify sort preference falls back
+without erasing the saved preference. Library drag targets accept editable
+playlists, but no longer imply that dropping onto Songs changes favorites.
+
+Copy link and Copy songs preserve Apple identity. Catalog items receive public
+`https://music.apple.com/<storefront>/<kind>/<id>` links in the authorized
+storefront. Private library items retain internal Apple URIs, without using a
+catalog match or leaking an authorization token. Open in Apple Music is offered
+only for public catalog items and opens that URL in the user's browser on click.
+This adds user-initiated browser access to `music.apple.com`; parsing/copying
+remains local. There is no new dependency, credential, persisted setting or
+background network request. Retained Spotify-mode callers keep their own links.
+
+Normal CLI help hides unsupported Like, Devices, Transfer and device-name
+controls. Explicit invocation exits with code 2 and a fixed explanation before
+contacting an existing instance. The supported transport commands are unchanged.
+The Linux private-bus fixture now uses Apple links and Mute; its runtime remains
+unverified on this Windows host.
+
+Focused tests cover outgoing link identity, clipboard/browser commands, guarded
+actions, menu accessibility, retained sorting preferences, playlist keyboard
+guards, stale sidebar filters and CLI rejection. See the matching
+[Windows album, artist and playlist comparison](review-supported-controls/index.html).
+These checks do not establish real-account writes or release acceptance.
+
+This slice passes formatting, strict default/demo all-target Clippy, 1,005
+default and 1,038 demo library tests (four opt-in checks ignored in each),
+binary/integration suites, default doctests, strict demo Rustdoc, the build,
+gettext and Node bridge/signer checks. The new browser label is translated in
+all 14 complete catalogs. All 24 native captures were inspected; comparison
+paths and PNG dimensions pass. HTML browser rendering, real-account acceptance,
+optional projectM, site/Nix and non-Windows compilation remain unchecked.
+
+Two earlier runs exposed intermittent existing Windows file-save failures:
+the cache-write test failed once, and the session test left the new JSON in
+its temporary file while retaining the prior session. Twenty isolated session
+trials and the final full default/demo suites passed. The underlying atomic
+replacement failure has not been diagnosed; these passing reruns do not prove
+that persistence is reliable under all Windows file-lock conditions.
+
 ## Local setup
 
 Invited testers: follow the [Windows setup and troubleshooting guide](testing.md).

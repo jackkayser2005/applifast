@@ -52,6 +52,7 @@ Token generation for maintainers is documented in the
 | Desktop | Tray, media keys, taskbar controls and mini player share the playback state. Closing to the tray can leave music running. |
 | Playlists | Create playlists, save the queue and append selected songs, albums or the queue. Real-account write acceptance remains pending. |
 | Favorites | Read Apple's favorite flags, filter loaded songs and show a Favorites page and configurable sidebar shelf. Writes remain pending. |
+| Links and menus | Copy public Apple Music catalog links or exact internal library links. Unsupported favorite writes, radio and advanced playlist edits are hidden. Playlist creation, additions and queue controls remain available. |
 | Lyrics and motion | Optional LRCLIB lyrics and full-screen Now Playing; Reduce motion; decorative Ambient Pulse. Apple playback does not expose PCM for EQ, spectrum, oscilloscope or MilkDrop. |
 | Shortcuts | Settings > Keyboard shortcuts or Ctrl+/. Alt+1–5 navigates, F5 refreshes music pages and Ctrl+M opens the mini player. |
 | Shared links | Paste an Apple Music share URL into Search and press Enter, or pass it to the executable. `play-uri` starts linked music explicitly; opening a link alone preserves playback. |

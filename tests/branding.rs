@@ -3,6 +3,35 @@ use std::process::Command;
 
 const COMMAND: &str = env!("CARGO_BIN_EXE_spotifast");
 
+#[test]
+fn apple_cli_hides_and_rejects_unsupported_controls_before_contacting_the_app() {
+    let output = Command::new(COMMAND).arg("--help").output().unwrap();
+    assert!(output.status.success());
+    let help = String::from_utf8(output.stdout).unwrap();
+    for text in [
+        "Spotify Connect",
+        "--device-name",
+        "  like ",
+        "  devices ",
+        "  transfer ",
+    ] {
+        assert!(!help.contains(text), "unsupported help entry: {text}");
+    }
+    for args in [
+        vec!["like"],
+        vec!["devices"],
+        vec!["transfer", "private-device-sentinel"],
+        vec!["--device-name", "private-device-sentinel"],
+    ] {
+        let output = Command::new(COMMAND).args(args).output().unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(
+            String::from_utf8(output.stderr).unwrap().trim(),
+            "this control is not supported in the Apple Music preview"
+        );
+    }
+}
+
 struct Scratch(PathBuf);
 
 impl Scratch {
@@ -166,7 +195,7 @@ fn the_command_forwards_links_to_the_existing_instance_on_a_private_bus() {
     let result = Command::new(COMMAND).arg("reload-themes").output().unwrap();
     assert_eq!(result.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&result.stderr).contains("not running"));
-    let result = Command::new(COMMAND).arg("like").output().unwrap();
+    let result = Command::new(COMMAND).arg("mute").output().unwrap();
     assert_eq!(result.status.code(), Some(1));
     assert!(
         String::from_utf8_lossy(&result.stderr).contains("not running"),
@@ -180,16 +209,16 @@ fn the_command_forwards_links_to_the_existing_instance_on_a_private_bus() {
     let commands = guard.commands();
     for (link, uri) in [
         (
-            "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
-            "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
+            "apple:track:library.i.upload",
+            "apple:track:library.i.upload",
         ),
         (
-            "https://open.spotify.com/search/here%20comes%20the%20sun",
-            "spotify:search:here%20comes%20the%20sun",
+            "https://music.apple.com/us/album/example/123?i=456",
+            "apple:track:catalog.456",
         ),
         (
-            "spotify://search/%E6%9D%B1%E4%BA%AC",
-            "spotify:search:%E6%9D%B1%E4%BA%AC",
+            "apple:playlist:catalog.pl.example",
+            "apple:playlist:catalog.pl.example",
         ),
     ] {
         let mut child = Command::new(COMMAND)
@@ -228,7 +257,7 @@ fn the_command_forwards_links_to_the_existing_instance_on_a_private_bus() {
         vec![ControlCommand::ReloadThemes],
         "a reload only asks for themes, never OpenLink or Show"
     );
-    let result = Command::new(COMMAND).arg("like").output().unwrap();
+    let result = Command::new(COMMAND).arg("mute").output().unwrap();
     assert!(
         result.status.success(),
         "{}",
@@ -236,7 +265,7 @@ fn the_command_forwards_links_to_the_existing_instance_on_a_private_bus() {
     );
     assert_eq!(
         std::mem::take(&mut *commands.lock().unwrap()),
-        vec![ControlCommand::ToggleSaved],
-        "like only toggles the saved state, never OpenLink or Show"
+        vec![ControlCommand::ToggleMute],
+        "mute only toggles volume, never OpenLink or Show"
     );
 }

@@ -246,7 +246,7 @@ fn finish_entry_interaction(
         );
     }
     if drop_allowed
-        && (entry.liked || entry.editable)
+        && ((entry.liked && app.apple.is_none()) || entry.editable)
         && egui::DragAndDrop::has_payload_of_type::<DragTrack>(ui.ctx())
         && let Some(track) = response.dnd_release_payload::<DragTrack>()
     {
@@ -332,6 +332,7 @@ fn liked_entry(app: &App) -> Entry {
 pub(crate) fn selected_sort(app: &App, shelf: Filter) -> LibrarySort {
     if let Some(sort) = app.settings.library_sort.get(&shelf).copied()
         && sort.supports(shelf)
+        && (app.apple.is_none() || sort != LibrarySort::Spotify)
     {
         return sort;
     }
@@ -339,10 +340,11 @@ pub(crate) fn selected_sort(app: &App, shelf: Filter) -> LibrarySort {
         LibrarySort::Library
     } else if !app.settings.sidebar_order.is_empty() {
         LibrarySort::Local
-    } else if app
-        .rootlist
-        .iter()
-        .any(|row| matches!(row, crate::player::RootlistEntry::FolderStart { .. }))
+    } else if app.apple.is_none()
+        && app
+            .rootlist
+            .iter()
+            .any(|row| matches!(row, crate::player::RootlistEntry::FolderStart { .. }))
     {
         LibrarySort::Spotify
     } else {
@@ -401,6 +403,7 @@ fn sort_menu(app: &mut App, ui: &mut egui::Ui, shelf: Filter, selected: LibraryS
             ui.set_width(width.min(ui.ctx().content_rect().width() - 24.0));
             for (sort, label) in &labels {
                 if !sort.supports(shelf)
+                    || (*sort == LibrarySort::Spotify && app.apple.is_some())
                     || (*sort == LibrarySort::Library && shelf == Filter::Playlists)
                     || (*sort == LibrarySort::Local && app.settings.sidebar_order.is_empty())
                 {
@@ -888,6 +891,9 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     let mut filter = ui
         .data(|data| data.get_temp::<Filter>(filter_id))
         .unwrap_or_default();
+    if app.apple.is_some() && filter == Filter::Podcasts {
+        filter = Filter::Playlists;
+    }
     let show_search_id = egui::Id::new("sidebar-show-search");
     let mut show_search = ui
         .data(|data| data.get_temp::<bool>(show_search_id))
@@ -990,6 +996,9 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
             (Filter::Artists, gettext(locale, "Artists")),
             (Filter::Podcasts, gettext(locale, "Podcasts")),
         ] {
+            if app.apple.is_some() && value == Filter::Podcasts {
+                continue;
+            }
             if theme::soft_button(ui, &palette, None, &label, filter == value).clicked() {
                 filter = value;
             }
@@ -1275,7 +1284,9 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                 .map(|pos| ((pos.y - list_top) / row_height).floor())
                 .filter(|row| *row >= 0.0 && *row < entries.len() as f32)
                 .map(|row| row as usize)
-                .filter(|row| entries[*row].liked || entries[*row].editable);
+                .filter(|row| {
+                    (entries[*row].liked && app.apple.is_none()) || entries[*row].editable
+                });
             // Sidebar entries, including Liked Songs, drop between rows.
             let reordering = egui::DragAndDrop::has_payload_of_type::<DragEntry>(ui.ctx());
             let reorder_slot = reordering.then_some(pointer).flatten().map(|pos| {
@@ -1290,7 +1301,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                     // Prepare the enlarged preview before this row is opened.
                     app.softened_covers.texture(ui.ctx(), &art, image);
                 }
-                let droppable = entry.liked || entry.editable;
+                let droppable = (entry.liked && app.apple.is_none()) || entry.editable;
                 let drop_hover = drop_target == Some(index);
                 let active = entry.folder.is_none() && entry.page == current_page;
                 // Liked Songs has no URI of its own here; Spotify plays it
@@ -1771,7 +1782,7 @@ fn library_grid(
                     let playing_here = entry_is_playing_context(entry, playing_context.as_deref());
                     let playing = context_playing && playing_here;
                     let pinned = pins.iter().any(|key| key == entry.ordering_key());
-                    let droppable = entry.liked || entry.editable;
+                    let droppable = (entry.liked && app.apple.is_none()) || entry.editable;
                     let (rect, response) = ui.allocate_exact_size(
                         vec2(layout.card_width, layout.card_height),
                         Sense::click_and_drag(),
@@ -2537,6 +2548,29 @@ mod ordering_tests {
         assert!(!LibrarySort::RecentlyAdded.supports(Filter::Playlists));
         assert!(!LibrarySort::RecentlyAdded.supports(Filter::Artists));
         assert!(LibrarySort::RecentlyAdded.supports(Filter::Podcasts));
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn apple_sort_ignores_spotify_order_without_destroying_the_preference() {
+        let mut app = app("apple-sort");
+        app.settings
+            .library_sort
+            .insert(Filter::Playlists, LibrarySort::Spotify);
+        assert_eq!(selected_sort(&app, Filter::Playlists), LibrarySort::Spotify);
+        app.apple = Some(crate::apple::State::default());
+        assert_eq!(
+            selected_sort(&app, Filter::Playlists),
+            LibrarySort::RecentlyPlayed
+        );
+        app.settings
+            .sidebar_order
+            .push("apple:playlist:library.p.test".into());
+        assert_eq!(selected_sort(&app, Filter::Playlists), LibrarySort::Local);
+        assert_eq!(
+            app.settings.library_sort[&Filter::Playlists],
+            LibrarySort::Spotify
+        );
         app.backend.shutdown();
     }
 

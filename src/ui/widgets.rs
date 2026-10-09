@@ -600,7 +600,7 @@ pub fn picked_menu(
     } else {
         (Icon::Heart, gettext(locale, "Save to Liked Songs"))
     };
-    if menu_item(ui, &palette, Some(icon), &text) {
+    if app.apple.is_none() && menu_item(ui, &palette, Some(icon), &text) {
         app.actions.push(Action::SetSavedMany {
             uris: uris.clone(),
             saved: !all_saved,
@@ -609,7 +609,8 @@ pub fn picked_menu(
     // Removal is URI-based, so one entry covers the whole selection on
     // both the unsorted context and a sorted or filtered view. The caller
     // only passes a playlist when every picked row shares it.
-    if let Some((playlist_id, _)) = editable_playlist
+    if app.apple.is_none()
+        && let Some((playlist_id, _)) = editable_playlist
         && menu_item(
             ui,
             &palette,
@@ -861,16 +862,18 @@ pub fn item_menu(
         } else {
             (Icon::Heart, gettext(locale, "Save to Liked Songs"))
         };
-        if menu_item(ui, &palette, Some(icon), &text) {
+        if app.apple.is_none() && menu_item(ui, &palette, Some(icon), &text) {
             app.actions.push(Action::ToggleSaved(uri.clone()));
         }
         add_to_playlist_menu(ui, app, std::slice::from_ref(item), None);
-    } else if menu_item(
-        ui,
-        &palette,
-        Some(Icon::Bookmark),
-        &gettext(locale, "Save episode"),
-    ) {
+    } else if app.apple.is_none()
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::Bookmark),
+            &gettext(locale, "Save episode"),
+        )
+    {
         app.actions.push(Action::ToggleSaved(uri.clone()));
     }
     // Removal is URI-based, so it stays available on a sorted or
@@ -887,7 +890,9 @@ pub fn item_menu(
         }) => Some((playlist_id, false)),
         _ => None,
     };
-    if let Some((playlist_id, can_move)) = editable {
+    if app.apple.is_none()
+        && let Some((playlist_id, can_move)) = editable
+    {
         if can_move && let Some(index) = index {
             if index > 0
                 && menu_item(
@@ -931,12 +936,14 @@ pub fn item_menu(
     menu_separator(ui, &palette);
     match item {
         PlayableItem::Track(track) => {
-            if menu_item(
-                ui,
-                &palette,
-                Some(Icon::Radio),
-                &gettext(locale, "Go to song radio"),
-            ) {
+            if app.apple.is_none()
+                && menu_item(
+                    ui,
+                    &palette,
+                    Some(Icon::Radio),
+                    &gettext(locale, "Go to song radio"),
+                )
+            {
                 app.actions.push(Action::OpenSongRadio {
                     uri: uri.clone(),
                     track: Box::new(track.clone()),
@@ -998,22 +1005,17 @@ pub fn item_menu(
         }
     }
     menu_separator(ui, &palette);
-    if menu_item(
-        ui,
-        &palette,
-        Some(Icon::Copy),
-        &gettext(locale, "Copy link"),
-    ) {
+    if app.music_link(&uri).is_some()
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::Copy),
+            &gettext(locale, "Copy link"),
+        )
+    {
         app.actions.push(Action::CopyLink(uri.clone()));
     }
-    if menu_item(
-        ui,
-        &palette,
-        Some(Icon::ExternalLink),
-        &gettext(locale, "Open in Spotify"),
-    ) {
-        app.actions.push(Action::OpenInSpotify(uri));
-    }
+    external_link_menu(ui, app, &uri);
 }
 
 /// Menu for a context (playlist, album, artist, show).
@@ -1069,10 +1071,13 @@ pub fn context_menu_items(
         (_, true) => (Icon::CircleX, gettext(locale, "Remove from Your Library")),
         (_, false) => (Icon::CirclePlus, gettext(locale, "Add to Your Library")),
     };
-    if owned_playlist.is_none() && menu_item(ui, &palette, Some(icon), &text) {
+    if app.apple.is_none() && owned_playlist.is_none() && menu_item(ui, &palette, Some(icon), &text)
+    {
         app.actions.push(Action::ToggleSaved(uri.to_string()));
     }
-    if let Some(playlist) = owned_playlist {
+    if app.apple.is_none()
+        && let Some(playlist) = owned_playlist
+    {
         if menu_item(
             ui,
             &palette,
@@ -1107,26 +1112,35 @@ pub fn context_menu_items(
         "artist" => Some(gettext(locale, "Go to artist radio")),
         _ => None,
     };
-    if let Some(label) = radio
+    if app.apple.is_none()
+        && let Some(label) = radio
         && util::station_uri(uri).is_some()
         && menu_item(ui, &palette, Some(Icon::Radio), &label)
     {
         app.actions.push(Action::Open(Page::Radio(uri.to_string())));
     }
-    if menu_item(
-        ui,
-        &palette,
-        Some(Icon::Copy),
-        &gettext(locale, "Copy link"),
-    ) {
+    if app.music_link(uri).is_some()
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::Copy),
+            &gettext(locale, "Copy link"),
+        )
+    {
         app.actions.push(Action::CopyLink(uri.to_string()));
     }
-    if menu_item(
-        ui,
-        &palette,
-        Some(Icon::ExternalLink),
-        &gettext(locale, "Open in Spotify"),
-    ) {
+    external_link_menu(ui, app, uri);
+}
+
+fn external_link_menu(ui: &mut Ui, app: &mut App, uri: &str) {
+    let label = if app.apple.is_some() {
+        gettext(app.locale, "Open in Apple Music")
+    } else {
+        gettext(app.locale, "Open in Spotify")
+    };
+    if app.external_music_url(uri).is_some()
+        && menu_item(ui, &app.palette, Some(Icon::ExternalLink), &label)
+    {
         app.actions.push(Action::OpenInSpotify(uri.to_string()));
     }
 }
@@ -1763,7 +1777,7 @@ fn track_row_contents(
     if cols.heart > 0.0 {
         let saved = app.is_saved(row.item.uri());
         let heart_rect = Rect::from_min_size(pos2(x, rect.top()), vec2(cols.heart, row_height));
-        if row.item.is_track() {
+        if app.apple.is_none() && row.item.is_track() {
             let mut child = ui.new_child(
                 UiBuilder::new()
                     .max_rect(heart_rect)
@@ -3517,6 +3531,91 @@ mod tests {
                 tray: false,
             },
         )
+    }
+
+    #[test]
+    fn apple_menus_expose_supported_actions_and_keep_private_links_internal() {
+        let mut app = test_app();
+        app.apple = Some(crate::apple::State::default());
+        app.apple.as_mut().unwrap().storefront = "us".into();
+        for library in [false, true] {
+            let source = if library {
+                "library.i.upload"
+            } else {
+                "catalog.123"
+            };
+            let song = PlayableItem::Track(Track {
+                uri: format!("apple:track:{source}"),
+                ..Default::default()
+            });
+            let editable = ("library.p.test".into(), None);
+            let context = RowContext::Context {
+                uri: "apple:playlist:library.p.test".into(),
+                editable_playlist: Some(editable.clone()),
+            };
+            for surface in ["song", "selection", "playlist", "album", "artist"] {
+                let ctx = egui::Context::default();
+                ctx.enable_accesskit();
+                theme::install(&ctx);
+                let mut output = ctx.run_ui(egui::RawInput::default(), |ui| match surface {
+                    "song" => item_menu(ui, &mut app, &song, Some(&context), Some(0)),
+                    "selection" => {
+                        picked_menu(ui, &mut app, std::slice::from_ref(&song), Some(&editable))
+                    }
+                    kind => {
+                        let id = if library {
+                            "library.p.test"
+                        } else if kind == "playlist" {
+                            "catalog.pl.test"
+                        } else {
+                            "catalog.123"
+                        };
+                        context_menu_items(
+                            ui,
+                            &mut app,
+                            &format!("apple:{kind}:{id}"),
+                            "Example",
+                            (kind == "playlist").then_some(&Playlist::default()),
+                        );
+                    }
+                });
+                output.textures_delta.clear();
+                let tree = output.platform_output.accesskit_update.unwrap();
+                let labels: Vec<_> = tree
+                    .nodes
+                    .iter()
+                    .filter_map(|(_, node)| node.label())
+                    .collect();
+                for forbidden in [
+                    "Save to Liked Songs",
+                    "Remove from Liked Songs",
+                    "Remove from this playlist",
+                    "Add to Your Library",
+                    "Follow",
+                    "Edit details",
+                    "Delete",
+                    "Go to song radio",
+                    "Go to album radio",
+                    "Go to artist radio",
+                    "Go to playlist radio",
+                    "Open in Spotify",
+                ] {
+                    assert!(!labels.contains(&forbidden), "{surface}: {forbidden}");
+                }
+                if surface == "selection" {
+                    assert!(labels.contains(&"Add to queue"));
+                    assert!(labels.contains(&"Add to playlist"));
+                } else {
+                    assert!(labels.contains(&"Copy link"));
+                    assert_eq!(
+                        labels.contains(&"Open in Apple Music"),
+                        !library,
+                        "{surface}"
+                    );
+                }
+            }
+        }
+        app.backend.shutdown();
     }
 
     fn run_on(
