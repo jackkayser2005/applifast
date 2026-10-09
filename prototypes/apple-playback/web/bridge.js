@@ -6,7 +6,7 @@
   let nativeQueue = false;
   let chain = Promise.resolve(), initializing, signingOut = false, authorizing = false;
   let writes = Promise.resolve();
-  const writeControllers = new Set();
+  const apiControllers = new Set();
   let transitioning = false, playbackFailed = false;
   let requestGeneration = 0;
   let seekTarget = null;
@@ -26,6 +26,21 @@
     message: 'Operation failed. Check authorization, subscription, connection, or song availability.'
   }, generation);
   const number = value => Number.isFinite(value) ? value : 0;
+  async function requestMusic(path, parameters = {}, options = {}) {
+    const controller = new AbortController();
+    apiControllers.add(controller);
+    // Reads have a deadline. A timed-out write could have applied at Apple,
+    // so mutations retain their existing acceptance/confirmation behavior.
+    const timeout = options.method === 'POST' ? null : setTimeout(() => controller.abort(), 20_000);
+    try {
+      return await music.api.music(path, parameters, {
+        fetchOptions: { ...options, signal: controller.signal }
+      });
+    } finally {
+      if (timeout !== null) clearTimeout(timeout);
+      apiControllers.delete(controller);
+    }
+  }
   const songAttributes = path => {
     const [bare, query = ''] = path.split('?');
     if (!/^\/v1\/me\/library\/songs(?:\/[\w.-]+)?$/.test(bare)) return path;
@@ -156,7 +171,7 @@
       case 'authorize': return authorize(generation);
       case 'request': {
         // The native boundary validates the relative path before it reaches MusicKit.
-        const response = await music.api.music(songAttributes(command.path));
+        const response = await requestMusic(songAttributes(command.path));
         send('response', { id: command.id, data: response.data }, generation);
         return;
       }
@@ -180,24 +195,21 @@
           ...(data.length ? { relationships: { tracks: { data } } } : {})
         } : { data };
         const path = '/v1/me/library/playlists' + (create ? '' : `/${command.playlist}/tracks`);
-        const controller = new AbortController();
-        writeControllers.add(controller);
-        let response;
-        try {
-          response = await music.api.music(path, {}, {
-            fetchOptions: { method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body), signal: controller.signal }
-          });
-        } finally { writeControllers.delete(controller); }
+        const response = await requestMusic(path, {}, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
         send('response', { id: command.id, data: response?.data ?? null }, generation);
         return;
       }
       case 'library': {
+        if (command.id != null && (!Number.isSafeInteger(command.id) || command.id < 0)) {
+          throw new Error('libraryRequest');
+        }
         const route = command.next || '/v1/me/library/songs?limit=100&include=albums,artists';
         if (typeof route !== 'string' || !route.startsWith('/v1/me/library/songs?') || route.length > 2048) {
           throw new Error('pagination');
         }
-        const response = await music.api.music(songAttributes(route));
+        const response = await requestMusic(songAttributes(route));
         if (generation !== session) return;
         const page = response.data;
         if (!page || !Array.isArray(page.data)) throw new Error('libraryResponse');
@@ -215,7 +227,7 @@
         if (next && (!next.startsWith('/v1/me/library/songs?') || next.length > 2048)) {
           throw new Error('pagination');
         }
-        send('library', { items, next }, generation);
+        send('library', { id: command.id, items, next }, generation);
         return;
       }
       case 'play':
@@ -311,7 +323,7 @@
       const pending = chain;
       const generation = ++session;
       signingOut = true;
-      for (const controller of writeControllers) controller.abort();
+      for (const controller of apiControllers) controller.abort();
       writes = Promise.resolve();
       desiredPlaying = false;
       queue = []; index = -1; order = { upcoming: [], manualCount: 0, context: [], history: [] };
@@ -337,6 +349,14 @@
     if (command.type === 'request') {
       return Promise.resolve(initializing).then(() => perform(command, generation))
         .catch(() => send('response', { id: command.id, error: 'Apple Music could not load this page. Check sign-in and connection, then retry.' }, generation));
+    }
+    if (command.type === 'library') {
+      // Metadata reads must not make transport commands wait for the network.
+      return Promise.resolve(initializing).then(() => perform(command, generation))
+        .catch(() => Number.isSafeInteger(command.id) && command.id >= 0
+          ? send('library', { id: command.id, items: [], next: null,
+            error: 'Apple Music could not load songs. Check sign-in and connection, then refresh Songs.' }, generation)
+          : error('library', generation));
     }
     chain = chain.then(() => initializing).then(() => perform(command, generation))
       .catch(() => error(command.type, generation));

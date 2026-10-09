@@ -113,6 +113,8 @@ pub enum Command {
     },
     Authorize,
     Library {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        id: Option<u64>,
         next: Option<String>,
     },
     Request {
@@ -204,9 +206,12 @@ impl Command {
                 }
                 command.validate()
             }
-            Self::Library { next: Some(next) }
-                if !valid_read_path(next) || !next.starts_with("/v1/me/library/songs?") =>
-            {
+            Self::Library { id: Some(id), .. } if *id > 9_007_199_254_740_991 => {
+                Err("Library request ID exceeds the JavaScript integer range.".into())
+            }
+            Self::Library {
+                next: Some(next), ..
+            } if !valid_read_path(next) || !next.starts_with("/v1/me/library/songs?") => {
                 Err("Only a next-page path for the song library is accepted.".into())
             }
             Self::Request { id, path } if *id > 9_007_199_254_740_991 || !valid_read_path(path) => {
@@ -537,6 +542,23 @@ mod tests {
     fn rejects_external_pagination_and_invalid_controls() {
         assert!(
             Command::Library {
+                id: Some(9_007_199_254_740_992),
+                next: None
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            Command::Library {
+                id: Some(0),
+                next: None
+            }
+            .validate()
+            .is_ok()
+        );
+        assert!(
+            Command::Library {
+                id: None,
                 next: Some("https://evil.example".into())
             }
             .validate()
@@ -544,6 +566,7 @@ mod tests {
         );
         assert!(
             Command::Library {
+                id: None,
                 next: Some("/v1/me/library/songs?offset=100".into())
             }
             .validate()
