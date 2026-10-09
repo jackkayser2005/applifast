@@ -1,13 +1,93 @@
-//! Spotify links as they arrive from outside: the desktop's URL handler,
+//! Music links as they arrive from outside: the desktop's URL handler,
 //! the command line, and a second launch handing one to the running
 //! instance.
 //!
-//! Every shape Spotify hands out comes back as the one canonical URI,
-//! `spotify:<kind>:<id>` or `spotify:search:<encoded query>`, or nothing
-//! when it is not something the app can open.
+//! Apple links retain their catalog/library identity. Retained Spotify
+//! handling is separate, for legacy callers and deterministic demo coverage.
 
 /// Resource pages. Search links carry text instead of a resource id.
 const KINDS: [&str; 6] = ["track", "album", "artist", "playlist", "show", "episode"];
+
+/// Apple share URLs and internal URIs, retaining catalog and library identity.
+/// Parsing never follows redirects or changes the authorized storefront.
+pub fn parse_apple(text: &str) -> Option<String> {
+    let text = text.trim();
+    if text.len() > 4096 || text.contains('\\') || text.chars().any(char::is_control) {
+        return None;
+    }
+    if let Some(rest) = text.strip_prefix("apple:") {
+        let (kind, identity) = rest.split_once(':')?;
+        let (source, id) = identity.split_once('.')?;
+        return apple_uri(kind, source, id);
+    }
+    // URL parsers normalize dot segments. Reject them before normalization.
+    for part in text.split(['?', '#']).next()?.split('/') {
+        let decoded = percent_encoding::percent_decode_str(part)
+            .decode_utf8()
+            .ok()?;
+        if matches!(decoded.as_ref(), "." | "..")
+            || decoded.contains(['/', '\\'])
+            || decoded.chars().any(char::is_control)
+        {
+            return None;
+        }
+    }
+    let url = reqwest::Url::parse(text).ok()?;
+    if url.scheme() != "https"
+        || url.host_str() != Some("music.apple.com")
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.port().is_some()
+    {
+        return None;
+    }
+    let segments = url
+        .path()
+        .trim_end_matches('/')
+        .split('/')
+        .skip(1)
+        .collect::<Vec<_>>();
+    if segments.iter().any(|segment| segment.is_empty()) {
+        return None;
+    }
+    let (storefront, kind, id) = match segments.as_slice() {
+        [storefront, kind, id] | [storefront, kind, _, id] => (*storefront, *kind, *id),
+        _ => return None,
+    };
+    if storefront.len() != 2 || !storefront.bytes().all(|byte| byte.is_ascii_alphabetic()) {
+        return None;
+    }
+    let mut song_ids = url.query_pairs().filter(|(key, _)| key == "i");
+    if let Some((_, song)) = song_ids.next() {
+        if kind != "album"
+            || song_ids.next().is_some()
+            || apple_uri("album", "catalog", id).is_none()
+        {
+            return None;
+        }
+        return apple_uri("track", "catalog", &song);
+    }
+    apple_uri(if kind == "song" { "track" } else { kind }, "catalog", id)
+}
+
+fn apple_uri(kind: &str, source: &str, id: &str) -> Option<String> {
+    if id.is_empty()
+        || id.len() > 128
+        || !id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
+    {
+        return None;
+    }
+    let valid = match (source, kind) {
+        ("catalog", "track" | "album" | "artist") => id.bytes().all(|byte| byte.is_ascii_digit()),
+        ("catalog", "playlist") => id.starts_with("pl.") && id.len() > 3,
+        ("library", "track") => id.starts_with("i.") && id.len() > 2,
+        ("library", "album" | "artist" | "playlist") => true,
+        _ => false,
+    };
+    valid.then(|| format!("apple:{kind}:{source}.{id}"))
+}
 
 /// The canonical form of a context URI Spotify reports as playing.
 /// Personalized playlists report their context with the owner embedded,
@@ -154,6 +234,93 @@ fn is_id(id: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn apple_share_urls_and_internal_ids_remain_distinct() {
+        for (link, uri) in [
+            (
+                "https://music.apple.com/us/album/trying/1616728060?i=1616728064&ls=1",
+                "apple:track:catalog.1616728064",
+            ),
+            (
+                "https://music.apple.com/gb/song/a-song/123",
+                "apple:track:catalog.123",
+            ),
+            (
+                "https://music.apple.com/de/album/na%C3%AFve/456/",
+                "apple:album:catalog.456",
+            ),
+            (
+                "https://music.apple.com/us/artist/789",
+                "apple:artist:catalog.789",
+            ),
+            (
+                "https://music.apple.com/us/playlist/name/pl.ab-CD_12",
+                "apple:playlist:catalog.pl.ab-CD_12",
+            ),
+            (
+                "apple:track:library.i.upload",
+                "apple:track:library.i.upload",
+            ),
+            (
+                "apple:album:library.l.upload",
+                "apple:album:library.l.upload",
+            ),
+            (
+                "apple:artist:library.r.artist",
+                "apple:artist:library.r.artist",
+            ),
+            (
+                "apple:playlist:library.p.test",
+                "apple:playlist:library.p.test",
+            ),
+        ] {
+            assert_eq!(parse_apple(link).as_deref(), Some(uri), "{link}");
+            assert_eq!(parse_apple(uri).as_deref(), Some(uri));
+        }
+    }
+
+    #[test]
+    fn apple_links_reject_ambiguous_songs_hosts_and_path_injection() {
+        for link in [
+            "spotify:track:123",
+            "apple:track:catalog.i.upload",
+            "apple:track:library.123",
+            "apple:track:library.i.upload:catalog.123",
+            "apple:album:catalog.123/../456",
+            "apple:show:catalog.123",
+            "apple:playlist:catalog.123",
+            "apple:track:catalog.",
+            "http://music.apple.com/us/song/123",
+            "https://music.apple.com.evil/us/song/123",
+            "https://music.apple.com@evil/us/song/123",
+            "https://user:secret@music.apple.com/us/song/123",
+            "https://music.apple.com:8443/us/song/123",
+            "https://music.apple.com/us/album/name/123?i=456&i=789",
+            "https://music.apple.com/us/album/name/123?i=",
+            "https://music.apple.com/us/album/name/123?i=i.upload",
+            "https://music.apple.com/us/album/name/abc?i=456",
+            "https://music.apple.com/us/song/123?i=456",
+            "https://music.apple.com/us/album/../song/123",
+            "https://music.apple.com/us/%2e%2e/song/123",
+            "https://music.apple.com/us/album/a%2Fb/123",
+            "https://music.apple.com/us/song/%31%32%33",
+            "https://music.apple.com/us/song/123/extra",
+            "https://music.apple.com/us/song/12\n3",
+            "https:\\music.apple.com/us/song/123",
+            "https://music.apple.com/us/song/123?i=456%0A789",
+        ] {
+            assert_eq!(parse_apple(link), None, "{link:?}");
+        }
+        assert!(parse_apple(&format!("apple:track:library.i.{}", "x".repeat(127))).is_none());
+        assert!(
+            parse_apple(&format!(
+                "https://music.apple.com/us/song/123?{}",
+                "x".repeat(4096)
+            ))
+            .is_none()
+        );
+    }
 
     /// Every shape Spotify's own apps and site hand out lands on the one
     /// URI the app navigates by.

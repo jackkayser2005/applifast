@@ -3556,7 +3556,19 @@ impl App {
                     MediaRepeat::Playlist => RepeatMode::Context,
                 })),
                 MediaCommand::OpenUri(uri) => {
-                    if crate::link::search_query(&uri).is_some() {
+                    if self.apple.is_some() {
+                        match crate::link::parse_apple(&uri) {
+                            Some(uri) => Some(Action::PlayContext {
+                                uri,
+                                offset_uri: None,
+                                offset_index: None,
+                            }),
+                            None => {
+                                self.toast_error("Applifast cannot open this Apple Music link.");
+                                None
+                            }
+                        }
+                    } else if crate::link::search_query(&uri).is_some() {
                         crate::link::parse(&uri).map(Action::OpenLink)
                     } else {
                         Some(Action::PlayContext {
@@ -6600,8 +6612,7 @@ impl App {
         self.evict_stale_pages();
     }
 
-    /// Hands the app a Spotify link from outside, a canonical URI as
-    /// [`crate::link::parse`] makes it: the window comes forward and the
+    /// Hands the app a music link from outside: the window comes forward and the
     /// page opens once the account is signed in.
     pub fn open_link(&mut self, uri: String) {
         self.actions.push(Action::OpenLink(uri));
@@ -6614,6 +6625,10 @@ impl App {
         let Some(uri) = self.pending_link.clone() else {
             return;
         };
+        if self.apple.is_some() {
+            self.apple_open_pending_link(&uri);
+            return;
+        }
         if self.user.is_none() {
             return;
         }
@@ -8600,6 +8615,12 @@ impl App {
             self.library.liked.revision += 1;
             return true;
         }
+        if matches!(
+            action,
+            Action::Open(_) | Action::Back | Action::Forward | Action::Search(_)
+        ) {
+            self.pending_link = None;
+        }
         if matches!(action, Action::CloseDialog | Action::ShowDialog(_)) {
             let apple = self.apple.as_mut().unwrap();
             if apple.pending_playlist_add.take().is_some()
@@ -8607,6 +8628,38 @@ impl App {
             {
                 self.playlist_busy = false;
             }
+        }
+        if matches!(
+            action,
+            Action::PlayContext { .. }
+                | Action::ShufflePlay(_)
+                | Action::PlayUris { .. }
+                | Action::PlayFromRow { .. }
+                | Action::ApplePlaySong(_)
+                | Action::Next
+                | Action::Previous
+                | Action::TogglePlay
+        ) {
+            self.apple.as_mut().unwrap().pending_play = None;
+        }
+        if let Action::PlayContext { uri, .. } | Action::ShufflePlay(uri) = action
+            && uri.starts_with("apple:track:")
+            && self.apple_context_uris(uri).is_empty()
+        {
+            self.apple_read_song(uri);
+            if self
+                .apple
+                .as_ref()
+                .unwrap()
+                .reads
+                .values()
+                .any(|(read, _)| *read == crate::apple::Read::Song(uri.clone()))
+            {
+                self.apple.as_mut().unwrap().pending_play = Some(action.clone());
+            } else {
+                self.toast_error("Sign in to Apple Music and use a valid song link to play.");
+            }
+            return true;
         }
         if let Action::PlayContext { uri, .. } | Action::ShufflePlay(uri) = action
             && self.apple_context_uris(uri).is_empty()
@@ -8766,6 +8819,7 @@ impl App {
             Action::SignOut | Action::CancelSignIn | Action::AppleTokenReady { .. }
         ) {
             if !matches!(action, Action::AppleTokenReady { .. }) {
+                self.pending_link = None;
                 self.backend.send(Command::ClearAppleCache);
             }
             self.reset_data();
@@ -9660,6 +9714,14 @@ impl App {
                 }
             }
             Action::Search(query) => {
+                if self.apple.is_some()
+                    && let Some(uri) = crate::link::parse_apple(&query)
+                {
+                    self.search.typed_at = None;
+                    self.pending_link = Some(uri);
+                    self.open_pending_link();
+                    return;
+                }
                 self.search.query = query.clone();
                 self.search.typed_at = None;
                 self.open(Page::Search);

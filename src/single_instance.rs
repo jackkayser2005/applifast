@@ -309,8 +309,12 @@ fn parse(line: &str) -> Option<Request> {
             ControlCommand::SetRepeat(crate::player::RepeatMode::Track)
         }
         ("save-toggle", None) => ControlCommand::ToggleSaved,
-        ("play-uri", Some(uri)) => ControlCommand::PlayUri(spotify_uri(uri)?),
-        ("open-link", Some(link)) => ControlCommand::OpenLink(crate::link::parse(link)?),
+        ("play-uri", Some(uri)) => {
+            ControlCommand::PlayUri(crate::link::parse_apple(uri).or_else(|| spotify_uri(uri))?)
+        }
+        ("open-link", Some(link)) => ControlCommand::OpenLink(
+            crate::link::parse_apple(link).or_else(|| crate::link::parse(link))?,
+        ),
         ("transfer", Some(id)) => ControlCommand::Transfer(device_id(id)?),
         ("nowplaying", None) => return Some(Request::NowPlaying),
         ("devices", None) => return Some(Request::Devices),
@@ -350,6 +354,28 @@ mod tests {
         match parse(line) {
             Some(Request::Command(command)) => Some(command),
             _ => None,
+        }
+    }
+
+    #[test]
+    fn apple_links_cross_the_control_channel_without_losing_library_identity() {
+        assert_eq!(
+            command("open-link https://music.apple.com/us/album/name/123?i=456"),
+            Some(ControlCommand::OpenLink("apple:track:catalog.456".into()))
+        );
+        assert_eq!(
+            command("play-uri apple:track:library.i.upload"),
+            Some(ControlCommand::PlayUri(
+                "apple:track:library.i.upload".into()
+            ))
+        );
+        for line in [
+            "play-uri apple:track:catalog.i.upload",
+            "open-link https://music.apple.com.evil/us/song/123",
+            "play-uri apple:track:library.i.upload\nnext",
+            "open-link apple:track:catalog.123:extra",
+        ] {
+            assert_eq!(command(line), None);
         }
     }
 
