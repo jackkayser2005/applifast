@@ -97,6 +97,25 @@ pub fn handle(app: &mut App, ctx: &egui::Context) {
             Key::Slash,
             Action::ShowDialog(Dialog::Shortcuts),
         );
+        if app.apple.is_some() && !editing_text && app.dialog.is_none() {
+            for (number, page) in [
+                (Key::Num1, Page::Home),
+                (Key::Num2, Page::LikedSongs),
+                (Key::Num3, Page::Favorites),
+                (Key::Num4, Page::Albums),
+                (Key::Num5, Page::Artists),
+            ] {
+                key(Modifiers::ALT, number, Action::Open(page));
+            }
+            if !matches!(app.page(), Page::Settings | Page::Queue) {
+                key(Modifiers::NONE, Key::F5, Action::Reload(app.page().clone()));
+                key(
+                    Modifiers::COMMAND,
+                    Key::R,
+                    Action::Reload(app.page().clone()),
+                );
+            }
+        }
         // In a text field these keys move the caret: Ctrl or Alt by a word,
         // Cmd to the end of the line, Up and Down to the end of the text.
         // Taking them here skipped songs while a search was being typed.
@@ -140,7 +159,8 @@ pub fn handle(app: &mut App, ctx: &egui::Context) {
             key(Modifiers::NONE, Key::Slash, Action::FocusSearch);
         }
     });
-    if !typing
+    if app.apple.is_none()
+        && !typing
         && ctx.input_mut(|input| input.consume_key(Modifiers::NONE, Key::B))
         && let Some(now) = app.now_playing().filter(|now| !now.is_episode)
     {
@@ -281,7 +301,11 @@ pub fn shortcuts(locale: Locale, apple: bool) -> Vec<(Cow<'static, str>, Cow<'st
         ),
         (
             keys(platform_shortcut("Ctrl+L", "Cmd+L")),
-            gettext(locale, "Liked Songs"),
+            if apple {
+                gettext(locale, "Songs")
+            } else {
+                gettext(locale, "Liked Songs")
+            },
         ),
         (
             keys(platform_shortcut("Ctrl+Shift+A", "Cmd+Shift+A")),
@@ -291,7 +315,14 @@ pub fn shortcuts(locale: Locale, apple: bool) -> Vec<(Cow<'static, str>, Cow<'st
             keys(platform_shortcut("Ctrl+Shift+B", "Cmd+Shift+B")),
             gettext(locale, "Go to the playing album"),
         ),
-        (keys(WINAMP_SHORTCUT), gettext(locale, "Winamp mini player")),
+        (
+            keys(WINAMP_SHORTCUT),
+            if apple {
+                gettext(locale, "Mini player")
+            } else {
+                gettext(locale, "Winamp mini player")
+            },
+        ),
         (
             keys(platform_shortcut("Ctrl+,", "Cmd+,")),
             gettext(locale, "Settings"),
@@ -312,7 +343,28 @@ pub fn shortcuts(locale: Locale, apple: bool) -> Vec<(Cow<'static, str>, Cow<'st
         ),
         (keys(QUIT_SHORTCUT), gettext(locale, "Quit")),
     ];
+    rows.push((
+        keys(platform_shortcut("Ctrl+Shift+Q", "Cmd+U")),
+        gettext(locale, "Show the queue"),
+    ));
     if apple {
+        rows.retain(|(key, _)| {
+            !matches!(
+                key.as_ref(),
+                "B" | "Delete" | "Ctrl+X" | "Cmd+X" | "Ctrl+V" | "Cmd+V"
+            )
+        });
+        rows.extend([
+            (keys("Alt+1"), gettext(locale, "Home")),
+            (keys("Alt+2"), gettext(locale, "Songs")),
+            (keys("Alt+3"), gettext(locale, "Favorites")),
+            (keys("Alt+4"), gettext(locale, "Albums")),
+            (keys("Alt+5"), gettext(locale, "Artists")),
+            (
+                keys(platform_shortcut("F5  /  Ctrl+R", "F5  /  Cmd+R")),
+                gettext(locale, "Refresh"),
+            ),
+        ]);
         rows.push((keys(MILKDROP_SHORTCUT), gettext(locale, "Show Now Playing")));
     } else {
         rows.extend([
@@ -553,6 +605,112 @@ mod tests {
         assert!(rows.iter().any(
             |(key, description)| key == MILKDROP_SHORTCUT && description == "Show Now Playing"
         ));
+        assert!(
+            rows.iter()
+                .any(|(key, description)| key == "Alt+3" && description == "Favorites")
+        );
+        assert!(
+            rows.iter()
+                .any(|(key, description)| key == WINAMP_SHORTCUT && description == "Mini player")
+        );
+        assert!(!rows.iter().any(|(key, _)| matches!(
+            key.as_ref(),
+            "B" | "Delete" | "Ctrl+X" | "Cmd+X" | "Ctrl+V" | "Cmd+V"
+        )));
+    }
+
+    #[test]
+    fn apple_navigation_and_refresh_wait_for_text_and_dialogs() {
+        let root =
+            std::env::temp_dir().join(format!("applifast-navigation-keys-{}", std::process::id()));
+        let mut app = App::new(
+            &crate::backend::Waker::default(),
+            AppDirs {
+                config: root.join("config"),
+                state: root.join("state"),
+                cache: root.join("cache"),
+            },
+            Settings::default(),
+            AppOptions {
+                media_controls: false,
+                restore_sign_in: false,
+                tray: false,
+            },
+        );
+        crate::demo::populate(&mut app);
+        let ctx = egui::Context::default();
+        let field = egui::Id::new("navigation-test-field");
+        let mut text = String::new();
+        let press = |app: &mut App, text: &mut String, key, modifiers| {
+            app.actions.clear();
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    events: vec![egui::Event::Key {
+                        key,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers,
+                    }],
+                    ..Default::default()
+                },
+                |ui| {
+                    handle(app, ui.ctx());
+                    ui.add(egui::TextEdit::singleline(text).id(field));
+                },
+            );
+            output.textures_delta.clear();
+            format!("{:?}", app.actions)
+        };
+        assert_eq!(press(&mut app, &mut text, Key::Num3, Modifiers::ALT), "[]");
+        app.apple = Some(crate::apple::State::default());
+        let command = if cfg!(target_os = "macos") {
+            Modifiers::MAC_CMD | Modifiers::COMMAND
+        } else {
+            Modifiers::CTRL | Modifiers::COMMAND
+        };
+        for (key, page) in [
+            (Key::Num1, Page::Home),
+            (Key::Num2, Page::LikedSongs),
+            (Key::Num3, Page::Favorites),
+            (Key::Num4, Page::Albums),
+            (Key::Num5, Page::Artists),
+        ] {
+            assert_eq!(
+                press(&mut app, &mut text, key, Modifiers::ALT),
+                format!("{:?}", [Action::Open(page)])
+            );
+        }
+        for (key, modifiers) in [(Key::F5, Modifiers::NONE), (Key::R, command)] {
+            let page = app.page().clone();
+            assert_eq!(
+                press(&mut app, &mut text, key, modifiers),
+                format!("{:?}", [Action::Reload(page)])
+            );
+        }
+        assert_eq!(press(&mut app, &mut text, Key::B, Modifiers::NONE), "[]");
+        app.dialog = Some(Dialog::Shortcuts);
+        for (key, modifiers) in [
+            (Key::Num3, Modifiers::ALT),
+            (Key::F5, Modifiers::NONE),
+            (Key::R, command),
+        ] {
+            assert_eq!(press(&mut app, &mut text, key, modifiers), "[]");
+        }
+        app.dialog = None;
+        ctx.memory_mut(|memory| memory.request_focus(field));
+        press(&mut app, &mut text, Key::F5, Modifiers::NONE);
+        assert!(ctx.text_edit_focused());
+        for (key, modifiers) in [
+            (Key::Num3, Modifiers::ALT),
+            (Key::F5, Modifiers::NONE),
+            (Key::R, command),
+        ] {
+            assert_eq!(press(&mut app, &mut text, key, modifiers), "[]");
+            assert!(ctx.text_edit_focused());
+        }
+        app.backend.shutdown();
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]

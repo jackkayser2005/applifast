@@ -3939,6 +3939,40 @@ mod tests {
             .collect()
     }
 
+    #[test]
+    fn apple_settings_header_opens_shortcuts_without_scrolling() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        let (ctx, mut app) = accessible_app("apple-settings-shortcuts");
+        app.apple = Some(crate::apple::State::default());
+        app.apple.as_mut().unwrap().authorized = true;
+        app.open(Page::Settings);
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let button = accessible_node(&tree, "Keyboard shortcuts", Role::Button);
+        let bounds = tree
+            .nodes
+            .iter()
+            .find(|(id, _)| *id == button)
+            .unwrap()
+            .1
+            .bounds()
+            .unwrap();
+        assert!(
+            bounds.y1 < 170.0,
+            "shortcut entry belongs in the visible header"
+        );
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(button, AccessibleAction::Click, None)],
+        );
+        assert!(matches!(app.dialog, Some(Dialog::Shortcuts)));
+        app.dialog = None;
+        let text = settings_text(&ctx, &mut app, "keyboard shortcuts");
+        assert!(!text.iter().any(|text| text.starts_with("No settings for")));
+        app.backend.shutdown();
+    }
+
     /// The About card ends with the author's credit, and the name opens
     /// the author's website.
     #[test]
