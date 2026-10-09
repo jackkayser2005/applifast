@@ -316,10 +316,9 @@ impl State {
             self.error = Some("This listening slice supports at most 1,000 queue occurrences. Clear manual additions or choose a smaller context.".into());
             return None;
         }
-        let queue: Option<Vec<_>> = uris
-            .iter()
-            .map(|uri| self.find_song(uri).cloned())
-            .collect();
+        let queue = self
+            .songs_for_uris(uris)
+            .map(|songs| songs.into_iter().cloned().collect::<Vec<_>>());
         let Some(mut queue) = queue else {
             self.error = Some("This song has not been loaded from Apple Music. Open its collection and try again.".into());
             return None;
@@ -384,11 +383,14 @@ impl State {
     ) -> Option<usize> {
         self.recent_adds.retain(|_, at| at.elapsed() < debounce);
         // Decide before inserting: repeats within this batch are distinct occurrences.
-        let additions = uris
+        let uris_to_add = uris
             .iter()
             .filter(|uri| album || !self.recent_adds.contains_key(*uri))
-            .map(|uri| self.find_song(uri).cloned())
-            .collect::<Option<Vec<_>>>();
+            .cloned()
+            .collect::<Vec<_>>();
+        let additions = self
+            .songs_for_uris(&uris_to_add)
+            .map(|songs| songs.into_iter().cloned().collect::<Vec<_>>());
         let Some(additions) = additions else {
             self.error = Some(
                 "Open the song's collection and wait for it to load before adding it to queue."
@@ -499,6 +501,22 @@ impl State {
             .or_else(|| self.songs.iter().find(|song| song.uri() == uri))
             .or_else(|| self.queue.iter().find(|song| song.uri() == uri))
     }
+    fn songs_for_uris(&self, uris: &[String]) -> Option<Vec<&Song>> {
+        if uris.len() <= 1 {
+            return uris.iter().map(|uri| self.find_song(uri)).collect();
+        }
+        // Index once per batch instead of allocating every library URI for every row.
+        // Preserve find_song's precedence and first matching occurrence in each list.
+        let mut lookup = self
+            .known_songs
+            .iter()
+            .map(|(uri, song)| (uri.clone(), song))
+            .collect::<std::collections::HashMap<_, _>>();
+        for song in self.songs.iter().chain(&self.queue) {
+            lookup.entry(song.uri()).or_insert(song);
+        }
+        uris.iter().map(|uri| lookup.get(uri).copied()).collect()
+    }
     pub fn read(&mut self, target: Read, path: String, offset: u32) -> Value {
         self.read_serial += 1;
         self.reads.insert(self.read_serial, (target, offset));
@@ -535,15 +553,9 @@ impl State {
         ))
     }
     pub fn playlist_items(&self, uris: &[String]) -> Result<Vec<PlaybackItem>, String> {
-        uris.iter()
-            .map(|uri| {
-                self.find_song(uri)
-                    .map(|song| song.item.clone())
-                    .ok_or_else(|| {
-                        "Reload the selected songs before saving this playlist.".to_owned()
-                    })
-            })
-            .collect()
+        self.songs_for_uris(uris)
+            .map(|songs| songs.into_iter().map(|song| song.item.clone()).collect())
+            .ok_or_else(|| "Reload the selected songs before saving this playlist.".to_owned())
     }
     pub fn append_playlist(
         &mut self,
@@ -1187,6 +1199,71 @@ mod tests {
         )
         .unwrap();
         assert!(command.validate().is_ok());
+    }
+    #[test]
+    fn batch_song_lookup_preserves_precedence_identity_and_atomic_failures() {
+        let mut state = queue_state();
+        let mut known = state.songs[0].clone();
+        known.title = "Known upload".into();
+        known.item.play_params =
+            Some(json!({"id":"i.a","kind":"song","isLibrary":true,"assetId":"uploaded"}));
+        state.known_songs.insert(known.uri(), known.clone());
+        let mut duplicate = state.songs[1].clone();
+        duplicate.title = "Later library copy".into();
+        state.songs.push(duplicate);
+        state.queue[1].title = "Queue copy".into();
+        let mut catalog = known.clone();
+        catalog.item.kind = applifast_playback_probe::protocol::ItemKind::Catalog;
+        catalog.item.play_params = Some(json!({"id":"i.a","kind":"song"}));
+        catalog.title = "Distinct catalog ID".into();
+        state.queue.push(catalog.clone());
+        let uris = [
+            known.uri(),
+            state.songs[1].uri(),
+            known.uri(),
+            catalog.uri(),
+        ];
+        for (uri, song) in uris.iter().zip(state.songs_for_uris(&uris).unwrap()) {
+            assert_eq!(song.title, state.find_song(uri).unwrap().title);
+        }
+        let items = state.playlist_items(&uris).unwrap();
+        assert_eq!(
+            serde_json::to_value(&items[0]).unwrap(),
+            serde_json::to_value(&known.item).unwrap()
+        );
+        assert_eq!(
+            serde_json::to_value(&items[2]).unwrap(),
+            serde_json::to_value(&known.item).unwrap()
+        );
+        assert_eq!(
+            serde_json::to_value(&items[3]).unwrap(),
+            serde_json::to_value(&catalog.item).unwrap()
+        );
+        state.play_uris(&uris, 0).unwrap();
+        assert_eq!(state.queue[0].catalog_id, None);
+        assert_eq!(state.queue[1].title, "i.b");
+        assert_eq!(
+            serde_json::to_value(&state.queue[2].item).unwrap(),
+            serde_json::to_value(&known.item).unwrap()
+        );
+        assert_eq!(
+            serde_json::to_value(&state.queue[3].item).unwrap(),
+            serde_json::to_value(&catalog.item).unwrap()
+        );
+        assert_eq!(
+            state.add_uris(&uris, 0, std::time::Duration::ZERO, false),
+            Some(4)
+        );
+        let before = state.queue_command();
+        let missing = [known.uri(), "apple:track:library.missing".into()];
+        assert!(state.play_uris(&missing, 0).is_none());
+        assert!(
+            state
+                .add_uris(&missing, 0, std::time::Duration::ZERO, false)
+                .is_none()
+        );
+        assert!(state.playlist_items(&missing).is_err());
+        assert_eq!(state.queue_command(), before);
     }
     #[test]
     fn explicit_shuffle_next_stale_events_and_failed_rows_keep_the_queue() {

@@ -20,6 +20,27 @@ only in Apple's popup. Existing grants from the playback probe restore without
 another import. An expired developer JWT requires generating and importing a
 new one. Authorization errors retain an explicit retry action.
 
+## Click-to-play preparation
+
+Batch song resolution indexes the loaded library once per operation instead of
+scanning it and constructing every URI again for every queue occurrence. Play,
+bulk queue additions and playlist saves share the lookup. Single-song requests
+retain the existing direct lookup. Known songs still take precedence over the
+library, which takes precedence over the queue; the first occurrence in each
+list wins. Library and catalog IDs, original playback parameters, duplicates,
+manual queue order and atomic failures are preserved. No persistent index,
+audio cache, credential or network destination is added.
+
+Run `cargo run --locked --example apple-click-latency` for a synthetic local
+measurement. On this Windows PC in the debug profile, five 1,000-song preparations
+(including command serialization) took 63.32–64.85 ms with the preceding
+`01c4a3a` lookup, and 6.40–8.25 ms with the batch lookup. At 100 songs, the ranges
+were 1.16–1.36 ms and 0.71–0.79 ms. This measures UI-side preparation only, not
+MusicKit loading, network time, audible playback latency or release performance.
+The focused regression compares lookup precedence, preserves uploaded playback
+parameters and duplicate identities, and keeps the queue unchanged on missing
+items. Actual first-play and song-switch listening remain runtime checks.
+
 ## Read-only account diagnostics
 
 On Windows, this opt-in check reads metadata using Applifast's own saved grants,
