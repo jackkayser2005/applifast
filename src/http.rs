@@ -125,7 +125,7 @@ fn apply_blocking_proxy(
 }
 
 fn user_agent() -> &'static str {
-    concat!("Spotifast/", env!("CARGO_PKG_VERSION"))
+    concat!("Applifast/", env!("CARGO_PKG_VERSION"))
 }
 
 #[cfg(test)]
@@ -244,6 +244,14 @@ mod tests {
         );
         let seen_by_origin = origin_thread.join().unwrap();
         assert!(seen_by_origin.contains("GET"));
+        assert!(
+            seen_by_origin
+                .lines()
+                .any(|line| line.eq_ignore_ascii_case(&format!(
+                    "User-Agent: Applifast/{}",
+                    env!("CARGO_PKG_VERSION")
+                )))
+        );
     }
 
     #[test]

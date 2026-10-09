@@ -74,10 +74,17 @@ need a separate real Windows account test; deterministic demos are not proof.
 | --- | --- |
 | Preferences | `%APPDATA%\paolino\applifast\config\settings.json` |
 | Queue/library snapshot | `%LOCALAPPDATA%\paolino\applifast\data\apple-session.json` |
-| Other durable state and current log | `%LOCALAPPDATA%\paolino\applifast\data\` (current log is still `spotifast.log`) |
+| Other durable state and current log | `%LOCALAPPDATA%\paolino\applifast\data\` (`applifast.log`, `panic.log`) |
+| Main-window geometry and interface memory | `%LOCALAPPDATA%\paolino\applifast\data\window.ron` |
 | Artwork and disposable caches | `%LOCALAPPDATA%\paolino\applifast\cache\` |
 | Isolated playback browser profile | `%LOCALAPPDATA%\Applifast\playback-probe\` |
 | Developer/user tokens | Windows Credential Manager, service `local.applifast.playback-probe` |
+
+Older previews wrote `spotifast.log` in the same Applifast data directory and
+used the upstream window-memory path. New builds leave those files alone and
+start with independent main-window geometry and zoom. Settings, Apple grants,
+the library/queue snapshot and mini-player preferences retain their existing
+paths. If a report concerns an older preview, include its log and source revision.
 
 The selected file is read locally, bounded and validated again by the playback
 host before credential storage. `.p8` paths are rejected before opening.

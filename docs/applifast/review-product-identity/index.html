@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast product identity review</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
+<h1>Applifast product identity</h1>
+<p>Candidate: <code>feat/apple-product-identity</code>. Baseline: native Windows demo build <code>47b1152</code>, PR #27.</p>
+<p>User-visible scope: Windows file properties identify Applifast and Apple Music; the current log is named applifast.log. Main-window geometry and interface memory now live under Applifast's own data folder, so the first launch starts with fresh main-window geometry and zoom. Settings, credentials, library/queue snapshots and mini-player preferences keep their paths. Old files are left alone. README and issue forms describe this fork's Windows preview and safe diagnostics.</p>
+<p>The interface layout, controls, colors and existing window title are unchanged. These matching native captures show the same Home data, theme, size, neutral pointer and Reduce motion. They cannot prove file properties, persistence after restart, taskbar grouping, playback, resource use or release acceptance. Those require separate evidence.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Matching native Windows Home comparison for the product identity changes">
+<p>All eight native Windows captures were inspected; selector paths and PNG dimensions pass. Browser rendering of this HTML remains unchecked due to the previously observed local browser-plugin module permissions. Windows executable product properties were read from the built file separately. Tests verify path selection and the actual HTTP user-agent header; they do not establish native window restart or taskbar behavior.</p>
+<p>Scope ledger: the maintainer requested Applifast product identity, separate storage and tester documentation in the release checklist. This slice adds no interface redesign, icon redesign, new credentials, network destination or automatic update behavior. The inherited Cargo target/version and packaging scripts remain technical release work; this comparison is not approval of a public release.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix='home-'+byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script>

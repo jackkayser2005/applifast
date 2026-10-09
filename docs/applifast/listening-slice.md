@@ -6,6 +6,40 @@ with a message pump. Commands and sanitized events cross channels through the
 existing asynchronous backend. Closing an egui window does not own or destroy
 the playback host. Apple authorization is the only visible browser popup.
 
+## Preview product identity
+
+Windows executable properties now identify **Applifast** and **Apple Music for
+Windows**. The application and HTTP user agent use Applifast; no new network
+destination or telemetry is added. The Cargo package/target and `--version`
+retain `spotifast 0.12.0` until the packaging/version milestone. Icons and
+inherited installer/release metadata are still pending.
+
+The current run writes `applifast.log` in the existing Applifast data directory.
+Main-window geometry and egui memory use `window.ron` in that same directory,
+instead of upstream's eframe profile. The first launch starts with fresh
+main-window geometry and zoom. No old profile or log is moved, copied or deleted;
+settings, grants, the account snapshot and mini-player preferences keep their
+paths. Demo storage remains isolated. The README and issue forms now describe
+Apple preview setup, current capabilities and redacted diagnostics rather than
+directing testers to upstream Spotify downloads.
+
+The existing window tests cover independent main-window storage, untouched demo
+and mini-player storage and matching main/mini app identity. The local HTTP proxy
+test checks the actual outgoing Applifast user-agent header. See the matching
+[Windows Home captures](review-product-identity/index.html). These do not prove
+first-run/restart geometry, taskbar grouping, fresh-account authorization or
+public-release acceptance. Linux/macOS remain unsupported for Apple playback.
+
+The Windows identity slice passes formatting, strict default/demo all-target
+Clippy, 992 default and 1,023 demo library tests (four opt-in checks ignored in
+each), the binary/integration suites, default doctests, strict demo Rustdoc,
+the demo build, gettext and Node bridge/signer checks. Native Windows executable
+properties report Applifast / Apple Music for Windows. All eight Home captures
+were inspected; comparison selector paths and PNG dimensions pass. Issue forms
+parse as YAML and README/tester-guide local links exist. HTML browser rendering,
+fresh-account/runtime acceptance, optional projectM/vcpkg, Ruby/Bundler, Nix and
+other-platform compilation remain unverified in this slice.
+
 ## Local setup
 
 Invited testers: follow the [Windows setup and troubleshooting guide](testing.md).

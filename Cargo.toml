@@ -5,9 +5,9 @@ version = "0.12.0"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
-description = "A native Spotify client"
-repository = "https://github.com/crmne/spotifast"
-keywords = ["spotify", "music", "egui", "librespot", "player"]
+description = "A lightweight Apple Music client for Windows"
+repository = "https://github.com/jackkayser2005/applifast"
+keywords = ["apple-music", "music", "egui", "windows", "player"]
 categories = ["multimedia::audio"]
 
 [lib]
