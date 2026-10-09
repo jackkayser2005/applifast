@@ -20,6 +20,47 @@ only in Apple's popup. Existing grants from the playback probe restore without
 another import. An expired developer JWT requires generating and importing a
 new one. Authorization errors retain an explicit retry action.
 
+## Keyboard shortcuts
+
+Open **Settings > Keyboard shortcuts** beside the page heading, or press
+**Ctrl+/**. The menu scrolls in smaller windows and lists the bindings supported
+in Apple mode. They operate in the focused app window; navigation changes the
+main page, and media keys remain the existing desktop integration. New
+navigation and refresh keys wait while a
+text field or a dialog is active. Refresh applies to music pages, not Settings
+or the local Queue.
+
+| Keys on Windows | Action |
+| --- | --- |
+| Alt+1 / Alt+2 / Alt+3 | Home / Songs / Favorites |
+| Alt+4 / Alt+5 | Albums / Artists |
+| F5 or Ctrl+R | Refresh the current music page |
+| Ctrl+Shift+Q or Q | Show or hide the queue |
+| Space | Play or pause |
+| Ctrl+Left / Ctrl+Right | Previous / Next |
+| Shift+Left / Shift+Right | Seek backward / forward 10 seconds |
+| Ctrl+Up / Ctrl+Down | Volume up / down |
+| M / S / R | Mute / Shuffle / Cycle repeat |
+| Ctrl+M | Toggle the mini player |
+| L or Ctrl+Shift+K | Now Playing |
+| Esc | Close the dialog or leave Now Playing |
+| Ctrl+, / Ctrl+F | Settings / Search |
+
+Apple mode omits the unimplemented favorite-toggle, playlist removal, cut and
+paste bindings from this menu. The B favorite shortcut no longer emits an
+unsupported Apple action. Other existing shortcuts remain available. No global
+hotkey registration, new preference, storage or network access is added.
+Windows keyboard and accessible-button tests cover navigation, refresh,
+text/dialog guards and opening the menu without scrolling. See the matching
+[Settings and shortcut comparison](review-shortcuts/index.html).
+Available Windows checks pass: formatting, strict default/demo all-target
+Clippy, 989 default and 1,020 demo library tests (four opt-in checks ignored in
+each), binary/integration tests, doctests, strict demo Rustdoc, gettext and
+Node bridge/token checks. Optional projectM/vcpkg, Ruby/Bundler site and launcher
+checks, Nix and other-platform coverage remain pending. These keyboard checks
+do not establish fresh-account authorization, real playback latency or release
+acceptance.
+
 ## Click-to-play preparation
 
 Batch song resolution indexes the loaded library once per operation instead of

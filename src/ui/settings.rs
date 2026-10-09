@@ -196,13 +196,20 @@ fn section(
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     let locale = app.locale;
+    let keyboard_shortcuts = gettext(locale, "Keyboard shortcuts");
     ui.add_space(8.0);
-    theme::text(
-        ui,
-        gettext(locale, "Settings"),
-        theme::bold(28.0),
-        palette.text,
-    );
+    ui.horizontal_wrapped(|ui| {
+        theme::text(
+            ui,
+            gettext(locale, "Settings"),
+            theme::bold(28.0),
+            palette.text,
+        );
+        if theme::soft_button(ui, &palette, Some(Icon::Info), &keyboard_shortcuts, false).clicked()
+        {
+            app.actions.push(Action::ShowDialog(Dialog::Shortcuts));
+        }
+    });
     ui.add_space(4.0);
     let mut filter = ui
         .data(|data| data.get_temp::<String>(egui::Id::new(SETTINGS_FILTER_ID)))
@@ -228,7 +235,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         .data(|data| data.get_temp::<bool>(proxy_dirty_id))
         .unwrap_or(false);
     let mut changed = false;
-    let mut any_visible = false;
+    let mut any_visible = row_matches(&needle, &keyboard_shortcuts, "");
     let open_folder = gettext(locale, "Open folder");
 
     let wanted = app
@@ -1966,7 +1973,6 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     };
     let check_for_updates = gettext(locale, "Check for updates");
     let checking = gettext(locale, "Checking…");
-    let keyboard_shortcuts = gettext(locale, "Keyboard shortcuts");
     let source_code = gettext(locale, "Source code");
     let about_rows = [
         RowText::new(
@@ -1975,7 +1981,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         ),
         RowText::new(
             format!("{check_for_updates} {checking}"),
-            format!("{keyboard_shortcuts} {source_code}"),
+            source_code.clone(),
         ),
     ];
     if section_matches(&needle, &about, &about_rows) {
@@ -2013,11 +2019,6 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                     && !app.update_checking
                 {
                     app.actions.push(Action::CheckForUpdates);
-                }
-                if theme::soft_button(ui, &palette, Some(Icon::Info), &keyboard_shortcuts, false)
-                    .clicked()
-                {
-                    app.actions.push(Action::ShowDialog(Dialog::Shortcuts));
                 }
                 if theme::soft_button(ui, &palette, Some(Icon::ExternalLink), &source_code, false)
                     .clicked()
