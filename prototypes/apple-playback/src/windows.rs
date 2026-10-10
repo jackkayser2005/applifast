@@ -1,5 +1,5 @@
 //! Temporary gate host. Every COM object lives on the dedicated STA thread.
-use crate::protocol::{Command, read_developer_token_file, validate_developer_token};
+use crate::protocol::{Command, read_developer_token_file, startup_developer_token};
 use keyring_core::api::CredentialStoreApi;
 use serde_json::{Value, json};
 use std::result::Result;
@@ -348,6 +348,17 @@ pub fn run() -> Result<(), String> {
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--self-check" => self_check = true,
+            "--check-token-file" => {
+                let path = args.next().ok_or("--check-token-file needs a path")?;
+                if args.next().is_some() {
+                    return Err("--check-token-file accepts only one path.".into());
+                }
+                read_developer_token_file(std::path::Path::new(&path))?;
+                println!(
+                    "Developer token passed local checks. Apple verifies its signature and access."
+                );
+                return Ok(());
+            }
             "--token-file" => {
                 let path = args.next().ok_or("--token-file needs a path")?;
                 imported = Some(read_developer_token_file(std::path::Path::new(&path))?);
@@ -391,9 +402,13 @@ fn serve(
         if let Some(token) = imported {
             write_secret("developer-token", &token)?;
         }
-        let developer = read_secret("developer-token")?
-            .ok_or("Import your developer token with --token-file PATH.")?;
-        validate_developer_token(&developer)?;
+        let stored = read_secret("developer-token")?;
+        let executable =
+            std::env::current_exe().map_err(|_| "Cannot locate Applifast executable.")?;
+        let (developer, bundled) = startup_developer_token(stored, &executable)?;
+        if bundled {
+            write_secret("developer-token", &developer)?;
+        }
         (
             developer,
             if revoked {

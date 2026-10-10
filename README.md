@@ -13,11 +13,13 @@ Spotifast downloads install a different product.
 Invited testers: get the portable ZIP and checksum from the maintainer, extract
 it, quit older builds through the tray, then run `Applifast.exe`. Follow the
 [Windows tester guide](docs/applifast/testing.md) for token import, Apple sign-in,
-WebView2 setup, storage paths and troubleshooting. Public download and automatic
-developer-token delivery remain release work.
+WebView2 setup, storage paths and troubleshooting. Tester ZIPs can include the
+app developer token, so listeners only click Sign in with Apple. Public release
+distribution and clean-machine acceptance remain pending.
 
 You need an Apple Music subscription, the Evergreen WebView2 Runtime and an
-unexpired developer token supplied by the maintainer. Testers do not need a
+unexpired app developer token supplied in the ZIP by the maintainer. Keep
+`developer-token.txt` beside `Applifast.exe`. Testers do not need a
 Developer Program membership. Authorize your own subscriber account in Apple's
 popup. Never share account credentials, user tokens or the `.p8` signing key.
 

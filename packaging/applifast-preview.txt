@@ -2,9 +2,13 @@ Applifast Windows development preview
 
 1. Quit the older build using its tray menu. Closing its window leaves it running.
 2. Extract this folder and run Applifast.exe. Keep the files together.
-3. A saved Apple authorization on this PC is reused. Otherwise, import your
-   developer-token.txt from Apple Account settings and sign in through Apple's
-   popup. The app never needs your .p8 signing key. Do not distribute that key.
+3. Keep developer-token.txt beside Applifast.exe. The app loads its token
+   automatically, then offers Sign in with Apple. Enter credentials only in
+   Apple's popup. Saved listener authorization is reused until you sign out.
+   No tester Developer Program membership or commands are required.
+4. If the app token expires, get a fresh preview from the maintainer and extract
+   all its files. BUILD.txt records its expiry. Advanced token import remains in
+   Settings and on setup errors. Never package or distribute the .p8 signing key.
 
 This preview requires Windows x64, the installed Evergreen WebView2 runtime,
 an Apple Music subscription and an unexpired developer token. It is a debug
@@ -41,13 +45,15 @@ playlist-append-error or playlist-duplicates.
 
 Songs offers Show only favorites for loaded songs Apple marks as favorites.
 Missing flags stay unknown. Favorite metadata stays in the existing restart cache;
-refresh Songs for changes made in Apple Music. Favorite writes, the compact shelf
-and public token onboarding remain unfinished. Demo: --demo-show favorites or
-favorites-empty. Real-account favorite reads and restart restoration need acceptance.
+refresh Songs for changes made in Apple Music. Known favorites show read-only
+hearts in rows and the player bar. Appearance controls how many favorites appear
+in the sidebar; Show all favorites opens their page. Favorite editing is pending.
+Demo: --demo-show favorites-page. Fresh-Windows-account sign-in, full library
+refresh and restart restoration still need acceptance.
 Real-account creation, appending, permissions and uploaded members need acceptance.
 Cloud-only uploads are never replaced with catalog songs; their playback is
 not guaranteed. Runtime restart/window checks and the gaming soak are pending.
-See https://github.com/jackkayser2005/applifast/tree/feat/apple-favorites-view
+See https://github.com/jackkayser2005/applifast/tree/feat/apple-bundled-token
 for the source and docs/applifast/listening-slice.md for exact validation status.
 
 Applifast is an MIT-licensed fork of Spotifast by Carmine Paolino.

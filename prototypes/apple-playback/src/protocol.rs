@@ -391,6 +391,21 @@ pub fn read_developer_token_file(path: &std::path::Path) -> Result<String, Strin
     Ok(token.trim().to_owned())
 }
 
+/// Prefer a valid protected grant; otherwise use only the executable's companion file.
+pub fn startup_developer_token(
+    stored: Option<String>,
+    executable: &std::path::Path,
+) -> Result<(String, bool), String> {
+    if let Some(token) = stored.filter(|token| validate_developer_token(token).is_ok()) {
+        return Ok((token, false));
+    }
+    let path = executable.with_file_name("developer-token.txt");
+    let token = read_developer_token_file(&path).map_err(|_| {
+        "App developer token is missing, invalid or expired. Download a fresh Applifast build, or import a renewed developer token.".to_string()
+    })?;
+    Ok((token, true))
+}
+
 // This only checks format and expiry. Apple verifies the signature and access.
 fn validate_token_at(token: &str, now: u64) -> Result<(), String> {
     let invalid = || "Expected a signed MusicKit developer JWT, not a .p8 signing key.".to_string();
@@ -636,6 +651,69 @@ mod tests {
         assert!(validate_token_at(&token(100), 100).is_err());
         assert!(validate_token_at("-----BEGIN PRIVATE KEY-----", 100).is_err());
         assert!(validate_token_at("fake.fake.fake", 100).is_err());
+    }
+
+    #[test]
+    fn startup_token_uses_executable_companion_only_when_protected_token_needs_renewal() {
+        let root =
+            std::env::temp_dir().join(format!("applifast-startup-token-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let executable = root.join("Applifast.exe");
+        let path = root.join("developer-token.txt");
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let signed = |expires| {
+            let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"ES256","kid":"TEST"}"#);
+            let claims = URL_SAFE_NO_PAD.encode(
+                json!({
+                    "iss":"TEST", "iat":now - 20, "exp":expires,
+                    "origin":["https://applifast.invalid"]
+                })
+                .to_string(),
+            );
+            format!("{header}.{claims}.{}", URL_SAFE_NO_PAD.encode([0u8; 64]))
+        };
+        let stored = signed(now + 3600);
+        let bundled = signed(now + 7200);
+        let failure = startup_developer_token(None, &executable).unwrap_err();
+        assert!(failure.contains("Download a fresh Applifast build"));
+        assert!(!failure.contains(root.to_str().unwrap()));
+        std::fs::write(&path, "private fixture contents").unwrap();
+        assert_eq!(
+            startup_developer_token(Some(stored.clone()), &executable).unwrap(),
+            (stored.clone(), false)
+        );
+        assert_eq!(
+            startup_developer_token(None, &executable).unwrap_err(),
+            failure
+        );
+        std::fs::write(&path, format!("\r\n{bundled}\r\n")).unwrap();
+        for saved in [
+            None,
+            Some("invalid stored fixture".into()),
+            Some(signed(now - 1)),
+        ] {
+            assert_eq!(
+                startup_developer_token(saved, &executable).unwrap(),
+                (bundled.clone(), true)
+            );
+        }
+        assert!(startup_developer_token(None, &root.join("elsewhere/Applifast.exe")).is_err());
+        for invalid in [signed(now - 1).into_bytes(), vec![b'x'; 32769], vec![0xff]] {
+            std::fs::write(&path, invalid).unwrap();
+            assert_eq!(
+                startup_developer_token(None, &executable).unwrap_err(),
+                failure
+            );
+        }
+        assert_eq!(
+            startup_developer_token(Some(stored.clone()), &root.join("missing/Applifast.exe"))
+                .unwrap(),
+            (stored, false)
+        );
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

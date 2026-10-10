@@ -34,6 +34,32 @@ does not print tokens or contact a server. Re-run it when the token expires.
 
 ## Build and run on Windows
 
+For a private tester ZIP that only asks listeners to sign in with Apple, build
+the desktop app and standalone token checker, then run the Windows packager:
+
+```powershell
+cargo build --locked --features demo
+cargo build --locked --manifest-path prototypes/apple-playback/Cargo.toml --target-dir target/apple-probe
+pwsh -NoProfile -File packaging/windows/applifast-preview.ps1 -DeveloperToken .secrets/apple-music/developer-token.txt
+```
+
+Use a checked source revision and inspect `BUILD.txt` before distributing.
+Uncommitted work is marked `dirty` in the filename and metadata. The packager
+requires an ignored output directory, validates the frozen token copy using
+`--check-token-file` without starting WebView2 or accessing credentials, and
+requires the local virtual origin. Its whitelist excludes signing keys, user
+grants and browser profiles. The ZIP includes a checksum and records expiry.
+Run `pwsh -File packaging/windows/test-preview.ps1` for disposable dummy-token
+packaging checks. These checks do not establish Apple signature acceptance.
+
+The app reads the companion token only when its protected app token is missing
+or invalid/expired. It never searches the current working directory for tokens.
+A valid manual import takes precedence. User credentials remain in Credential
+Manager and the sign-out marker still prevents silently restoring them. There
+is no hosted renewal service: issue a new preview or import a fresh signed JWT
+when the current 30-day app token expires. Do not include the `.p8` in the ZIP.
+Fresh-account popup authorization remains a runtime acceptance check.
+
 For the desktop app rather than this diagnostic console, use the
 [private tester guide](../../docs/applifast/testing.md). Its Import developer token
 button opens a file chooser when the path is blank and checks the file before

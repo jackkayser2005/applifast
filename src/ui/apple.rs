@@ -6,6 +6,7 @@ pub(super) fn login_contents(app: &mut App, ui: &mut egui::Ui) {
         let apple = app.apple.as_ref().expect("Apple sign-in");
         (apple.ready, apple.loading, apple.error.clone())
     };
+    let needs_token_import = error.is_some() || app.apple.as_ref().unwrap().token_request.is_some();
     if let Some(error) = error {
         ui.add(
             egui::Label::new(
@@ -60,8 +61,10 @@ pub(super) fn login_contents(app: &mut App, ui: &mut egui::Ui) {
         theme::regular(12.5),
         app.palette.secondary,
     );
-    ui.add_space(12.0);
-    token_import(app, ui);
+    if needs_token_import {
+        ui.add_space(12.0);
+        token_import(app, ui);
+    }
 }
 
 /// Import only a local JWT path. The private signing key never enters the app.

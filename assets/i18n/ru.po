@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-09 14:21-0400\n"
+"POT-Creation-Date: 2026-10-10 13:53-0400\n"
 "PO-Revision-Date: 2026-09-23 20:00+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Russian\n"
@@ -391,7 +391,7 @@ msgid "Couldn't fetch the lyrics: {error}"
 msgstr "Не удалось получить текст песни: {error}"
 
 #: src/ui/lyrics.rs:151 src/ui/lyrics.rs:429 src/ui/lyrics.rs:828
-#: src/ui/settings.rs:461 src/ui/login.rs:113
+#: src/ui/settings.rs:461 src/ui/login.rs:114
 msgid "Try again"
 msgstr "Попробовать снова"
 
@@ -1189,7 +1189,7 @@ msgstr "Общий доступ остаётся активным."
 msgid "Apple Music account"
 msgstr "Учётная запись Apple Music"
 
-#: src/ui/settings.rs:293 src/ui/apple.rs:82
+#: src/ui/settings.rs:293 src/ui/apple.rs:85
 msgid "Import developer token"
 msgstr "Импортировать токен разработчика"
 
@@ -1246,7 +1246,7 @@ msgctxt "playback status"
 msgid "Connecting"
 msgstr "Подключение"
 
-#: src/ui/settings.rs:455 src/ui/login.rs:104
+#: src/ui/settings.rs:455 src/ui/login.rs:105
 msgid "Connecting to Spotify…"
 msgstr "Подключение к Spotify…"
 
@@ -1594,7 +1594,7 @@ msgstr ""
 "«Выкл.» игнорирует переменные окружения. «Системный» использует их, а в "
 "macOS и Windows также прокси ОС."
 
-#: src/ui/settings.rs:1358 src/ui/login.rs:256
+#: src/ui/settings.rs:1358 src/ui/login.rs:257
 msgid "Apply settings"
 msgstr "Применить настройки"
 
@@ -2305,7 +2305,7 @@ msgid "“{name}” will no longer appear in Your Library."
 msgstr "«{name}» больше не будет отображаться в медиатеке."
 
 #: src/ui/dialogs.rs:104 src/ui/dialogs.rs:147 src/ui/dialogs.rs:416
-#: src/ui/dialogs.rs:595 src/ui/login.rs:96
+#: src/ui/dialogs.rs:595 src/ui/login.rs:97
 msgid "Cancel"
 msgstr "Отмена"
 
@@ -2684,27 +2684,27 @@ msgstr "Нет сохранённых выпусков"
 msgid "Saved episodes appear here."
 msgstr "Здесь появятся сохранённые выпуски."
 
-#: src/ui/login.rs:77
+#: src/ui/login.rs:78
 msgid "A native Spotify client."
 msgstr "Нативный клиент Spotify."
 
-#: src/ui/login.rs:89
+#: src/ui/login.rs:90
 msgid "Waiting for Spotify in your browser…"
 msgstr "Ожидание Spotify в браузере…"
 
-#: src/ui/login.rs:92
+#: src/ui/login.rs:93
 msgid "Didn't open? Open the sign-in page again"
 msgstr "Не открылось? Открой страницу входа ещё раз"
 
-#: src/ui/login.rs:121 src/ui/login.rs:156
+#: src/ui/login.rs:122 src/ui/login.rs:157
 msgid "Use the shared Spotify app instead"
 msgstr "Использовать общее приложение Spotify"
 
-#: src/ui/login.rs:135
+#: src/ui/login.rs:136
 msgid "Sign in with Spotify"
 msgstr "Войти через Spotify"
 
-#: src/ui/login.rs:141
+#: src/ui/login.rs:142
 msgid ""
 "Sign in through your browser. Applifast never sees your password. Local "
 "playback needs Spotify Premium."
@@ -2712,17 +2712,17 @@ msgstr ""
 "Вход выполняется в браузере. Applifast никогда не видит твой пароль. Для "
 "локального воспроизведения нужен Spotify Premium."
 
-#: src/ui/login.rs:174
+#: src/ui/login.rs:175
 msgid "Proxy Settings"
 msgstr "Настройки прокси"
 
 #. Translators: {version} is the app's version number, such as 1.2.0.
-#: src/ui/login.rs:195
+#: src/ui/login.rs:196
 #, rust-format
 msgid "Applifast {version} • not affiliated with Spotify"
 msgstr "Applifast {version} • не связан со Spotify"
 
-#: src/ui/apple.rs:72
+#: src/ui/apple.rs:75
 msgid "Path to developer-token.txt"
 msgstr "Путь к developer-token.txt"
 
