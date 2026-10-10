@@ -113,6 +113,9 @@ The desktop app also supplies a numeric `id` with every song-library page reques
 The library reply echoes it. Only the app's currently pending ID may update its
 songs, loading state or read error; older, duplicated and untagged replies are
 ignored. The diagnostic console still accepts the untagged example above.
+Read requests ask for explicit `inFavorites` flags on catalog and library song
+resources, including nested collection/search results. Pagination retains these
+scoped parameters; writes and original playback identities stay unchanged.
 Metadata reads run independently of transport commands and supply a 20-second
 abort deadline. Sign-out aborts in-flight API reads and writes and suppresses
 their late replies. Playlist writes retain their existing confirmation behavior

@@ -61,6 +61,12 @@ snapshot takes precedence over older cached queue/search metadata. Favorites
 also remain readable through the existing page and sidebar shelf. See the
 [heart comparison](review-favorite-hearts/index.html). Playlist creation and
 appending songs/albums/queue remain supported.
+Collection, search and Home reads now request `inFavorites` for nested catalog
+and library song resources with Apple's resource-scoped `extend` parameters.
+Pagination preserves these parameters. This adds fields to existing Apple GET
+requests, without extra requests, favorite writes, identity matching, storage
+changes or new network destinations. Unknown values remain unknown. See the
+[collection metadata evidence](collection-favorites-evidence.md).
 The heart follow-up passes formatting, strict default/demo Clippy, 1,006 default
 and 1,040 demo library tests, binary/integration suites, default doctests, strict
 demo Rustdoc, the build, gettext and Node bridge/signer checks. All 16 matching

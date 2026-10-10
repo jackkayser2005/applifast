@@ -167,7 +167,39 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   const detailURL = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
   assert.deepEqual(detailURL.searchParams.getAll('extend'), ['inFavorites']);
   await app.dispatch({type:'request',id:202,path:'/v1/catalog/us/search?term=test&types=songs'});
-  assert.equal(requests.at(-1)[0], '/v1/catalog/us/search?term=test&types=songs');
+  const searchURL = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
+  assert.equal(searchURL.searchParams.get('term'), 'test');
+  assert.equal(searchURL.searchParams.get('types'), 'songs');
+  libraryReply = {data: {data: [
+    {id: 'i.upload', type: 'library-songs', attributes: {inFavorites: true, playParams: uploaded.playParams}},
+    {id: '123', type: 'songs', attributes: {inFavorites: false, playParams: {id: '123', kind: 'song'}}},
+    {id: '456', type: 'songs', attributes: {name: 'Unknown favorite status'}}
+  ]}};
+  for (const route of [
+    '/v1/catalog/us/search?term=test&types=songs',
+    '/v1/me/library/search?term=test&types=library-songs',
+    '/v1/me/library/playlists/p.test/tracks?offset=100&limit=100',
+    '/v1/catalog/us/playlists/pl.test?include=tracks',
+    '/v1/me/library/albums/l.test/tracks?limit=100',
+    '/v1/catalog/us/albums/123?include=tracks',
+    '/v1/catalog/us/artists/123/view/top-songs?limit=20',
+    '/v1/me/history/heavy-rotation?limit=10',
+    '/v1/me/recommendations?limit=10',
+    '/v1/me/library/songs?offset=100&extend%5Blibrary-songs%5D=inFavorites'
+  ]) {
+    await app.dispatch({type:'request',id:204,path:route});
+    const extended = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
+    const original = new URL(route, 'https://api.music.apple.com');
+    assert.equal(extended.pathname, original.pathname);
+    for (const [key, value] of original.searchParams) assert.equal(extended.searchParams.get(key), value);
+    assert.deepEqual(extended.searchParams.getAll('extend[songs]'), ['inFavorites']);
+    assert.deepEqual(extended.searchParams.getAll('extend[library-songs]'), ['inFavorites']);
+    if (!route.startsWith('/v1/me/library/songs')) {
+      assert.equal(extended.searchParams.get('include'), original.searchParams.get('include'));
+      assert.equal(extended.searchParams.get('extend'), null);
+    }
+    assert.deepEqual(JSON.parse(JSON.stringify(messages.filter(event => event.id === 204).at(-1).data)), libraryReply.data);
+  }
   const count = messages.filter(event => event.type === 'library').length;
   libraryReply.data.next = 'https://untrusted.example/';
   await app.dispatch({ type: 'library', next: null });

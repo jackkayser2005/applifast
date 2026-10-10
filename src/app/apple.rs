@@ -1841,6 +1841,59 @@ mod tests {
     }
 
     #[test]
+    fn collection_favorite_metadata_reaches_exact_rows_and_queue_occurrences() {
+        let mut app = super::super::tests::test_app("apple-collection-favorites");
+        app.backend.set_offline(true);
+        app.apple = Some(crate::apple::State::default());
+        app.apple.as_mut().unwrap().authorized = true;
+        let rows = json!([
+            {"id":"123","type":"songs","attributes":{"name":"Favorite", "inFavorites":true,
+                "playParams":{"id":"123","kind":"song"}}},
+            {"id":"i.upload","type":"library-songs","attributes":{"name":"Upload", "inFavorites":false,
+                "playParams":{"id":"i.upload","kind":"song","isLibrary":true,"catalogId":"123"}}},
+            {"id":"456","type":"songs","attributes":{"name":"Unknown"}}
+        ]);
+        for (target, path) in [
+            (
+                Read::PlaylistTracks("library.p.favorite".into()),
+                "/v1/me/library/playlists/p.favorite/tracks",
+            ),
+            (
+                Read::AlbumTracks("catalog.789".into()),
+                "/v1/catalog/us/albums/789/tracks",
+            ),
+        ] {
+            let request = app
+                .apple
+                .as_mut()
+                .unwrap()
+                .read(target.clone(), path.into(), 0);
+            let next = format!(
+                "{path}?offset=3&extend%5Bsongs%5D=inFavorites&extend%5Blibrary-songs%5D=inFavorites"
+            );
+            app.apple_response(&json!({"id":request["id"],"data":{"data":rows,"next":next}}));
+            assert_eq!(app.apple.as_ref().unwrap().next_reads[&target], (next, 3));
+            assert_eq!(app.is_saved("apple:track:catalog.123"), Some(true));
+            assert_eq!(app.is_saved("apple:track:library.i.upload"), Some(false));
+            assert_eq!(app.is_saved("apple:track:catalog.456"), None);
+        }
+        let uris = [
+            "apple:track:catalog.123",
+            "apple:track:library.i.upload",
+            "apple:track:catalog.123",
+        ]
+        .map(str::to_owned);
+        let apple = app.apple.as_mut().unwrap();
+        assert!(apple.play_uris(&uris, 0).is_some());
+        assert_eq!(apple.queue.len(), 3);
+        assert_eq!(apple.queue[0].in_favorites, Some(true));
+        assert_eq!(apple.queue[1].in_favorites, Some(false));
+        assert_eq!(apple.queue[0].uri(), apple.queue[2].uri());
+        assert_eq!(apple.queue[1].item.id, "i.upload");
+        app.backend.shutdown();
+    }
+
+    #[test]
     fn apple_links_wait_for_apple_authorization_without_a_spotify_profile() {
         let mut app = super::super::tests::test_app("apple-link-auth");
         app.backend.set_offline(true);
@@ -2159,11 +2212,17 @@ mod tests {
             current_account()?;
             Ok(data)
         };
+        let extended = |path: &str| {
+            format!(
+                "{path}{}extend%5Bsongs%5D=inFavorites&extend%5Blibrary-songs%5D=inFavorites",
+                if path.contains('?') { '&' } else { '?' }
+            )
+        };
         let mut app = super::super::tests::test_app("apple-account-api");
         app.backend.set_offline(true);
         app.apple = Some(crate::apple::State::default());
         for shelf in crate::apple::HomeShelf::ALL {
-            let data = get(shelf.path()).await?;
+            let data = get(&extended(shelf.path())).await?;
             let raw = data["data"]
                 .as_array()
                 .ok_or("Home resources missing")?
@@ -2182,8 +2241,9 @@ mod tests {
                 cards.len()
             );
         }
-        let data = get("/v1/me/library/albums?limit=100").await?;
+        let data = get(&extended("/v1/me/library/albums?limit=100")).await?;
         let rows = data["data"].as_array().ok_or("Library albums missing")?;
+        let album = rows.first().and_then(|row| row["id"].as_str());
         let dated = rows
             .iter()
             .filter(|row| models::added_at(row).is_some())
@@ -2192,8 +2252,10 @@ mod tests {
             "Library albums: {} resources, {dated} parsed add dates",
             rows.len()
         );
-        let data =
-            get("/v1/me/library/songs?limit=100&include=albums,artists&extend=inFavorites").await?;
+        let data = get(&extended(
+            "/v1/me/library/songs?limit=100&include=albums,artists&extend=inFavorites",
+        ))
+        .await?;
         let rows = data["data"].as_array().ok_or("Library songs missing")?;
         let songs = rows.iter().filter_map(models::song).collect::<Vec<_>>();
         assert_eq!(
@@ -2223,6 +2285,93 @@ mod tests {
             "Library songs: {} parsed rows, {known} explicit favorite flags, {favorites} favorites",
             songs.len()
         );
+        let playlists = get(&extended("/v1/me/library/playlists?limit=10")).await?;
+        let playlist = playlists["data"]
+            .as_array()
+            .and_then(|rows| rows.first())
+            .and_then(|row| row["id"].as_str())
+            .ok_or("A library playlist is required for this account check")?;
+        let album = album.ok_or("A library album is required for this account check")?;
+        let term = songs
+            .iter()
+            .find(|song| song.in_favorites == Some(true))
+            .ok_or("A favorite library song is required for this account check")?;
+        let mut search = reqwest::Url::parse("https://api.music.apple.com/").unwrap();
+        search.query_pairs_mut().append_pair("term", &term.title);
+        let term = search.query().ok_or("Search term missing")?;
+        let paths = [
+            (
+                "Library playlist tracks",
+                format!("/v1/me/library/playlists/{playlist}/tracks?limit=25"),
+            ),
+            (
+                "Library playlist embedded tracks",
+                format!("/v1/me/library/playlists/{playlist}?include=tracks"),
+            ),
+            (
+                "Library album tracks",
+                format!("/v1/me/library/albums/{album}/tracks?limit=25"),
+            ),
+            (
+                "Library album embedded tracks",
+                format!("/v1/me/library/albums/{album}?include=tracks"),
+            ),
+            (
+                "Catalog search",
+                format!("/v1/catalog/us/search?{term}&types=songs&limit=5"),
+            ),
+            (
+                "Library search",
+                format!("/v1/me/library/search?{term}&types=library-songs&limit=5"),
+            ),
+        ];
+        fn song_resources(data: &Value) -> Vec<&Value> {
+            match data {
+                Value::Object(fields)
+                    if matches!(
+                        fields.get("type").and_then(Value::as_str),
+                        Some("songs" | "library-songs")
+                    ) =>
+                {
+                    vec![data]
+                }
+                Value::Object(fields) => fields.values().flat_map(song_resources).collect(),
+                Value::Array(values) => values.iter().flat_map(song_resources).collect(),
+                _ => Vec::new(),
+            }
+        }
+        for (label, path) in paths {
+            let before = get(&path).await?;
+            let after = get(&extended(&path)).await?;
+            let before = song_resources(&before);
+            let after = song_resources(&after);
+            assert!(
+                before.len() == after.len()
+                    && before.iter().zip(&after).all(|(a, b)| {
+                        a["id"] == b["id"]
+                            && a["type"] == b["type"]
+                            && a["attributes"]["playParams"] == b["attributes"]["playParams"]
+                    }),
+                "Song identities or playback parameters changed"
+            );
+            let known = |rows: &[&Value]| {
+                rows.iter()
+                    .filter(|row| row["attributes"]["inFavorites"].is_boolean())
+                    .count()
+            };
+            eprintln!(
+                "{label}: {} songs, favorite flags {} -> {}",
+                after.len(),
+                known(&before),
+                known(&after)
+            );
+            assert!(
+                after
+                    .iter()
+                    .all(|row| row["attributes"]["inFavorites"].is_boolean()),
+                "Apple omitted requested favorite status"
+            );
+        }
         app.backend.shutdown();
         Ok(())
     }
