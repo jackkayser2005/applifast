@@ -75,10 +75,16 @@ part of the check.
 
 The CI definition now includes standalone Windows host format/Clippy/tests,
 the isolated native credential-store round trip, bridge/signer checks and x64
-preview/package/install regressions. It does not use real Apple secrets. GitHub
-currently reports zero registered workflows and no runs for the preceding PR
-head. Editing this definition does not establish hosted CI acceptance; enable
-the repository workflows and verify jobs before release.
+preview/package/install regressions. It does not use real Apple secrets. The
+initial API snapshot showed zero registered workflows and no runs for the
+preceding PR head. PR #35 subsequently started CI and Packaging runs. Hosted
+acceptance still requires completed jobs on the final head, not merely a changed
+definition or a started run.
+
+On `afb2a1e`, [CI run 38079141932](https://github.com/jackkayser2005/applifast/actions/runs/38079141932)
+passed the documentation-site build and Linux packaging regression steps while
+compilation and Nix jobs were still running. This records that observed head's
+progress, not final-head CI acceptance.
 
 Local installer regression passed: production-template compilation, x64 input
 validation, missing compiler rejection, compiler-failure ZIP preservation,
