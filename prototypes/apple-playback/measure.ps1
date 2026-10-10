@@ -46,7 +46,7 @@ function Get-OverallCpuPercent {
     return 100 * $CpuSeconds / ($ElapsedSeconds * $LogicalProcessors)
 }
 
-# Dot sourcing makes the two pure functions available to the focused self-check.
+# Dot sourcing makes the pure functions available to the focused self-check.
 if ($MyInvocation.InvocationName -eq '.') { return }
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
     throw 'This sampler requires Windows.'
@@ -119,8 +119,10 @@ function Read-Inventory {
         $ticks = $null
         $cpu = $null
         $memory = $null
+        $name = $null
         try {
             $process = [Diagnostics.Process]::GetProcessById($link.ProcessId)
+            $name = $process.ProcessName
             $ticks = $process.StartTime.ToUniversalTime().Ticks
             $cpu = $process.TotalProcessorTime.TotalSeconds
             $memory = $process.PrivateMemorySize64
@@ -135,6 +137,7 @@ function Read-Inventory {
             StartTicks = $ticks
             CpuSeconds = $cpu
             PrivateBytes = $memory
+            Name = $name
         }
     }
 }
@@ -230,6 +233,7 @@ while ($true) {
         PrivateBytes = $memory
         OverallCpuPercent = [Math]::Round($cpuPercent, 4)
         ProcessIds = @($selected.ProcessId | Sort-Object)
+        Processes = @($selected | Sort-Object ProcessId | Select-Object ProcessId, ParentProcessId, StartTicks, Name, PrivateBytes)
     })
     $lastSampleElapsed = $elapsed
     if (($elapsed - $measurementStart) -ge $DurationSeconds) { break }

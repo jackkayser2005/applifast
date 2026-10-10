@@ -93,6 +93,11 @@ network/output recovery, aggregate performance, installers and signed releases
 remain acceptance work. The [tester guide](docs/applifast/testing.md) lists what
 to exercise and how to report a result without secrets.
 
+The [Windows resource sampler](prototypes/apple-playback/README.md#resource-measurement)
+reports private memory for each app/helper process alongside the aggregate.
+Use the desktop app's PID to include egui and WebView2 together. Short tooling
+checks do not establish playback performance or pass the acceptance duration.
+
 Report problems in [this fork's issues](https://github.com/jackkayser2005/applifast/issues).
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing changes. Most legacy
 pages under `docs/_guide/` and the inherited packaging instructions still

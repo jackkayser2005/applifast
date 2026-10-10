@@ -6,6 +6,22 @@ with a message pump. Commands and sanitized events cross channels through the
 existing asynchronous backend. Closing an egui window does not own or destroy
 the playback host. Apple authorization is the only visible browser popup.
 
+## Process memory diagnostics
+
+The Windows resource sampler now includes each selected process's private bytes,
+name, PID, parent PID and creation-time ticks in every JSON sample. Aggregate
+memory/CPU counters, PID-reuse protection, unreadable-process failures and the
+original acceptance limits are unchanged. It records neither command lines nor
+executable paths. Use the integrated desktop PID to count egui and its WebView2
+helpers together. This is optional local diagnostic tooling, with no app network
+or storage changes. See the [sampler instructions](../../prototypes/apple-playback/README.md#resource-measurement).
+
+Focused checks cover tree membership, reparenting, PID reuse and CPU normalization.
+A temporary Windows PowerShell process verifies real private-byte counters,
+per-process sums, identity and names. That short tooling check deliberately
+fails the acceptance-duration gate; it does not verify audio, integrated resource
+budgets or the gaming session. CI runs the sampler check on Windows.
+
 ## Windows preview installer
 
 The validated six-file portable payload can also be packaged as an Applifast
