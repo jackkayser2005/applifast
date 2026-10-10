@@ -92,6 +92,14 @@ hash, `sha256-JnLrhJTGuAskwUtKbmrLtQRDpGh3PytrTGsa6KLRW7o=`. No lockfile,
 dependency version or Windows code changes accompany that refresh. The new
 head's Nix build must still verify it; the failure is not treated as a pass.
 
+The Ubuntu test job on `f15f2e1` subsequently failed in
+`mpris_search_links_open_search_on_a_private_bus`: its client requested
+`org.mpris.MediaPlayer2.spotifast`, while production `media_app()` already
+registers `org.mpris.MediaPlayer2.applifast`. The focused follow-up changes both
+test clients to the Applifast name, keeping the private bus, readiness deadline,
+URI dispatch and supported-schemes assertions. It changes no runtime code and
+does not skip the regression. Linux CI must execute it before claiming a pass.
+
 Local installer regression passed: production-template compilation, x64 input
 validation, missing compiler rejection, compiler-failure ZIP preservation,
 existing-output protection, checksum, six installed file hashes, per-user QA
