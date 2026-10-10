@@ -1586,6 +1586,55 @@ mod tests {
 
     #[cfg(feature = "demo")]
     #[test]
+    fn apple_favorite_hearts_are_read_only_images_in_rows_and_player() {
+        use egui::accesskit::Role;
+        let (ctx, mut app) = accessible_app("apple-favorite-hearts");
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        for song in &mut apple.songs {
+            song.in_favorites = Some(false);
+        }
+        apple.songs[0].in_favorites = Some(true);
+        apple.songs[1].in_favorites = None;
+        app.library.liked.items = apple
+            .songs
+            .iter()
+            .map(|song| SavedTrack {
+                added_at: None,
+                track: song.track(),
+            })
+            .collect();
+        app.local = apple.local.clone();
+        app.apple = Some(apple);
+        app.remote = None;
+        app.open(Page::LikedSongs);
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let hearts = tree
+            .nodes
+            .iter()
+            .filter(|(_, node)| node.label() == Some("Favorites") && node.role() == Role::Image)
+            .collect::<Vec<_>>();
+        assert_eq!(hearts.len(), 2, "one song-row heart and one player heart");
+        for (_, heart) in hearts {
+            assert!(!heart.supports_action(egui::accesskit::Action::Click));
+        }
+        assert!(!tree.nodes.iter().any(|(_, node)| matches!(
+            node.label(),
+            Some("Save to Liked Songs" | "Remove from Liked Songs")
+        )));
+        app.apple.as_mut().unwrap().songs[0].in_favorites = None;
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .any(|(_, node)| node.label() == Some("Favorites") && node.role() == Role::Image)
+        );
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
     fn apple_favorites_shelf_and_page_keep_songs_navigation_and_playable_identity() {
         let (ctx, mut app) = accessible_app("apple-favorites-shelf");
         let mut apple = crate::apple::State::demo(&app.library.liked.items);

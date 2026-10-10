@@ -33,6 +33,9 @@ For sample data without authorization or playback:
 cargo run --locked --features demo -- --demo
 ```
 
+Known Apple favorites show filled, read-only hearts in song rows and the player
+bar. Changing favorites still requires Apple Music and a refresh here.
+
 The Cargo package and build target retain the technical name `spotifast` and
 version `0.12.0` during this port. Consequently, `--version` can still report
 `spotifast 0.12.0`. Use the source revision from `BUILD.txt` for preview reports.

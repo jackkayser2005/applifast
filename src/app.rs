@@ -1165,6 +1165,14 @@ impl App {
     }
 
     pub fn is_saved(&self, uri: &str) -> Option<bool> {
+        if let Some(apple) = &self.apple {
+            return apple
+                .songs
+                .iter()
+                .find(|song| song.uri() == uri)
+                .or_else(|| apple.find_song(uri))
+                .and_then(|song| song.in_favorites);
+        }
         let exact = self.saved.get(uri).copied();
         if exact == Some(true)
             || self
@@ -20579,6 +20587,44 @@ mod tests {
 
         assert_eq!(app.is_saved(playing_uri), Some(true));
         assert_eq!(app.saved_toggle_targets(playing_uri), vec![saved_uri]);
+    }
+
+    #[test]
+    fn apple_favorite_state_uses_exact_identity_and_never_spotify_saved_aliases() {
+        let mut app = headless_app();
+        let mut song = crate::apple::models::song(&serde_json::json!({
+            "id":"i.upload", "type":"library-songs",
+            "attributes":{"name":"Upload", "inFavorites":true,
+                "playParams":{"id":"i.upload", "kind":"song", "isLibrary":true,
+                    "catalogId":"123"}}
+        }))
+        .unwrap();
+        let uri = song.uri();
+        let mut apple = crate::apple::State::default();
+        apple.known_songs.insert(uri.clone(), song.clone());
+        song.in_favorites = Some(false);
+        apple.songs.push(song);
+        app.apple = Some(apple);
+        app.saved.insert(uri.clone(), true);
+        app.saved.insert("apple:track:catalog.123".into(), true);
+        assert_eq!(
+            app.is_saved(&uri),
+            Some(false),
+            "current library state wins"
+        );
+        assert_eq!(app.is_saved("apple:track:catalog.123"), None);
+        app.apple.as_mut().unwrap().songs[0].in_favorites = None;
+        assert_eq!(app.is_saved(&uri), None);
+        app.apple.as_mut().unwrap().songs[0].in_favorites = Some(true);
+        assert_eq!(app.is_saved(&uri), Some(true));
+        app.apple.as_mut().unwrap().songs.clear();
+        assert_eq!(
+            app.is_saved(&uri),
+            Some(true),
+            "known search/queue songs remain readable"
+        );
+        app.apple.as_mut().unwrap().known_songs.clear();
+        assert_eq!(app.is_saved(&uri), None);
     }
 
     #[test]

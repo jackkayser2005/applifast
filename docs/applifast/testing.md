@@ -59,7 +59,9 @@ mini player, **Ctrl+Shift+Q** opens the queue, and **F5** refreshes music pages.
 The [current capabilities and pending checks](listening-slice.md) distinguish
 implemented controls from verified real-account behavior.
 
-Song and collection menus show supported Apple actions. Favorites are readable,
+Song and collection menus show supported Apple actions. Known favorites show
+filled hearts in song rows and the player bar. These are read-only indicators;
+unknown songs stay unmarked. Favorites are readable,
 but changing favorites, artist follow, radio, playlist removal/reordering and
 editing playlist details remain unavailable in this preview. Use Apple Music
 for those changes, then refresh here. Playlist creation and adding songs remain

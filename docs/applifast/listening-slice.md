@@ -44,9 +44,19 @@ other-platform compilation remain unverified in this slice.
 
 Apple song, selection, album, artist and playlist menus now hide unavailable
 favorite/save/follow writes, Spotify radio and advanced playlist edits. Header
-save/follow buttons and track-row hearts are also hidden until Apple writes are
-implemented. Favorites remain readable through the existing page and sidebar
-shelf. Playlist creation and appending songs/albums/queue remain supported.
+save/follow buttons remain hidden until Apple writes are implemented. Known
+Apple favorites display filled, read-only hearts in song rows and the player
+bar, using the exact library/catalog identity and Apple's `inFavorites` flag.
+Unknown and explicitly non-favorite songs stay unmarked. The current library
+snapshot takes precedence over older cached queue/search metadata. Favorites
+also remain readable through the existing page and sidebar shelf. See the
+[heart comparison](review-favorite-hearts/index.html). Playlist creation and
+appending songs/albums/queue remain supported.
+The heart follow-up passes formatting, strict default/demo Clippy, 1,006 default
+and 1,040 demo library tests, binary/integration suites, default doctests, strict
+demo Rustdoc, the build, gettext and Node bridge/signer checks. All 16 matching
+Windows heart captures were inspected. Real-account refresh and HTML browser
+rendering remain unchecked; the launcher checker requires unavailable Ruby.
 Apple playlists keep Copy and selection, while Cut, Paste and Delete cannot
 dispatch unsupported edits. Old/direct unsupported actions produce a clear
 preview error instead of opening legacy pages or Spotify editing dialogs.

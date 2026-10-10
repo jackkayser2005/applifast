@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast favorite hearts review</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
+<h1>Known Apple favorite hearts</h1>
+<p>Candidate <code>fix/apple-favorite-hearts</code>, baseline <code>4eb33e0</code> (PR #30). Filled hearts return to song rows and the player bar for exact Apple song identities whose current favorite flag is true. They are accessible read-only images, without favorite/unfavorite buttons. Unknown and non-favorite songs stay unmarked.</p>
+<p>Matching Windows native captures use identical Apple demo data, Songs or Favorites, theme, window size, neutral pointer, zoom and Reduce motion. No real account data or playback is used. The maintainer explicitly requested restoring these indicators; this scope keeps the existing layout.</p>
+<label>View <select id="view"><option value="songs">Songs</option><option value="favorites">Favorites</option></select></label>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Matching native Windows favorite-heart comparison">
+<p>Regression tests cover exact library/catalog identity, false and unknown flags, current-library precedence, read-only accessible images and absence of favorite-write controls. Real-account refresh behavior and HTML browser rendering remain separate acceptance checks.</p>
+<p>All 16 matching native captures were inspected. Formatting, strict default/demo Clippy, 1,006 default and 1,040 demo library tests (four opt-in checks ignored in each), binary/integration suites, default doctests, strict demo Rustdoc, the demo build, gettext and Node bridge/signer checks pass. Translation messages are unchanged. The launcher checker cannot complete here because Ruby is absent; optional projectM, site/Nix and non-Windows checks remain unverified. Existing intermittent persistence failures remain a separate release risk.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['view','theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>
