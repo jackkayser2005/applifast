@@ -6,6 +6,25 @@ with a message pump. Commands and sanitized events cross channels through the
 existing asynchronous backend. Closing an egui window does not own or destroy
 the playback host. Apple authorization is the only visible browser popup.
 
+## Windows preview installer
+
+The validated six-file portable payload can also be packaged as an Applifast
+installer. It uses the independent `Applifast.Windows` uninstall identity and
+`%LOCALAPPDATA%\Programs\Applifast`, needs no administrator rights, adds a Start
+shortcut and offers an optional desktop shortcut. It registers no Spotify or
+Apple URL scheme and never terminates a running app. Quit before updating.
+Uninstall removes program files and shortcuts, preserving settings, the library/
+queue snapshot, WebView2 profile and protected credentials. Sign out first to
+clear authorization and account-specific cached data.
+
+The installer contains the same app developer token as the ZIP and no signing
+key or listener grant. No new application network access or dependencies are
+added. The inherited icon and package version remain pending release work.
+Installer and app are unsigned development previews. See the
+[native installer checks and limits](windows-installer-evidence.md). Fresh-user
+authorization, wizard visual review, hosted CI and public-release acceptance
+remain separate gates.
+
 ## Windows checkpoint replacement
 
 Settings, session and Apple library/queue checkpoint saves now fall back to

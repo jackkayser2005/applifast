@@ -1,7 +1,7 @@
 # Windows private tester guide
 
 This is a development preview for invited Windows x64 testers. Public release
-distribution, installers and clean-machine acceptance are still pending. A preview
+distribution and clean-machine acceptance are still pending. A preview
 can report the inherited version `spotifast 0.12.0`; use its `BUILD.txt` source
 revision when reporting a problem. The original Spotifast downloads are a
 different product.
@@ -19,16 +19,22 @@ default URL handler are not supported yet.
 
 ## Start listening
 
-1. Get the portable Applifast preview and its checksum from the maintainer.
-   Extract the whole ZIP. Quit an older build through its tray menu before
-   starting `Applifast.exe`. Closing its window can leave music playing.
+1. Get the Applifast preview installer or portable ZIP and its checksum from the
+   maintainer. Quit older builds through their tray menu first. Closing a window
+   can leave music playing. Run the installer and open Applifast from Start, or
+   extract the whole ZIP and run `Applifast.exe`. These preview executables are
+   unsigned; checksums detect changed downloads and do not prove publisher identity.
+   The installer needs no administrator account. It installs the app and token
+   together in `%LOCALAPPDATA%\Programs\Applifast`, adds a Start entry and offers
+   an optional desktop shortcut. It does not download WebView2 or register link
+   handlers. Updates require quitting the old build and running the new installer.
 2. Install or repair the [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
    if the app reports a host initialization failure. An installed Edge browser
    alone is not the production runtime. See [Microsoft's distribution guidance](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution).
 3. Keep the included **developer-token.txt** beside **Applifast.exe**. It
    authenticates the app; it contains a signed MusicKit JWT, with no listener
    credentials or private signing key. It loads automatically when no valid
-   app token is already stored on this PC.
+   app token is already stored on this PC. The installer puts them together.
    Testers do not need their own Developer Program membership, signing key,
    Node installation or Rust toolchain. The maintainer creates the developer
    token; each tester authorizes their own Apple Music subscriber account.
@@ -49,8 +55,8 @@ delete sharing. A read-only file or a reader that denies deletion can still
 block a save; quit software holding that file and retry. This is metadata and
 session persistence only. See the [reproduction and limits](windows-save-evidence.md).
 
-If the app token is missing or expired, download a fresh preview from the
-maintainer and extract all its files. `BUILD.txt` records the bundled token's
+If the app token is missing or expired, install a fresh preview from the
+maintainer or extract its complete ZIP. `BUILD.txt` records the bundled token's
 expiry. There is no token-renewal server; these builds currently use 30-day
 tokens. An expired stored token automatically falls back to a valid companion
 file. A valid manually imported token takes precedence. Advanced recovery still
@@ -71,6 +77,12 @@ Open **Settings > Keyboard shortcuts** or press **Ctrl+/**. **Alt+1** through
 mini player, **Ctrl+Shift+Q** opens the queue, and **F5** refreshes music pages.
 The [current capabilities and pending checks](listening-slice.md) distinguish
 implemented controls from verified real-account behavior.
+
+Windows Settings > Apps can uninstall the installed preview. Uninstall removes
+the app files and shortcuts and preserves your Applifast settings, library/queue
+cache, WebView2 profile and Windows Credential Manager entries. Sign out in the
+app before uninstalling if you want its account authorization and snapshot cleared.
+Portable ZIPs keep their existing manual folder setup.
 
 Song and collection menus show supported Apple actions. Known favorites show
 filled hearts in song rows and the player bar. These are read-only indicators;
