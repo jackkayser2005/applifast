@@ -3,6 +3,7 @@
 <title>Applifast favorite hearts review</title>
 <style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
 <h1>Known Apple favorite hearts</h1>
+<p><a href="https://github.com/jackkayser2005/applifast/pull/31">PR #31</a>, implementation <code>ac1317d</code>. Scope ledger: restoring known-favorite indicators is the maintainer's explicit requested adjustment. Favorite editing and mini-player favorite controls remain pending.</p>
 <p>Candidate <code>fix/apple-favorite-hearts</code>, baseline <code>4eb33e0</code> (PR #30). Filled hearts return to song rows and the player bar for exact Apple song identities whose current favorite flag is true. They are accessible read-only images, without favorite/unfavorite buttons. Unknown and non-favorite songs stay unmarked.</p>
 <p>Matching Windows native captures use identical Apple demo data, Songs or Favorites, theme, window size, neutral pointer, zoom and Reduce motion. No real account data or playback is used. The maintainer explicitly requested restoring these indicators; this scope keeps the existing layout.</p>
 <label>View <select id="view"><option value="songs">Songs</option><option value="favorites">Favorites</option></select></label>
