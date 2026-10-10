@@ -43,10 +43,13 @@
   }
   const songAttributes = path => {
     const [bare, query = ''] = path.split('?');
-    if (!/^\/v1\/me\/library\/songs(?:\/[\w.-]+)?$/.test(bare)) return path;
     const params = new URLSearchParams(query);
-    params.set('extend', 'inFavorites');
-    if (!params.has('include')) params.set('include', 'albums,artists');
+    params.set('extend[songs]', 'inFavorites');
+    params.set('extend[library-songs]', 'inFavorites');
+    if (/^\/v1\/me\/library\/songs(?:\/[\w.-]+)?$/.test(bare)) {
+      params.set('extend', 'inFavorites');
+      if (!params.has('include')) params.set('include', 'albums,artists');
+    }
     return `${bare}?${params}`;
   };
   const state = () => {

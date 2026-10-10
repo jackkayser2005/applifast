@@ -74,7 +74,8 @@ implemented controls from verified real-account behavior.
 
 Song and collection menus show supported Apple actions. Known favorites show
 filled hearts in song rows and the player bar. These are read-only indicators;
-unknown songs stay unmarked. Favorites are readable,
+playlist, album and search reads also request Apple's explicit song favorite
+flags. Unknown songs stay unmarked. Favorites are readable,
 but changing favorites, artist follow, radio, playlist removal/reordering and
 editing playlist details remain unavailable in this preview. Use Apple Music
 for those changes, then refresh here. Playlist creation and adding songs remain

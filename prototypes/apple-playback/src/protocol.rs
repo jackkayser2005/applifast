@@ -352,6 +352,8 @@ pub fn valid_read_path(path: &str) -> bool {
         && path.split_once('?').is_none_or(|(_, query)| {
             url::form_urlencoded::parse(query.as_bytes()).all(|(key, value)| {
                 ["limit", "offset", "term", "types", "include"].contains(&key.as_ref())
+                    || (["extend[songs]", "extend[library-songs]"].contains(&key.as_ref())
+                        && value == "inFavorites")
                     || (key == "extend"
                         && value == "inFavorites"
                         && matches!(
@@ -484,6 +486,11 @@ mod tests {
             "/v1/me/library/songs?extend=inFavorites,authorization",
             "/v1/catalog/us/songs?extend=inFavorites",
             "/v1/me/library/playlists/p.1/tracks?extend=inFavorites",
+            "/v1/me/library/playlists/p.1/tracks?extend[songs]=authorization",
+            "/v1/catalog/us/search?extend%5Blibrary-songs%5D=inFavorites,authorization",
+            "/v1/me/library/songs?extend[albums]=inFavorites",
+            "/v1/catalog/us/search?extend[songs]=inFavorites&token=secret",
+            "/v1/catalog/us/search?extend[songs][authorization]=inFavorites",
         ] {
             assert!(!valid_read_path(path), "{path}");
         }
@@ -498,6 +505,9 @@ mod tests {
             "/v1/me/library/recently-added?offset=10",
             "/v1/me/library/songs?limit=100&extend=inFavorites",
             "/v1/me/library/songs/i.upload?extend=inFavorites",
+            "/v1/me/library/playlists/p.1/tracks?offset=100&extend%5Bsongs%5D=inFavorites&extend%5Blibrary-songs%5D=inFavorites",
+            "/v1/catalog/us/albums/123?include=tracks&extend[songs]=inFavorites",
+            "/v1/catalog/us/search?term=test&types=songs&extend[library-songs]=inFavorites",
         ] {
             assert!(valid_read_path(path), "{path}");
         }

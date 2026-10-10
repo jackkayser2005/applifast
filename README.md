@@ -37,6 +37,9 @@ cargo run --locked --features demo -- --demo
 
 Known Apple favorites show filled, read-only hearts in song rows and the player
 bar. Changing favorites still requires Apple Music and a refresh here.
+Playlist, album and search reads now request Apple's explicit favorite flags
+for song resources too, preserving each library/catalog identity. See the
+[collection metadata evidence](docs/applifast/collection-favorites-evidence.md).
 
 Windows saves now preserve open readers while replacing library, queue and
 session files. Read-only files and locks that deny deletion still produce save
