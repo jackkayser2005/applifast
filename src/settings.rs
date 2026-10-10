@@ -1676,8 +1676,18 @@ mod session_tests {
         };
 
         state("home").save(&path);
+        #[cfg(windows)]
+        let previous_reader = std::fs::File::open(&path).unwrap();
         state("liked").save(&path);
 
+        #[cfg(windows)]
+        assert_eq!(
+            serde_json::from_reader::<_, SessionState>(previous_reader)
+                .unwrap()
+                .last_page
+                .as_deref(),
+            Some("home")
+        );
         assert_eq!(
             SessionState::load(&path).last_page.as_deref(),
             Some("liked")

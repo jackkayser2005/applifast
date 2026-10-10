@@ -57,6 +57,11 @@ try {
         $reader=[IO.StreamReader]::new($archive.GetEntry('developer-token.txt').Open())
         try {if($reader.ReadToEnd().Trim() -ne $token){throw 'Packaged app token changed.'}}
         finally {$reader.Dispose()}
+        $reader=[IO.StreamReader]::new($archive.GetEntry('TESTING.md').Open())
+        try {
+            $guide=$reader.ReadToEnd()
+            if($guide.Contains('(windows-save-evidence.md)') -or -not $guide.Contains('/docs/applifast/windows-save-evidence.md)')){throw 'Packaged save-evidence link is broken.'}
+        } finally {$reader.Dispose()}
     } finally {$archive.Dispose()}
     if(Get-ChildItem -LiteralPath $scratch -Filter '.token-validation-*' -Recurse -Force){throw 'Token validation scratch was retained.'}
     Write-Output 'Preview package checks pass using dummy JWTs only; no Apple signature/access claim.'

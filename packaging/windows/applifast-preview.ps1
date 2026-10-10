@@ -45,7 +45,7 @@ try {
     Copy-Item -LiteralPath $Binary -Destination (Join-Path $directory 'Applifast.exe')
     Copy-Item -LiteralPath 'LICENSE' -Destination (Join-Path $directory 'LICENSE')
     Copy-Item -LiteralPath 'packaging/applifast-preview.txt' -Destination (Join-Path $directory 'README.txt')
-    $guide=(Get-Content -LiteralPath 'docs/applifast/testing.md' -Raw).Replace('(listening-slice.md)',"(https://github.com/jackkayser2005/applifast/blob/$source/docs/applifast/listening-slice.md)")
+    $guide=(Get-Content -LiteralPath 'docs/applifast/testing.md' -Raw).Replace('(listening-slice.md)',"(https://github.com/jackkayser2005/applifast/blob/$source/docs/applifast/listening-slice.md)").Replace('(windows-save-evidence.md)',"(https://github.com/jackkayser2005/applifast/blob/$source/docs/applifast/windows-save-evidence.md)")
     [IO.File]::WriteAllText((Join-Path $directory 'TESTING.md'),$guide,[Text.UTF8Encoding]::new($false))
     [IO.File]::WriteAllText((Join-Path $directory 'developer-token.txt'),($token+"`n"),[Text.UTF8Encoding]::new($false))
     $exeHash=(Get-FileHash -LiteralPath (Join-Path $directory 'Applifast.exe') -Algorithm SHA256).Hash.ToLowerInvariant()

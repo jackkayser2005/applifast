@@ -357,21 +357,31 @@ pub(crate) fn replace_file(
     path: &std::path::Path,
 ) -> std::io::Result<()> {
     use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Foundation::ERROR_ACCESS_DENIED;
     use windows_sys::Win32::Storage::FileSystem::{
         MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH, MoveFileExW,
     };
 
-    let temporary: Vec<u16> = temporary.as_os_str().encode_wide().chain(Some(0)).collect();
-    let path: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    let temporary_wide: Vec<u16> = temporary.as_os_str().encode_wide().chain(Some(0)).collect();
+    let path_wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
     let moved = unsafe {
         MoveFileExW(
-            temporary.as_ptr(),
-            path.as_ptr(),
+            temporary_wide.as_ptr(),
+            path_wide.as_ptr(),
             MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
         )
     };
     if moved == 0 {
-        Err(std::io::Error::last_os_error())
+        let error = std::io::Error::last_os_error();
+        if error.raw_os_error() == Some(ERROR_ACCESS_DENIED as i32)
+            && std::fs::symlink_metadata(path)
+                .is_ok_and(|metadata| !metadata.permissions().readonly())
+        {
+            // Rust's POSIX fallback preserves readers that permit delete sharing.
+            std::fs::rename(temporary, path)
+        } else {
+            Err(error)
+        }
     } else {
         Ok(())
     }
@@ -380,6 +390,99 @@ pub(crate) fn replace_file(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn replacing_a_file_keeps_an_existing_reader_on_the_old_contents() {
+        use std::{fs, io::Read, os::windows::fs::OpenOptionsExt};
+        use windows_sys::Win32::Storage::FileSystem::{
+            FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE,
+        };
+
+        let root = std::env::temp_dir().join(format!(
+            "applifast-replace-reader-{}-{}",
+            std::process::id(),
+            rand::random::<u64>()
+        ));
+        fs::create_dir(&root).unwrap();
+        let path = root.join("session-音楽.json");
+        let temporary = path.with_extension("json.tmp");
+        fs::write(&path, b"old session").unwrap();
+        fs::write(&temporary, b"new session").unwrap();
+        let mut reader = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+            .open(&path)
+            .unwrap();
+
+        let replaced = replace_file(&temporary, &path);
+        let current = fs::read(&path).unwrap();
+        let temporary_exists = temporary.exists();
+        let mut previous = String::new();
+        reader.read_to_string(&mut previous).unwrap();
+        drop(reader);
+        let _ = fs::remove_file(&temporary);
+        fs::remove_file(&path).unwrap();
+        fs::remove_dir(&root).unwrap();
+
+        replaced.unwrap();
+        assert_eq!(current, b"new session");
+        assert_eq!(previous, "old session");
+        assert!(!temporary_exists);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn failed_replacement_preserves_both_files_and_can_be_retried() {
+        use std::{fs, os::windows::fs::OpenOptionsExt};
+        use windows_sys::Win32::Storage::FileSystem::{FILE_SHARE_READ, FILE_SHARE_WRITE};
+
+        let root = std::env::temp_dir().join(format!(
+            "applifast-replace-failure-{}-{}",
+            std::process::id(),
+            rand::random::<u64>()
+        ));
+        fs::create_dir(&root).unwrap();
+        let path = root.join("session.json");
+        let temporary = path.with_extension("json.tmp");
+        fs::write(&path, b"old session").unwrap();
+        assert_eq!(
+            replace_file(&temporary, &path).unwrap_err().kind(),
+            std::io::ErrorKind::NotFound
+        );
+        assert_eq!(fs::read(&path).unwrap(), b"old session");
+
+        fs::write(&temporary, b"new session").unwrap();
+        let original_permissions = fs::metadata(&path).unwrap().permissions();
+        let mut permissions = original_permissions.clone();
+        permissions.set_readonly(true);
+        fs::set_permissions(&path, permissions.clone()).unwrap();
+        let read_only = replace_file(&temporary, &path);
+        let protected = fs::read(&path).unwrap();
+        let pending = fs::read(&temporary).unwrap();
+        fs::set_permissions(&path, original_permissions).unwrap();
+        assert!(read_only.is_err());
+        assert_eq!(protected, b"old session");
+        assert_eq!(pending, b"new session");
+
+        let reader = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
+            .open(&path)
+            .unwrap();
+        let locked = replace_file(&temporary, &path);
+        let protected = fs::read(&path).unwrap();
+        let pending = fs::read(&temporary).unwrap();
+        drop(reader);
+        assert!(locked.is_err());
+        assert_eq!(protected, b"old session");
+        assert_eq!(pending, b"new session");
+        replace_file(&temporary, &path).unwrap();
+        assert_eq!(fs::read(&path).unwrap(), b"new session");
+        assert!(!temporary.exists());
+        fs::remove_file(&path).unwrap();
+        fs::remove_dir(root).unwrap();
+    }
 
     fn pixel(rgba: &[u8], size: usize, x: usize, y: usize) -> [u8; 4] {
         let index = (y * size + x) * 4;

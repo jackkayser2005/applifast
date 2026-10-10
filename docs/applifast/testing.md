@@ -44,6 +44,11 @@ default URL handler are not supported yet.
    listening. A song without usable Apple playback parameters stays visible
    with an error. It is never replaced with another recording.
 
+Windows checkpoint replacement can now complete while another reader permits
+delete sharing. A read-only file or a reader that denies deletion can still
+block a save; quit software holding that file and retry. This is metadata and
+session persistence only. See the [reproduction and limits](windows-save-evidence.md).
+
 If the app token is missing or expired, download a fresh preview from the
 maintainer and extract all its files. `BUILD.txt` records the bundled token's
 expiry. There is no token-renewal server; these builds currently use 30-day
