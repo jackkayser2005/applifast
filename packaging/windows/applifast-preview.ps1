@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory=$true)][string]$DeveloperToken,
     [string]$Binary='target/debug/spotifast.exe',
     [string]$TokenChecker='target/apple-probe/debug/applifast-playback-probe.exe',
-    [string]$OutputDirectory='dist'
+    [string]$OutputDirectory='dist',
+    [string]$SetupCompiler
 )
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -13,10 +14,20 @@ try {
     $ignoredProbe=Join-Path $output '.applifast-package-output-check'
     & git check-ignore -q -- $ignoredProbe
     if($LASTEXITCODE -ne 0){throw 'Package output must be in an ignored directory, such as dist or .cache.'}
+    if($SetupCompiler){$SetupCompiler=(Resolve-Path -LiteralPath $SetupCompiler).Path}
     if([IO.Path]::GetExtension($DeveloperToken) -ieq '.p8'){throw 'Package a signed developer token, never the .p8 signing key.'}
     if(-not (Test-Path -LiteralPath $Binary -PathType Leaf) -or -not (Test-Path -LiteralPath $TokenChecker -PathType Leaf)){throw 'Build the app and playback probe before packaging.'}
     $TokenChecker=(Resolve-Path -LiteralPath $TokenChecker).Path
     if((Get-Item -LiteralPath $Binary).VersionInfo.ProductName -ne 'Applifast'){throw 'Expected the Applifast Windows executable.'}
+    if($SetupCompiler){
+        $pe=[IO.BinaryReader]::new([IO.File]::OpenRead((Resolve-Path -LiteralPath $Binary).Path))
+        try {
+            if($pe.ReadUInt16() -ne 0x5a4d){throw 'Installer requires a Windows x64 executable.'}
+            $pe.BaseStream.Position=0x3c
+            $pe.BaseStream.Position=$pe.ReadUInt32()
+            if($pe.ReadUInt32() -ne 0x4550 -or $pe.ReadUInt16() -ne 0x8664){throw 'Installer requires a Windows x64 executable.'}
+        } finally {$pe.Dispose()}
+    }
     $stream=[IO.File]::OpenRead((Resolve-Path -LiteralPath $DeveloperToken).Path)
     try {
         $reader=[IO.BinaryReader]::new($stream)
@@ -40,7 +51,8 @@ try {
     $name='applifast-preview-'+$source.Substring(0,7)+$(if($dirty){'-dirty'})
     $directory=Join-Path $output $name
     $zip=Join-Path $output ($name+'.zip')
-    if((Test-Path -LiteralPath $directory) -or (Test-Path -LiteralPath $zip)){throw 'Package destination already exists.'}
+    $installer=Join-Path $output ($name+'-setup.exe')
+    if((Test-Path -LiteralPath $directory) -or (Test-Path -LiteralPath $zip) -or (Test-Path -LiteralPath $installer)){throw 'Package destination already exists.'}
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     Copy-Item -LiteralPath $Binary -Destination (Join-Path $directory 'Applifast.exe')
     Copy-Item -LiteralPath 'LICENSE' -Destination (Join-Path $directory 'LICENSE')
@@ -60,6 +72,14 @@ try {
     $zipHash=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
     [IO.File]::WriteAllText(($zip+'.sha256'),($zipHash+'  '+[IO.Path]::GetFileName($zip)+"`n"),[Text.UTF8Encoding]::new($false))
     Write-Output ("Created $zip`nSHA256: $zipHash`nApp token expires (UTC): $expires")
+    if($SetupCompiler){
+        $version=(Get-Item -LiteralPath $Binary).VersionInfo.FileVersion
+        & $SetupCompiler "/DPayloadDir=$directory" "/DOutputDir=$output" "/DOutputName=$name" "/DVersion=$version" "/DSourceRevision=$($source.Substring(0,7))" "$PSScriptRoot/applifast.iss"
+        if($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $installer -PathType Leaf)){throw 'Installer compilation failed; the portable ZIP remains available.'}
+        $installerHash=(Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+        [IO.File]::WriteAllText(($installer+'.sha256'),($installerHash+'  '+[IO.Path]::GetFileName($installer)+"`n"),[Text.UTF8Encoding]::new($false))
+        Write-Output ("Created $installer`nSHA256: $installerHash`nDevelopment preview. Installer and app are not Authenticode-signed.")
+    }
 } finally {
     if($validationFile -and (Test-Path -LiteralPath $validationFile)){Remove-Item -LiteralPath $validationFile -Force}
     Pop-Location

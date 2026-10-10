@@ -1,8 +1,12 @@
 Applifast Windows development preview
 
 1. Quit the older build using its tray menu. Closing its window leaves it running.
-2. Extract this folder and run Applifast.exe. Keep the files together.
-3. Keep developer-token.txt beside Applifast.exe. The app loads its token
+2. Run the preview installer and open Applifast from Start, or extract the whole
+   portable ZIP and run Applifast.exe. Keep the portable files together.
+   The installer uses your account without administrator rights. Preview
+   executables are unsigned. It does not download WebView2 or register links.
+3. The installer puts developer-token.txt beside Applifast.exe automatically;
+   keep them together when using the ZIP. The app loads its token
    automatically, then offers Sign in with Apple. Enter credentials only in
    Apple's popup. Saved listener authorization is reused until you sign out.
    No tester Developer Program membership or commands are required.
@@ -53,8 +57,10 @@ refresh and restart restoration still need acceptance.
 Real-account creation, appending, permissions and uploaded members need acceptance.
 Cloud-only uploads are never replaced with catalog songs; their playback is
 not guaranteed. Runtime restart/window checks and the gaming soak are pending.
-See https://github.com/jackkayser2005/applifast/tree/feat/apple-bundled-token
-for the source and docs/applifast/listening-slice.md for exact validation status.
+See TESTING.md for setup and validation links, and BUILD.txt for source revision.
+Uninstalling the installed preview removes program files and shortcuts, preserving
+settings, the library/queue snapshot and protected authorization. Sign out first
+if you want account authorization and its snapshot cleared. Quit before updating.
 
 Applifast is an MIT-licensed fork of Spotifast by Carmine Paolino.
 The accompanying LICENSE preserves upstream credit.

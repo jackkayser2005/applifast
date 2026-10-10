@@ -10,12 +10,16 @@ Spotifast downloads install a different product.
 
 ## Try the preview
 
-Invited testers: get the portable ZIP and checksum from the maintainer, extract
-it, quit older builds through the tray, then run `Applifast.exe`. Follow the
+Invited testers: get the preview installer or portable ZIP and its checksum from
+the maintainer. Quit older builds through the tray. Run the installer and open
+Applifast from Start, or extract the ZIP and run `Applifast.exe`. Follow the
 [Windows tester guide](docs/applifast/testing.md) for token import, Apple sign-in,
 WebView2 setup, storage paths and troubleshooting. Tester ZIPs can include the
 app developer token, so listeners only click Sign in with Apple. Public release
-distribution and clean-machine acceptance remain pending.
+distribution and clean-machine acceptance remain pending. The installer uses
+your user account, preserves settings on uninstall and does not register Spotify
+links. Preview executables are unsigned. See the
+[installer checks and limits](docs/applifast/windows-installer-evidence.md).
 
 You need an Apple Music subscription, the Evergreen WebView2 Runtime and an
 unexpired app developer token supplied in the ZIP by the maintainer. Keep
