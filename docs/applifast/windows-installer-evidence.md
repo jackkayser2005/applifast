@@ -86,6 +86,12 @@ passed the documentation-site build and Linux packaging regression steps while
 compilation and Nix jobs were still running. This records that observed head's
 progress, not final-head CI acceptance.
 
+The first Nix job on `d19fdec` failed with a vendor-staging hash mismatch after
+the earlier Apple dependency changes. `flake.nix` now uses Nix's reported actual
+hash, `sha256-JnLrhJTGuAskwUtKbmrLtQRDpGh3PytrTGsa6KLRW7o=`. No lockfile,
+dependency version or Windows code changes accompany that refresh. The new
+head's Nix build must still verify it; the failure is not treated as a pass.
+
 Local installer regression passed: production-template compilation, x64 input
 validation, missing compiler rejection, compiler-failure ZIP preservation,
 existing-output protection, checksum, six installed file hashes, per-user QA
