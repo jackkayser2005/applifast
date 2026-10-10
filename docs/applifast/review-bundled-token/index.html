@@ -3,6 +3,7 @@
 <title>Applifast tester sign-in review</title>
 <style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
 <h1>Tester sign-in with an app token in the ZIP</h1>
+<p><a href="https://github.com/jackkayser2005/applifast/pull/32">PR #32</a>, implementation <code>873e18d</code>. Scope ledger: the maintainer requested download-and-sign-in onboarding. This slice simplifies only the existing sign-in card; fresh-account acceptance remains outstanding.</p>
 <p>Candidate <code>feat/apple-bundled-token</code>, baseline <code>642cfac</code> (PR #31). When Apple sign-in is ready, the card hides manual developer-token setup and is 80 pixels shorter. Errors and pending imports retain manual recovery. Settings retains its import control. The shell and Apple authorization popup are unchanged.</p>
 <p>Matching Windows native captures use identical signed-out demo ready/error states, theme, window size, neutral pointer, zoom and Reduce motion. No real account data or playback is used. The maintainer's download-and-sign-in request authorizes this setup change. It does not establish release acceptance.</p>
 <label>State <select id="view"><option value="ready">Ready for Apple sign-in</option><option value="error">Setup error and recovery</option></select></label>
