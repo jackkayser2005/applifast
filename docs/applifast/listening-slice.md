@@ -111,12 +111,38 @@ in a commit or chat. The app imports the JWT file, not the signing key. On
 Windows, run `cargo run --locked`. The executable is still named `spotifast.exe`
 during this development slice; its window and local identity are Applifast.
 
-If no saved grant exists, leave the path empty and click **Import developer token**
-to choose `developer-token.txt`, or enter its absolute path. Quoted Windows paths
-are accepted. Then click **Sign in with Apple**. Enter the subscriber's credentials
-only in Apple's popup. Existing grants from the playback probe restore without
-another import. An expired developer JWT requires generating and importing a
-new one. Authorization errors retain an explicit retry action.
+Tester ZIPs can now include `developer-token.txt` next to `Applifast.exe`.
+The host keeps a valid app token from Credential Manager; if it is missing or
+expired, it reads only that executable's companion file using the existing
+bounded JWT validator, then saves it to Credential Manager. File/store work
+remains off the UI thread. Nothing is fetched from a token server. Click
+**Sign in with Apple** and enter subscriber credentials only in Apple's popup.
+The sign-in card hides manual token controls when ready; errors and Settings
+retain protected manual import. Existing user grants restore as before, while
+the sign-out marker continues to prevent restoring a revoked user session.
+
+The maintainer's [Windows packager](../../packaging/windows/applifast-preview.ps1)
+includes only the executable, license, docs, build metadata and signed app JWT.
+It rejects `.p8` keys, invalid/expired/oversized files and wrong origins; output
+must be Git-ignored. A validation copy is removed on success or failure. ZIP
+checksums and the token expiry are recorded without printing token contents.
+The local signer still creates 30-day tokens. Expiry requires a new preview or
+protected manual renewal. No signing key, listener token, new dependency,
+network destination or settings format is added. Public release distribution
+and clean-Windows-account authorization acceptance remain pending.
+
+The bundled-token follow-up passes formatting, strict default/demo Clippy,
+1,006 default and 1,040 demo library tests, binary/integration suites, default
+doctests, strict demo Rustdoc, the build, gettext and Node bridge/signer checks.
+The standalone host passes 13 ordinary tests, strict Clippy and its isolated
+dummy native Credential Manager round trip. Packager checks reject invalid
+inputs, missing/extra origins and unignored output, preserve existing archives,
+and verify the whitelist, token content and checksum using dummy tokens only.
+All 16 matching [sign-in captures](review-bundled-token/index.html) were inspected.
+On October 10, 2026, Apple accepted the existing app JWT for a public catalog
+search. This does not prove a fresh listener's authorization popup or playback.
+HTML browser rendering, optional projectM, launcher/site tooling, Nix and
+non-Windows coverage remain unchecked; earlier persistence failures remain open.
 
 Token selection and bounded local validation run asynchronously before resetting
 the host. Cancelled selection, unreadable/expired/invalid files and late results
@@ -126,8 +152,8 @@ token controls, loading and errors. A current accepted token restarts the host;
 the host validates the file again before writing credentials. A changed file or
 Apple-rejected signature can still fail that final step. No JWT appears in UI
 events, no signing key is imported, and `.p8` paths are rejected before opening.
-This adds no dependency, network destination or settings format. Public token
-delivery and clean-machine authorization acceptance remain pending.
+This adds no dependency, network destination or settings format. Clean-machine
+authorization acceptance remains pending.
 
 The token regressions use dummy data: bounded/expired/non-UTF-8 files, signing-key
 path rejection, cancelled selection, request generations, delayed success after

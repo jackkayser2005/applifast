@@ -1,7 +1,7 @@
 # Windows private tester guide
 
-This is a development preview for invited Windows x64 testers. Public token
-delivery, installers and clean-machine acceptance are still pending. A preview
+This is a development preview for invited Windows x64 testers. Public release
+distribution, installers and clean-machine acceptance are still pending. A preview
 can report the inherited version `spotifast 0.12.0`; use its `BUILD.txt` source
 revision when reporting a problem. The original Spotifast downloads are a
 different product.
@@ -25,26 +25,34 @@ default URL handler are not supported yet.
 2. Install or repair the [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
    if the app reports a host initialization failure. An installed Edge browser
    alone is not the production runtime. See [Microsoft's distribution guidance](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution).
-3. For this private preview, get an unexpired **developer-token.txt** from the
-   maintainer through a private channel. It contains a signed MusicKit JWT.
+3. Keep the included **developer-token.txt** beside **Applifast.exe**. It
+   authenticates the app; it contains a signed MusicKit JWT, with no listener
+   credentials or private signing key. It loads automatically when no valid
+   app token is already stored on this PC.
    Testers do not need their own Developer Program membership, signing key,
    Node installation or Rust toolchain. The maintainer creates the developer
    token; each tester authorizes their own Apple Music subscriber account.
    See [Apple's developer-token documentation](https://developer.apple.com/documentation/applemusicapi/generating-developer-tokens).
-4. On the sign-in card, leave the token path empty and click **Import developer
-   token** to choose that file. A typed path also works, including a quoted
-   Windows “Copy as path” value. The same import control is in Settings under
-   Account. Do not select a `.p8` file or paste a JWT into the path field.
-5. Click **Sign in with Apple** when it becomes available. Enter account
+4. Click **Sign in with Apple** when it becomes available. Enter account
    credentials only in Apple's authorization popup. There is no code to extract
    from an existing browser session. MusicKit supplies the user authorization
    token; never copy browser cookies or user tokens. See [Apple's authentication
    documentation](https://developer.apple.com/documentation/applemusicapi/user-authentication-for-musickit).
-6. Open Songs, choose a track and check your audio output. Loaded library
+5. Open Songs, choose a track and check your audio output. Loaded library
    metadata and the local queue survive restart; restored playback starts
    paused. These caches contain no downloaded audio and do not provide offline
    listening. A song without usable Apple playback parameters stays visible
    with an error. It is never replaced with another recording.
+
+If the app token is missing or expired, download a fresh preview from the
+maintainer and extract all its files. `BUILD.txt` records the bundled token's
+expiry. There is no token-renewal server; these builds currently use 30-day
+tokens. An expired stored token automatically falls back to a valid companion
+file. A valid manually imported token takes precedence. Advanced recovery still
+offers **Import developer token** on errors and under Settings > Account.
+Leave its path empty to open the file chooser, or supply a quoted Windows path.
+Never select a `.p8` key or paste a JWT into the path field. A source checkout
+without the companion file still needs this manual setup.
 
 Import checks run off the interface thread. Cancelling the file chooser or
 rejecting an invalid or expired file preserves the current account, library,

@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-09 14:21-0400\n"
+"POT-Creation-Date: 2026-10-10 13:53-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Traditional Chinese\n"
@@ -382,7 +382,7 @@ msgid "Couldn't fetch the lyrics: {error}"
 msgstr "無法取得歌詞：{error}"
 
 #: src/ui/lyrics.rs:151 src/ui/lyrics.rs:429 src/ui/lyrics.rs:828
-#: src/ui/settings.rs:461 src/ui/login.rs:113
+#: src/ui/settings.rs:461 src/ui/login.rs:114
 msgid "Try again"
 msgstr "再試一次"
 
@@ -1152,7 +1152,7 @@ msgstr "共用存取會保持登入狀態。"
 msgid "Apple Music account"
 msgstr "Apple Music帳號"
 
-#: src/ui/settings.rs:293 src/ui/apple.rs:82
+#: src/ui/settings.rs:293 src/ui/apple.rs:85
 msgid "Import developer token"
 msgstr "匯入開發者權杖"
 
@@ -1209,7 +1209,7 @@ msgctxt "playback status"
 msgid "Connecting"
 msgstr "正在連線"
 
-#: src/ui/settings.rs:455 src/ui/login.rs:104
+#: src/ui/settings.rs:455 src/ui/login.rs:105
 msgid "Connecting to Spotify…"
 msgstr "正在連線至 Spotify…"
 
@@ -1540,7 +1540,7 @@ msgstr ""
 "「關閉」會忽略環境變數。「系統」會使用環境變數，在 macOS 和 Windows 上還會使"
 "用作業系統的 Proxy。"
 
-#: src/ui/settings.rs:1358 src/ui/login.rs:256
+#: src/ui/settings.rs:1358 src/ui/login.rs:257
 msgid "Apply settings"
 msgstr "套用設定"
 
@@ -2211,7 +2211,7 @@ msgid "“{name}” will no longer appear in Your Library."
 msgstr "「{name}」將不再顯示於你的音樂庫。"
 
 #: src/ui/dialogs.rs:104 src/ui/dialogs.rs:147 src/ui/dialogs.rs:416
-#: src/ui/dialogs.rs:595 src/ui/login.rs:96
+#: src/ui/dialogs.rs:595 src/ui/login.rs:97
 msgid "Cancel"
 msgstr "取消"
 
@@ -2582,27 +2582,27 @@ msgstr "沒有已儲存的單集"
 msgid "Saved episodes appear here."
 msgstr "儲存的單集會顯示在這裡。"
 
-#: src/ui/login.rs:77
+#: src/ui/login.rs:78
 msgid "A native Spotify client."
 msgstr "原生 Spotify 用戶端。"
 
-#: src/ui/login.rs:89
+#: src/ui/login.rs:90
 msgid "Waiting for Spotify in your browser…"
 msgstr "正在等待瀏覽器中的 Spotify…"
 
-#: src/ui/login.rs:92
+#: src/ui/login.rs:93
 msgid "Didn't open? Open the sign-in page again"
 msgstr "沒有開啟嗎？重新開啟登入頁面"
 
-#: src/ui/login.rs:121 src/ui/login.rs:156
+#: src/ui/login.rs:122 src/ui/login.rs:157
 msgid "Use the shared Spotify app instead"
 msgstr "改用共用的 Spotify 應用程式"
 
-#: src/ui/login.rs:135
+#: src/ui/login.rs:136
 msgid "Sign in with Spotify"
 msgstr "使用 Spotify 登入"
 
-#: src/ui/login.rs:141
+#: src/ui/login.rs:142
 msgid ""
 "Sign in through your browser. Applifast never sees your password. Local "
 "playback needs Spotify Premium."
@@ -2610,17 +2610,17 @@ msgstr ""
 "透過瀏覽器登入。Applifast 永遠不會看到你的密碼。本機播放需要 Spotify "
 "Premium。"
 
-#: src/ui/login.rs:174
+#: src/ui/login.rs:175
 msgid "Proxy Settings"
 msgstr "Proxy 設定"
 
 #. Translators: {version} is the app's version number, such as 1.2.0.
-#: src/ui/login.rs:195
+#: src/ui/login.rs:196
 #, rust-format
 msgid "Applifast {version} • not affiliated with Spotify"
 msgstr "Applifast {version} • 與 Spotify 無關"
 
-#: src/ui/apple.rs:72
+#: src/ui/apple.rs:75
 msgid "Path to developer-token.txt"
 msgstr "developer-token.txt的路徑"
 

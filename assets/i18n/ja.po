@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-09 14:21-0400\n"
+"POT-Creation-Date: 2026-10-10 13:53-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Japanese\n"
@@ -382,7 +382,7 @@ msgid "Couldn't fetch the lyrics: {error}"
 msgstr "歌詞を取得できませんでした：{error}"
 
 #: src/ui/lyrics.rs:151 src/ui/lyrics.rs:429 src/ui/lyrics.rs:828
-#: src/ui/settings.rs:461 src/ui/login.rs:113
+#: src/ui/settings.rs:461 src/ui/login.rs:114
 msgid "Try again"
 msgstr "もう一度試す"
 
@@ -1174,7 +1174,7 @@ msgstr "共有アクセスはログインしたままになります。"
 msgid "Apple Music account"
 msgstr "Apple Musicアカウント"
 
-#: src/ui/settings.rs:293 src/ui/apple.rs:82
+#: src/ui/settings.rs:293 src/ui/apple.rs:85
 msgid "Import developer token"
 msgstr "開発者トークンをインポート"
 
@@ -1231,7 +1231,7 @@ msgctxt "playback status"
 msgid "Connecting"
 msgstr "接続中"
 
-#: src/ui/settings.rs:455 src/ui/login.rs:104
+#: src/ui/settings.rs:455 src/ui/login.rs:105
 msgid "Connecting to Spotify…"
 msgstr "Spotifyに接続中…"
 
@@ -1580,7 +1580,7 @@ msgstr ""
 "「オフ」では環境変数を無視します。「システム」では環境変数と、macOSとWindows"
 "ではOSのプロキシを使います。"
 
-#: src/ui/settings.rs:1358 src/ui/login.rs:256
+#: src/ui/settings.rs:1358 src/ui/login.rs:257
 msgid "Apply settings"
 msgstr "設定を適用"
 
@@ -2280,7 +2280,7 @@ msgid "“{name}” will no longer appear in Your Library."
 msgstr "「{name}」はマイライブラリに表示されなくなります。"
 
 #: src/ui/dialogs.rs:104 src/ui/dialogs.rs:147 src/ui/dialogs.rs:416
-#: src/ui/dialogs.rs:595 src/ui/login.rs:96
+#: src/ui/dialogs.rs:595 src/ui/login.rs:97
 msgid "Cancel"
 msgstr "キャンセル"
 
@@ -2653,27 +2653,27 @@ msgstr "保存したエピソードはありません"
 msgid "Saved episodes appear here."
 msgstr "保存したエピソードがここに表示されます。"
 
-#: src/ui/login.rs:77
+#: src/ui/login.rs:78
 msgid "A native Spotify client."
 msgstr "ネイティブなSpotifyクライアント。"
 
-#: src/ui/login.rs:89
+#: src/ui/login.rs:90
 msgid "Waiting for Spotify in your browser…"
 msgstr "ブラウザでSpotifyを待っています…"
 
-#: src/ui/login.rs:92
+#: src/ui/login.rs:93
 msgid "Didn't open? Open the sign-in page again"
 msgstr "開きませんか？ログインページをもう一度開く"
 
-#: src/ui/login.rs:121 src/ui/login.rs:156
+#: src/ui/login.rs:122 src/ui/login.rs:157
 msgid "Use the shared Spotify app instead"
 msgstr "代わりに共有Spotifyアプリを使う"
 
-#: src/ui/login.rs:135
+#: src/ui/login.rs:136
 msgid "Sign in with Spotify"
 msgstr "Spotifyでログイン"
 
-#: src/ui/login.rs:141
+#: src/ui/login.rs:142
 msgid ""
 "Sign in through your browser. Applifast never sees your password. Local "
 "playback needs Spotify Premium."
@@ -2681,17 +2681,17 @@ msgstr ""
 "ブラウザでログインします。Applifastがパスワードを見ることはありません。ローカ"
 "ル再生にはSpotify Premiumが必要です。"
 
-#: src/ui/login.rs:174
+#: src/ui/login.rs:175
 msgid "Proxy Settings"
 msgstr "プロキシ設定"
 
 #. Translators: {version} is the app's version number, such as 1.2.0.
-#: src/ui/login.rs:195
+#: src/ui/login.rs:196
 #, rust-format
 msgid "Applifast {version} • not affiliated with Spotify"
 msgstr "Applifast {version} • Spotifyとは関係ありません"
 
-#: src/ui/apple.rs:72
+#: src/ui/apple.rs:75
 msgid "Path to developer-token.txt"
 msgstr "developer-token.txtのパス"
 

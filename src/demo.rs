@@ -4115,6 +4115,24 @@ mod tests {
         app.apple = Some(apple);
         accessible_frame(&ctx, &mut app, vec![]);
         let tree = accessible_frame(&ctx, &mut app, vec![]);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .any(|(_, node)| node.label() == Some("Import developer token"))
+        );
+        let sign_in = accessible_node(&tree, "Sign in with Apple", Role::Button);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .find(|(id, _)| *id == sign_in)
+                .unwrap()
+                .1
+                .is_disabled()
+        );
+        app.apple.as_mut().unwrap().error = Some("App developer token needs renewal.".into());
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
         let import = accessible_node(&tree, "Import developer token", Role::Button);
         let button = &tree.nodes.iter().find(|(id, _)| *id == import).unwrap().1;
         assert!(!button.is_disabled());
