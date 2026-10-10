@@ -38,6 +38,10 @@ cargo run --locked --features demo -- --demo
 Known Apple favorites show filled, read-only hearts in song rows and the player
 bar. Changing favorites still requires Apple Music and a refresh here.
 
+Windows saves now preserve open readers while replacing library, queue and
+session files. Read-only files and locks that deny deletion still produce save
+errors. See the [save evidence](docs/applifast/windows-save-evidence.md).
+
 The Cargo package and build target retain the technical name `spotifast` and
 version `0.12.0` during this port. Consequently, `--version` can still report
 `spotifast 0.12.0`. Use the source revision from `BUILD.txt` for preview reports.

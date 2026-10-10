@@ -1112,7 +1112,21 @@ mod tests {
         ));
         std::fs::create_dir(&root).unwrap();
         let path = root.join("apple-session.json");
+        #[cfg(windows)]
+        let previous_reader = {
+            let mut previous = snapshot.clone();
+            previous.position_ms = 0;
+            previous.save(&path).unwrap();
+            std::fs::File::open(&path).unwrap()
+        };
         snapshot.save(&path).unwrap();
+        #[cfg(windows)]
+        assert_eq!(
+            serde_json::from_reader::<_, cache::Snapshot>(previous_reader)
+                .unwrap()
+                .position_ms,
+            0
+        );
         assert!(cache::Snapshot::load(&path, &"b".repeat(64), "us").is_none());
         assert!(cache::Snapshot::load(&path, &"a".repeat(64), "gb").is_none());
         let snapshot = cache::Snapshot::load(&path, &"a".repeat(64), "us").unwrap();

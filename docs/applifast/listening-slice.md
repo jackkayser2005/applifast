@@ -6,6 +6,15 @@ with a message pump. Commands and sanitized events cross channels through the
 existing asynchronous backend. Closing an egui window does not own or destroy
 the playback host. Apple authorization is the only visible browser popup.
 
+## Windows checkpoint replacement
+
+Settings, session and Apple library/queue checkpoint saves now fall back to
+Rust's atomic Windows rename when the old file has a reader that permits delete
+sharing. The existing write-through move remains the first attempt. Read-only
+files and locks that deny deletion still fail without destroying the old file.
+There are no sleeps or retry loops, new dependencies, storage formats or UI changes.
+See the [reproduction, tests and remaining limits](windows-save-evidence.md).
+
 ## Preview product identity
 
 Windows executable properties now identify **Applifast** and **Apple Music for
