@@ -147,7 +147,8 @@ New-Item -ItemType Directory -Force .cache/apple-measurements | Out-Null
 & prototypes/apple-playback/measure.ps1 -RootProcessId 12345 -State paused -OutputPath .cache/apple-measurements/paused.json
 ```
 
-Replace 12345 with the host PID. Defaults are 120 seconds warm-up and 300 seconds
+Replace 12345 with the host PID, or with the integrated Applifast PID when testing
+the desktop app. Defaults are 120 seconds warm-up and 300 seconds
 sampling. The sampler counts the app's process descendants, including browser,
 renderer, GPU and helper processes, retaining surviving reparented children and
 checking PID reuse. CPU is normalized by all logical processors. It enforces
@@ -158,6 +159,21 @@ entirely between snapshots, and state labels do not prove playback. Review
 process coverage and verify sound independently. These measurements concern
 the isolated engine; final acceptance must include the integrated egui app and
 a one-hour gaming/listening session.
+
+Every JSON sample retains the aggregate counters and PID list, and adds
+`Processes`: PID, parent PID, creation-time ticks, executable name and private
+bytes for each selected process. Names contain no command lines or paths.
+Unreadable members remain visible and prevent a passing result. To inspect the
+last sample's largest consumers:
+
+```powershell
+$report = Get-Content .cache/apple-measurements/playing.json -Raw | ConvertFrom-Json
+$report.Samples[-1].Processes | Sort-Object PrivateBytes -Descending | Format-Table Name, ProcessId, ParentProcessId, PrivateBytes
+```
+
+The focused sampler check now runs a short-lived Windows helper and verifies
+the per-process sum, identity and names against real counters. Its deliberately
+short sample cannot pass the acceptance duration or establish playback results.
 
 ## Focused checks
 

@@ -146,6 +146,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node prototypes/apple-playback/generate-token.cjs --self-test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./prototypes/apple-playback/test-measure.ps1
 
       - name: Applifast preview packaging and installer
         if: runner.os == 'Windows' && runner.arch == 'X64'
