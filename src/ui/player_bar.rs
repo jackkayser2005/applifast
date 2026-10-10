@@ -625,7 +625,7 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
         }
     }
 
-    if !now.is_episode && app.apple.is_none() {
+    if !now.is_episode && (app.apple.is_none() || app.is_saved(&now.uri) == Some(true)) {
         let saved = app.is_saved(&now.uri).unwrap_or(false);
         let (icon, color, tooltip) = if saved {
             (
@@ -660,12 +660,20 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
                 .max_rect(heart_rect)
                 .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
         );
-        let scale = super::motion::heart_scale(ui.ctx(), &now.uri);
-        if theme::icon_button_scaled(
+        if app.apple.is_some() {
+            let label = gettext(app.locale, "Favorites");
+            heart_ui
+                .add(
+                    Icon::HeartFilled
+                        .image(palette.accent, 17.0)
+                        .alt_text(label.as_ref()),
+                )
+                .on_hover_text(label.as_ref());
+        } else if theme::icon_button_scaled(
             &mut heart_ui,
             icon,
             17.0,
-            scale,
+            super::motion::heart_scale(ui.ctx(), &now.uri),
             color,
             palette.text,
             &tooltip,

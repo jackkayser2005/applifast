@@ -1777,7 +1777,21 @@ fn track_row_contents(
     if cols.heart > 0.0 {
         let saved = app.is_saved(row.item.uri());
         let heart_rect = Rect::from_min_size(pos2(x, rect.top()), vec2(cols.heart, row_height));
-        if app.apple.is_none() && row.item.is_track() {
+        if app.apple.is_some() && row.item.is_track() && saved == Some(true) {
+            let mut child = ui.new_child(
+                UiBuilder::new()
+                    .max_rect(heart_rect)
+                    .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
+            );
+            let label = gettext(app.locale, "Favorites");
+            child
+                .add(
+                    Icon::HeartFilled
+                        .image(palette.accent, 16.0)
+                        .alt_text(label.as_ref()),
+                )
+                .on_hover_text(label.as_ref());
+        } else if app.apple.is_none() && row.item.is_track() {
             let mut child = ui.new_child(
                 UiBuilder::new()
                     .max_rect(heart_rect)
