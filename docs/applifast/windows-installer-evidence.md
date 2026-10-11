@@ -100,6 +100,21 @@ test clients to the Applifast name, keeping the private bus, readiness deadline,
 URI dispatch and supported-schemes assertions. It changes no runtime code and
 does not skip the regression. Linux CI must execute it before claiming a pass.
 
+On `f9c213b`, [CI run 38122322514](https://github.com/jackkayser2005/applifast/actions/runs/38122322514)
+passed that private-bus regression and all 1,050 Linux all-feature library tests
+(three opt-in checks ignored). The later `startup_diagnostics` integration test
+failed because the default filter enabled `spotifast=info`, while the logger's
+startup identity is emitted under `applifast`. The follow-up also enables
+`applifast=info`, retaining the crate's existing filter and the startup-log
+regression. The renamed identity must appear in a subsequent Linux CI run before
+this gate is accepted. No log format, credential handling or interface changes.
+An isolated Windows check using the actual `fastframe-log` dependency failed
+the startup-identity assertion with the inherited filter and passed with the
+current production filter, without launching the app or using its profile.
+The Nix package job in that same `f9c213b` run subsequently passed, verifying
+`nix build .#default` and the refreshed vendor hash on that head. It does not
+execute the failing demo-only startup integration test or verify the new head.
+
 Local installer regression passed: production-template compilation, x64 input
 validation, missing compiler rejection, compiler-failure ZIP preservation,
 existing-output protection, checksum, six installed file hashes, per-user QA
