@@ -25,7 +25,7 @@ pub const CONFIG: UpdateConfig = UpdateConfig {
     ..UpdateConfig::new(
         "jackkayser2005/applifast",
         "Applifast",
-        "spotifast",
+        "applifast",
         env!("CARGO_PKG_VERSION"),
     )
 };

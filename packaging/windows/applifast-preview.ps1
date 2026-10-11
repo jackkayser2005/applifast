@@ -61,7 +61,8 @@ try {
     [IO.File]::WriteAllText((Join-Path $directory 'TESTING.md'),$guide,[Text.UTF8Encoding]::new($false))
     [IO.File]::WriteAllText((Join-Path $directory 'developer-token.txt'),($token+"`n"),[Text.UTF8Encoding]::new($false))
     $exeHash=(Get-FileHash -LiteralPath (Join-Path $directory 'Applifast.exe') -Algorithm SHA256).Hash.ToLowerInvariant()
-    $build="Source: $source`nDirty source: $dirty`nWindows x64 development preview, not a public release`nInherited version: spotifast 0.12.0`nApplifast.exe SHA256: $exeHash`nApp developer token expires (UTC): $expires`nLocal token checks cover format, dates and origin. Apple verifies signature and access.`nFresh-account authorization and runtime release acceptance remain required.`nEarlier intermittent Windows cache/session replacement failures remain undiagnosed.`n"
+    $version=(Get-Item -LiteralPath $Binary).VersionInfo.FileVersion
+    $build="Source: $source`nDirty source: $dirty`nWindows x64 development preview, not a public release`nFile version: $version`nApplifast.exe SHA256: $exeHash`nApp developer token expires (UTC): $expires`nLocal token checks cover format, dates and origin. Apple verifies signature and access.`nFresh-account authorization and runtime release acceptance remain required.`n"
     [IO.File]::WriteAllText((Join-Path $directory 'BUILD.txt'),$build,[Text.UTF8Encoding]::new($false))
     $allowed=@('Applifast.exe','BUILD.txt','LICENSE','README.txt','TESTING.md','developer-token.txt')
     Compress-Archive -LiteralPath ($allowed | ForEach-Object {Join-Path $directory $_}) -DestinationPath $zip -CompressionLevel Optimal
@@ -73,7 +74,6 @@ try {
     [IO.File]::WriteAllText(($zip+'.sha256'),($zipHash+'  '+[IO.Path]::GetFileName($zip)+"`n"),[Text.UTF8Encoding]::new($false))
     Write-Output ("Created $zip`nSHA256: $zipHash`nApp token expires (UTC): $expires")
     if($SetupCompiler){
-        $version=(Get-Item -LiteralPath $Binary).VersionInfo.FileVersion
         & $SetupCompiler "/DPayloadDir=$directory" "/DOutputDir=$output" "/DOutputName=$name" "/DVersion=$version" "/DSourceRevision=$($source.Substring(0,7))" "$PSScriptRoot/applifast.iss"
         if($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $installer -PathType Leaf)){throw 'Installer compilation failed; the portable ZIP remains available.'}
         $installerHash=(Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()

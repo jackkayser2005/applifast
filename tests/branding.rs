@@ -50,21 +50,22 @@ impl Drop for Scratch {
 }
 
 #[test]
-fn the_command_reports_its_name_and_passes_the_update_version_check() {
+fn the_command_reports_apple_identity_and_matches_the_update_version_probe() {
     let output = Command::new(COMMAND).arg("--version").output().unwrap();
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8(output.stdout).unwrap().trim(),
-        format!("spotifast {}", env!("CARGO_PKG_VERSION"))
+        format!("applifast {}", env!("CARGO_PKG_VERSION"))
     );
     let help = Command::new(COMMAND).arg("--help").output().unwrap();
     assert!(help.status.success());
     assert!(
         String::from_utf8(help.stdout)
             .unwrap()
-            .contains("Usage: spotifast")
+            .contains("Usage: applifast")
     );
-    assert_eq!(spotifast::updates::CONFIG.slug, "spotifast");
+    assert_eq!(spotifast::updates::CONFIG.slug, "applifast");
+    assert!(spotifast::updates::CONFIG.legacy_names.is_empty());
 }
 
 /// The app's name before the rename is gone from everything but the past

@@ -54,6 +54,12 @@ try {
     $archive=[IO.Compression.ZipFile]::OpenRead($zip[0].FullName)
     try {
         if($archive.Entries.Count -ne 6){throw 'Unexpected archive size.'}
+        $reader=[IO.StreamReader]::new($archive.GetEntry('BUILD.txt').Open())
+        try {
+            $build=$reader.ReadToEnd()
+            $version=(Get-Item -LiteralPath $Binary).VersionInfo.FileVersion
+            if(-not $version -or -not $build.Contains("File version: $version`n") -or $build.Contains('Inherited version: spotifast')){throw 'Packaged file version does not match its executable.'}
+        } finally {$reader.Dispose()}
         $reader=[IO.StreamReader]::new($archive.GetEntry('developer-token.txt').Open())
         try {if($reader.ReadToEnd().Trim() -ne $token){throw 'Packaged app token changed.'}}
         finally {$reader.Dispose()}

@@ -4,7 +4,7 @@ use clap::{CommandFactory, FromArgMatches, Parser};
 
 /// Apple Music for Windows, with a native Rust interface.
 #[derive(Debug, Parser)]
-#[command(name = env!("CARGO_BIN_NAME"), version, about)]
+#[command(name = "applifast", bin_name = "applifast", version, about)]
 struct Cli {
     /// A command for the running instance; without one, the app starts.
     #[command(subcommand)]
