@@ -1350,6 +1350,92 @@ mod tests {
     }
     #[cfg(windows)]
     #[test]
+    #[ignore = "Uses local authorization to re-add two already-confirmed favorites without playing audio"]
+    fn native_host_readds_confirmed_catalog_and_library_favorites() {
+        let (sender, events) = std::sync::mpsc::channel();
+        let host = crate::player::AppleHost::start(None, move |event| {
+            let _ = sender.send(event);
+        });
+        let result = || {
+            let await_event = |kind: &str, id: Option<u64>| -> Value {
+                let deadline = Instant::now() + std::time::Duration::from_secs(45);
+                loop {
+                    let event = events
+                        .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                        .expect("Favorites host timed out");
+                    if event["type"] == "hostErrorCode" {
+                        eprintln!("Favorites WebView2 HRESULT: {}", event["hresult"]);
+                    }
+                    assert_ne!(
+                        event["type"], "error",
+                        "Favorites host failed: {}",
+                        event["message"]
+                    );
+                    if event["type"] == kind && id.is_none_or(|id| event["id"] == id) {
+                        return event;
+                    }
+                }
+            };
+            let ready = await_event("ready", None);
+            assert_eq!(
+                ready["authorized"], true,
+                "Sign in locally before this opt-in check"
+            );
+            let read = |id: u64, path: String| -> Value {
+                host.send(json!({"type":"request","id":id,"path":path}).to_string());
+                let response = await_event("response", Some(id));
+                assert!(
+                    response["error"].is_null(),
+                    "Favorites metadata read failed"
+                );
+                response["data"].clone()
+            };
+            let library = read(9000, "/v1/me/library/songs?limit=100".into());
+            let song = library["data"].as_array().unwrap().iter().find(|song| {
+                song["attributes"]["inFavorites"] == true
+                    && song["attributes"]["playParams"]["catalogId"].is_string()
+            }).expect("No confirmed matched library favorite found; this check never favorites a new song");
+            let library_id = song["id"].as_str().unwrap();
+            let catalog_id = song["attributes"]["playParams"]["catalogId"]
+                .as_str()
+                .unwrap();
+            let catalog_path = format!(
+                "/v1/catalog/{}/songs/{catalog_id}",
+                ready["storefront"].as_str().unwrap()
+            );
+            let catalog = read(9001, catalog_path.clone());
+            assert_eq!(
+                catalog["data"][0]["attributes"]["inFavorites"], true,
+                "Catalog counterpart must already be a confirmed favorite before this opt-in check"
+            );
+            let library_path = format!("/v1/me/library/songs/{library_id}");
+            for (id, kind, resource_id, path) in [
+                (9002, "library", library_id, library_path),
+                (9004, "catalog", catalog_id, catalog_path),
+            ] {
+                host.send(json!({"type":"favoriteSongs","id":id,"items":[{"kind":kind,"id":resource_id,"playParams":null}]}).to_string());
+                let response = await_event("response", Some(id));
+                assert!(
+                    response["error"].is_null(),
+                    "Apple did not accept the idempotent favorites request"
+                );
+                let confirmed = read(id + 1, path);
+                assert_eq!(confirmed["data"][0]["id"], resource_id);
+                assert_eq!(confirmed["data"][0]["attributes"]["inFavorites"], true);
+            }
+            eprintln!(
+                "Existing library and catalog favorite writes accepted; exact resource state confirmed. No audio started."
+            );
+        };
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(result));
+        host.shutdown();
+        if let Err(failure) = outcome {
+            std::panic::resume_unwind(failure);
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
     #[ignore = "Uses the locally authorized Apple account and starts muted real playback"]
     fn native_host_restores_library_plays_seeks_and_pauses() {
         let (sender, events) = std::sync::mpsc::channel();

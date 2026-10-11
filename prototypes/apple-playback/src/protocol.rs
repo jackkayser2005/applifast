@@ -133,6 +133,10 @@ pub enum Command {
         playlist: String,
         items: Vec<PlaybackItem>,
     },
+    FavoriteSongs {
+        id: u64,
+        items: Vec<PlaybackItem>,
+    },
     Play {
         items: Vec<PlaybackItem>,
         index: usize,
@@ -199,6 +203,7 @@ impl Command {
                             | Self::Request { .. }
                             | Self::CreatePlaylist { .. }
                             | Self::AppendPlaylist { .. }
+                            | Self::FavoriteSongs { .. }
                             | Self::SignOut
                             | Self::Shutdown
                     )
@@ -235,6 +240,12 @@ impl Command {
                     return Err("Choose a library playlist.".into());
                 }
                 validate_playlist_items(*id, items, false)
+            }
+            Self::FavoriteSongs { id, items } => {
+                if *id > 9_007_199_254_740_991 || items.is_empty() || items.len() > 100 {
+                    return Err("Choose between 1 and 100 songs to add to favorites.".into());
+                }
+                items.iter().try_for_each(PlaybackItem::validate)
             }
             Self::Play {
                 items,
@@ -532,6 +543,43 @@ mod tests {
             play_params: Some(json!({"id":"123", "isLibrary":true})),
         };
         assert!(item.validate().is_err());
+    }
+
+    #[test]
+    fn favorite_writes_preserve_resource_ids_and_reject_unbounded_or_invalid_batches() {
+        let input = json!({"type":"favoriteSongs","id":7,"items":[
+            {"kind":"library","id":"i.upload","playParams":null},
+            {"kind":"catalog","id":"123","playParams":{"id":"456","kind":"song"}}
+        ]});
+        let command: Command = serde_json::from_value(input.clone()).unwrap();
+        command.validate().unwrap();
+        assert_eq!(serde_json::to_value(command).unwrap(), input);
+        for patch in [
+            json!({"id":9_007_199_254_740_992u64}),
+            json!({"items":[]}),
+            json!({"items":vec![input["items"][0].clone();101]}),
+            json!({"items":[{"kind":"catalog","id":"i.upload","playParams":null}]}),
+            json!({"items":[{"kind":"library","id":"i.x?token=secret","playParams":null}]}),
+            json!({"items":[{"kind":"library","id":"i.upload","playParams":{"id":"123","isLibrary":true}}]}),
+        ] {
+            let mut invalid = input.clone();
+            for (key, value) in patch.as_object().unwrap() {
+                invalid[key] = value.clone();
+            }
+            assert!(
+                serde_json::from_value::<Command>(invalid)
+                    .unwrap()
+                    .validate()
+                    .is_err()
+            );
+        }
+        let intent: Command =
+            serde_json::from_value(json!({"type":"intent","generation":1,"command":input}))
+                .unwrap();
+        assert!(
+            intent.validate().is_err(),
+            "favorites are account writes, not playback intents"
+        );
     }
 
     #[test]

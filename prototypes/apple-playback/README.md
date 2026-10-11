@@ -123,6 +123,29 @@ without a new deadline, since an interrupted write may have reached Apple.
 Library read failures retain loaded songs and the local playback queue, and
 do not pause audio. Refresh Songs retries the read.
 
+The diagnostic boundary also accepts `favoriteSongs` with a numeric request ID
+and 1 to 100 typed song items, using the same item shape as playlist writes. This
+is a local batch bound, not a claimed Apple API limit. It sends
+`POST /v1/me/favorites` with resource-typed `ids[songs]` and `ids[library-songs]`
+parameters, preserves original resource IDs and deduplicates repeated IDs only
+within that favorite request. It never substitutes a catalog/playback match,
+changes ratings or removes favorites. Writes serialize separately from playback;
+sign-out aborts them and rejects late replies. They are not retried automatically.
+An accepted empty reply does not prove Apple changed every requested song.
+
+These writes are an integration gate, not an exposed desktop feature. Hearts
+remain read-only until optimistic state, rollback and exact server confirmation
+are integrated. See the [evidence and pending checks](../../docs/applifast/favorites-write-evidence.md).
+
+The opt-in account check re-adds only a library favorite and a catalog counterpart
+that both already report `inFavorites=true`, then reads their exact IDs again.
+It starts no audio and does not establish adding a previously unfavorited song.
+Quit every running Applifast build through its tray menu before running it:
+
+```powershell
+cargo test --locked --lib apple::tests::native_host_readds_confirmed_catalog_and_library_favorites -- --ignored --exact --nocapture
+```
+
 Repeat modes are 0=off, 1=current occurrence, 2=queue. Sign-out invalidates old
 responses, deletes the protected user grant, closes popups and clears the
 dedicated browser profile. Check the `profileCleared` result. A durable

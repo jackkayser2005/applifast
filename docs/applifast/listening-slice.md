@@ -86,6 +86,13 @@ other-platform compilation remain unverified in this slice.
 
 ## Supported Apple controls
 
+Favorites-write integration is in progress behind the diagnostic host boundary.
+The typed command preserves resource identities, validates a bounded batch and
+keeps mutations independent of playback controls. The native account gate has
+not passed, and desktop favorite writes, optimistic confirmation and rollback
+are not exposed yet. The existing read-only hearts are unchanged. See the
+[favorites integration evidence](favorites-write-evidence.md).
+
 Apple song, selection, album, artist and playlist menus now hide unavailable
 favorite/save/follow writes, Spotify radio and advanced playlist edits. Header
 save/follow buttons remain hidden until Apple writes are implemented. Known
