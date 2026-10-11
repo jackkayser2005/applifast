@@ -1362,7 +1362,16 @@ mod tests {
                 loop {
                     let event = events
                         .recv_timeout(deadline.saturating_duration_since(Instant::now()))
-                        .expect("Favorites host timed out");
+                        .unwrap_or_else(|_| panic!("Favorites host timed out awaiting {kind}"));
+                    if event["type"] == "hostReady" {
+                        eprintln!("Favorites WebView2 host ready; awaiting MusicKit.");
+                    }
+                    if event["type"] == "pageLoaded" {
+                        eprintln!(
+                            "Favorites page loaded: {}; status: {}; HTTP: {}",
+                            event["success"], event["errorStatus"], event["httpStatus"]
+                        );
+                    }
                     if event["type"] == "hostErrorCode" {
                         eprintln!("Favorites WebView2 HRESULT: {}", event["hresult"]);
                     }
@@ -1372,6 +1381,7 @@ mod tests {
                         event["message"]
                     );
                     if event["type"] == kind && id.is_none_or(|id| event["id"] == id) {
+                        eprintln!("Favorites check received {kind}.");
                         return event;
                     }
                 }

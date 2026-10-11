@@ -8,6 +8,15 @@ the playback host. Apple authorization is the only visible browser popup.
 
 ## Retry after startup failure
 
+The host also waits for WebView2's bootstrap-registration callback before
+navigating. A failed local-page navigation emits a fixed actionable error,
+making the existing retry control available. Local host diagnostics report
+only navigation success and numeric WebView2/HTTP statuses. The native account
+check after the older preview exited reached host readiness but failed loading
+the local page (`false`, `0`, `0`), before MusicKit or any account write. The
+ordering correction does not claim to resolve that separate failure. See the
+[account gate evidence](favorites-write-evidence.md).
+
 If the Apple playback host cannot initialize, the sign-in card now offers
 **Retry connection**. It restarts the independent host through the existing
 asynchronous backend, using the saved developer/user credentials or the
