@@ -23696,6 +23696,7 @@ mod tests {
     fn mpris_search_links_open_search_on_a_private_bus() {
         use std::time::{Duration, Instant};
         const CHILD: &str = "SPOTIFAST_SEARCH_PRIVATE_BUS";
+        const SERVICE: &str = "org.mpris.MediaPlayer2.applifast";
         if std::env::var_os(CHILD).is_none() {
             let root = std::env::temp_dir().join(format!(
                 "spotifast-search-bus-{:016x}",
@@ -23739,7 +23740,7 @@ mod tests {
             .unwrap();
         let call = |uri: &str| {
             client.call_method(
-                Some("org.mpris.MediaPlayer2.spotifast"),
+                Some(SERVICE),
                 "/org/mpris/MediaPlayer2",
                 Some("org.mpris.MediaPlayer2.Player"),
                 "OpenUri",
@@ -23766,7 +23767,7 @@ mod tests {
         assert!(matches!(app.actions.as_slice(), [Action::OpenLink(_)]));
         let schemes: Vec<String> = zbus::blocking::Proxy::new(
             &client,
-            "org.mpris.MediaPlayer2.spotifast",
+            SERVICE,
             "/org/mpris/MediaPlayer2",
             "org.mpris.MediaPlayer2",
         )

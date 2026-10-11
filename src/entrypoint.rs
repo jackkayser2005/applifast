@@ -432,7 +432,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     } else {
         // Which system face draws each script the interface font lacks,
         // one line per script at startup, for reports of odd-looking text.
-        "warn,spotifast=info,fastframe_fonts=info"
+        "warn,applifast=info,spotifast=info,fastframe_fonts=info"
     };
     let dirs = paths::AppDirs::discover();
     #[cfg(feature = "demo")]
