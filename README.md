@@ -45,7 +45,9 @@ For sample data without authorization or playback:
 cargo run --locked --features demo -- --demo
 ```
 
-Apple song rows, the player bar and selection menus offer Add to Favorites.
+Apple song rows, the player bar, mini-player and selection menus offer Add to Favorites.
+The mini-player replaces the inactive Apple EQ button with a heart; its
+right-click menu also offers the action when rolled up.
 Hearts update immediately; exact Apple confirmation retains successful songs
 and rolls unconfirmed members back with a refresh-before-retry message. Removal
 still requires Apple Music. This draft integration needs live-account testing.

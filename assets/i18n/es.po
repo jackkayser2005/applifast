@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-11 17:14-0400\n"
+"POT-Creation-Date: 2026-10-11 18:58-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Spanish\n"
@@ -79,6 +79,7 @@ msgstr "Buscar"
 
 #: src/ui/sidebar.rs:873 src/ui/player_bar.rs:678 src/ui/widgets.rs:1790
 #: src/ui/settings.rs:1211 src/ui/collection.rs:1926 src/ui/keys.rs:360
+#: src/ui/winamp/mod.rs:696
 msgid "Favorites"
 msgstr "Favoritos"
 
@@ -236,7 +237,7 @@ msgid "Pick a song, album, or playlist"
 msgstr "Elige una canción, un álbum o una playlist"
 
 #: src/ui/player_bar.rs:642 src/ui/widgets.rs:596 src/ui/widgets.rs:860
-#: src/ui/widgets.rs:1816
+#: src/ui/widgets.rs:1816 src/ui/winamp/mod.rs:698
 msgid "Add to Favorites"
 msgstr "Añadir a favoritos"
 
@@ -1541,7 +1542,7 @@ msgstr ""
 "Muestra los cambios al instante, sin fundidos, rebotes ni barras en "
 "movimiento."
 
-#: src/ui/settings.rs:932 src/ui/settings.rs:1191 src/ui/winamp/mod.rs:922
+#: src/ui/settings.rs:932 src/ui/settings.rs:1191 src/ui/winamp/mod.rs:941
 msgid "Ambient Pulse"
 msgstr "Pulso ambiental"
 
@@ -1562,7 +1563,7 @@ msgid "Show up to ten loaded favorite songs. Zero hides the shelf."
 msgstr ""
 "Muestra hasta diez canciones favoritas cargadas. Cero oculta la sección."
 
-#: src/ui/settings.rs:1071 src/ui/winamp/mod.rs:928
+#: src/ui/settings.rs:1071 src/ui/winamp/mod.rs:947
 msgid "Off"
 msgstr "Desactivado"
 
@@ -1616,7 +1617,7 @@ msgstr "Se usa el proxy del sistema."
 msgid "Winamp skins"
 msgstr "Skins de Winamp"
 
-#: src/ui/settings.rs:1383 src/ui/winamp/mod.rs:707 src/ui/winamp/mod.rs:854
+#: src/ui/settings.rs:1383 src/ui/winamp/mod.rs:719 src/ui/winamp/mod.rs:873
 msgid "Always on top"
 msgstr "Siempre visible"
 
@@ -1658,7 +1659,7 @@ msgstr ""
 "Las skins instaladas están en {folder}. Encuentra más en el Winamp Skin "
 "Museum."
 
-#: src/ui/settings.rs:1410 src/ui/winamp/mod.rs:694
+#: src/ui/settings.rs:1410 src/ui/winamp/mod.rs:706
 msgid "Size"
 msgstr "Tamaño"
 
@@ -1670,7 +1671,7 @@ msgstr "Escalar por números enteros mantiene nítidos los píxeles de la skin."
 msgid "Keep the Winamp window above everything else."
 msgstr "Mantener la ventana de Winamp por encima de todo lo demás."
 
-#: src/ui/settings.rs:1422 src/ui/winamp/mod.rs:717
+#: src/ui/settings.rs:1422 src/ui/winamp/mod.rs:729
 msgid "Show in taskbar"
 msgstr "Mostrar en la barra de tareas"
 
@@ -2619,7 +2620,7 @@ msgstr "Ctrl+/ o ?"
 msgid "Close the window"
 msgstr "Cerrar la ventana"
 
-#: src/ui/keys.rs:344 src/ui/winamp/mod.rs:742
+#: src/ui/keys.rs:344 src/ui/winamp/mod.rs:754
 msgid "Quit"
 msgstr "Salir"
 
@@ -3004,83 +3005,83 @@ msgstr "Desenrollar la ventana"
 msgid "Roll the window up"
 msgstr "Enrollar la ventana"
 
-#: src/ui/winamp/mod.rs:733
+#: src/ui/winamp/mod.rs:745
 msgid "Choose a skin"
 msgstr "Elegir una skin"
 
-#: src/ui/winamp/mod.rs:739
+#: src/ui/winamp/mod.rs:751
 msgid "Big window"
 msgstr "Ventana grande"
 
-#: src/ui/winamp/mod.rs:872 src/ui/winamp/playlist.rs:718
+#: src/ui/winamp/mod.rs:891 src/ui/winamp/playlist.rs:718
 #: src/ui/winamp/playlist.rs:723
 msgid "Song info"
 msgstr "Información de la canción"
 
-#: src/ui/winamp/mod.rs:893
+#: src/ui/winamp/mod.rs:912
 msgid "Size: 2x, 3x, 4x"
 msgstr "Tamaño: 2x, 3x, 4x"
 
-#: src/ui/winamp/mod.rs:916
+#: src/ui/winamp/mod.rs:935
 msgid "Visualisation"
 msgstr "Visualización"
 
-#: src/ui/winamp/mod.rs:936
+#: src/ui/winamp/mod.rs:955
 msgid "Spectrum analyser"
 msgstr "Analizador de espectro"
 
-#: src/ui/winamp/mod.rs:937
+#: src/ui/winamp/mod.rs:956
 msgid "Oscilloscope"
 msgstr "Osciloscopio"
 
 #. Translators: The visualiser choice that shows no visualisation.
-#: src/ui/winamp/mod.rs:939
+#: src/ui/winamp/mod.rs:958
 msgctxt "visualiser"
 msgid "Nothing"
 msgstr "Nada"
 
-#: src/ui/winamp/mod.rs:1092
+#: src/ui/winamp/mod.rs:1111
 msgid "Play in mono"
 msgstr "Reproducir en mono"
 
-#: src/ui/winamp/mod.rs:1100
+#: src/ui/winamp/mod.rs:1119
 msgid "Play in stereo"
 msgstr "Reproducir en estéreo"
 
 #. Translators: {percent} is a number from 0 to 100, followed by a percent sign.
-#: src/ui/winamp/mod.rs:1191
+#: src/ui/winamp/mod.rs:1210
 #, rust-format
 msgid "Balance: {percent}% left"
 msgstr "Balance: {percent}% izquierda"
 
 #. Translators: {percent} is a number from 0 to 100, followed by a percent sign.
-#: src/ui/winamp/mod.rs:1196
+#: src/ui/winamp/mod.rs:1215
 #, rust-format
 msgid "Balance: {percent}% right"
 msgstr "Balance: {percent}% derecha"
 
-#: src/ui/winamp/mod.rs:1199
+#: src/ui/winamp/mod.rs:1218
 msgid "Balance: center"
 msgstr "Balance: centro"
 
 #. Translators: {percent} is a number from 0 to 100, followed by a percent sign.
-#: src/ui/winamp/mod.rs:1204
+#: src/ui/winamp/mod.rs:1223
 #, rust-format
 msgid "Volume: {percent}%"
 msgstr "Volumen: {percent}%"
 
 #. Translators: {position} and {duration} are times such as 2:12, {percent} a number from 0 to 100.
-#: src/ui/winamp/mod.rs:1220
+#: src/ui/winamp/mod.rs:1239
 #, rust-format
 msgid "Seek to: {position}/{duration} ({percent}%)"
 msgstr "Ir a: {position}/{duration} ({percent}%)"
 
-#: src/ui/winamp/mod.rs:1403
+#: src/ui/winamp/mod.rs:1422
 msgid "Channel balance is unavailable with MusicKit playback."
 msgstr ""
 "El balance de canales no está disponible con la reproducción de MusicKit."
 
-#: src/ui/winamp/mod.rs:1572
+#: src/ui/winamp/mod.rs:1651
 msgid "Open the big window"
 msgstr "Abrir la ventana grande"
 

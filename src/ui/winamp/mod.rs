@@ -412,7 +412,7 @@ fn full_window(
     marquee(app, view, now);
     rates(app, view, now);
     sliders(app, view, now);
-    windows_buttons(app, view);
+    windows_buttons(app, view, now);
     transport(app, view, now);
     shuffle_repeat(app, view, now);
     if view
@@ -689,6 +689,18 @@ fn options_menu(app: &mut App, ui: &mut Ui, unit: f32) {
     let locale = app.locale;
     let font = menu_font(unit);
     ui.set_min_width(font * 11.0);
+    if app.apple.is_some()
+        && let Some(now) = app.now_playing().filter(|now| !now.is_episode)
+    {
+        if app.is_saved(&now.uri) == Some(true) {
+            ui.label(gettext(locale, "Favorites").as_ref());
+        } else if ui
+            .button(gettext(locale, "Add to Favorites").as_ref())
+            .clicked()
+        {
+            app.actions.push(Action::ToggleSaved(now.uri));
+        }
+    }
     let scale = WinampState::scale(&app.settings, ui.ctx().pixels_per_point());
     ui.horizontal(|ui| {
         ui.label(gettext(locale, "Size").as_ref());
@@ -839,7 +851,14 @@ fn clutter_bar(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
         "clutter-o",
     );
     let unit = view.unit;
-    menu(egui::Popup::menu(&options), view.skin, unit, |ui| {
+    let popup = egui::Popup::menu(&options);
+    #[cfg(feature = "demo")]
+    let popup = if app.winamp.demo_options_open {
+        popup.open(true)
+    } else {
+        popup
+    };
+    menu(popup, view.skin, unit, |ui| {
         options_menu(app, ui, unit);
     });
     if view
@@ -1472,14 +1491,74 @@ fn balance_of(value: f32) -> f32 {
 }
 
 /// The EQ and PL toggles, each lit while its window hangs below.
-fn windows_buttons(app: &mut App, view: &mut View) {
+fn windows_buttons(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
     let (normal, pressed) = if app.settings.eq_open {
         (sprites::EQ_ON, sprites::EQ_ON_PRESSED)
     } else {
         (sprites::EQ_OFF, sprites::EQ_OFF_PRESSED)
     };
     if app.apple.is_some() {
-        view.sprite(sprites::EQ_OFF, layout::EQ_BUTTON);
+        // MusicKit has no EQ. Use its inactive slot without resizing the skin.
+        let area = layout::EQ_BUTTON;
+        let [r, g, b] = view.skin.playlist.normal_background;
+        view.fill(
+            area.x,
+            area.y,
+            area.width,
+            area.height,
+            Color32::from_rgb(r, g, b),
+        );
+        if let Some(now) = now.filter(|now| !now.is_episode) {
+            let saved = app.is_saved(&now.uri) == Some(true);
+            let label = gettext(
+                app.locale,
+                if saved {
+                    "Favorites"
+                } else {
+                    "Add to Favorites"
+                },
+            );
+            let response = view.interact(
+                layout::EQ_BUTTON,
+                "favorite",
+                if saved {
+                    Sense::hover()
+                } else {
+                    Sense::click()
+                },
+            );
+            response.widget_info(|| {
+                egui::WidgetInfo::labeled(
+                    if saved {
+                        egui::WidgetType::Image
+                    } else {
+                        egui::WidgetType::Button
+                    },
+                    true,
+                    label.as_ref(),
+                )
+            });
+            let color = if saved || response.hovered() || response.has_focus() {
+                view.skin.playlist.current
+            } else {
+                view.skin.playlist.normal
+            };
+            crate::theme::paint_icon(
+                view.ui,
+                if saved {
+                    crate::theme::Icon::HeartFilled
+                } else {
+                    crate::theme::Icon::Heart
+                },
+                response.rect,
+                9.0 * view.unit,
+                Color32::from_rgb(color[0], color[1], color[2]),
+            );
+            crate::theme::focus_ring(view.ui, &response);
+            if response.on_hover_text(label.as_ref()).clicked() && !saved {
+                app.actions.push(Action::ToggleSaved(now.uri.clone()));
+            }
+        }
     } else if view
         .button(layout::EQ_BUTTON, normal, pressed, "equalizer")
         .clicked()
