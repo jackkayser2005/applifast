@@ -1023,6 +1023,7 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 app.settings.eq_bands_db = crate::eq::PRESETS[13].bands_db;
             }
             "presets" => app.winamp.open_presets = true,
+            "mini-menu" => app.winamp.demo_options_open = true,
             "art" => app.settings.art_expanded = true,
             "folders" => {
                 use crate::player::RootlistEntry;
@@ -1677,6 +1678,107 @@ mod tests {
             )],
         );
         assert_eq!(app.is_saved(&uri), Some(true));
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_mini_player_favorites_are_accessible_at_each_scale_and_share_rollback() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        for scale in 1..=4 {
+            let (ctx, mut app) = accessible_app(&format!("apple-mini-favorite-{scale}"));
+            app.backend.set_offline(true);
+            let mut apple = crate::apple::State::demo(&app.library.liked.items);
+            apple.songs[0].in_favorites = None;
+            app.local = apple.local.clone();
+            app.apple = Some(apple);
+            app.remote = None;
+            app.settings.winamp_window = true;
+            app.settings.skin_scale = Some(scale);
+            let uri = app.now_playing().unwrap().uri;
+            accessible_frame(&ctx, &mut app, vec![]);
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let button = accessible_node(&tree, "Add to Favorites", Role::Button);
+            assert!(
+                tree.nodes
+                    .iter()
+                    .find(|(id, _)| *id == button)
+                    .unwrap()
+                    .1
+                    .supports_action(AccessibleAction::Click)
+            );
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(button, AccessibleAction::Click, None)],
+            );
+            assert_eq!(app.is_saved(&uri), Some(true));
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let image = accessible_node(&tree, "Favorites", Role::Image);
+            assert!(
+                !tree
+                    .nodes
+                    .iter()
+                    .find(|(id, _)| *id == image)
+                    .unwrap()
+                    .1
+                    .supports_action(AccessibleAction::Click)
+            );
+            assert!(
+                !tree
+                    .nodes
+                    .iter()
+                    .any(|(_, node)| node.label() == Some("Add to Favorites"))
+            );
+            app.apple_response(
+                &serde_json::json!({"type":"response","session":1,"id":1,"error":"unconfirmed"}),
+            );
+            assert_eq!(app.is_saved(&uri), None);
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            accessible_node(&tree, "Add to Favorites", Role::Button);
+            app.backend.shutdown();
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_rolled_up_mini_player_menu_adds_the_current_song() {
+        let (ctx, mut app) = accessible_app("apple-mini-favorite-menu");
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        apple.songs[0].in_favorites = Some(false);
+        app.local = apple.local.clone();
+        app.apple = Some(apple);
+        app.remote = None;
+        app.settings.winamp_window = true;
+        app.settings.winamp_shaded = true;
+        app.settings.skin_scale = Some(2);
+        let uri = app.now_playing().unwrap().uri;
+        view_frame(&ctx, &mut app, vec![], crate::ui::winamp::show);
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(egui::pos2(80.0, 8.0), egui::PointerButton::Secondary),
+            crate::ui::winamp::show,
+        );
+        let text = view_frame(&ctx, &mut app, vec![], crate::ui::winamp::show);
+        let button = text
+            .iter()
+            .find(|(label, _)| label == "Add to Favorites")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(button, egui::PointerButton::Primary),
+            crate::ui::winamp::show,
+        );
+        assert!(
+            app.actions
+                .iter()
+                .any(|action| matches!(action, Action::ToggleSaved(selected) if selected == &uri))
+        );
         app.backend.shutdown();
     }
 

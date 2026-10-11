@@ -149,8 +149,11 @@ The shared state applies hearts immediately, retains partial confirmations and
 rolls unconfirmed members back. Request ordering protects against older metadata;
 newer reads can reflect external changes. Pending hearts do not become confirmed
 disk state, and sign-out clears pending work. The native account write gate has
-not passed; removal, a dedicated mini-player favorite button and live-account
-acceptance remain pending. See the
+not passed; removal and live-account acceptance remain pending. The mini-player
+now replaces the inactive Apple EQ slot with the same add-only heart, and its
+title-bar menu offers the action even when rolled up. Both use the shared
+confirmation and rollback state without changing skin dimensions or preferences.
+See the [mini-player scope and evidence](mini-favorites.md) and the
 [favorites integration evidence](favorites-write-evidence.md).
 
 Apple album, artist and playlist menus hide unavailable save/follow writes,

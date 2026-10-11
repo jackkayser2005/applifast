@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast mini-player Favorites comparison</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666;image-rendering:pixelated}a{color:#ff7a80}</style>
+<h1>Mini-player Apple favorites</h1>
+<p>Baseline <code>e536995</code> (PR #44), candidate <code>feat/apple-mini-favorites</code>. The inactive Apple EQ slot becomes an add-only heart. The title-bar menu adds the current song, including when rolled up. Filled hearts remain read-only. Skin dimensions and transport controls are unchanged.</p>
+<p>Matching native Windows captures use deterministic Apple demo data, built-in skin, identical pointer position, Reduce motion, theme and scale. Normal is 2x (550 × 232); narrow is 1x (275 × 116). Classic skins supply their own colors, so changing the application theme does not recolor this skin. Ready shows the hollow heart, pending/confirmed fill it, and an error restores it with refresh guidance in the marquee.</p>
+<label>State <select id="view"><option value="ready">Ready</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="error">Unconfirmed error</option><option value="menu">Open options menu (After only)</option></select></label>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Size <select id="size"><option value="550x232">Normal, 2x</option><option value="275x116">Narrow, 1x</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Native Windows mini-player Favorites comparison">
+<p>The open-menu captures are candidate-only because the baseline has no deterministic menu fixture. The rolled-up menu is exercised by a pointer regression, but is not pictured. HTML browser rendering, live-account additions, custom skins, restart acceptance and gaming tests remain separate gates. Stills do not verify motion.</p>
+<p><a href="../mini-favorites.md">Scope and evidence limits</a></p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const menu=byId('view').value==='menu';byId('before').disabled=menu;if(menu)phase='after';const suffix=byId('view').value+'-'+byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['view','theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

@@ -94,6 +94,9 @@ Portable ZIPs keep their existing manual folder setup.
 Song and collection menus show supported Apple actions. Known favorites show
 filled hearts in song rows and the player bar. Hollow hearts and song/selection
 menus offer Add to Favorites (up to 100 distinct non-favorite songs per action).
+The mini-player uses the inactive Apple EQ slot for the current song's heart.
+Its title-bar right-click menu also offers Add to Favorites, including when
+rolled up. Filled hearts remain read-only in both window modes.
 Hearts fill immediately. Exact confirmation keeps successful members and restores
 unconfirmed members to their previous state with a refresh-before-retry message.
 Refresh before retrying: an interrupted write may have reached Apple. Pending

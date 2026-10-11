@@ -85,6 +85,8 @@ pub struct WinampState {
     /// Open the equalizer's presets menu on the next frame; the demo's
     /// `presets` surface asks for it.
     pub open_presets: bool,
+    #[cfg(feature = "demo")]
+    pub demo_options_open: bool,
     marquee_text: String,
     marquee_offset: usize,
     marquee_moved: Option<Instant>,
@@ -123,6 +125,8 @@ impl WinampState {
             time_remaining: false,
             balance_preview: None,
             open_presets: false,
+            #[cfg(feature = "demo")]
+            demo_options_open: false,
             marquee_text: String::new(),
             marquee_offset: 0,
             marquee_moved: None,

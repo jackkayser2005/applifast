@@ -5,8 +5,8 @@ This draft desktop slice follows the exact confirmation boundary in PR #43
 
 Hollow hearts in song rows and the player bar, plus song and selection menus,
 offer **Add to Favorites**. Filled hearts remain read-only because removal has
-no verified route. There is no layout, navigation or settings change. A dedicated
-mini-player favorite button remains pending; its shared song state stays in sync.
+no verified route. This desktop slice changes no layout, navigation or settings.
+The subsequent [mini-player controls](mini-favorites.md) share the same state.
 
 A selection adds up to 100 distinct non-favorite songs. Repeated identities and
 already favorite or pending members are skipped. Library, catalog and playback
@@ -54,7 +54,7 @@ per-user installer, shortcut, upgrade and uninstall checks. These fixtures never
 launch the app or authorize an Apple account.
 
 Live-account additions, server propagation, genuinely uploaded songs, restart
-acceptance, menu captures, mini-player editing and gaming measurements still need
+acceptance, desktop menu captures and gaming measurements still need
 verification. The earlier `9cb3a36` preview's confirmed audible catalog playback
 does not verify these additions. No public release or full favorites parity is
 claimed.

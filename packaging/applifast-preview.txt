@@ -59,6 +59,8 @@ Hearts fill immediately; exact confirmation retains successful members and rolls
 unconfirmed members back. Refresh before retrying, because Apple may have applied
 an interrupted write. Pending hearts are not saved as confirmed favorites.
 Filled hearts are read-only; removing favorites requires Apple Music.
+The mini-player's inactive Apple EQ slot now shows the current song's heart.
+Its title-bar right-click menu offers Add to Favorites, including when rolled up.
 Appearance controls how many favorites appear in the sidebar; Show all favorites
 opens their page. Real-account favorite additions still need acceptance.
 Demo: --demo-show favorites-page. Fresh-Windows-account sign-in, full library
