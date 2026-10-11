@@ -131,7 +131,11 @@ parameters, preserves original resource IDs and deduplicates repeated IDs only
 within that favorite request. It never substitutes a catalog/playback match,
 changes ratings or removes favorites. Writes serialize separately from playback;
 sign-out aborts them and rejects late replies. They are not retried automatically.
-An accepted empty reply does not prove Apple changed every requested song.
+An accepted empty reply does not prove Apple changed every requested song. The
+command confirms exact typed IDs with at most two parallel, uncached song reads
+requesting `inFavorites`. It returns minimal per-song resources alongside a fixed
+refresh-before-retry error when any flag is false or unknown, retaining partial
+confirmations. These reads use the existing deadline and sign-out cancellation.
 
 These writes are an integration gate, not an exposed desktop feature. Hearts
 remain read-only until optimistic state, rollback and exact server confirmation

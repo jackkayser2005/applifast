@@ -183,17 +183,42 @@
             !Array.isArray(command.items) || !command.items.length || command.items.length > 100) {
           throw new Error('favorites');
         }
-        const parameters = {};
+        const parameters = {}, groups = [];
         for (const kind of ['catalog', 'library']) {
           const ids = new Set();
           for (const item of command.items) {
             song(item);
             if (item.kind === kind) ids.add(item.id);
           }
-          if (ids.size) parameters[`ids[${kind === 'library' ? 'library-songs' : 'songs'}]`] = [...ids].join(',');
+          if (ids.size) {
+            const type = kind === 'library' ? 'library-songs' : 'songs';
+            if (kind === 'catalog' && (typeof music.storefrontId !== 'string' || !/^[a-z]{2}$/.test(music.storefrontId))) throw new Error('storefront');
+            parameters[`ids[${type}]`] = [...ids].join(',');
+            groups.push({ type, ids: [...ids], path: kind === 'library'
+              ? '/v1/me/library/songs' : `/v1/catalog/${music.storefrontId}/songs` });
+          }
         }
-        const response = await requestMusic('/v1/me/favorites', parameters, { method: 'POST' });
-        send('response', { id: command.id, data: response?.data ?? null }, generation);
+        await requestMusic('/v1/me/favorites', parameters, { method: 'POST' });
+        if (generation !== session || signingOut) return;
+        // Apple's 202 may ignore IDs. Confirm exact typed resources, never catalog matches.
+        const results = await Promise.all(groups.map(async group => {
+          if (generation !== session || signingOut) return [];
+          let rows = [];
+          try {
+            const response = await requestMusic(group.path, { ids: group.ids.join(','), extend: 'inFavorites' }, { cache: 'no-store' });
+            if (Array.isArray(response?.data?.data)) rows = response.data.data;
+          } catch { /* An accepted mutation with a failed read remains unconfirmed. */ }
+          return group.ids.map(id => {
+            const matches = rows.filter(row => row?.id === id && row.type === group.type);
+            const flag = matches.length === 1 ? matches[0].attributes?.inFavorites : undefined;
+            return { id, type: group.type, attributes: typeof flag === 'boolean' ? { inFavorites: flag } : {} };
+          });
+        }));
+        const data = results.flat();
+        send('response', { id: command.id, data: { data },
+          ...(data.every(row => row.attributes.inFavorites === true) ? {} : {
+            error: 'Apple Music has not confirmed every favorite. Refresh your library before retrying.'
+          }) }, generation);
         return;
       }
       case 'createPlaylist':
@@ -365,7 +390,7 @@
       writes = writes.then(() => initializing).then(() => perform(command, generation))
         .catch(() => send('response', { id: command.id,
           error: command.type === 'favoriteSongs'
-            ? 'Apple Music could not add these songs to favorites. Check sign-in and connection before retrying.'
+            ? 'Apple Music could not confirm these favorites. Check sign-in and connection, then refresh your library before retrying.'
             : 'Apple Music could not save this playlist. Check sign-in, connection and playlist permissions, then retry.' }, generation));
       return writes;
     }

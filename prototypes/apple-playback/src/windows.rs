@@ -1295,6 +1295,31 @@ mod tests {
         }
     }
     #[test]
+    fn partial_favorite_confirmation_keeps_exact_resources_and_error_together() {
+        let response = sanitized_event(&json!({"type":"response","session":4,"id":9,
+            "error":"Apple Music has not confirmed every favorite. Refresh your library before retrying.",
+            "data":{"data":[
+                {"id":"123","type":"songs","attributes":{"inFavorites":true,"userToken":"SECRET"}},
+                {"id":"i.upload","type":"library-songs","attributes":{}}
+            ],"developerToken":"SECRET"}})).unwrap();
+        assert_eq!(response["session"], 4);
+        assert!(response["error"].is_string());
+        assert_eq!(response["data"]["data"][0]["id"], "123");
+        assert_eq!(response["data"]["data"][0]["type"], "songs");
+        assert_eq!(
+            response["data"]["data"][0]["attributes"]["inFavorites"],
+            true
+        );
+        assert_eq!(response["data"]["data"][1]["id"], "i.upload");
+        assert_eq!(response["data"]["data"][1]["type"], "library-songs");
+        assert!(
+            response["data"]["data"][1]["attributes"]
+                .get("inFavorites")
+                .is_none()
+        );
+        assert!(!response.to_string().contains("SECRET"));
+    }
+    #[test]
     fn recommendation_contents_and_added_dates_survive_the_bridge_without_credentials() {
         let value = sanitized_event(&json!({"type":"response","session":1,"id":2,
             "data":{"data":[{"relationships":{"contents":{"data":[{"id":"l.1","type":"library-albums",

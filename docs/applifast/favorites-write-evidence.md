@@ -26,6 +26,32 @@ may be ignored. Acceptance alone cannot establish that every song changed:
 The exact typed-ID route still needs real-account verification. Desktop hearts
 remain read-only, with no layout or visual changes in this gate.
 
+## Per-song confirmation
+
+The diagnostic `favoriteSongs` command now follows an accepted POST with one
+batched GET per requested resource type, in parallel. Catalog IDs use the active
+validated storefront; library IDs use the original library endpoint. Both reads
+request `extend=inFavorites` and disable HTTP cache reuse. These use Apple's documented
+[catalog song](https://developer.apple.com/documentation/applemusicapi/get-multiple-catalog-songs-by-id)
+and [library song](https://developer.apple.com/documentation/applemusicapi/get-multiple-library-songs)
+routes. No catalog-match ID or playback ID replaces the requested identity.
+
+The response's `data.data` contains one minimal resource per unique requested
+typed ID. A single exact matching resource with a boolean `inFavorites` supplies
+that flag. Missing, wrong-type, substituted, duplicate, malformed and failed
+read results stay unknown, represented by an empty attributes object. Any false
+or unknown flag produces a fixed error alongside the per-song data, preserving
+confirmed members of a partial result. API credentials and unrelated response
+fields are excluded. An empty 202 body alone no longer reports confirmation.
+
+Confirmation reads retain the existing 20-second deadline. They do not block
+transport controls, repeat the mutation or automatically retry reads. Apple may
+still be updating the library when this immediate read happens; an unconfirmed
+result asks for a refresh before retrying the write. Sign-out aborts active
+reads, suppresses late confirmations and prevents a stale completed POST from
+starting new reads. No dependency, persisted format, setting or destination is
+added. Desktop optimistic controls, rollback and bulk interaction remain pending.
+
 ## Checks and limits
 
 Rust boundary tests cover round-trip identity, mismatched library playback IDs,
@@ -79,8 +105,17 @@ found on their ancestors; the remaining cause is unresolved.
 No favorites request or audio command was sent in these attempts. The
 real-account favorites gate remains failed, and successful native reconnection
 must not be inferred from the green CI checks or the absence of the earlier
-profile-conflict HRESULT. A normal desktop launch is needed to distinguish the
-automation environment from a broader startup failure.
+profile-conflict HRESULT. The maintainer confirmed normal library loading in the
+`2d0ca87` desktop preview after these attempts. That baseline's library view may
+include cached data; it does not establish favorites writes, identify the
+automated failure's cause or verify a newer desktop build.
+
+The maintainer subsequently confirmed library loading and audible catalog
+playback in the optimized `9cb3a36` desktop preview. This establishes normal
+desktop playback separately from the failing automated host check. It does not
+establish full-track completion, fresh-account sign-in, favorite writes or the
+gaming resource budget. The confirmation changes described above are newer
+than that preview and have not been tested against the account.
 
 The known failed-page case was separately checked: the host emits the exact
 fixed retry error and exits with failure instead of hanging, with no account
@@ -90,6 +125,15 @@ default and 1,045 demo library tests (five opt-in tests ignored in each),
 binary/integration suites, default doctests, strict demo Rustdoc, build, gettext
 and Node bridge/signer checks pass after the change. Standalone host formatting,
 strict Clippy and 15 ordinary tests pass. Final-head hosted CI remains required.
+
+For per-song confirmation, the same available Windows checks pass: 1,011 default
+and 1,045 demo library tests (five opt-in tests ignored in each), the remaining
+binary/integration suites, formatting, strict Clippy, doctests, strict demo
+Rustdoc, demo build, gettext and Node bridge/signer checks. The standalone host
+passes formatting, strict Clippy and 16 ordinary tests (one native-store test
+ignored). Regressions exercise false/missing/malformed/ambiguous confirmations,
+partial read failure, deadlines, transport responsiveness and sign-out both
+before and during confirmation. No real-account favorites test has passed.
 
 After that gate, remaining work includes optimistic desktop controls, partial
 and failed write confirmation/rollback, stale-read protection, bulk interaction,

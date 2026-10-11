@@ -1427,8 +1427,20 @@ mod tests {
                 let response = await_event("response", Some(id));
                 assert!(
                     response["error"].is_null(),
-                    "Apple did not accept the idempotent favorites request"
+                    "Apple did not confirm the idempotent favorites request"
                 );
+                let confirmation = response["data"]["data"].as_array().unwrap();
+                assert_eq!(confirmation.len(), 1);
+                assert_eq!(confirmation[0]["id"], resource_id);
+                assert_eq!(
+                    confirmation[0]["type"],
+                    if kind == "library" {
+                        "library-songs"
+                    } else {
+                        "songs"
+                    }
+                );
+                assert_eq!(confirmation[0]["attributes"]["inFavorites"], true);
                 let confirmed = read(id + 1, path);
                 assert_eq!(confirmed["data"][0]["id"], resource_id);
                 assert_eq!(confirmed["data"][0]["attributes"]["inFavorites"], true);
