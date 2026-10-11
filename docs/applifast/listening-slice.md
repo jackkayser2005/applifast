@@ -6,6 +6,43 @@ with a message pump. Commands and sanitized events cross channels through the
 existing asynchronous backend. Closing an egui window does not own or destroy
 the playback host. Apple authorization is the only visible browser popup.
 
+## Retry after startup failure
+
+If the Apple playback host cannot initialize, the sign-in card now offers
+**Retry connection**. It restarts the independent host through the existing
+asynchronous backend, using the saved developer/user credentials or the
+executable's companion developer token. It does not require importing the same
+token again. A ready host still uses **Sign in with Apple** for authorization.
+Retry waits while another startup or token import is pending, and a new host
+generation rejects late events from the old attempt. Missing or expired tokens
+still require a valid replacement; retry cannot renew them.
+
+WebView2 `0x8007139F` now retains a fixed profile-related diagnosis that asks the
+listener to quit other Applifast builds through their tray menus before retrying.
+Other host failures retain the Evergreen runtime guidance. The embedded host's
+returned error preserves that actionable message instead of overwriting it with
+the generic probe failure. No native error text, profile paths or credentials
+are exposed. No new dependency, storage format, network destination or automatic
+retry is introduced.
+
+[Visual comparison](review-host-recovery/index.html) covers failed startup,
+pending token import, connecting and ready states in light/dark and narrow/normal
+Windows demo captures. Regression tests cover accessible retry, duplicate clicks,
+token-import exclusion, generation filtering and sanitized HRESULT diagnosis.
+These deterministic checks do not prove real-account reconnection after the
+older preview releases its browser profile; that acceptance check remains open.
+
+Local Windows verification passed: formatting, strict default/demo all-target
+Clippy, 1,011 default and 1,045 demo library tests (five opt-in checks ignored in
+each), binary/integration suites, default doctests, strict demo Rustdoc, build,
+gettext and Node bridge/signer checks. Standalone host formatting, strict
+all-target Clippy, 15 ordinary tests and its isolated native Credential Manager
+round trip passed. Four Flatpak metadata regressions passed locally. Linux
+launcher tests require Ruby here, and the release-name symlink check requires a
+privilege this Windows session lacks; neither failure is counted as a pass.
+Optional projectM, Jekyll, Nix and cross-platform checks remain hosted CI gates
+for this change. No full-track, gaming or resource acceptance is implied.
+
 ## Process memory diagnostics
 
 The Windows resource sampler now includes each selected process's private bytes,

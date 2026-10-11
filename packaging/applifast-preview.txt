@@ -10,6 +10,8 @@ Applifast Windows development preview
    automatically, then offers Sign in with Apple. Enter credentials only in
    Apple's popup. Saved listener authorization is reused until you sign out.
    No tester Developer Program membership or commands are required.
+   If the playback host fails, quit other builds and click Retry connection.
+   It reuses saved setup. Missing or expired app tokens still need replacement.
 4. If the app token expires, get a fresh preview from the maintainer and extract
    all its files. BUILD.txt records its expiry. Advanced token import remains in
    Settings and on setup errors. Never package or distribute the .p8 signing key.

@@ -6,6 +6,7 @@ pub(super) fn login_contents(app: &mut App, ui: &mut egui::Ui) {
         let apple = app.apple.as_ref().expect("Apple sign-in");
         (apple.ready, apple.loading, apple.error.clone())
     };
+    let retry = !ready && error.is_some();
     let needs_token_import = error.is_some() || app.apple.as_ref().unwrap().token_request.is_some();
     if let Some(error) = error {
         ui.add(
@@ -47,8 +48,18 @@ pub(super) fn login_contents(app: &mut App, ui: &mut egui::Ui) {
     }
     if ui
         .add_enabled_ui(
-            ready && !loading && app.apple.as_ref().unwrap().token_request.is_none(),
-            |ui| super::login::big_button(ui, app, "Sign in with Apple"),
+            (ready || retry) && !loading && app.apple.as_ref().unwrap().token_request.is_none(),
+            |ui| {
+                super::login::big_button(
+                    ui,
+                    app,
+                    if retry {
+                        "Retry connection"
+                    } else {
+                        "Sign in with Apple"
+                    },
+                )
+            },
         )
         .inner
     {

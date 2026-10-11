@@ -30,7 +30,10 @@ default URL handler are not supported yet.
    handlers. Updates require quitting the old build and running the new installer.
 2. The app needs the [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
    If host initialization fails, first quit other Applifast builds through their
-   tray menus and retry. WebView2 `0x8007139F` can indicate incompatible options
+   tray menus and click **Retry connection**. This restarts the host using saved
+   credentials or the companion developer token, without restarting the app.
+   Once connected, **Sign in with Apple** opens authorization when needed.
+   WebView2 `0x8007139F` can indicate incompatible options
    in a shared browser process. An installed Edge browser alone is not the
    production runtime; install or repair Evergreen if it is missing or still
    fails after other builds exit. See [Microsoft's distribution guidance](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution)
@@ -114,7 +117,8 @@ if invoked explicitly.
 | Developer token must be UTF-8 / exceeds 32 KiB | Use the original token file rather than an HTML download or key export. |
 | Developer token expired | Obtain a fresh token and import it from Account settings. The local generator currently issues 30-day tokens. |
 | Invalid token dates or origin | Check Windows date/time. Ask the maintainer to regenerate for `https://applifast.invalid`. |
-| WebView2 host failed | Quit other Applifast builds, install/repair Evergreen, then reopen. Report a fixed host error or HRESULT without credentials. |
+| WebView2 could not start with the current browser profile | Quit other Applifast builds through their tray menus, then click Retry connection. The app keeps your saved setup. |
+| WebView2 host failed | Check/install Evergreen, then click Retry connection. Report the fixed host error or HRESULT without credentials. |
 | Authorization cancelled or rejected | Cancel the pending authorization and retry Sign in with Apple. Check the intended subscriber account and Apple Music access. |
 | Apple rejects requests after sign-in | Refresh/retry. Persistent authorization failures may require reauthorization or developer-token renewal. They do not always mean an expired subscription. |
 | Empty Favorites or Home feed | Refresh the relevant music page. Favorites shows loaded songs Apple marks as favorites. A real empty result and a failed request have different states. |
