@@ -119,6 +119,7 @@ if invoked explicitly.
 | Invalid token dates or origin | Check Windows date/time. Ask the maintainer to regenerate for `https://applifast.invalid`. |
 | WebView2 could not start with the current browser profile | Quit other Applifast builds through their tray menus, then click Retry connection. The app keeps your saved setup. |
 | WebView2 host failed | Check/install Evergreen, then click Retry connection. Report the fixed host error or HRESULT without credentials. |
+| Apple playback page could not load | Click Retry connection. If it persists, report the app revision and numeric page-loading status, without credentials or browser-profile files. |
 | Authorization cancelled or rejected | Cancel the pending authorization and retry Sign in with Apple. Check the intended subscriber account and Apple Music access. |
 | Apple rejects requests after sign-in | Refresh/retry. Persistent authorization failures may require reauthorization or developer-token renewal. They do not always mean an expired subscription. |
 | Empty Favorites or Home feed | Refresh the relevant music page. Favorites shows loaded songs Apple marks as favorites. A real empty result and a failed request have different states. |

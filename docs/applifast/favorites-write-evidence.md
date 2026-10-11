@@ -47,7 +47,7 @@ confirms exact IDs afterward, without audio. Even a passing result would only
 prove that these idempotent requests were accepted and the existing state was
 retained, not that adding a new favorite works or that unsupported IDs change.
 
-The current native attempt failed before MusicKit initialization with WebView2
+The initial native attempt failed before MusicKit initialization with WebView2
 HRESULT `0x8007139F`. No favorites request or audio command was sent. Evergreen
 runtime `154.0.4258.62` is installed. The existing `e501564` preview, PID 38016,
 still owns an Applifast WebView2 process group using the dedicated profile.
@@ -57,6 +57,39 @@ check with that build closed succeeds:
 [WebView2 environment errors](https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/webview2-idl).
 The user was asked to quit through the tray; their app/profile was not stopped,
 deleted or modified by this investigation.
+
+After the user quit that preview, the October 11 check no longer produced
+`0x8007139F`. WebView2 reached `hostReady`, but MusicKit did not become ready
+within the existing 45-second deadline. A credential-free host startup/shutdown
+check passed on runtime `154.0.4258.62`; an independent HEAD request to Apple's
+public SDK returned HTTP 200. Neither establishes SDK loading in WebView2.
+
+The host now waits for bootstrap-script registration before navigation, as
+[Microsoft requires](https://learn.microsoft.com/microsoft-edge/webview2/reference/win32/icorewebview2#addscripttoexecuteondocumentcreated).
+This corrects an asynchronous ordering bug but did not resolve this machine's
+native gate. Navigation diagnostics then isolated the failure to the local
+playback page: `success=false`, WebView2 status `0`, HTTP status `0`. The fixed
+page-loading error now appears immediately instead of leaving setup waiting.
+Diagnostics contain only fixed stage names, booleans and numeric statuses, never
+URLs, page contents, credentials or SDK responses. The test now identifies its
+awaited stage. Native folder-path separator normalization did not change the
+result and was discarded. The asset files exist, and no explicit deny rules were
+found on their ancestors; the remaining cause is unresolved.
+
+No favorites request or audio command was sent in these attempts. The
+real-account favorites gate remains failed, and successful native reconnection
+must not be inferred from the green CI checks or the absence of the earlier
+profile-conflict HRESULT. A normal desktop launch is needed to distinguish the
+automation environment from a broader startup failure.
+
+The known failed-page case was separately checked: the host emits the exact
+fixed retry error and exits with failure instead of hanging, with no account
+requests or audio. This is negative-case verification, not a passing favorites
+gate. Full available Windows formatting, strict default/demo Clippy, 1,011
+default and 1,045 demo library tests (five opt-in tests ignored in each),
+binary/integration suites, default doctests, strict demo Rustdoc, build, gettext
+and Node bridge/signer checks pass after the change. Standalone host formatting,
+strict Clippy and 15 ordinary tests pass. Final-head hosted CI remains required.
 
 After that gate, remaining work includes optimistic desktop controls, partial
 and failed write confirmation/rollback, stale-read protection, bulk interaction,

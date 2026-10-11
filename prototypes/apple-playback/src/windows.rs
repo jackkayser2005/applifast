@@ -915,10 +915,41 @@ fn host_loop(
         "if(location.href === {page}) document.addEventListener('DOMContentLoaded', () => window.applifast.bootstrap({bootstrap}));",
         page = serde_json::to_string(PAGE)?
     ));
+    let init_webview = webview.clone();
+    // Navigation must wait until WebView2 has registered the bootstrap script.
+    AddScriptToExecuteOnDocumentCreatedCompletedHandler::wait_for_async_operation(
+        Box::new(move |handler| unsafe {
+            init_webview
+                .AddScriptToExecuteOnDocumentCreated(PCWSTR(init.as_ptr()), &handler)
+                .map_err(webview2_com::Error::WindowsError)
+        }),
+        Box::new(|result, _| result),
+    )?;
     unsafe {
-        webview.AddScriptToExecuteOnDocumentCreated(
-            PCWSTR(init.as_ptr()),
-            &AddScriptToExecuteOnDocumentCreatedCompletedHandler::create(Box::new(|_, _| Ok(()))),
+        let navigation_output = output.clone();
+        webview.add_NavigationCompleted(
+            &NavigationCompletedEventHandler::create(Box::new(move |_, args| {
+                if let Some(args) = args {
+                    let mut success = Default::default();
+                    let mut status = COREWEBVIEW2_WEB_ERROR_STATUS_UNKNOWN;
+                    args.IsSuccess(&mut success)?;
+                    args.WebErrorStatus(&mut status)?;
+                    let mut http_status = 0;
+                    if let Ok(args) = args.cast::<ICoreWebView2NavigationCompletedEventArgs2>() {
+                        args.HttpStatusCode(&mut http_status)?;
+                    }
+                    let _ = navigation_output.send(Output::Diagnostic(
+                        json!({"type":"pageLoaded","success":success.as_bool(),"errorStatus":status.0,"httpStatus":http_status}),
+                    ));
+                    if !success.as_bool() {
+                        let _ = navigation_output.send(Output::Error(
+                            "Apple playback page could not load. Retry the connection.",
+                        ));
+                    }
+                }
+                Ok(())
+            })),
+            &mut token,
         )?;
         let event_output = output.clone();
         let event_generation = generation.clone();
