@@ -178,6 +178,24 @@
         send('response', { id: command.id, data: response.data }, generation);
         return;
       }
+      case 'favoriteSongs': {
+        if (!Number.isSafeInteger(command.id) || command.id < 0 ||
+            !Array.isArray(command.items) || !command.items.length || command.items.length > 100) {
+          throw new Error('favorites');
+        }
+        const parameters = {};
+        for (const kind of ['catalog', 'library']) {
+          const ids = new Set();
+          for (const item of command.items) {
+            song(item);
+            if (item.kind === kind) ids.add(item.id);
+          }
+          if (ids.size) parameters[`ids[${kind === 'library' ? 'library-songs' : 'songs'}]`] = [...ids].join(',');
+        }
+        const response = await requestMusic('/v1/me/favorites', parameters, { method: 'POST' });
+        send('response', { id: command.id, data: response?.data ?? null }, generation);
+        return;
+      }
       case 'createPlaylist':
       case 'appendPlaylist': {
         const create = command.type === 'createPlaylist';
@@ -342,11 +360,13 @@
       return result;
     }
     const generation = session;
-    if (['createPlaylist', 'appendPlaylist'].includes(command.type)) {
+    if (['createPlaylist', 'appendPlaylist', 'favoriteSongs'].includes(command.type)) {
       // Writes serialize independently: a slow library mutation cannot stall playback controls.
       writes = writes.then(() => initializing).then(() => perform(command, generation))
         .catch(() => send('response', { id: command.id,
-          error: 'Apple Music could not save this playlist. Check sign-in, connection and playlist permissions, then retry.' }, generation));
+          error: command.type === 'favoriteSongs'
+            ? 'Apple Music could not add these songs to favorites. Check sign-in and connection before retrying.'
+            : 'Apple Music could not save this playlist. Check sign-in, connection and playlist permissions, then retry.' }, generation));
       return writes;
     }
     if (command.type === 'request') {

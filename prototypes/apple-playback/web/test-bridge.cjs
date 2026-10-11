@@ -63,6 +63,27 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   assert.equal(requests.at(-1)[0], '/v1/me/library/playlists/p.created/tracks');
   assert.equal(JSON.parse(requests.at(-1)[2].fetchOptions.body).data.length, 2);
   assert.equal(messages.find(event => event.id === 102).data, null);
+  await app.dispatch({ type: 'favoriteSongs', id: 2010,
+    items: [uploaded, { ...catalog, playParams: { id: '456', kind: 'song' } }, uploaded] });
+  const favorite = requests.at(-1);
+  assert.equal(favorite[0], '/v1/me/favorites');
+  assert.equal(favorite[2].fetchOptions.method, 'POST');
+  assert.equal(favorite[2].fetchOptions.body, undefined);
+  assert.deepEqual(JSON.parse(JSON.stringify(favorite[1])), {
+    'ids[songs]': '123', 'ids[library-songs]': 'i.upload'
+  });
+  assert.equal(messages.find(event => event.id === 2010).data, null);
+  for (const [index, patch] of [
+    { items: [] }, { items: Array(101).fill(catalog) }, { id: Number.MAX_SAFE_INTEGER + 1 },
+    { items: [{ ...uploaded, id: 'i.x?token=secret' }] },
+    { items: [{ ...uploaded, playParams: { id: '123', isLibrary: true } }] }
+  ].entries()) {
+    const count = requests.length;
+    const id = 2011 + index;
+    await app.dispatch({ type: 'favoriteSongs', id, items: [catalog], ...patch });
+    assert.equal(requests.length, count, 'Invalid favorites must not contact Apple');
+    assert(messages.find(event => event.id === (patch.id ?? id)).error);
+  }
   const beforeInvalid = requests.length;
   await app.dispatch({ type: 'appendPlaylist', id: 103, playlist: 'p.created/../../', items: [uploaded] });
   assert.equal(requests.length, beforeInvalid);
@@ -83,6 +104,20 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   await write;
   assert(messages.find(event => event.id === 104).error);
   assert(!JSON.stringify(messages).includes('secret SDK write response'));
+  music.api.music = api;
+  music.pause = pause;
+  let rejectFavorite;
+  music.api.music = () => new Promise((_, reject) => { rejectFavorite = reject; });
+  const favoriteWrite = app.dispatch({ type: 'favoriteSongs', id: 2020, items: [uploaded] });
+  while (!rejectFavorite) await new Promise(resolve => setImmediate(resolve));
+  let favoritePause = false;
+  music.pause = async () => { favoritePause = true; };
+  await app.dispatch({ type: 'pause' });
+  assert(favoritePause, 'A favorites write must not block transport');
+  rejectFavorite(new Error('secret SDK favorites response'));
+  await favoriteWrite;
+  assert(messages.find(event => event.id === 2020).error.includes('favorites'));
+  assert(!JSON.stringify(messages).includes('secret SDK favorites response'));
   music.api.music = api;
   music.pause = pause;
   let resolveLibrary;
@@ -282,6 +317,7 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   const pendingWrite = app.dispatch({ type: 'appendPlaylist', id: 105, playlist: 'p.created', items: [uploaded] });
   while (!resolveWrite) await new Promise(resolve => setImmediate(resolve));
   const queuedWrite = app.dispatch({ type: 'createPlaylist', id: 106, name: 'Canceled', public: false, items: [] });
+  const queuedFavorite = app.dispatch({ type: 'favoriteSongs', id: 2021, items: [catalog] });
   const writeAPI = music.api.music, readSignals = [];
   music.api.music = (path, parameters, options) => {
     if (options.fetchOptions.method === 'POST') return writeAPI(path, parameters, options);
@@ -301,15 +337,15 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   authorization('late-user-token');
   await Promise.race([signOut, new Promise((_, reject) => setTimeout(() => reject(new Error('Write blocked sign-out')), 250))]);
   resolveWrite({ data: { data: [] } });
-  await pendingWrite; await queuedWrite; await pendingAuthorization;
+  await pendingWrite; await queuedWrite; await queuedFavorite; await pendingAuthorization;
   await Promise.all(pendingReads);
   assert.equal(writeCalls, 1); // Queued mutations cannot execute under a new account.
-  assert(!messages.some(event => [105, 106].includes(event.id))); // Late write replies are stale.
+  assert(!messages.some(event => [105, 106, 2021].includes(event.id))); // Late write replies are stale.
   assert(!messages.some(event => [110, 203].includes(event.id)));
   assert(!JSON.stringify(messages).includes('secret canceled read'));
   assert(!messages.some(event => event.type === 'authorized'));
   assert.equal(messages.at(-1).type, 'signedOut');
   assert.equal(messages.at(-1).session, 2);
   assert.equal(readTimers.size, 0);
-  console.log('Bridge self-check passed: uploaded IDs, occurrences, pagination, read deadlines, responsive transport, playlist writes, failures, stale authorization.');
+  console.log('Bridge self-check passed: uploaded IDs, occurrences, pagination, read deadlines, responsive transport, playlist/favorites writes, failures, stale authorization.');
 })().catch(failure => { console.error(failure); process.exitCode = 1; });
