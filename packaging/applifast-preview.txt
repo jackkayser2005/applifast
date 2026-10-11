@@ -17,8 +17,8 @@ Applifast Windows development preview
    Settings and on setup errors. Never package or distribute the .p8 signing key.
 
 This preview requires Windows x64, the installed Evergreen WebView2 runtime,
-an Apple Music subscription and an unexpired developer token. It is a debug
-build, not a public release. Command help and --version identify applifast;
+an Apple Music subscription and an unexpired developer token. It is a development
+preview, not a public release. Command help and --version identify applifast;
 BUILD.txt records the executable's file version and source revision.
 The app uses separate Applifast settings and Windows Credential Manager entries.
 
@@ -32,7 +32,8 @@ Ctrl+M toggles the mini player. L or Ctrl+Shift+K opens Now Playing; Esc returns
 Enable Ambient Pulse in Appearance. It is decorative, not an audio analyser.
 Reduce motion stops its animation. Ambient Pulse is off by default.
 
-Preview the design without signing in or changing your library from PowerShell:
+For builds compiled with the optional demo feature only, preview the design
+without signing in or changing your library from PowerShell:
   .\Applifast.exe --demo --demo-page liked --demo-show queue,ambient-pulse
 
 Try playlist creation with the library + button or Save as a playlist in the
