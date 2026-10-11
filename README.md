@@ -20,6 +20,9 @@ distribution and clean-machine acceptance remain pending. The installer uses
 your user account, preserves settings on uninstall and does not register Spotify
 links. Preview executables are unsigned. See the
 [installer checks and limits](docs/applifast/windows-installer-evidence.md).
+Maintainers can prepare optimized installer/ZIP downloads using the manual
+[Windows preview workflow](docs/applifast/preview-downloads.md), once it is merged
+and its signed developer-token secret is configured.
 
 You need an Apple Music subscription, the Evergreen WebView2 Runtime and an
 unexpired app developer token supplied in the ZIP by the maintainer. Keep
