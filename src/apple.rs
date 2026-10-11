@@ -8,6 +8,7 @@ use crate::player::{LocalState, LocalTrack, Playback};
 use applifast_playback_probe::protocol::{PlaybackItem, QueueOrder};
 use rand::seq::SliceRandom;
 pub mod cache;
+mod favorites;
 pub mod models;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -192,6 +193,8 @@ pub struct State {
     pub pending_playlist_add: Option<crate::model::Action>,
     pub pending_album_playlist: Option<crate::model::Action>,
     pub playlist_appends: std::collections::HashMap<u64, (String, usize)>,
+    favorite_writes: std::collections::HashMap<u64, Vec<(String, Option<bool>)>>,
+    favorite_updates: std::collections::HashMap<String, favorites::Update>,
     pub next_reads: std::collections::HashMap<Read, (String, u32)>,
     pub pending_play: Option<crate::model::Action>,
     read_serial: u64,
@@ -239,6 +242,8 @@ impl Default for State {
             pending_playlist_add: None,
             pending_album_playlist: None,
             playlist_appends: Default::default(),
+            favorite_writes: Default::default(),
+            favorite_updates: Default::default(),
             next_reads: Default::default(),
             pending_play: None,
             read_serial: 0,
@@ -284,6 +289,8 @@ impl State {
         self.pending_playlist_add = None;
         self.pending_album_playlist = None;
         self.playlist_appends.clear();
+        self.favorite_writes.clear();
+        self.favorite_updates.clear();
         self.next_reads.clear();
         self.pending_play = None;
         self.queue.clear();
@@ -769,7 +776,8 @@ impl State {
                 }
                 let parsed: Result<Vec<Song>, _> = serde_json::from_value(event["items"].clone());
                 match parsed {
-                    Ok(songs) if songs.iter().all(|song| song.item.validate().is_ok()) => {
+                    Ok(mut songs) if songs.iter().all(|song| song.item.validate().is_ok()) => {
+                        self.observe_favorites(event["id"].as_u64().unwrap(), &mut songs);
                         let next = event["next"].as_str().map(str::to_owned);
                         if let Some(fresh) = &mut self.refresh_songs {
                             if songs.is_empty() && next.is_some() {
@@ -964,7 +972,7 @@ impl State {
         }
         self.cache_dirty = false;
         self.cache_position_ms = position;
-        Some(cache::Snapshot {
+        let mut snapshot = cache::Snapshot {
             version: 1,
             account_tag: tag,
             storefront: self.storefront.clone(),
@@ -980,7 +988,9 @@ impl State {
                 crate::player::RepeatMode::Track => 1,
                 crate::player::RepeatMode::Context => 2,
             },
-        })
+        };
+        self.cache_favorites(&mut snapshot);
+        Some(snapshot)
     }
     pub fn refresh_library(&mut self) -> Value {
         self.refresh_songs = Some(Vec::new());

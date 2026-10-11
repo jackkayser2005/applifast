@@ -1310,6 +1310,32 @@ pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
             }
             continue;
         }
+        if matches!(
+            flag,
+            "favorite-pending" | "favorite-confirmed" | "favorite-error"
+        ) {
+            if let Some(apple) = &mut app.apple {
+                let uris = apple
+                    .songs
+                    .iter()
+                    .take(2)
+                    .map(crate::apple::Song::uri)
+                    .collect::<Vec<_>>();
+                if let Ok(Some(command)) = apple.favorite_songs(&uris)
+                    && flag != "favorite-pending"
+                {
+                    let data = if flag == "favorite-confirmed" {
+                        command["items"].as_array().unwrap().iter().map(|item| serde_json::json!({
+                                "id":item["id"], "type":if item["kind"] == "library" { "library-songs" } else { "songs" },
+                                "attributes":{"inFavorites":true}})).collect::<Vec<_>>()
+                    } else {
+                        Vec::new()
+                    };
+                    app.apple_response(&serde_json::json!({"type":"response","session":1,"id":command["id"],"data":{"data":data}}));
+                }
+            }
+            continue;
+        }
         if flag == "favorites" || flag == "favorites-empty" {
             if let Some(apple) = &mut app.apple {
                 if flag == "favorites-empty" {
@@ -1586,7 +1612,7 @@ mod tests {
 
     #[cfg(feature = "demo")]
     #[test]
-    fn apple_favorite_hearts_are_read_only_images_in_rows_and_player() {
+    fn apple_favorite_hearts_offer_accessible_add_buttons_and_read_only_existing_favorites() {
         use egui::accesskit::Role;
         let (ctx, mut app) = accessible_app("apple-favorite-hearts");
         let mut apple = crate::apple::State::demo(&app.library.liked.items);
@@ -1629,6 +1655,82 @@ mod tests {
                 .nodes
                 .iter()
                 .any(|(_, node)| node.label() == Some("Favorites") && node.role() == Role::Image)
+        );
+        let button = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| {
+                node.label() == Some("Add to Favorites")
+                    && node.role() == Role::Button
+                    && node.bounds().is_some_and(|bounds| bounds.y0 > 700.0)
+            })
+            .unwrap();
+        assert!(button.1.supports_action(egui::accesskit::Action::Click));
+        let uri = app.now_playing().unwrap().uri;
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(
+                button.0,
+                egui::accesskit::Action::Click,
+                None,
+            )],
+        );
+        assert_eq!(app.is_saved(&uri), Some(true));
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_selection_menu_adds_favorites_without_offering_removal() {
+        fn draw(app: &mut App, ui: &mut egui::Ui) {
+            let items = app
+                .apple
+                .as_ref()
+                .unwrap()
+                .songs
+                .iter()
+                .take(2)
+                .map(|song| PlayableItem::Track(song.track()))
+                .collect::<Vec<_>>();
+            crate::ui::widgets::picked_menu(ui, app, &items, None);
+        }
+        let (ctx, mut app) = accessible_app("apple-favorite-selection");
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        apple.songs[0].in_favorites = Some(false);
+        apple.songs[1].in_favorites = None;
+        let uris = apple
+            .songs
+            .iter()
+            .take(2)
+            .map(crate::apple::Song::uri)
+            .collect::<Vec<_>>();
+        app.apple = Some(apple);
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let add = text
+            .iter()
+            .find(|(label, _)| label == "Add to Favorites")
+            .unwrap()
+            .1
+            .center();
+        assert!(!text.iter().any(|(label, _)| label.contains("Liked Songs")));
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(add, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(app.actions.iter().any(|action| matches!(action, Action::SetSavedMany { uris: selected, saved: true } if selected == &uris)));
+        for song in app.apple.as_mut().unwrap().songs.iter_mut().take(2) {
+            song.in_favorites = Some(true);
+        }
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(
+            !text
+                .iter()
+                .any(|(label, _)| label == "Add to Favorites" || label.contains("Liked Songs"))
         );
         app.backend.shutdown();
     }

@@ -137,9 +137,11 @@ requesting `inFavorites`. It returns minimal per-song resources alongside a fixe
 refresh-before-retry error when any flag is false or unknown, retaining partial
 confirmations. These reads use the existing deadline and sign-out cancellation.
 
-These writes are an integration gate, not an exposed desktop feature. Hearts
-remain read-only until optimistic state, rollback and exact server confirmation
-are integrated. See the [evidence and pending checks](../../docs/applifast/favorites-write-evidence.md).
+The draft desktop integration uses this command for add-only hearts and song
+menus, with optimistic state, partial rollback and stale-read protection. Pending
+hearts are excluded from confirmed disk state. Live-account write acceptance is
+still unverified; removal is unavailable. See the
+[evidence and pending checks](../../docs/applifast/favorites-write-evidence.md).
 
 The opt-in account check re-adds only a library favorite and a catalog counterpart
 that both already report `inFavorites=true`, then reads their exact IDs again.

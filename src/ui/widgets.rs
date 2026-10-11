@@ -592,7 +592,9 @@ pub fn picked_menu(
     }
     // Set one explicit saved state for the full selection.
     let all_saved = uris.iter().all(|uri| app.is_saved(uri).unwrap_or(false));
-    let (icon, text) = if all_saved {
+    let (icon, text) = if app.apple.is_some() {
+        (Icon::Heart, gettext(locale, "Add to Favorites"))
+    } else if all_saved {
         (
             Icon::HeartFilled,
             gettext(locale, "Remove from Liked Songs"),
@@ -600,7 +602,7 @@ pub fn picked_menu(
     } else {
         (Icon::Heart, gettext(locale, "Save to Liked Songs"))
     };
-    if app.apple.is_none() && menu_item(ui, &palette, Some(icon), &text) {
+    if (app.apple.is_none() || !all_saved) && menu_item(ui, &palette, Some(icon), &text) {
         app.actions.push(Action::SetSavedMany {
             uris: uris.clone(),
             saved: !all_saved,
@@ -854,7 +856,9 @@ pub fn item_menu(
     }
     if item.is_track() {
         let saved = app.is_saved(&uri).unwrap_or(false);
-        let (icon, text) = if saved {
+        let (icon, text) = if app.apple.is_some() {
+            (Icon::Heart, gettext(locale, "Add to Favorites"))
+        } else if saved {
             (
                 Icon::HeartFilled,
                 gettext(locale, "Remove from Liked Songs"),
@@ -862,7 +866,7 @@ pub fn item_menu(
         } else {
             (Icon::Heart, gettext(locale, "Save to Liked Songs"))
         };
-        if app.apple.is_none() && menu_item(ui, &palette, Some(icon), &text) {
+        if (app.apple.is_none() || !saved) && menu_item(ui, &palette, Some(icon), &text) {
             app.actions.push(Action::ToggleSaved(uri.clone()));
         }
         add_to_playlist_menu(ui, app, std::slice::from_ref(item), None);
@@ -1791,7 +1795,7 @@ fn track_row_contents(
                         .alt_text(label.as_ref()),
                 )
                 .on_hover_text(label.as_ref());
-        } else if app.apple.is_none() && row.item.is_track() {
+        } else if row.item.is_track() {
             let mut child = ui.new_child(
                 UiBuilder::new()
                     .max_rect(heart_rect)
@@ -1808,7 +1812,9 @@ fn track_row_contents(
             } else {
                 (Icon::Heart, palette.secondary)
             };
-            let tooltip = if saved == Some(true) {
+            let tooltip = if app.apple.is_some() {
+                gettext(app.locale, "Add to Favorites")
+            } else if saved == Some(true) {
                 gettext(app.locale, "Remove from Liked Songs")
             } else {
                 gettext(app.locale, "Save to Liked Songs")

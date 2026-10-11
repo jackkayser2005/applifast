@@ -625,9 +625,23 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
         }
     }
 
-    if !now.is_episode && (app.apple.is_none() || app.is_saved(&now.uri) == Some(true)) {
+    if !now.is_episode {
         let saved = app.is_saved(&now.uri).unwrap_or(false);
-        let (icon, color, tooltip) = if saved {
+        let (icon, color, tooltip) = if app.apple.is_some() {
+            (
+                if saved {
+                    Icon::HeartFilled
+                } else {
+                    Icon::Heart
+                },
+                if saved {
+                    palette.accent
+                } else {
+                    palette.secondary
+                },
+                gettext(app.locale, "Add to Favorites"),
+            )
+        } else if saved {
             (
                 Icon::HeartFilled,
                 palette.accent,
@@ -660,7 +674,7 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
                 .max_rect(heart_rect)
                 .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
         );
-        if app.apple.is_some() {
+        if app.apple.is_some() && saved {
             let label = gettext(app.locale, "Favorites");
             heart_ui
                 .add(

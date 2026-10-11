@@ -1572,7 +1572,7 @@ fn favorites_shelf(app: &mut App, ui: &mut egui::Ui) {
         .songs
         .iter()
         .enumerate()
-        .filter(|(_, song)| song.in_favorites == Some(true))
+        .filter(|(_, song)| apple.song_favorite(song) == Some(true))
         .take(count)
         .map(|(index, song)| (index, song.clone()))
         .collect::<Vec<_>>();
@@ -1636,12 +1636,16 @@ fn favorites_shelf(app: &mut App, ui: &mut egui::Ui) {
                         let (uris, position) = if song.available() {
                             let position = apple.songs[..*index]
                                 .iter()
-                                .filter(|row| row.in_favorites == Some(true) && row.available())
+                                .filter(|row| {
+                                    apple.song_favorite(row) == Some(true) && row.available()
+                                })
                                 .count();
                             let uris = apple
                                 .songs
                                 .iter()
-                                .filter(|row| row.in_favorites == Some(true) && row.available())
+                                .filter(|row| {
+                                    apple.song_favorite(row) == Some(true) && row.available()
+                                })
                                 .map(crate::apple::Song::uri)
                                 .collect();
                             (uris, position)

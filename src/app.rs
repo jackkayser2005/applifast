@@ -1166,12 +1166,7 @@ impl App {
 
     pub fn is_saved(&self, uri: &str) -> Option<bool> {
         if let Some(apple) = &self.apple {
-            return apple
-                .songs
-                .iter()
-                .find(|song| song.uri() == uri)
-                .or_else(|| apple.find_song(uri))
-                .and_then(|song| song.in_favorites);
+            return apple.favorite_status(uri);
         }
         let exact = self.saved.get(uri).copied();
         if exact == Some(true)
@@ -8803,9 +8798,23 @@ impl App {
                 self.apple_add_to_playlist(playlist_id, playlist_name, items, false);
                 return true;
             }
-            Action::ToggleSaved(_)
-            | Action::SetSavedMany { .. }
-            | Action::OpenSongRadio { .. }
+            Action::ToggleSaved(uri) => {
+                if self.is_saved(uri) == Some(true) {
+                    self.toast_error("Use Apple Music to remove a favorite.");
+                } else {
+                    self.apple_favorite_songs(std::slice::from_ref(uri));
+                }
+                return true;
+            }
+            Action::SetSavedMany { uris, saved: true } => {
+                self.apple_favorite_songs(uris);
+                return true;
+            }
+            Action::SetSavedMany { saved: false, .. } => {
+                self.toast_error("Use Apple Music to remove a favorite.");
+                return true;
+            }
+            Action::OpenSongRadio { .. }
             | Action::SaveRadio(_)
             | Action::PasteSongs { .. }
             | Action::Open(Page::Radio(_) | Page::Podcasts | Page::Episodes | Page::Show(_))
@@ -18146,7 +18155,6 @@ mod tests {
                 track: Box::default(),
             },
             Action::SaveRadio("apple:track:catalog.123".into()),
-            Action::ToggleSaved("apple:track:catalog.123".into()),
             Action::PasteSongs {
                 playlist_id: "library.p.test".into(),
                 text: "spotify:track:123".into(),

@@ -53,9 +53,14 @@ playlist-append-error or playlist-duplicates.
 
 Songs offers Show only favorites for loaded songs Apple marks as favorites.
 Missing flags stay unknown. Favorite metadata stays in the existing restart cache;
-refresh Songs for changes made in Apple Music. Known favorites show read-only
-hearts in rows and the player bar. Appearance controls how many favorites appear
-in the sidebar; Show all favorites opens their page. Favorite editing is pending.
+refresh Songs for changes made in Apple Music. Hollow hearts and song/selection
+menus offer Add to Favorites, for up to 100 distinct non-favorite songs per action.
+Hearts fill immediately; exact confirmation retains successful members and rolls
+unconfirmed members back. Refresh before retrying, because Apple may have applied
+an interrupted write. Pending hearts are not saved as confirmed favorites.
+Filled hearts are read-only; removing favorites requires Apple Music.
+Appearance controls how many favorites appear in the sidebar; Show all favorites
+opens their page. Real-account favorite additions still need acceptance.
 Demo: --demo-show favorites-page. Fresh-Windows-account sign-in, full library
 refresh and restart restoration still need acceptance.
 Real-account creation, appending, permissions and uploaded members need acceptance.

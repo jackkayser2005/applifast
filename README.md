@@ -45,8 +45,10 @@ For sample data without authorization or playback:
 cargo run --locked --features demo -- --demo
 ```
 
-Known Apple favorites show filled, read-only hearts in song rows and the player
-bar. Changing favorites still requires Apple Music and a refresh here.
+Apple song rows, the player bar and selection menus offer Add to Favorites.
+Hearts update immediately; exact Apple confirmation retains successful songs
+and rolls unconfirmed members back with a refresh-before-retry message. Removal
+still requires Apple Music. This draft integration needs live-account testing.
 Playlist, album and search reads now request Apple's explicit favorite flags
 for song resources too, preserving each library/catalog identity. See the
 [collection metadata evidence](docs/applifast/collection-favorites-evidence.md).
@@ -74,8 +76,8 @@ Token generation for maintainers is documented in the
 | Restart | Retain loaded song metadata and the local queue; restore playback paused and refresh in the background. Audio is streamed, without offline downloads. |
 | Desktop | Tray, media keys, taskbar controls and mini player share the playback state. Closing to the tray can leave music running. |
 | Playlists | Create playlists, save the queue and append selected songs, albums or the queue. Real-account write acceptance remains pending. |
-| Favorites | Read Apple's favorite flags, filter loaded songs and show a Favorites page and configurable sidebar shelf. Writes remain pending. |
-| Links and menus | Copy public Apple Music catalog links or exact internal library links. Unsupported favorite writes, radio and advanced playlist edits are hidden. Playlist creation, additions and queue controls remain available. |
+| Favorites | Read flags, filter loaded songs, show a Favorites page and configurable sidebar shelf, and add up to 100 distinct non-favorite songs per action. Additions are locally tested; live-account acceptance is pending. Removal remains unavailable. |
+| Links and menus | Copy public Apple Music catalog links or exact internal library links. Radio and advanced playlist edits are hidden. Playlist creation, additions and queue controls remain available. |
 | Lyrics and motion | Optional LRCLIB lyrics and full-screen Now Playing; Reduce motion; decorative Ambient Pulse. Apple playback does not expose PCM for EQ, spectrum, oscilloscope or MilkDrop. |
 | Shortcuts | Settings > Keyboard shortcuts or Ctrl+/. Alt+1–5 navigates, F5 refreshes music pages and Ctrl+M opens the mini player. |
 | Shared links | Paste an Apple Music share URL into Search and press Enter, or pass it to the executable. `play-uri` starts linked music explicitly; opening a link alone preserves playback. |
