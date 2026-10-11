@@ -139,7 +139,12 @@ other-platform compilation remain unverified in this slice.
 
 Favorites-write integration is in progress behind the diagnostic host boundary.
 The typed command preserves resource identities, validates a bounded batch and
-keeps mutations independent of playback controls. The native account gate has
+keeps mutations independent of playback controls. An accepted favorites POST now
+reads back the exact requested typed song IDs in at most two parallel batches.
+Only explicit boolean flags confirm each member; partial or unknown results keep
+their per-song data and produce a fixed refresh-before-retry error. Confirmation
+reads use the existing deadline and sign-out cancellation, without retrying the
+mutation. The native account gate has
 not passed, and desktop favorite writes, optimistic confirmation and rollback
 are not exposed yet. The existing read-only hearts are unchanged. See the
 [favorites integration evidence](favorites-write-evidence.md).

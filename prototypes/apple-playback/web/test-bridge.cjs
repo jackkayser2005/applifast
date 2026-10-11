@@ -63,16 +63,94 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   assert.equal(requests.at(-1)[0], '/v1/me/library/playlists/p.created/tracks');
   assert.equal(JSON.parse(requests.at(-1)[2].fetchOptions.body).data.length, 2);
   assert.equal(messages.find(event => event.id === 102).data, null);
+  const initialApi = music.api.music;
+  music.api.music = async (...args) => {
+    requests.push(args);
+    if (args[2].fetchOptions.method === 'POST') return undefined;
+    const library = args[0] === '/v1/me/library/songs';
+    return { data: { data: [{ id: library ? 'i.upload' : '123',
+      type: library ? 'library-songs' : 'songs', attributes: { inFavorites: true } }] } };
+  };
+  const favoriteStart = requests.length;
   await app.dispatch({ type: 'favoriteSongs', id: 2010,
     items: [uploaded, { ...catalog, playParams: { id: '456', kind: 'song' } }, uploaded] });
-  const favorite = requests.at(-1);
+  const favorite = requests[favoriteStart];
   assert.equal(favorite[0], '/v1/me/favorites');
   assert.equal(favorite[2].fetchOptions.method, 'POST');
   assert.equal(favorite[2].fetchOptions.body, undefined);
   assert.deepEqual(JSON.parse(JSON.stringify(favorite[1])), {
     'ids[songs]': '123', 'ids[library-songs]': 'i.upload'
   });
-  assert.equal(messages.find(event => event.id === 2010).data, null);
+  assert.equal(requests.length - favoriteStart, 3, 'One write and one read per resource type');
+  assert.equal(requests[favoriteStart + 1][0], '/v1/catalog/us/songs');
+  assert.equal(requests[favoriteStart + 2][0], '/v1/me/library/songs');
+  assert.deepEqual(JSON.parse(JSON.stringify(requests[favoriteStart + 1][1])), { ids: '123', extend: 'inFavorites' });
+  assert.deepEqual(JSON.parse(JSON.stringify(requests[favoriteStart + 2][1])), { ids: 'i.upload', extend: 'inFavorites' });
+  assert.equal(requests[favoriteStart + 1][2].fetchOptions.cache, 'no-store');
+  assert.equal(requests[favoriteStart + 2][2].fetchOptions.cache, 'no-store');
+  const confirmed = messages.find(event => event.id === 2010);
+  assert.equal(confirmed.error, undefined);
+  assert.deepEqual(JSON.parse(JSON.stringify(confirmed.data)), { data: [
+    { id: '123', type: 'songs', attributes: { inFavorites: true } },
+    { id: 'i.upload', type: 'library-songs', attributes: { inFavorites: true } }
+  ] });
+  // Missing, malformed, substituted and ambiguous results cannot confirm a favorite.
+  for (const [n, rows] of [
+    [], [{ id: '123', type: 'songs', attributes: { inFavorites: false } }],
+    [{ id: '123', type: 'songs', attributes: { inFavorites: 'true' } }],
+    [{ id: '456', type: 'songs', attributes: { inFavorites: true } }],
+    [{ id: '123', type: 'library-songs', attributes: { inFavorites: true } }],
+    Array(2).fill({ id: '123', type: 'songs', attributes: { inFavorites: true } })
+  ].entries()) {
+    music.api.music = async (_path, _parameters, options) => options.fetchOptions.method === 'POST'
+      ? undefined : { data: { data: rows } };
+    await app.dispatch({ type: 'favoriteSongs', id: 2100 + n, items: [catalog] });
+    const result = messages.find(event => event.id === 2100 + n);
+    assert(result.error.includes('Refresh'));
+    assert.equal(result.data.data[0].id, '123');
+    assert.equal(result.data.data[0].attributes.inFavorites, n === 1 ? false : undefined);
+  }
+  music.api.music = async (path, _parameters, options) => {
+    if (options.fetchOptions.method === 'POST') return undefined;
+    if (path === '/v1/me/library/songs') throw new Error('secret confirmation failure');
+    return { data: { data: [{ id: '123', type: 'songs', attributes: { inFavorites: true, token: 'secret extra' } }] } };
+  };
+  await app.dispatch({ type: 'favoriteSongs', id: 2110, items: [catalog, uploaded] });
+  const partial = messages.find(event => event.id === 2110);
+  assert(partial.error);
+  assert.equal(partial.data.data[0].attributes.inFavorites, true);
+  assert.equal(partial.data.data[1].attributes.inFavorites, undefined);
+  assert(!JSON.stringify(partial).includes('secret'));
+  let confirmationSignal, confirmationPosts = 0;
+  music.api.music = (_path, _parameters, options) => {
+    if (options.fetchOptions.method === 'POST') { confirmationPosts++; return Promise.resolve(); }
+    confirmationSignal = options.fetchOptions.signal;
+    return new Promise((_resolve, reject) => confirmationSignal.addEventListener('abort',
+      () => reject(new Error('secret confirmation timeout')), { once: true }));
+  };
+  const timedConfirmation = app.dispatch({ type: 'favoriteSongs', id: 2112, items: [catalog] });
+  while (!confirmationSignal) await new Promise(resolve => setImmediate(resolve));
+  let confirmationPaused = false;
+  const confirmationPause = music.pause;
+  music.pause = async () => { confirmationPaused = true; };
+  await app.dispatch({ type: 'pause' });
+  assert(confirmationPaused, 'Favorite confirmation must not block transport');
+  assert.equal(readTimers.size, 1);
+  [...readTimers.values()][0]();
+  await timedConfirmation;
+  assert(confirmationSignal.aborted);
+  assert.equal(confirmationPosts, 1, 'A failed confirmation must never repeat the mutation');
+  assert(messages.find(event => event.id === 2112).error);
+  assert.equal(readTimers.size, 0);
+  music.pause = confirmationPause;
+  music.api.music = initialApi;
+  const storefront = music.storefrontId;
+  music.storefrontId = '../secret';
+  const storefrontRequests = requests.length;
+  await app.dispatch({ type: 'favoriteSongs', id: 2111, items: [catalog, uploaded] });
+  assert.equal(requests.length, storefrontRequests, 'Invalid storefront must fail before the write');
+  assert(messages.find(event => event.id === 2111).error);
+  music.storefrontId = storefront;
   for (const [index, patch] of [
     { items: [] }, { items: Array(101).fill(catalog) }, { id: Number.MAX_SAFE_INTEGER + 1 },
     { items: [{ ...uploaded, id: 'i.x?token=secret' }] },
@@ -314,7 +392,7 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   let resolveWrite, writeSignal, writeCalls = 0;
   music.api.music = (_, __, options) => { writeCalls++; writeSignal = options.fetchOptions.signal;
     return new Promise(resolve => { resolveWrite = resolve; }); };
-  const pendingWrite = app.dispatch({ type: 'appendPlaylist', id: 105, playlist: 'p.created', items: [uploaded] });
+  const pendingWrite = app.dispatch({ type: 'favoriteSongs', id: 105, items: [uploaded] });
   while (!resolveWrite) await new Promise(resolve => setImmediate(resolve));
   const queuedWrite = app.dispatch({ type: 'createPlaylist', id: 106, name: 'Canceled', public: false, items: [] });
   const queuedFavorite = app.dispatch({ type: 'favoriteSongs', id: 2021, items: [catalog] });
@@ -340,12 +418,35 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   await pendingWrite; await queuedWrite; await queuedFavorite; await pendingAuthorization;
   await Promise.all(pendingReads);
   assert.equal(writeCalls, 1); // Queued mutations cannot execute under a new account.
+  assert.equal(readSignals.length, 2, 'A stale favorites POST cannot start confirmation reads');
   assert(!messages.some(event => [105, 106, 2021].includes(event.id))); // Late write replies are stale.
   assert(!messages.some(event => [110, 203].includes(event.id)));
   assert(!JSON.stringify(messages).includes('secret canceled read'));
   assert(!messages.some(event => event.type === 'authorized'));
   assert.equal(messages.at(-1).type, 'signedOut');
   assert.equal(messages.at(-1).session, 2);
+  assert.equal(readTimers.size, 0);
+  // A fresh host can sign out during confirmation even if the SDK ignores abort.
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), sandbox);
+  const freshApp = sandbox.window.applifast;
+  await freshApp.bootstrap({ developerToken: 'mock-only', session: 3 });
+  let finishConfirmation, activeConfirmationSignal, confirmationSignOut, confirmationReads = 0;
+  music.api.music = (_path, _parameters, options) => {
+    if (options.fetchOptions.method === 'POST') return Promise.resolve();
+    confirmationReads++;
+    activeConfirmationSignal = options.fetchOptions.signal;
+    confirmationSignOut = freshApp.dispatch({ type: 'signOut' });
+    return new Promise(resolve => { finishConfirmation = resolve; });
+  };
+  const activeFavorite = freshApp.dispatch({ type: 'favoriteSongs', id: 2113, items: [catalog, uploaded] });
+  while (!finishConfirmation) await new Promise(resolve => setImmediate(resolve));
+  await Promise.race([confirmationSignOut,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Confirmation blocked sign-out')), 250))]);
+  assert(activeConfirmationSignal.aborted);
+  assert.equal(confirmationReads, 1, 'Sign-out during one confirmation must prevent starting another');
+  finishConfirmation({ data: { data: [{ id: '123', type: 'songs', attributes: { inFavorites: true } }] } });
+  await activeFavorite;
+  assert(!messages.some(event => event.id === 2113), 'A late confirmation cannot reach a new account');
   assert.equal(readTimers.size, 0);
   console.log('Bridge self-check passed: uploaded IDs, occurrences, pagination, read deadlines, responsive transport, playlist/favorites writes, failures, stale authorization.');
 })().catch(failure => { console.error(failure); process.exitCode = 1; });
