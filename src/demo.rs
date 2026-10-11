@@ -4106,6 +4106,68 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
+    fn apple_startup_failure_offers_accessible_retry_without_overlapping_setup() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        let (ctx, mut app) = accessible_app("apple-host-recovery");
+        let mut apple = crate::apple::State::default();
+        apple.loading = false;
+        apple.error = Some("Playback host could not start.".into());
+        let generation = apple.generation;
+        app.apple = Some(apple);
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let retry = accessible_node(&tree, "Retry connection", Role::Button);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .find(|(id, _)| *id == retry)
+                .unwrap()
+                .1
+                .is_disabled()
+        );
+        app.apple.as_mut().unwrap().token_request = Some(77);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let retry = accessible_node(&tree, "Retry connection", Role::Button);
+        assert!(
+            tree.nodes
+                .iter()
+                .find(|(id, _)| *id == retry)
+                .unwrap()
+                .1
+                .is_disabled()
+        );
+        app.apple.as_mut().unwrap().token_request = None;
+        accessible_frame(&ctx, &mut app, vec![]);
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(retry, AccessibleAction::Click, None)],
+        );
+        let apple = app.apple.as_ref().unwrap();
+        assert_eq!(apple.generation, generation + 1);
+        assert!(apple.loading && !apple.ready && apple.error.is_none());
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let sign_in = accessible_node(&tree, "Sign in with Apple", Role::Button);
+        assert!(
+            tree.nodes
+                .iter()
+                .find(|(id, _)| *id == sign_in)
+                .unwrap()
+                .1
+                .is_disabled()
+        );
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .any(|(_, node)| node.label() == Some("Retry connection"))
+        );
+        app.backend.shutdown();
+    }
+
+    #[cfg(windows)]
+    #[test]
     fn apple_token_setup_disables_overlapping_import_and_signin_controls() {
         use egui::accesskit::{Action as AccessibleAction, Role};
         let (ctx, mut app) = accessible_app("apple-token-setup");

@@ -8873,7 +8873,17 @@ impl App {
         };
         let request = match action {
             Action::SignIn => {
-                if apple.token_request.is_some() {
+                if apple.token_request.is_some() || apple.loading {
+                    return true;
+                }
+                if !apple.ready {
+                    apple.reset_host();
+                    self.local = LocalState::default();
+                    self.local_ready = false;
+                    self.backend.send(Command::AppleStart {
+                        generation: apple.generation,
+                        token_file: None,
+                    });
                     return true;
                 }
                 apple.loading = true;
@@ -18452,6 +18462,50 @@ mod tests {
         );
         app.local_ready = true;
         app
+    }
+
+    #[test]
+    fn apple_failed_startup_retries_saved_setup_once_and_rejects_old_host_events() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        let mut apple = crate::apple::State::default();
+        apple.loading = false;
+        apple.error = Some("Playback host could not start.".into());
+        apple.token_path = "unchanged-token-path".into();
+        let old_generation = apple.generation;
+        app.apple = Some(apple);
+        let ctx = egui::Context::default();
+        app.apply(Action::SignIn, &ctx);
+        let apple = app.apple.as_mut().unwrap();
+        assert_eq!(apple.generation, old_generation + 1);
+        assert_eq!(apple.session, 1);
+        assert!(apple.loading && !apple.ready && apple.error.is_none());
+        assert_eq!(apple.token_path, "unchanged-token-path");
+        assert!(!app.local_ready);
+        apple.event(
+            old_generation,
+            &serde_json::json!({"type":"ready","authorized":true}),
+        );
+        assert!(!apple.ready && !apple.authorized);
+        app.apply(Action::SignIn, &ctx);
+        assert_eq!(app.apple.as_ref().unwrap().generation, old_generation + 1);
+        let apple = app.apple.as_mut().unwrap();
+        apple.event(
+            old_generation + 1,
+            &serde_json::json!({"type":"ready","session":1,"authorized":false}),
+        );
+        assert!(apple.ready && !apple.loading);
+        app.apply(Action::SignIn, &ctx);
+        assert!(app.apple.as_ref().unwrap().loading);
+        assert_eq!(app.apple.as_ref().unwrap().generation, old_generation + 1);
+        let apple = app.apple.as_mut().unwrap();
+        apple.ready = false;
+        apple.loading = false;
+        apple.token_request = Some(77);
+        app.apply(Action::SignIn, &ctx);
+        assert_eq!(app.apple.as_ref().unwrap().generation, old_generation + 1);
+        assert_eq!(app.apple.as_ref().unwrap().token_request, Some(77));
+        app.backend.shutdown();
     }
 
     /// Dock menu picks wait in their own queue, which the application reads

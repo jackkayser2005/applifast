@@ -15,7 +15,7 @@ use std::{
 use webview2_com::{Microsoft::Web::WebView2::Win32::*, *};
 use windows::{
     Win32::{
-        Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM},
+        Foundation::{ERROR_INVALID_STATE, HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM},
         System::{Com::*, LibraryLoader::GetModuleHandleW, Threading::GetCurrentThreadId},
         UI::WindowsAndMessaging::*,
     },
@@ -45,6 +45,14 @@ enum Output {
     Error(&'static str),
     Input(String),
     Eof,
+}
+
+fn host_failure_message(code: Option<i32>) -> &'static str {
+    if code == Some(windows::core::HRESULT::from_win32(ERROR_INVALID_STATE.0).0) {
+        "WebView2 could not start with the current browser profile. Quit other Applifast builds through their tray menus, then retry the connection."
+    } else {
+        "WebView2 host failed. Install or repair the Evergreen runtime."
+    }
 }
 enum HostCommand {
     Dispatch(Command),
@@ -448,15 +456,13 @@ fn serve(
                     json!({"type":"hostErrorCode","hresult":format!("0x{:08X}", code as u32)}),
                 ));
             }
-            let _ = sta_tx.send(Output::Error(
-                "WebView2 host failed. Install or repair the Evergreen runtime.",
-            ));
+            let _ = sta_tx.send(Output::Error(host_failure_message(code)));
         }
     });
     let mut thread_id = None;
     let mut epoch = 1u64;
     let mut credentials_failed = false;
-    let mut host_failed = false;
+    let mut host_failed = None;
     for event in out_rx {
         match event {
             Output::Diagnostic(value) => report(value),
@@ -609,7 +615,7 @@ fn serve(
             }
             Output::Error(message) => {
                 report(json!({"type":"error","message":message}));
-                host_failed = true;
+                host_failed = Some(message);
                 break;
             }
             Output::Eof => {
@@ -635,8 +641,8 @@ fn serve(
     if credentials_failed {
         return Err("Sign-out could not clear saved credentials. Resolve Credential Manager access before restarting.".into());
     }
-    if host_failed {
-        return Err("Probe did not finish successfully.".into());
+    if let Some(message) = host_failed {
+        return Err(message.into());
     }
     Ok(())
 }
@@ -1166,6 +1172,14 @@ fn host_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn host_failure_explains_profile_conflicts_without_echoing_native_errors() {
+        let conflict = windows::core::HRESULT::from_win32(ERROR_INVALID_STATE.0).0;
+        assert_eq!(conflict as u32, 0x8007139F);
+        assert!(host_failure_message(Some(conflict)).contains("Quit other Applifast builds"));
+        assert!(host_failure_message(None).contains("Evergreen runtime"));
+        assert_eq!(host_failure_message(Some(-1)), host_failure_message(None));
+    }
     #[test]
     fn bridge_and_popup_boundaries() {
         assert!(bridge_origin(PAGE));

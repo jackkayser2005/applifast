@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast startup recovery review</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
+<h1>Retry the Apple connection</h1>
+<p>Baseline: native Windows demo build <code>6363b6d</code>. Candidate: <code>fix/apple-host-recovery</code>, the source in this PR, stacked on PR #39.</p>
+<p>Visible change: a failed startup now offers an enabled <strong>Retry connection</strong> button in the existing sign-in card. Token import pending keeps it disabled. Connecting and ready states retain their existing controls and layout. Retry uses saved setup, clears the failed attempt and rejects its late events.</p>
+<p>Matching sample data, light/dark themes, normal/narrow sizes, neutral pointer and Reduce motion. Both builds use the same fixed demo error. The longer native profile diagnosis is tested separately and is not pictured here. Demo mode uses no real credentials or playback host.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<label>State <select id="view"><option value="failed">Failed startup</option><option value="import-pending">Token import pending</option><option value="connecting">Connecting</option><option value="ready">Ready for authorization</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Matching native Windows startup recovery comparison">
+<p>All 32 selector paths and PNG dimensions pass. Representative captures were inspected in both themes and sizes. Pixel comparisons locate the failed/pending-state changes within the primary button; ready states are identical, and connecting states differ only in spinner phase. Browser rendering of this HTML is not verified.</p>
+<p>These captures and deterministic lifecycle/accessibility tests do not establish successful real-account reconnection, popup authorization or clean-user installation. Real-account retry remains pending while the older preview owns the browser profile. No credential format, network destination, dependency or automatic retry is added.</p>
+<p>Scope ledger: the maintainer requested usable sign-in and release preparation. This review covers the recovery button and its pending states within the existing card. It does not approve a broader interface redesign or establish release acceptance.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['theme','size','view'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script>

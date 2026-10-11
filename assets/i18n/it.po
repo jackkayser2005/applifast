@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-10 13:53-0400\n"
+"POT-Creation-Date: 2026-10-11 04:59-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Italian\n"
@@ -28,7 +28,7 @@ msgstr "Metti in pausa {name}"
 msgid "Play {name}"
 msgstr "Riproduci {name}"
 
-#: src/ui/sidebar.rs:298 src/app.rs:2571 src/app.rs:17311
+#: src/ui/sidebar.rs:298 src/app.rs:2571 src/app.rs:17321
 #: src/ui/collection.rs:1732 src/ui/collection.rs:1934
 msgid "Playlist"
 msgstr "Playlist"
@@ -406,7 +406,7 @@ msgstr "Strumentale"
 msgid "No timed lyrics for this track."
 msgstr "Nessun testo sincronizzato per questo brano."
 
-#: src/ui/lyrics.rs:409 src/ui/widgets.rs:2604 src/app.rs:11122
+#: src/ui/lyrics.rs:409 src/ui/widgets.rs:2604 src/app.rs:11132
 #: src/ui/collection.rs:764
 msgid "Loading…"
 msgstr "Caricamento…"
@@ -687,7 +687,7 @@ msgstr "Riproduzione locale: {error}"
 msgid "Spotify audio disconnected. Reconnecting local playback"
 msgstr "Audio di Spotify disconnesso. Riconnessione della riproduzione locale"
 
-#: src/app.rs:2545 src/app.rs:17316 src/ui/collection.rs:1926
+#: src/app.rs:2545 src/app.rs:17326 src/ui/collection.rs:1926
 #: src/ui/keys.rs:307 src/ui/winamp/playlist.rs:653
 msgid "Liked Songs"
 msgstr "Brani che ti piacciono"
@@ -753,7 +753,7 @@ msgid "Queue cleared"
 msgstr "Coda svuotata"
 
 #. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
-#: src/app.rs:4777 src/app.rs:17301
+#: src/app.rs:4777 src/app.rs:17311
 #, rust-format
 msgid "Queue {date}"
 msgstr "Coda {date}"
@@ -965,25 +965,25 @@ msgid_plural "{count} pasted links could not be added"
 msgstr[0] "Impossibile aggiungere {count} link incollato"
 msgstr[1] "Impossibile aggiungere {count} link incollati"
 
-#: src/app.rs:9673
+#: src/app.rs:9683
 msgid "Spotify doesn't let apps remove a playlist description, so it was kept"
 msgstr ""
 "Spotify non consente alle app di rimuovere la descrizione di una playlist, "
 "quindi è stata mantenuta"
 
-#: src/app.rs:9717 src/app.rs:9730
+#: src/app.rs:9727 src/app.rs:9740
 msgid "Link copied"
 msgstr "Link copiato"
 
 #. Translators: {count} is a number of song links, always more than one.
-#: src/app.rs:9734
+#: src/app.rs:9744
 #, rust-format
 msgid "{count} link copied"
 msgid_plural "{count} links copied"
 msgstr[0] "{count} link copiato"
 msgstr[1] "{count} link copiati"
 
-#: src/app.rs:9997
+#: src/app.rs:10007
 msgid ""
 "Spotify doesn't let apps reorder your playlists, so this order is saved on "
 "this computer"
@@ -991,77 +991,77 @@ msgstr ""
 "Spotify non consente alle app di riordinare le tue playlist, quindi questo "
 "ordine viene salvato su questo computer"
 
-#: src/app.rs:10061
+#: src/app.rs:10071
 msgid "Restarting local playback"
 msgstr "Riavvio della riproduzione locale"
 
-#: src/app.rs:10094
+#: src/app.rs:10104
 msgid "Local playback needs Spotify Premium"
 msgstr "La riproduzione locale richiede Spotify Premium"
 
-#: src/app.rs:10106
+#: src/app.rs:10116
 msgid "Opening your browser to set up local playback"
 msgstr "Apertura del browser per configurare la riproduzione locale"
 
-#: src/app.rs:10123
+#: src/app.rs:10133
 msgid "Play history cleared"
 msgstr "Cronologia di ascolto cancellata"
 
 #. Translators: {size} is a size in megabytes, such as 12.5.
-#: src/app.rs:10134
+#: src/app.rs:10144
 #, rust-format
 msgid "Cleared {size} MB of artwork"
 msgstr "Liberati {size} MB di copertine"
 
 #. Translators: {error} is an error message.
-#: src/app.rs:10140
+#: src/app.rs:10150
 #, rust-format
 msgid "Couldn't clear artwork: {error}"
 msgstr "Impossibile cancellare le copertine: {error}"
 
-#: src/app.rs:10324
+#: src/app.rs:10334
 msgid "Downloading MilkDrop preset packs"
 msgstr "Download dei pacchetti di preset MilkDrop"
 
 #. Translators: {name} is the name of a visualizer preset pack.
-#: src/app.rs:10358
+#: src/app.rs:10368
 #, rust-format
 msgid "Downloading {name} presets"
 msgstr "Download dei preset {name}"
 
-#: src/app.rs:11234
+#: src/app.rs:11244
 msgid "Couldn't start playback"
 msgstr "Impossibile avviare la riproduzione"
 
-#: src/app.rs:11235
+#: src/app.rs:11245
 msgid "Couldn't pause"
 msgstr "Impossibile mettere in pausa"
 
-#: src/app.rs:11236
+#: src/app.rs:11246
 msgid "Couldn't skip"
 msgstr "Impossibile passare al successivo"
 
-#: src/app.rs:11237
+#: src/app.rs:11247
 msgid "Couldn't go back"
 msgstr "Impossibile tornare indietro"
 
-#: src/app.rs:11238
+#: src/app.rs:11248
 msgid "Couldn't seek"
 msgstr "Impossibile cambiare posizione"
 
-#: src/app.rs:11239
+#: src/app.rs:11249
 msgid "Couldn't change the volume"
 msgstr "Impossibile cambiare il volume"
 
-#: src/app.rs:11240
+#: src/app.rs:11250
 msgid "Couldn't change shuffle"
 msgstr "Impossibile cambiare la riproduzione casuale"
 
-#: src/app.rs:11241
+#: src/app.rs:11251
 msgid "Couldn't change repeat"
 msgstr "Impossibile cambiare la ripetizione"
 
-#: src/app.rs:11284
+#: src/app.rs:11294
 msgid ""
 "No audio output device was found. Connect or enable one, then press play "
 "again."
@@ -1069,20 +1069,20 @@ msgstr ""
 "Nessun dispositivo di uscita audio trovato. Collegane o attivane uno, poi "
 "premi di nuovo Riproduci."
 
-#: src/app.rs:11295
+#: src/app.rs:11305
 msgid ""
 "Spotify doesn't make this playlist's songs available to third-party apps."
 msgstr ""
 "Spotify non rende disponibili i brani di questa playlist alle app di terze "
 "parti."
 
-#: src/app.rs:11425
+#: src/app.rs:11435
 msgid "Spotify sign-in expired. Sign in again, then retry the cover upload."
 msgstr ""
 "L’accesso a Spotify è scaduto. Accedi di nuovo, poi riprova a caricare la "
 "copertina."
 
-#: src/app.rs:11430
+#: src/app.rs:11440
 msgid ""
 "Spotify refused this cover. Check that you own the playlist, then sign in "
 "again to grant image upload permission. If using a personal app, reconnect "
@@ -1092,21 +1092,21 @@ msgstr ""
 "accedi di nuovo per concedere il permesso di caricare immagini. Se usi "
 "un’app personale, ricollegala anche nelle Impostazioni."
 
-#: src/app.rs:11434
+#: src/app.rs:11444
 msgid "Spotify rejected the image size. Choose a smaller image."
 msgstr ""
 "Spotify ha rifiutato le dimensioni dell’immagine. Scegli un’immagine più "
 "piccola."
 
 #. Translators: {error} is an error message.
-#: src/app.rs:11437
+#: src/app.rs:11447
 #, rust-format
 msgid "Couldn't upload the cover: {error}. Try again."
 msgstr "Impossibile caricare la copertina: {error}. Riprova."
 
 #. Translators: Keep {track} unchanged. It is the name of the song,
 #. playlist, album, or artist the radio is based on, not translated.
-#: src/app.rs:17321 src/app/radio.rs:38
+#: src/app.rs:17331 src/app/radio.rs:38
 #, rust-format
 msgid "{track} Radio"
 msgstr "Radio di {track}"
@@ -1186,7 +1186,7 @@ msgstr "L’accesso condiviso resta connesso."
 msgid "Apple Music account"
 msgstr "Account Apple Music"
 
-#: src/ui/settings.rs:293 src/ui/apple.rs:85
+#: src/ui/settings.rs:293 src/ui/apple.rs:96
 msgid "Import developer token"
 msgstr "Importa token sviluppatore"
 
@@ -2721,7 +2721,7 @@ msgstr "Impostazioni proxy"
 msgid "Applifast {version} • not affiliated with Spotify"
 msgstr "Applifast {version} • non affiliato a Spotify"
 
-#: src/ui/apple.rs:75
+#: src/ui/apple.rs:86
 msgid "Path to developer-token.txt"
 msgstr "Percorso di developer-token.txt"
 
