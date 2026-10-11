@@ -6,6 +6,11 @@ nav_order: 1
 
 ## Independent grants, once each
 
+> The Spotify grant and routing details below describe retained upstream code.
+> Windows Apple authorization and storage are documented in the
+> [Applifast listening slice](../applifast/listening-slice.md) and
+> [Windows tester guide](../applifast/testing.md).
+
 Applifast uses separate credentials for Web API access, a personal app, and
 local playback:
 

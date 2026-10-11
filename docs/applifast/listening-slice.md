@@ -35,7 +35,8 @@ clear authorization and account-specific cached data.
 
 The installer contains the same app developer token as the ZIP and no signing
 key or listener grant. No new application network access or dependencies are
-added. The inherited icon and package version remain pending release work.
+added. The executable and installer use the approved Applifast icon. Package
+versioning remains pending release work.
 Installer and app are unsigned development previews. See the
 [native installer checks and limits](windows-installer-evidence.md). Fresh-user
 authorization, wizard visual review, hosted CI and public-release acceptance
@@ -54,9 +55,13 @@ See the [reproduction, tests and remaining limits](windows-save-evidence.md).
 
 Windows executable properties now identify **Applifast** and **Apple Music for
 Windows**. The application and HTTP user agent use Applifast; no new network
-destination or telemetry is added. The Cargo package/target and `--version`
-retain `spotifast 0.12.0` until the packaging/version milestone. Icons and
-inherited installer/release metadata are still pending.
+destination or telemetry is added. Command help and `--version` now identify
+`applifast`, matching the configured update identity. Automatic updates remain
+disabled in Apple mode. Cargo retains the technical package/target name
+`spotifast` and inherited version `0.12.0`; release versioning is still pending.
+The approved Applifast icon is shared by the executable and preview installer.
+Inherited release workflows still use upstream artifact names. Public Windows
+release assets must be migrated and verified before Apple updates are enabled.
 
 The current run writes `applifast.log` in the existing Applifast data directory.
 Main-window geometry and egui memory use `window.ron` in that same directory,

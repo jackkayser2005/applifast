@@ -29,8 +29,9 @@ out in the app first to clear its subscriber authorization and account snapshot.
 
 The setup display name includes the source revision and says development
 preview. Its numeric version comes from the executable's inherited `0.12.0`
-file version. The executable, installer icon, release versioning and signing
-still have separate pending release work. The installer and application are
+file version. The executable and installer share the approved Applifast icon;
+the source asset retains its technical filename `spotifast.ico`. Release
+versioning and signing remain pending. The installer and application are
 unsigned; SHA256 checksums detect changed files, not publisher identity.
 
 ## Building
@@ -47,6 +48,9 @@ Omit `-SetupCompiler` for a ZIP only. The command validates the token locally,
 checks that installer inputs contain an x64 PE executable, preserves existing
 outputs, builds the six-file ZIP and optionally compiles the installer with its
 own checksum. A compiler failure reports failure and preserves the valid ZIP.
+`BUILD.txt` records the input executable's actual file version and source
+revision. Command help and `--version` identify Applifast; the Cargo build target
+retains its technical name `spotifast`.
 Apple verifies the token's signature and access at runtime. The `.p8` signing
 key must never be supplied or distributed.
 

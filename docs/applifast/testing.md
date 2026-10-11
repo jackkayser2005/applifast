@@ -1,10 +1,10 @@
 # Windows private tester guide
 
 This is a development preview for invited Windows x64 testers. Public release
-distribution and clean-machine acceptance are still pending. A preview
-can report the inherited version `spotifast 0.12.0`; use its `BUILD.txt` source
-revision when reporting a problem. The original Spotifast downloads are a
-different product.
+distribution and clean-machine acceptance are still pending. Current command
+help and `--version` identify `applifast`; older previews can report
+`spotifast 0.12.0`. Use the `BUILD.txt` source revision and file version when
+reporting a problem. The original Spotifast downloads are a different product.
 
 ## Open shared music
 
@@ -28,9 +28,13 @@ default URL handler are not supported yet.
    together in `%LOCALAPPDATA%\Programs\Applifast`, adds a Start entry and offers
    an optional desktop shortcut. It does not download WebView2 or register link
    handlers. Updates require quitting the old build and running the new installer.
-2. Install or repair the [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
-   if the app reports a host initialization failure. An installed Edge browser
-   alone is not the production runtime. See [Microsoft's distribution guidance](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution).
+2. The app needs the [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
+   If host initialization fails, first quit other Applifast builds through their
+   tray menus and retry. WebView2 `0x8007139F` can indicate incompatible options
+   in a shared browser process. An installed Edge browser alone is not the
+   production runtime; install or repair Evergreen if it is missing or still
+   fails after other builds exit. See [Microsoft's distribution guidance](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution)
+   and [environment errors](https://learn.microsoft.com/microsoft-edge/webview2/reference/win32/webview2-idl).
 3. Keep the included **developer-token.txt** beside **Applifast.exe**. It
    authenticates the app; it contains a signed MusicKit JWT, with no listener
    credentials or private signing key. It loads automatically when no valid

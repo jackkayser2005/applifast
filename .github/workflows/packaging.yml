@@ -112,7 +112,7 @@ jobs:
           set -- dist/native-packages/packages/"$TARGET"/appimage/spotifast-*-"$ARCH".AppImage
           test "$#" -eq 1
           chmod +x "$1"
-          "$1" --appimage-extract-and-run --version | grep -Ex 'spotifast [0-9]+\.[0-9]+\.[0-9]+.*'
+          "$1" --appimage-extract-and-run --version | grep -Ex 'applifast [0-9]+\.[0-9]+\.[0-9]+.*'
 
   installation:
     name: Install (${{ matrix.os }}, ${{ matrix.image }})

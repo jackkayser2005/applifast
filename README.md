@@ -50,9 +50,10 @@ session files. Read-only files and locks that deny deletion still produce save
 errors. See the [save evidence](docs/applifast/windows-save-evidence.md).
 
 The Cargo package and build target retain the technical name `spotifast` and
-version `0.12.0` during this port. Consequently, `--version` can still report
-`spotifast 0.12.0`. Use the source revision from `BUILD.txt` for preview reports.
-The maintainer's portable package names the executable `Applifast.exe`.
+version `0.12.0` during this port. Command help and `--version` now identify
+`applifast`; older previews can still print `spotifast 0.12.0`. Use the source
+revision from `BUILD.txt` for preview reports. The maintainer's portable package
+names the executable `Applifast.exe`.
 Token generation for maintainers is documented in the
 [playback diagnostic guide](prototypes/apple-playback/README.md).
 

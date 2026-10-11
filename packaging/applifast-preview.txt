@@ -16,7 +16,8 @@ Applifast Windows development preview
 
 This preview requires Windows x64, the installed Evergreen WebView2 runtime,
 an Apple Music subscription and an unexpired developer token. It is a debug
-build, not a public release. Its inherited --version is still spotifast 0.12.0.
+build, not a public release. Command help and --version identify applifast;
+BUILD.txt records the executable's file version and source revision.
 The app uses separate Applifast settings and Windows Credential Manager entries.
 
 Try restart restoration: play a song, add a few queue entries (including a
