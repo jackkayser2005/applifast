@@ -23,6 +23,16 @@ fn page<T>(items: Vec<T>, data: &Value, offset: u32) -> ApiPage<T> {
 }
 
 impl App {
+    pub(super) fn apple_favorite_songs(&mut self, uris: &[String]) {
+        match self.apple.as_mut().unwrap().favorite_songs(uris) {
+            Ok(Some(command)) => {
+                self.backend.send(Command::AppleSend(command.to_string()));
+                self.sync_apple_library();
+            }
+            Ok(None) => {}
+            Err(error) => self.toast_error(error),
+        }
+    }
     pub(super) fn apple_token_selected(
         &mut self,
         generation: u64,
@@ -1088,7 +1098,8 @@ impl App {
                     .songs
                     .iter()
                     .filter(|song| {
-                        uri != "apple:collection:favorites" || song.in_favorites == Some(true)
+                        uri != "apple:collection:favorites"
+                            || apple.song_favorite(song) == Some(true)
                     })
                     .map(crate::apple::Song::uri)
                     .collect()
@@ -1211,7 +1222,8 @@ impl App {
                 );
                 continue;
             }
-            let tracks = (kind == SearchFilter::Songs).then(|| self.apple_tracks(bucket));
+            let tracks = (kind == SearchFilter::Songs)
+                .then(|| self.apple_tracks(bucket, value["id"].as_u64().unwrap_or(0)));
             let held = self.search.results.get_mut().unwrap();
             let added = match kind {
                 SearchFilter::Songs => merge(
@@ -1286,6 +1298,13 @@ impl App {
         }
     }
     pub(crate) fn apple_response(&mut self, value: &Value) {
+        if let Some(confirmed) = self.apple.as_mut().unwrap().complete_favorites(value) {
+            self.sync_apple_library();
+            if !confirmed {
+                self.toast_error("Apple Music has not confirmed every favorite. Refresh your library before retrying.");
+            }
+            return;
+        }
         if let Some((id, before)) = value["id"]
             .as_u64()
             .and_then(|id| self.apple.as_mut()?.playlist_appends.remove(&id))
@@ -1326,7 +1345,7 @@ impl App {
                     self.toast_error("Cannot load this Apple Music song. Check your connection and try its link again.");
                 }
             } else {
-                self.apple_tracks(data);
+                self.apple_tracks(data, value["id"].as_u64().unwrap_or(0));
                 self.open_pending_link();
             }
             return;
@@ -1383,7 +1402,10 @@ impl App {
             } else {
                 raw.clone()
             };
-            self.apple_tracks(&serde_json::json!({"data":rows}));
+            self.apple_tracks(
+                &serde_json::json!({"data":rows}),
+                value["id"].as_u64().unwrap_or(0),
+            );
             let cards = rows
                 .iter()
                 .filter_map(models::home_card)
@@ -1648,7 +1670,7 @@ impl App {
                         .remove(&Read::AlbumTracks(id));
                     return;
                 }
-                let tracks = self.apple_tracks(data);
+                let tracks = self.apple_tracks(data, value["id"].as_u64().unwrap_or(0));
                 self.album_pages
                     .entry(id)
                     .or_default()
@@ -1696,7 +1718,7 @@ impl App {
                         return;
                     }
                 }
-                let tracks = self.apple_tracks(data);
+                let tracks = self.apple_tracks(data, value["id"].as_u64().unwrap_or(0));
                 if let Some(held) = self.apple.as_mut().unwrap().playlist_confirms.get_mut(&id) {
                     held.absorb(
                         offset,
@@ -1755,17 +1777,21 @@ impl App {
                 self.apple_artist_filters(&id);
             }
             Read::ArtistSongs(id) => {
-                let tracks = self.apple_tracks(data);
+                let tracks = self.apple_tracks(data, value["id"].as_u64().unwrap_or(0));
                 self.artist_pages.entry(id).or_default().top_tracks = Loadable::Loaded(tracks);
             }
             Read::Search { .. } | Read::SearchPage { .. } => {}
         }
     }
-    fn apple_tracks(&mut self, data: &Value) -> Vec<Track> {
+    fn apple_tracks(&mut self, data: &Value, read_id: u64) -> Vec<Track> {
         resources(data)
             .iter()
             .filter_map(models::song)
-            .map(|song| {
+            .map(|mut song| {
+                self.apple
+                    .as_mut()
+                    .unwrap()
+                    .observe_favorites(read_id, std::slice::from_mut(&mut song));
                 let track = song.track();
                 if let Some(id) = &track.id {
                     self.track_cache.insert(id.clone(), track.clone());
@@ -1821,6 +1847,67 @@ fn merge<T: Default>(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn desktop_favorites_apply_immediately_and_reject_old_sessions_without_touching_queue() {
+        let mut app = super::super::tests::test_app("apple-favorite-controls");
+        app.backend.set_offline(true);
+        let song = models::song(
+            &json!({"id":"i.upload","type":"library-songs","attributes":{
+            "name":"Upload", "inFavorites":false,
+            "playParams":{"id":"i.upload","kind":"song","isLibrary":true,"catalogId":"123"}}}),
+        )
+        .unwrap();
+        let uri = song.uri();
+        let mut apple = crate::apple::State::default();
+        apple.ready = true;
+        apple.authorized = true;
+        app.apple = Some(apple);
+        app.apple.as_mut().unwrap().songs.push(song);
+        app.sync_apple_library();
+        let ctx = egui::Context::default();
+        app.apply(
+            Action::SetSavedMany {
+                uris: vec![uri.clone(), uri.clone()],
+                saved: true,
+            },
+            &ctx,
+        );
+        assert_eq!(app.is_saved(&uri), Some(true));
+        assert_eq!(app.is_saved("apple:track:catalog.123"), None);
+        assert_eq!(
+            app.apple_context_uris("apple:collection:favorites"),
+            vec![uri.clone()]
+        );
+        assert!(app.apple.as_ref().unwrap().queue.is_empty());
+        app.handle_backend_events(vec![Event::Apple {
+            generation: 1,
+            value: json!({
+            "type":"response","session":2,"id":1,"error":"late failure"}),
+        }]);
+        assert_eq!(app.is_saved(&uri), Some(true));
+        app.handle_backend_events(vec![Event::Apple {
+            generation: 1,
+            value: json!({
+            "type":"response","session":1,"id":1,"error":"unconfirmed"}),
+        }]);
+        assert_eq!(app.is_saved(&uri), Some(false));
+        assert!(
+            app.apple_context_uris("apple:collection:favorites")
+                .is_empty()
+        );
+        assert!(app.toasts.last().unwrap().message.contains("Refresh"));
+        app.apply(
+            Action::SetSavedMany {
+                uris: vec![uri.clone()],
+                saved: false,
+            },
+            &ctx,
+        );
+        assert_eq!(app.is_saved(&uri), Some(false));
+        assert!(app.toasts.last().unwrap().message.contains("remove"));
+        app.backend.shutdown();
+    }
 
     fn linked_song(id: &str, library: bool) -> Value {
         json!({"id":id,"type":if library {"library-songs"} else {"songs"},

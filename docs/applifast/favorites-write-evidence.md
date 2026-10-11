@@ -3,6 +3,11 @@
 Baseline: `0cdfe6b235159796d4ec2cb16c70d36380356e5a` (PR #37).
 Windows investigation: October 11, 2026. This is unfinished feature work.
 
+The host-boundary history below predates the draft
+[desktop add-only integration](favorite-controls.md). Its original read-only
+statements describe those baselines; current desktop controls and their remaining
+acceptance gates are documented separately.
+
 ## Boundary
 
 The host now accepts a typed `favoriteSongs` command with a JavaScript-safe

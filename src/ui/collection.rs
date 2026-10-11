@@ -1883,7 +1883,11 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
                 .as_ref()
                 .into_iter()
                 .flat_map(|apple| &apple.songs)
-                .filter(|song| song.in_favorites == Some(true))
+                .filter(|song| {
+                    app.apple
+                        .as_ref()
+                        .is_some_and(|apple| apple.song_favorite(song) == Some(true))
+                })
                 .map(|song| (PlayableItem::Track(song.track()), None, None))
                 .collect()
         } else {

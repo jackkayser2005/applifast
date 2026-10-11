@@ -92,10 +92,15 @@ app before uninstalling if you want its account authorization and snapshot clear
 Portable ZIPs keep their existing manual folder setup.
 
 Song and collection menus show supported Apple actions. Known favorites show
-filled hearts in song rows and the player bar. These are read-only indicators;
-playlist, album and search reads also request Apple's explicit song favorite
-flags. Unknown songs stay unmarked. Favorites are readable,
-but changing favorites, artist follow, radio, playlist removal/reordering and
+filled hearts in song rows and the player bar. Hollow hearts and song/selection
+menus offer Add to Favorites (up to 100 distinct non-favorite songs per action).
+Hearts fill immediately. Exact confirmation keeps successful members and restores
+unconfirmed members to their previous state with a refresh-before-retry message.
+Refresh before retrying: an interrupted write may have reached Apple. Pending
+hearts are not saved as confirmed favorites on restart. Live-account additions
+still need testing; removing a favorite requires Apple Music and Refresh here.
+Playlist, album and search reads also request Apple's explicit song favorite
+flags. Unknown songs show a hollow add button. Artist follow, radio, playlist removal/reordering and
 editing playlist details remain unavailable in this preview. Use Apple Music
 for those changes, then refresh here. Playlist creation and adding songs remain
 available. Cut, Paste and Delete do not edit Apple playlists; Copy still works.

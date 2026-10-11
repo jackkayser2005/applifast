@@ -137,24 +137,28 @@ other-platform compilation remain unverified in this slice.
 
 ## Supported Apple controls
 
-Favorites-write integration is in progress behind the diagnostic host boundary.
+Favorites-write integration now has draft desktop add-only controls.
 The typed command preserves resource identities, validates a bounded batch and
 keeps mutations independent of playback controls. An accepted favorites POST now
 reads back the exact requested typed song IDs in at most two parallel batches.
 Only explicit boolean flags confirm each member; partial or unknown results keep
 their per-song data and produce a fixed refresh-before-retry error. Confirmation
 reads use the existing deadline and sign-out cancellation, without retrying the
-mutation. The native account gate has
-not passed, and desktop favorite writes, optimistic confirmation and rollback
-are not exposed yet. The existing read-only hearts are unchanged. See the
+mutation. The player, song rows and song/selection menus offer Add to Favorites.
+The shared state applies hearts immediately, retains partial confirmations and
+rolls unconfirmed members back. Request ordering protects against older metadata;
+newer reads can reflect external changes. Pending hearts do not become confirmed
+disk state, and sign-out clears pending work. The native account write gate has
+not passed; removal, a dedicated mini-player favorite button and live-account
+acceptance remain pending. See the
 [favorites integration evidence](favorites-write-evidence.md).
 
-Apple song, selection, album, artist and playlist menus now hide unavailable
-favorite/save/follow writes, Spotify radio and advanced playlist edits. Header
+Apple album, artist and playlist menus hide unavailable save/follow writes,
+Spotify radio and advanced playlist edits. Header
 save/follow buttons remain hidden until Apple writes are implemented. Known
 Apple favorites display filled, read-only hearts in song rows and the player
 bar, using the exact library/catalog identity and Apple's `inFavorites` flag.
-Unknown and explicitly non-favorite songs stay unmarked. The current library
+Unknown and explicitly non-favorite songs offer hollow add buttons. The current library
 snapshot takes precedence over older cached queue/search metadata. Favorites
 also remain readable through the existing page and sidebar shelf. See the
 [heart comparison](review-favorite-hearts/index.html). Playlist creation and
