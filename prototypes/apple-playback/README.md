@@ -186,6 +186,11 @@ Repeat modes are 0=off, 1=current occurrence, 2=queue. Sign-out invalidates old
 responses, deletes the protected user grant, closes popups and clears the
 dedicated browser profile. Check the `profileCleared` result. A durable
 sign-out marker prevents interrupted cleanup from restoring an old grant.
+Sign-out cancels a pending authorization without waiting for its old SDK promise.
+Closing the native popup uses that cancellation path too. Cancelled completions
+restore the accepted in-memory grant and cannot publish a stale authorization.
+The [regressions and runtime limits](../../docs/applifast/authorization-cancellation.md)
+keep actual popup cancellation and native profile-clearing acceptance open.
 The profile lives in `%LOCALAPPDATA%/Applifast/playback-probe`. The Evergreen
 runtime manages its own browser storage and updates. This probe creates no
 decrypted-media files or hosted backend and adds no application telemetry.

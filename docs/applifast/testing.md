@@ -56,6 +56,11 @@ default URL handler are not supported yet.
    from an existing browser session. MusicKit supplies the user authorization
    token; never copy browser cookies or user tokens. See [Apple's authentication
    documentation](https://developer.apple.com/documentation/applemusicapi/user-authentication-for-musickit).
+   Use **Cancel** on the sign-in card if you change your mind. Cancellation now
+   releases a pending authorization even if its old SDK promise never settles.
+   Closing the native popup cancels that attempt too, allowing another sign-in.
+   Include close, Cancel and retry in the fresh-PC checklist; deterministic
+   cancellation tests do not replace checking Apple's real popup.
 5. Open Songs, choose a track and check your audio output. Loaded library
    metadata and the local queue survive restart; restored playback starts
    paused. These caches contain no downloaded audio and do not provide offline

@@ -57,6 +57,17 @@ Reports are `.cache/paused-restore-ref-snapshot.json` and
 default-feature CLI checks pass. Dummy-token package and isolated QA-identity
 install/upgrade/uninstall fixtures also pass against this optimized build.
 
+The `a15ba42` authorization-cancellation preview was audited on October 12.
+All 55 published branch tips matched fetched refs. The same scan covered
+10,694 objects, 5,932 blobs and 597,256,272 raw bytes, with no historical secret
+paths or pattern hits. The six-file ZIP contains only its declared companion
+app JWT. Integration ignore patterns and the original checkout's actual
+key/token paths remain ignored and untracked. Reports are
+`.cache/auth-cancel-ref-snapshot.json` and `.cache/auth-cancel-secret-audit.json`.
+Clean source, payload, executable architecture, hashes and default-feature CLI
+checks pass. Dummy-token packaging and isolated install/upgrade/shortcuts/uninstall
+fixtures pass against the optimized build without launching the app.
+
 This pattern check cannot prove the absence of opaque listener grants, encoded
 or encrypted payloads, credentials visible only in images, or remote history
 that is no longer reachable. It does not verify Apple's signature acceptance,

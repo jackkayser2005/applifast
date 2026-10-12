@@ -98,8 +98,90 @@ async function checkSdkStartup() {
   }
 }
 
+async function checkAuthorizationCancellation() {
+  const events = [], attempts = [];
+  const localMusic = { ...music, addEventListener: () => {}, musicUserToken: '',
+    authorize: () => new Promise(resolve => attempts.push(token => {
+      localMusic.musicUserToken = token;
+      resolve(token);
+    })),
+    unauthorize: async () => { localMusic.musicUserToken = ''; }
+  };
+  const context = { ...sandbox, window: { ...sandbox.window,
+    MusicKit: { ...sandbox.window.MusicKit, configure: async () => localMusic },
+    chrome: { webview: { postMessage: event => events.push(event) } }
+  } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), context);
+  const localApp = context.window.applifast;
+  await localApp.bootstrap({ developerToken: 'mock-only', session: 7 });
+  const pending = localApp.dispatch({ type: 'authorize' });
+  while (attempts.length < 1) await new Promise(resolve => setImmediate(resolve));
+  await Promise.race([localApp.dispatch({ type: 'signOut' }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Unresolved authorization blocked sign-out')), 250))]);
+  await pending;
+  assert.equal(events.at(-1).type, 'signedOut');
+  assert.equal(events.at(-1).session, 8);
+  const retry = localApp.dispatch({ type: 'authorize' });
+  while (attempts.length < 2) await new Promise(resolve => setImmediate(resolve));
+  attempts[0]('dummy-stale-user-token');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(localMusic.musicUserToken, '', 'A canceled SDK completion must restore the current grant');
+  assert.equal(attempts.length, 2, 'A stale completion must not clear the newer attempt guard');
+  attempts[1]('dummy-current-user-token');
+  await retry;
+  assert.equal(localMusic.musicUserToken, 'dummy-current-user-token');
+  assert.equal(events.filter(event => event.type === 'authorized').length, 1);
+
+  const closing = localApp.dispatch({ type: 'authorize' });
+  while (attempts.length < 3) await new Promise(resolve => setImmediate(resolve));
+  localApp.cancelAuthorization();
+  await Promise.race([closing,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Popup close left authorization pending')), 250))]);
+  const reopened = localApp.dispatch({ type: 'authorize' });
+  while (attempts.length < 4) await new Promise(resolve => setImmediate(resolve));
+  attempts[3]('dummy-newer-user-token');
+  await reopened;
+  attempts[2]('dummy-late-popup-token');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(localMusic.musicUserToken, 'dummy-newer-user-token');
+  const authorized = events.filter(event => event.type === 'authorized');
+  assert.equal(authorized.length, 2);
+  assert(authorized.every(event => event.session === 8));
+  assert(!JSON.stringify(events).includes('dummy-stale-user-token'));
+  assert(!JSON.stringify(events).includes('dummy-late-popup-token'));
+  const racing = localApp.dispatch({ type: 'authorize' });
+  while (attempts.length < 5) await new Promise(resolve => setImmediate(resolve));
+  attempts[4]('dummy-racing-user-token');
+  await Promise.resolve();
+  localApp.cancelAuthorization();
+  await racing;
+  assert.equal(localMusic.musicUserToken, 'dummy-newer-user-token');
+  assert.equal(events.filter(event => event.type === 'authorized').length, 2,
+    'Cancellation between SDK resolution and token publication must win');
+  assert(!JSON.stringify(events).includes('dummy-racing-user-token'));
+  let configure;
+  context.window.MusicKit.configure = () => new Promise(resolve => { configure = resolve; });
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), context);
+  const startingApp = context.window.applifast;
+  const starting = startingApp.bootstrap({ developerToken: 'mock-only',
+    userToken: 'dummy-restored-user-token', session: 20 });
+  const earlySignOut = startingApp.dispatch({ type: 'signOut' });
+  while (!configure) await new Promise(resolve => setImmediate(resolve));
+  configure(localMusic);
+  await starting;
+  await earlySignOut;
+  const canceled = startingApp.dispatch({ type: 'authorize' });
+  while (attempts.length < 6) await new Promise(resolve => setImmediate(resolve));
+  startingApp.cancelAuthorization();
+  await canceled;
+  attempts[5]('dummy-late-startup-token');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(localMusic.musicUserToken, '', 'Sign-out during startup must clear the accepted grant too');
+}
+
 (async () => {
   await checkSdkStartup();
+  await checkAuthorizationCancellation();
   await app.bootstrap({ developerToken: 'mock-only', session: 1 });
   assert.equal(music.playbackMode, 2);
   const uploaded = { kind: 'library', id: 'i.upload', playParams: { id: 'i.upload', kind: 'song', isLibrary: true } };
@@ -550,5 +632,5 @@ async function checkSdkStartup() {
   await activeFavorite;
   assert(!messages.some(event => event.id === 2113), 'A late confirmation cannot reach a new account');
   assert.equal(readTimers.size, 0);
-  console.log('Bridge self-check passed: SDK startup deadline, uploaded IDs, occurrences, pagination, read deadlines, responsive transport, playlist/favorites writes, failures, stale authorization.');
+  console.log('Bridge self-check passed: SDK startup deadline, uploaded IDs, occurrences, pagination, read deadlines, responsive transport, playlist/favorites writes, failures, cancellable and stale authorization.');
 })().catch(failure => { console.error(failure); process.exitCode = 1; });

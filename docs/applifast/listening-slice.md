@@ -66,6 +66,12 @@ Retry waits while another startup or token import is pending, and a new host
 generation rejects late events from the old attempt. Missing or expired tokens
 still require a valid replacement; retry cannot renew them.
 
+Cancel sign-in no longer waits for an unresolved Apple authorization promise.
+Closing the native popup cancels the same bridge attempt so it can be retried.
+Late cancelled results cannot replace a newer accepted grant. The
+[cancellation regression and remaining runtime gates](authorization-cancellation.md)
+distinguish deterministic checks from actual Apple popup acceptance.
+
 WebView2 `0x8007139F` now retains a fixed profile-related diagnosis that asks the
 listener to quit other Applifast builds through their tray menus before retrying.
 Other host failures retain the Evergreen runtime guidance. The embedded host's

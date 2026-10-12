@@ -1,8 +1,9 @@
 # Applifast Windows beta readiness
 
 Snapshot: October 12, 2026. This is the release checklist, not a release claim.
-The candidate code is `292ab76` (PR #51), fixing paused restoration and MusicKit
-state conversion on top of the SDK startup deadline and Favorites shortcut.
+The candidate code is `a15ba42` (PR #53), fixing pending-authorization cancellation
+on top of paused restoration, full-track regressions, the SDK startup deadline
+and Favorites shortcut.
 `main` remains at
 `995c768`; these preview changes have not
 been merged into a public release.
@@ -15,7 +16,7 @@ the app developer token; the tester authorizes their own Apple account. They
 do not need Developer Program membership, a signing key, Rust, Node, or commands.
 Use the [Windows tester guide](testing.md).
 
-- [x] Build and verify the optimized `292ab76` installer/ZIP, checksums,
+- [x] Build and verify the optimized `a15ba42` installer/ZIP, checksums,
   six-file payload, source manifest and default-feature CLI help. Isolated
   dummy-token packaging and install/upgrade/uninstall fixtures pass.
 - [x] Complete the October 12 candidate [credential/package audit](private-preview-audit.md):
@@ -35,6 +36,10 @@ Use the [Windows tester guide](testing.md).
   complete catalog-linked library track, then the separate context duplicate
   starts and pauses. Both 90.013-second tracks finished naturally without seeks;
   the native coordinator preserved manual-before-context order.
+- [x] Reproduce and fix cancellation blocked by an unresolved authorization
+  promise. Deterministic close/cancel/retry and late-result regressions pass.
+  The updated native host passes restored-account playback/seek/resume in
+  43.80 seconds; actual Apple popup cancellation remains in the fresh-PC check.
 - [ ] Verify every required hosted CI job on the candidate commit.
 - [ ] On Dad's PC, install through the wizard, open from Start, authorize in
   Apple's popup and load his library without copying another user's profile,
@@ -76,13 +81,13 @@ evidence comes from a different PC and account.
 | Area | Evidence and limit |
 | --- | --- |
 | Ordinary desktop listening | The user confirmed library loading and audible catalog playback on optimized `9cb3a36`. This does not verify the later Favorites changes or full-track/gaming acceptance. |
-| Latest local checks | `292ab76`: Windows formatting, strict default/demo all-target Clippy, 1,017 default and 1,055 demo library tests, remaining binary/integration tests, doctests, strict Rustdoc, demo build, gettext and bridge/signer tests pass. Five opt-in tests were ignored per ordinary library suite; the complete muted account check passes separately. The earlier native credential-store check passes using dummy grants; this change does not alter credential code. |
-| Hosted checks | PR #46's seven CI jobs and applicable Packaging jobs pass; PR #48 at `1410e27` also passes all seven CI jobs. PR #51's [latest CI](https://github.com/jackkayser2005/applifast/actions/runs/38285671862) at docs-only follow-up `9f4cd2a` has successful quality/docs jobs; Nix and the four platform test jobs remain in progress at this snapshot. |
-| Private installer | `292ab76` installer/ZIP: clean source manifest, six entries, payload/checksum/PE/default-feature-help checks pass. Dummy-token packaging and isolated install, upgrade, shortcuts and uninstall fixtures pass against the optimized build. Those fixtures never authorize or launch the app. This is a local private download, not a published GitHub release. |
-| Credential/package audit | At `292ab76`, all 53 published origin branch tips matched fetched refs. All local refs/reflogs and historical paths were inspected: 5,918 blobs, with no complete private-key blocks or MusicKit developer-JWT candidates. Integration secret patterns and original-checkout actual secret paths remain ignored/untracked. The private ZIP contains only the intended app JWT in its declared companion file. [Scope and limits](private-preview-audit.md) remain explicit; this does not prove absence of every possible secret or replace the final release audit. |
+| Latest local checks | `a15ba42`: Windows formatting, strict default/demo all-target Clippy, 1,017 default and 1,055 demo library tests, remaining binary/integration tests, doctests, strict Rustdoc, demo build, gettext and bridge/signer tests pass. Six opt-in tests were ignored per ordinary library suite; the muted account check passes separately. Standalone host formatting, strict Clippy, tests/build and the native credential-store round trip with dummy grants pass. |
+| Hosted checks | PR #46's CI/Packaging and PR #48's seven CI jobs pass. PR #51 at `9f4cd2a` and PR #52 at `84eeeaf` now pass all seven jobs, including quality/docs, four platform test jobs and Nix. PR #53's [code-candidate CI](https://github.com/jackkayser2005/applifast/actions/runs/38316975913) at `a15ba42` has successful quality/docs; the remaining jobs are in progress at this snapshot. Its evidence-only follow-up still needs hosted checks. |
+| Private installer | `a15ba42` installer/ZIP: clean source manifest, six entries, payload/checksum/PE/default-feature-help checks pass. Dummy-token packaging and isolated install, upgrade, shortcuts and uninstall fixtures pass against the optimized build. Those fixtures never authorize or launch the app. This is a local private download, not a published GitHub release. |
+| Credential/package audit | At `a15ba42`, all 55 published origin branch tips matched fetched refs. All local refs/reflogs and historical paths were inspected: 5,932 blobs, with no complete private-key blocks or MusicKit developer-JWT candidates. Integration secret patterns and original-checkout actual secret paths remain ignored/untracked. The private ZIP contains only the intended app JWT in its declared companion file. [Scope and limits](private-preview-audit.md) remain explicit; this does not prove absence of every possible secret or replace the final release audit. |
 | Native host and account automation | The isolated SDK startup checks and 6.51-second idempotent Favorites check pass. The [state-conversion fix](paused-restoration.md) corrects SDK stopped/ended/stalled handling; the complete muted test now passes in 44.86 seconds, including actual saved-position resume and both retained queue occurrences. The initial failed album-detail read remains recorded. Existing-profile asset-location failure, real app restart, new-favorite writes and fresh-PC authorization remain distinct unresolved gates. |
-| Full-track and mixed occurrence check | The separate Windows ignored test passed in 190.40 seconds. A catalog song and its catalog-linked library entry each played to completion with declared duration 90.013 seconds, maximum actual SDK position 90.00 seconds and elapsed playing time 90.15 seconds. Volume remained zero and no seek was issued. The production `State` coordinator selected occurrence 2 (manual), then occurrence 1 (context duplicate), which started and paused; all three occurrences remained distinct. The owned workspace profile restored the protected grant, with no account writes. This does not establish audible desktop listening, genuine cloud-only uploads, matched-file provenance, shuffle/repeat, fresh sign-in, application restart or gaming performance. |
-| Full-track regression checks | The tests/docs-only branch passes Windows formatting, strict default/demo all-target Clippy, 1,017 default and 1,055 demo library tests, remaining targets, doctests, strict Rustdoc, demo build, gettext and Node bridge/signer checks. Six opt-in tests are ignored per ordinary library run; the full-track native result is separate. The disposable browser profile was removed after shutdown, retaining the protected grant. No production behavior or package changed; the verified private download remains `292ab76`. Hosted all-feature and other-platform checks for this test change remain pending. |
+| Full-track and mixed occurrence check | At `84eeeaf`, the separate Windows ignored test passed in 190.40 seconds. A catalog song and its catalog-linked library entry each played to completion with declared duration 90.013 seconds, maximum actual SDK position 90.00 seconds and elapsed playing time 90.15 seconds. Volume remained zero and no seek was issued. The production `State` coordinator selected occurrence 2 (manual), then occurrence 1 (context duplicate), which started and paused; all three occurrences remained distinct. The owned workspace profile restored the protected grant, with no account writes. This does not establish audible desktop listening, genuine cloud-only uploads, matched-file provenance, shuffle/repeat, fresh sign-in, application restart or gaming performance. |
+| Authorization cancellation | The [new regression](authorization-cancellation.md) reproduced sign-out blocked by an unresolved SDK authorization promise. It now covers cancellation, retry, late completions, publication races and sign-out during configuration. The updated native host passes restored-account reads/search/playback/seek/pause/resume in 43.80 seconds using an owned workspace profile, subsequently removed. It sent no popup, Sign out or account-write command. Actual Apple popup behavior, expiry/revocation and profile-clearing acceptance remain open. |
 | Resource budget | The standalone probe exceeded the original 250 MiB private-memory limit: 285.406 MiB playing and 278.297 MiB paused. Initial integration was approved with that footprint. Integrated five-minute samples and the one-hour gaming session remain unverified. Roughly 300 MB reported by the user is not a measurement against the original gate. |
 | Visual evidence | Motion/Now Playing, main controls and mini-player have native comparison artifacts. The [Favorites shortcut](favorite-shortcut.md) has eight inspected matching captures. HTML browser rendering and real motion/runtime acceptance remain distinct from still-image and selector checks. |
 

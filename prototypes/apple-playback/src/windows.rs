@@ -1117,6 +1117,10 @@ fn host_loop(
                     let _ = DestroyWindow(window);
                     authorized_popup.set(false);
                     if message.message == AUTH_CLOSED {
+                        webview.ExecuteScript(
+                            w!("window.applifast.cancelAuthorization()"),
+                            &ExecuteScriptCompletedHandler::create(Box::new(|result, _| result)),
+                        )?;
                         let _ = output.send(Output::Bridge(
                             json!({"type":"error","session":generation.get(),"code":"AUTH_CLOSED"}),
                         ));
