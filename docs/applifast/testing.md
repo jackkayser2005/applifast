@@ -82,6 +82,8 @@ not prove that a developer key is unrevoked or that Apple will accept it.
 Open **Settings > Keyboard shortcuts** or press **Ctrl+/**. **Alt+1** through
 **Alt+5** open Home, Songs, Favorites, Albums and Artists. **Ctrl+M** opens the
 mini player, **Ctrl+Shift+Q** opens the queue, and **F5** refreshes music pages.
+**B** adds the playing song to Favorites in either window. It does nothing for
+an existing or pending favorite, while typing, or while a dialog is open.
 The [current capabilities and pending checks](listening-slice.md) distinguish
 implemented controls from verified real-account behavior.
 

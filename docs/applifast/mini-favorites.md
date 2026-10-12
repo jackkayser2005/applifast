@@ -31,3 +31,6 @@ supplies its own colors, independent of the app's light/dark theme.
 Real-account favorite additions and propagation, restart acceptance, custom-skin
 visual acceptance and gaming measurements remain pending. Removal still requires
 Apple Music. This is not a public release or complete favorites parity.
+
+The [Favorites keyboard shortcut](favorite-shortcut.md) adds the same playing
+song from either window with B.
