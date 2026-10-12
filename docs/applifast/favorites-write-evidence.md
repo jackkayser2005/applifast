@@ -8,6 +8,65 @@ The host-boundary history below predates the draft
 statements describe those baselines; current desktop controls and their remaining
 acceptance gates are documented separately.
 
+## Current native check, October 12
+
+The opt-in no-audio account check now passes with an isolated workspace browser
+profile and the existing authorization restored from Windows Credential Manager.
+The unchanged host loaded its local page with HTTP 200, reported authorized
+MusicKit readiness and read Apple's library/catalog metadata. It selected an
+already-confirmed library favorite and an independently confirmed catalog
+favorite, sent each idempotent request and verified exact resource types, IDs
+and `inFavorites=true` in the uncached confirmation and subsequent reads.
+The complete native check passed in 6.51 seconds after compilation.
+
+The first attempt exposed an invalid fixture assumption: one library song was
+already a favorite while its catalog counterpart reported false. The test now
+searches the first library page's linked catalog candidates independently,
+using existing validated individual-song routes. It requires both fixtures to
+report true before either write. The passing run considered a set of 30
+candidates and found a confirmed catalog favorite. The protocol boundary was
+not broadened for the test. No song was newly favorited and no audio, removal,
+authorization-popup or Sign out command was sent.
+
+The existing-profile failure was narrowed separately. Temporary diagnostics
+showed that the failed completion belonged to the expected local-page navigation
+and was not cancelled. Both on-disk asset hashes matched the source. Serving
+identical assets from the workspace with that same browser profile reached
+MusicKit readiness. The temporary hardcoded path and navigation diagnostics
+were discarded; production profile/asset paths remain unchanged. The execution
+environment's asset-location failure is not fully explained.
+
+Before testing, process checks found no running app or browser-profile owner.
+For the passing account check, only the child test process's `LOCALAPPDATA`
+selected the disposable profile. It did not copy another account's browser
+profile or export a listener token. The profile was removed after the result
+was recorded, without clearing the protected grant. The standalone diagnostic
+binary was rebuilt after discarding temporary source changes.
+
+This verifies native authorization restoration, reads and idempotent Favorites
+request/confirmation behavior. It does not verify adding a previously unfavorited
+song, desktop optimistic interaction, fresh-PC sign-in, full-track playback or
+gaming performance. The [release checklist](release-readiness.md) retains those
+gates. The earlier failed attempts and historical implementation stages below
+remain useful context, not the current account-test result.
+
+## Muted playback gate, October 12
+
+The existing opt-in playback test also ran with a disposable workspace profile,
+protected authorization restoration and no other app/profile owner. Library,
+playlist, album and artist reads, detail routes and library/catalog search
+completed. Muted playback advanced beyond one second, seeking reached at least
+29 seconds and pause was confirmed. No playlist or Favorites write was sent.
+
+The complete test still failed. Its final paused-restoration assertion timed out
+after a total 59.70 seconds. Safe numeric diagnostics reported generation 4,
+SDK status 4 (loading), requested position 30, actual position 0, duration 0 and
+two queue entries. Earlier playback/seek/pause assertions had already passed.
+The test now retains those numeric fields on timeout without logging account
+identifiers, song metadata or authorization responses. Restoration needs further
+investigation; this result does not establish restart recovery or full-track
+listening. The disposable profiles were removed after shutdown.
+
 ## Boundary
 
 The host now accepts a typed `favoriteSongs` command with a JavaScript-safe

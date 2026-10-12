@@ -139,18 +139,35 @@ confirmations. These reads use the existing deadline and sign-out cancellation.
 
 The draft desktop integration uses this command for add-only hearts and song
 menus, with optimistic state, partial rollback and stale-read protection. Pending
-hearts are excluded from confirmed disk state. Live-account write acceptance is
-still unverified; removal is unavailable. See the
+hearts are excluded from confirmed disk state. Adding a previously unfavorited
+song is still unverified; removal is unavailable. See the
 [evidence and pending checks](../../docs/applifast/favorites-write-evidence.md).
 
-The opt-in account check re-adds only a library favorite and a catalog counterpart
-that both already report `inFavorites=true`, then reads their exact IDs again.
+The opt-in account check re-adds only an independently confirmed library favorite
+and catalog favorite that already report `inFavorites=true`, then reads their
+exact IDs again. A library flag does not establish its catalog counterpart's
+flag. The check considers catalog IDs linked to favorites in the first library
+page and stops before any write if it cannot find both confirmed fixtures.
 It starts no audio and does not establish adding a previously unfavorited song.
 Quit every running Applifast build through its tray menu before running it:
 
 ```powershell
 cargo test --locked --lib apple::tests::native_host_readds_confirmed_catalog_and_library_favorites -- --ignored --exact --nocapture
 ```
+
+For the October 12 automated Windows run, the original profile's local page
+failed in the execution environment. The unchanged host passed using a fresh
+workspace-local profile selected through the test process's `LOCALAPPDATA`,
+restoring the existing protected authorization. Both idempotent requests and
+exact confirmations passed without audio. The disposable profile was removed
+afterward without sending Sign out or deleting the saved grant. This is not
+fresh-account onboarding or a new-favorite write. See the
+[native account evidence](../../docs/applifast/favorites-write-evidence.md).
+
+The separate muted playback test passed real reads/search, playback, seek and
+pause in this isolated setup, but timed out restoring the paused queue at the
+saved position. Its timeout reports numeric playback state only. The complete
+native playback gate remains failed until restoration and resume are verified.
 
 Repeat modes are 0=off, 1=current occurrence, 2=queue. Sign-out invalidates old
 responses, deletes the protected user grant, closes popups and clears the
