@@ -1661,6 +1661,170 @@ mod tests {
             std::panic::resume_unwind(failure);
         }
     }
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "Plays two complete muted tracks with local authorization; allow ten minutes"]
+    fn native_full_tracks_advance_manual_then_duplicate_context_occurrences() {
+        let (sender, events) = std::sync::mpsc::channel();
+        let host = crate::player::AppleHost::start(None, move |event| {
+            let _ = sender.send(event);
+        });
+        let result = || {
+            let await_event = |kind: &str| -> Value {
+                let deadline = Instant::now() + std::time::Duration::from_secs(45);
+                loop {
+                    let event = events
+                        .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                        .expect("Native full-track setup timed out");
+                    assert_ne!(event["type"], "error", "{}", event["message"]);
+                    if event["type"] == kind {
+                        return event;
+                    }
+                }
+            };
+            let mut state = State::default();
+            let ready = await_event("ready");
+            assert_eq!(ready["authorized"], true, "Authorize the local probe first");
+            host.send(state.event(1, &ready).unwrap().to_string());
+            state.event(1, &await_event("library"));
+            assert!(state.error.is_none(), "Library setup failed");
+            let library = state
+                .songs
+                .iter()
+                .filter(|song| {
+                    song.available()
+                        && song.catalog_id.is_some()
+                        && (60_000..=240_000).contains(&song.duration_ms)
+                })
+                .min_by_key(|song| song.duration_ms)
+                .expect("No playable catalog-linked library song of one to four minutes")
+                .clone();
+            let path = format!(
+                "/v1/catalog/{}/songs/{}",
+                state.storefront,
+                library.catalog_id.as_ref().unwrap()
+            );
+            host.send(json!({"type":"request","id":10000,"path":path}).to_string());
+            let response = await_event("response");
+            assert_eq!(response["id"], 10000);
+            assert!(response["error"].is_null(), "Catalog setup failed");
+            let catalog = models::song(&response["data"]["data"][0])
+                .expect("Catalog counterpart was not a song");
+            assert!(catalog.available());
+            let durations = [
+                f64::from(catalog.duration_ms) / 1000.0,
+                f64::from(library.duration_ms) / 1000.0,
+            ];
+            assert!(
+                durations
+                    .iter()
+                    .all(|seconds| (60.0..=240.0).contains(seconds))
+            );
+            let catalog_uri = catalog.uri();
+            state.known_songs.insert(catalog_uri.clone(), catalog);
+            host.send(json!({"type":"volume","value":0}).to_string());
+            host.send(
+                state
+                    .play_uris(&[catalog_uri, library.uri()], 0)
+                    .unwrap()
+                    .to_string(),
+            );
+            assert_eq!(
+                state.add_uris(&[library.uri()], 0, std::time::Duration::ZERO, false),
+                Some(1)
+            );
+            host.send(state.queue_command().to_string());
+            assert_eq!(state.order.upcoming, [2, 1]);
+            let deadline = Instant::now()
+                + std::time::Duration::from_secs_f64(durations.iter().sum::<f64>() + 120.0);
+            let mut started = [None, None];
+            let mut furthest = [0.0_f64; 2];
+            let mut completed = 0;
+            eprintln!(
+                "Full-track check: catalog/library durations {durations:?} seconds; muted, no seeks"
+            );
+            loop {
+                let event = events
+                    .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                    .expect("Full-track playback or natural transition timed out");
+                assert_ne!(event["type"], "error", "{}", event["message"]);
+                if event["type"] != "state"
+                    || event["requestGeneration"].as_u64() != Some(state.request_generation)
+                {
+                    continue;
+                }
+                let index = event["index"].as_u64().expect("Missing occurrence index");
+                if let Some(at) = match index {
+                    0 => Some(0),
+                    2 => Some(1),
+                    _ => None,
+                } {
+                    let position = event["actualPosition"].as_f64().unwrap_or(0.0);
+                    furthest[at] = furthest[at].max(position);
+                    if event["status"] == 2 && started[at].is_none() {
+                        assert!(position <= 5.0, "Track did not start near its beginning");
+                        let duration = event["duration"].as_f64().unwrap_or(0.0);
+                        assert!(
+                            (duration - durations[at]).abs() <= 5.0,
+                            "Full duration mismatch"
+                        );
+                        started[at] = Some(Instant::now());
+                    }
+                }
+                if let Some(command) = state.event(1, &event) {
+                    assert_eq!(event["status"], 10, "Unexpected coordinator command");
+                    let at = completed;
+                    assert!(at < 2, "Extra natural advance");
+                    assert_eq!(index, [0, 2][at]);
+                    assert!(furthest[at] >= durations[at] - 3.0, "Track ended early");
+                    let elapsed = started[at]
+                        .expect("Track never played")
+                        .elapsed()
+                        .as_secs_f64();
+                    assert!(elapsed >= durations[at] - 5.0, "Track finished too quickly");
+                    assert_eq!(state.index, Some([2, 1][at]));
+                    assert_eq!(state.order.manual_count, 0);
+                    completed += 1;
+                    eprintln!(
+                        "Complete track {completed}: elapsed {elapsed:.2}s, actual position {:.2}s; next occurrence {:?}",
+                        furthest[at], state.index
+                    );
+                    host.send(command.to_string());
+                }
+                if index == 1
+                    && event["status"] == 2
+                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 1.0
+                {
+                    assert_eq!(completed, 2);
+                    assert_eq!(state.index, Some(1));
+                    assert!(state.order.upcoming.is_empty());
+                    assert_eq!(state.queue.len(), 3);
+                    assert_eq!(state.queue[1].uri(), state.queue[2].uri());
+                    host.send(state.intent(json!({"type":"pause"})).to_string());
+                    break;
+                }
+            }
+            let deadline = Instant::now() + std::time::Duration::from_secs(45);
+            loop {
+                let event = events
+                    .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                    .expect("Final pause timed out");
+                assert_ne!(event["type"], "error", "{}", event["message"]);
+                state.event(1, &event);
+                if state.local.playback == Playback::Paused {
+                    break;
+                }
+            }
+            eprintln!(
+                "Two full tracks passed; manual occurrence preceded its context duplicate; duplicate started and paused. No account writes."
+            );
+        };
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(result));
+        host.shutdown();
+        if let Err(failure) = outcome {
+            std::panic::resume_unwind(failure);
+        }
+    }
     #[test]
     fn duplicate_occurrences_and_new_play_intent_survive_stale_and_failed_events() {
         let row = json!({"kind":"library","id":"i.matched","playParams":{"id":"i.matched","kind":"song","isLibrary":true,"catalogId":"123"},"catalogId":"123","title":"Library copy","artist":"Example","album":"Example","durationMs":180000});

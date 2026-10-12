@@ -1170,6 +1170,17 @@ pauses and shuts down. It never logs tokens or library metadata:
 cargo test --locked --lib apple::tests::native_host_restores_library_plays_seeks_and_pauses -- --ignored --exact --nocapture
 ```
 
+The separate full-track check lets a catalog song and its catalog-linked library
+entry finish without seeking, with volume zero. The native coordinator advances
+the manual occurrence before a separate duplicate in the context, then confirms
+that duplicate starts and pauses. It checks actual SDK position, full duration
+and elapsed time. Catalog linkage alone does not prove an uploaded or matched
+file. Quit other Applifast instances first; allow up to ten minutes:
+
+```powershell
+cargo test --locked --lib apple::tests::native_full_tracks_advance_manual_then_duplicate_context_occurrences -- --ignored --exact --nocapture
+```
+
 Ordinary unit/demo tests use deterministic data and do not restore account
 credentials. Bridge regressions run with
 `node prototypes/apple-playback/web/test-bridge.cjs`. For matching UI captures,
