@@ -1411,22 +1411,50 @@ mod tests {
                 response["data"].clone()
             };
             let library = read(9000, "/v1/me/library/songs?limit=100".into());
-            let song = library["data"].as_array().unwrap().iter().find(|song| {
-                song["attributes"]["inFavorites"] == true
+            let songs = library["data"].as_array().unwrap();
+            let song = songs.iter().find(|song| {
+                song["type"] == "library-songs"
+                    && song["attributes"]["inFavorites"] == true
                     && song["attributes"]["playParams"]["catalogId"].is_string()
             }).expect("No confirmed matched library favorite found; this check never favorites a new song");
             let library_id = song["id"].as_str().unwrap();
-            let catalog_id = song["attributes"]["playParams"]["catalogId"]
-                .as_str()
-                .unwrap();
+            // Library favorite state does not establish the counterpart's catalog flag.
+            let candidates: std::collections::BTreeSet<_> = songs
+                .iter()
+                .filter(|song| song["attributes"]["inFavorites"] == true)
+                .filter_map(|song| song["attributes"]["playParams"]["catalogId"].as_str())
+                .collect();
+            eprintln!(
+                "Checking {} catalog favorite candidates from the first library page.",
+                candidates.len()
+            );
+            let mut catalog_song = None;
+            for (offset, candidate) in candidates.iter().enumerate() {
+                let catalog = read(
+                    9100 + u64::try_from(offset).unwrap(),
+                    format!(
+                        "/v1/catalog/{}/songs/{candidate}",
+                        ready["storefront"].as_str().unwrap(),
+                    ),
+                );
+                if let Some(song) = catalog["data"].as_array().unwrap().iter().find(|song| {
+                    song["type"] == "songs"
+                        && song["id"] == *candidate
+                        && song["attributes"]["inFavorites"] == true
+                }) {
+                    catalog_song = Some(song.clone());
+                    break;
+                }
+            }
+            let catalog_song = catalog_song.expect("No independently confirmed catalog favorite in this library page; no favorites will be added");
+            let catalog_id = catalog_song["id"].as_str().unwrap();
             let catalog_path = format!(
                 "/v1/catalog/{}/songs/{catalog_id}",
                 ready["storefront"].as_str().unwrap()
             );
-            let catalog = read(9001, catalog_path.clone());
             assert_eq!(
-                catalog["data"][0]["attributes"]["inFavorites"], true,
-                "Catalog counterpart must already be a confirmed favorite before this opt-in check"
+                catalog_song["attributes"]["inFavorites"], true,
+                "Catalog song must already be a confirmed favorite before this opt-in check"
             );
             let library_path = format!("/v1/me/library/songs/{library_id}");
             for (id, kind, resource_id, path) in [
@@ -1477,12 +1505,24 @@ mod tests {
         let result = || {
             let await_event = |kind: &str, matches: &dyn Fn(&Value) -> bool| -> Value {
                 let deadline = Instant::now() + std::time::Duration::from_secs(45);
+                let mut last_state = None;
                 loop {
                     let event = events
                         .recv_timeout(deadline.saturating_duration_since(Instant::now()))
-                        .unwrap_or_else(|_| panic!("Playback host timed out awaiting {kind}"));
+                        .unwrap_or_else(|_| {
+                            panic!("Playback host timed out awaiting {kind}; last state (generation, status, position, actual position, duration, queue length): {last_state:?}")
+                        });
                     if event["type"] != "state" {
                         eprintln!("Host event: {}", event["type"]);
+                    } else {
+                        last_state = Some((
+                            event["requestGeneration"].as_u64(),
+                            event["status"].as_u64(),
+                            event["position"].as_f64(),
+                            event["actualPosition"].as_f64(),
+                            event["duration"].as_f64(),
+                            event["queueLength"].as_u64(),
+                        ));
                     }
                     assert_ne!(event["type"], "error", "{}", event["message"]);
                     if event["type"] == kind && matches(&event) {
