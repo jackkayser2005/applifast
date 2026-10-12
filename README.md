@@ -64,6 +64,12 @@ Windows saves now preserve open readers while replacing library, queue and
 session files. Read-only files and locks that deny deletion still produce save
 errors. See the [save evidence](docs/applifast/windows-save-evidence.md).
 
+Right-click an upcoming Apple queue row to **Remove from queue**. In the
+mini-player playlist, select rows and use **REM > Remove selected**. This removes
+only those queued copies, leaves the playing song alone and survives restart.
+It never deletes library songs or edits an Apple playlist. **Remove all** still
+clears only manually queued songs. See the [queue evidence](docs/applifast/queue-removal.md).
+
 The Cargo package and build target retain the technical name `spotifast` and
 version `0.12.0` during this port. Command help and `--version` now identify
 `applifast`; older previews can still print `spotifast 0.12.0`. Use the source

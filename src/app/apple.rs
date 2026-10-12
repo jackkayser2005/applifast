@@ -824,7 +824,7 @@ impl App {
         let Some(apple) = &self.apple else {
             return;
         };
-        self.queue = Loadable::Loaded(Queue {
+        let queue = Queue {
             currently_playing: apple
                 .index
                 .and_then(|index| apple.queue.get(index))
@@ -836,7 +836,20 @@ impl App {
                 .filter_map(|index| apple.queue.get(*index))
                 .map(|song| PlayableItem::Track(song.track()))
                 .collect(),
-        });
+        };
+        // A row selection must not follow a different occurrence after the queue changes.
+        if self.queue.get().is_none_or(|previous| {
+            previous.currently_playing.as_ref().map(PlayableItem::uri)
+                != queue.currently_playing.as_ref().map(PlayableItem::uri)
+                || previous
+                    .queue
+                    .iter()
+                    .map(PlayableItem::uri)
+                    .ne(queue.queue.iter().map(PlayableItem::uri))
+        }) {
+            self.winamp.playlist_selection.clear();
+        }
+        self.queue = Loadable::Loaded(queue);
         self.manual_queue = apple.order.upcoming[..apple.order.manual_count]
             .iter()
             .filter_map(|index| apple.queue.get(*index))

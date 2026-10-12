@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast queue removal comparison</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}</style>
+<h1>Remove queued copies</h1>
+<p>Baseline production code <code>7d25258</code>, candidate <code>feat/apple-queue-removal</code>. Both builds use the same demo-only menu fixtures. The main queue adds Remove from queue; the mini-player enables Remove selected for upcoming rows and uses Apple Music wording in ADD. The playing row is excluded. No shell, layout, sizing or theme redesign.</p>
+<p>Matching native Windows captures use deterministic Apple data, the same artwork cache, pointer, zoom and window sizes. The mini-player REM fixture selects the playing row and two upcoming rows. The existing Remove all still clears only manual additions, so it is disabled in this context-only sample. The mini-player and its popups keep the classic skin colors in both application themes.</p>
+<label>View <select id="view"><option value="queue">Main queue menu</option><option value="mini-add">Mini-player ADD</option><option value="mini-rem">Mini-player REM</option></select></label>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Size <select id="size"><option value="normal">Normal</option><option value="narrow">Narrow</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Native Windows queue menu comparison">
+<p>Input-driven tests cover duplicate selections, stale actions and restart restoration separately. Fresh-PC sign-in, audible desktop listening and rendered HTML review remain separate checks. See <a href="../queue-removal.md">scope and verification</a>.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const view=byId('view').value;const normal=byId('size').value==='normal';const size=view==='queue'?(normal?'1100x760':'760x760'):(normal?'550x580':'275x290');const suffix=view+'-'+byId('theme').value+'-'+size;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['view','theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

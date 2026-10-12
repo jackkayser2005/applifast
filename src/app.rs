@@ -281,6 +281,8 @@ pub struct App {
     pub taskbar_hiding_supported: bool,
     #[cfg(any(test, feature = "demo"))]
     pub demo_windows_controls: bool,
+    #[cfg(feature = "demo")]
+    pub demo_queue_menu: bool,
     applied_dark: Option<bool>,
     /// Reveals new colours from the middle of the window outwards.
     theme_transition: fastframe_theme::Transition,
@@ -778,6 +780,8 @@ impl App {
             taskbar_hiding_supported: cfg!(windows),
             #[cfg(any(test, feature = "demo"))]
             demo_windows_controls: false,
+            #[cfg(feature = "demo")]
+            demo_queue_menu: false,
             applied_dark: None,
             theme_transition: fastframe_theme::Transition::default(),
             reveal_theme_changes: true,
@@ -4680,6 +4684,21 @@ impl App {
     /// Whether the active local queue has rows that can be cleared.
     pub fn can_clear_queue(&self) -> bool {
         self.queue_locally_reorderable() && self.queued_rows_len() > 0
+    }
+
+    pub fn queue_removal(&self, indices: Vec<usize>) -> Option<Action> {
+        let apple = self.apple.as_ref().filter(|apple| apple.authorized)?;
+        if indices.is_empty()
+            || indices
+                .iter()
+                .any(|index| *index >= apple.order.upcoming.len())
+        {
+            return None;
+        }
+        Some(Action::RemoveFromQueue {
+            indices,
+            generation: apple.queue_generation(),
+        })
     }
 
     /// Clears manually queued tracks while keeping the context's upcoming rows.
@@ -9083,6 +9102,19 @@ impl App {
                 apple.move_manual(*from, *to);
                 apple.queue_command()
             }
+            Action::RemoveFromQueue {
+                indices,
+                generation,
+            } => {
+                if !apple.authorized
+                    || *generation != apple.queue_generation()
+                    || !apple.remove_upcoming(indices)
+                {
+                    return true;
+                }
+                self.winamp.playlist_selection.clear();
+                apple.queue_command()
+            }
             Action::ToggleShuffle | Action::SetShuffle(_) => {
                 self.shuffle_wanted = if let Action::SetShuffle(value) = action {
                     *value
@@ -9119,6 +9151,7 @@ impl App {
                 | Action::ToggleShuffle
                 | Action::ClearQueue
                 | Action::MoveInQueue { .. }
+                | Action::RemoveFromQueue { .. }
         ) {
             apple.intent(request)
         } else {
@@ -9173,7 +9206,8 @@ impl App {
             | Action::AppleTokenReady { .. }
             | Action::AppleSend(_)
             | Action::ApplePlaySong(_)
-            | Action::AppleShowFavorites(_) => {}
+            | Action::AppleShowFavorites(_)
+            | Action::RemoveFromQueue { .. } => {}
             Action::Open(page) => self.open(page),
             Action::OpenSongRadio { uri, track } => self.open_song_radio(&uri, &track),
             Action::PrepareTint(url) => {

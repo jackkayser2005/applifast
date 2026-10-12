@@ -1012,6 +1012,11 @@ pub enum Action {
         from: usize,
         to: usize,
     },
+    /// Remove exact upcoming Apple rows, guarded by host, account and playback intent.
+    RemoveFromQueue {
+        indices: Vec<usize>,
+        generation: (u64, u64, u64),
+    },
     /// Insert dragged songs into "Playing next" at a position, instead of
     /// always appending like `QueueMany`. Falls back to appending when the
     /// local player is not the active target.

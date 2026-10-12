@@ -18,6 +18,14 @@ playing from somewhere Spotify reports.
 These are the rules the app follows. The queue tests in `src/app.rs`
 check every one of them.
 
+In the Applifast Apple mode, **Remove from queue** removes that exact upcoming
+occurrence. The mini-player playlist's **REM > Remove selected** removes selected
+upcoming occurrences together, excluding the playing row. Other copies of the
+same song remain. The removal also applies to this session's repeat/shuffle
+context and is saved with the queue; it never deletes a library song or edits
+an Apple playlist. **Clear queue** and **Remove all** continue to clear manual
+additions only. Spotify mode retains its existing queue capabilities.
+
 Starting and resuming are separate actions. With Shuffle off, a playlist's
 **Play** button starts at its first available song in the selected order.
 Double-clicking a row starts there, including with Shuffle on. **Play** in

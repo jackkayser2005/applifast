@@ -11,6 +11,16 @@ with a message pump. Commands and sanitized events cross channels through the
 existing asynchronous backend. Closing an egui window does not own or destroy
 the playback host. Apple authorization is the only visible browser popup.
 
+## Removing queued occurrences
+
+Apple queue rows now offer **Remove from queue**. The mini-player playlist's
+**REM > Remove selected** removes selected upcoming rows together and excludes
+the playing row. Repeated copies remain distinct; stale actions from an older
+host, account or playback intent are ignored. The queue snapshot persists these
+changes without editing an Apple playlist or library. **Remove all** retains
+its manual-only behavior. Mini-player ADD navigation now says **Search Apple
+Music** and **Favorites** in Apple mode. See [verification](queue-removal.md).
+
 ## Retry after startup failure
 
 If Apple's SDK does not become available after the local playback page loads,

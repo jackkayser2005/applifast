@@ -774,6 +774,10 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 };
             }
             "queue" => app.show_queue_panel = true,
+            "queue-menu" => {
+                app.show_queue_panel = true;
+                app.demo_queue_menu = true;
+            }
             // The first cover card as under the pointer.
             "card-hover" => crate::ui::motion::force_hover("card"),
             "ambient-pulse" => app.settings.ambient_pulse = true,
@@ -1024,6 +1028,15 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
             }
             "presets" => app.winamp.open_presets = true,
             "mini-menu" => app.winamp.demo_options_open = true,
+            "mini-add-menu" | "mini-rem-menu" => {
+                app.settings.playlist_open = true;
+                app.winamp.demo_playlist_menu = Some(if surface == "mini-add-menu" {
+                    "add"
+                } else {
+                    "rem"
+                });
+                app.winamp.playlist_selection.extend([0, 1, 3]);
+            }
             "art" => app.settings.art_expanded = true,
             "folders" => {
                 use crate::player::RootlistEntry;
@@ -1738,6 +1751,187 @@ mod tests {
             accessible_node(&tree, "Add to Favorites", Role::Button);
             app.backend.shutdown();
         }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_queue_removal_rejects_stale_actions_and_restores_exact_occurrences() {
+        let (ctx, mut app) = accessible_app("apple-queue-removal");
+        app.backend.set_offline(true);
+        assert!(app.queue_removal(vec![0]).is_none());
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        let uri = apple.songs[0].uri();
+        apple.account_tag = Some("a".repeat(64));
+        apple.cache_checked = true;
+        apple.storefront = "us".into();
+        apple.add_uris(
+            &[uri.clone(), uri.clone()],
+            0,
+            std::time::Duration::ZERO,
+            false,
+        );
+        app.apple = Some(apple);
+        app.apply(Action::SetRepeat(crate::player::RepeatMode::Context), &ctx);
+        assert!(app.queue_removal(vec![]).is_none());
+        assert!(app.queue_removal(vec![usize::MAX]).is_none());
+        for epoch in 0..3 {
+            let stale = app.queue_removal(vec![0]).unwrap();
+            let apple = app.apple.as_mut().unwrap();
+            match epoch {
+                0 => apple.generation += 1,
+                1 => apple.session += 1,
+                _ => {
+                    apple.intent(serde_json::json!({"type":"pause"}));
+                }
+            }
+            let before = apple.queue_command();
+            app.apply(stale, &ctx);
+            assert_eq!(app.apple.as_ref().unwrap().queue_command(), before);
+        }
+        let remove = app.queue_removal(vec![0]).unwrap();
+        let generation = app.apple.as_ref().unwrap().queue_generation();
+        app.winamp.playlist_selection.extend([0, 1, 2]);
+        app.apply(remove, &ctx);
+        let apple = app.apple.as_ref().unwrap();
+        assert_eq!(apple.order.manual_count, 1);
+        assert_eq!(apple.queue[apple.index.unwrap()].uri(), uri);
+        assert_eq!(app.queue.get().unwrap().queue[0].uri(), uri);
+        assert!(app.winamp.playlist_selection.is_empty());
+        let before = apple.queue_command();
+        app.apply(
+            Action::RemoveFromQueue {
+                indices: vec![0],
+                generation,
+            },
+            &ctx,
+        );
+        assert_eq!(app.apple.as_ref().unwrap().queue_command(), before);
+        let snapshot = app.apple.as_mut().unwrap().cache_snapshot(true).unwrap();
+        let mut restored = crate::apple::State::default();
+        restored.authorized = true;
+        restored.account_tag = app.apple.as_ref().unwrap().account_tag.clone();
+        restored.storefront = app.apple.as_ref().unwrap().storefront.clone();
+        restored.restore_cache(Some(snapshot)).unwrap();
+        assert_eq!(restored.queue_command(), before);
+        app.apple.as_mut().unwrap().authorized = false;
+        assert!(app.queue_removal(vec![0]).is_none());
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_queue_row_menu_removes_only_the_selected_occurrence() {
+        fn draw(app: &mut App, ui: &mut egui::Ui) {
+            let apple = app.apple.as_ref().unwrap();
+            let item = PlayableItem::Track(apple.queue[apple.order.upcoming[1]].track());
+            crate::ui::widgets::item_menu(ui, app, &item, Some(&RowContext::Queue), Some(1));
+        }
+        let (ctx, mut app) = accessible_app("apple-queue-removal-menu");
+        app.backend.set_offline(true);
+        app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let remove = text
+            .iter()
+            .find(|(label, _)| label == "Remove from queue")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(remove, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            matches!(app.actions.as_slice(), [Action::RemoveFromQueue {indices, ..}] if indices == &[1])
+        );
+        app.apple = None;
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_mini_playlist_removes_selected_copies_and_uses_apple_navigation() {
+        let (ctx, mut app) = accessible_app("apple-mini-queue-removal");
+        app.backend.set_offline(true);
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        let uri = apple.songs[0].uri();
+        apple.add_uris(
+            &[uri.clone(), uri.clone(), uri.clone()],
+            0,
+            std::time::Duration::ZERO,
+            false,
+        );
+        app.apple = Some(apple);
+        app.remote = None;
+        app.apply(Action::SetRepeat(crate::player::RepeatMode::Off), &ctx);
+        app.settings.winamp_window = true;
+        app.settings.skin_scale = Some(2);
+        apply_flags(&mut app, None, Some("mini-rem-menu"));
+        let draw = crate::ui::winamp::show;
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let remove = text
+            .iter()
+            .find(|(label, _)| label == "Remove selected")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(remove, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            matches!(app.actions.as_slice(), [Action::RemoveFromQueue { indices, .. }] if indices == &[0, 2])
+        );
+        let action = app.actions.pop().unwrap();
+        app.apply(action, &ctx);
+        let apple = app.apple.as_ref().unwrap();
+        assert_eq!(apple.order.manual_count, 1);
+        assert_eq!(apple.queue[apple.index.unwrap()].uri(), uri);
+        assert_eq!(apple.queue[apple.order.upcoming[0]].uri(), uri);
+        app.winamp.demo_playlist_menu = None;
+        app.winamp.playlist_selection.insert(1);
+        app.apply(Action::SetVolume(25), &ctx);
+        assert!(app.winamp.playlist_selection.contains(&1));
+        app.apply(Action::Next, &ctx);
+        assert!(app.winamp.playlist_selection.is_empty());
+        apply_flags(&mut app, None, Some("mini-add-menu"));
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let search = text
+            .iter()
+            .find(|(label, _)| label == "Search Apple Music")
+            .unwrap()
+            .1
+            .center();
+        assert!(text.iter().any(|(label, _)| label == "Favorites"));
+        assert!(
+            !text
+                .iter()
+                .any(|(label, _)| label == "Search Spotify" || label == "Liked Songs")
+        );
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(search, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(matches!(
+            app.actions.as_slice(),
+            [Action::FocusSearch, Action::ToggleWinampWindow]
+        ));
+        app.apple = None;
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(text.iter().any(|(label, _)| label == "Search Spotify"));
+        assert!(text.iter().any(|(label, _)| label == "Liked Songs"));
+        app.backend.shutdown();
     }
 
     #[cfg(feature = "demo")]
