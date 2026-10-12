@@ -13,6 +13,41 @@ the playback host. Apple authorization is the only visible browser popup.
 
 ## Retry after startup failure
 
+If Apple's SDK does not become available after the local playback page loads,
+the bridge now fails initialization after 45 seconds instead of leaving the
+sign-in card connecting indefinitely. It reports the existing sanitized
+configuration error, enabling **Retry connection**. Successful SDK loading
+clears the deadline and listener; a late SDK cannot revive a failed attempt.
+Retry continues to create a new host generation through the existing backend.
+This deadline covers waiting for the SDK, not WebView2 environment creation,
+MusicKit's configuration promise or the authorization popup. No account data,
+credentials, queue rules, destinations, dependencies or layout are changed.
+Deterministic tests cover a missing SDK, late arrival, normal/preloaded startup,
+configuration rejection, repeat bootstrap calls, timer/listener cleanup and the
+existing native retry lifecycle.
+
+On October 12, the updated standalone Windows host passed two isolated native
+checks using fresh signed-out browser profiles and the existing protected app
+token. Normal startup loaded the local page with HTTP 200, reported MusicKit
+readiness with `authorized=false` and shut down cleanly in 2.88 seconds. A
+child-only refused HTTP proxy blocked external SDK requests while the local
+page still loaded with HTTP 200. The host reported the existing fixed error
+after 45.61 seconds and shut down cleanly. Both checks sent only shutdown, with
+no authorization, account-read, playback or write commands. No listener grant
+was restored and the running desktop app was left alone. The completed test
+profiles were disposable; the proxy setting was not applied to Windows or the
+user's app. This uses Microsoft's documented
+[test browser flags](https://learn.microsoft.com/microsoft-edge/webview2/concepts/webview-features-flags).
+These checks establish SDK-load success/failure in the native host, not fresh
+account authorization, audio or recovery from an outage during playback.
+
+For this deadline change, Windows formatting, strict default/demo all-target
+Clippy, 1,016 default and 1,054 demo library tests, remaining binary/integration
+tests, doctests, strict demo Rustdoc, demo build, gettext and Node bridge/signer
+checks pass. Five opt-in tests remain ignored in each ordinary library suite.
+The standalone host builds successfully. Hosted all-feature and other-platform
+checks remain separate gates; no account or credential-store code changed.
+
 The host also waits for WebView2's bootstrap-registration callback before
 navigating. A failed local-page navigation emits a fixed actionable error,
 making the existing retry control available. Local host diagnostics report

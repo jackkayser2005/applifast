@@ -41,7 +41,62 @@ const app = sandbox.window.applifast;
 const emit = name => (listeners.get(name) || []).forEach(handler => handler());
 const lastState = () => messages.filter(event => event.type === 'state').at(-1);
 
+async function checkSdkStartup() {
+  for (const outcome of ['timeout', 'loaded', 'preloaded', 'configuration-failed']) {
+    const events = [], timers = new Map(), handlers = new Map();
+    let configured = 0;
+    const sdk = { ...sandbox.window.MusicKit, configure: async () => {
+      configured++;
+      if (outcome === 'configuration-failed') throw new Error('secret SDK failure');
+      return { ...music, addEventListener: () => {} };
+    } };
+    const context = { ...sandbox,
+      window: { MusicKit: ['preloaded', 'configuration-failed'].includes(outcome) ? sdk : undefined,
+        chrome: { webview: { postMessage: event => events.push(event) } } },
+      document: {
+        addEventListener: (name, handler) => handlers.set(name, handler),
+        removeEventListener: (name, handler) => { assert.equal(handlers.get(name), handler); handlers.delete(name); },
+        dispatchEvent: () => {}
+      },
+      setTimeout: (callback, delay) => { assert.equal(delay, 45_000); timers.set(1, callback); return 1; },
+      clearTimeout: id => timers.delete(id)
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), context);
+    const starting = context.window.applifast.bootstrap({ developerToken: 'mock-only', session: 17 });
+    assert.equal(context.window.applifast.bootstrap({ developerToken: 'mock-only', session: 17 }), starting);
+    if (outcome === 'timeout') {
+      assert.equal(timers.size, 1, 'A missing SDK must have a startup deadline');
+      const rejected = assert.rejects(starting);
+      timers.get(1)();
+      await rejected;
+      context.window.MusicKit = sdk;
+      handlers.get('musickitloaded')?.();
+      await Promise.resolve();
+      assert.equal(configured, 0, 'A late SDK cannot revive failed startup');
+    } else if (outcome === 'configuration-failed') {
+      await assert.rejects(starting);
+    } else {
+      if (outcome === 'loaded') {
+        assert.equal(timers.size, 1);
+        context.window.MusicKit = sdk;
+        handlers.get('musickitloaded')();
+      }
+      await starting;
+      assert.equal(configured, 1);
+    }
+    assert.equal(timers.size, 0);
+    assert.equal(handlers.size, 0, 'Startup must release its SDK listener');
+    const failed = ['timeout', 'configuration-failed'].includes(outcome);
+    assert.equal(events.length, 1);
+    assert.equal(events[0].session, 17);
+    assert.equal(events[0].type, failed ? 'error' : 'ready');
+    if (failed) assert.equal(events[0].code, 'configuration');
+    assert(!JSON.stringify(events).includes('secret SDK failure'));
+  }
+}
+
 (async () => {
+  await checkSdkStartup();
   await app.bootstrap({ developerToken: 'mock-only', session: 1 });
   assert.equal(music.playbackMode, 2);
   const uploaded = { kind: 'library', id: 'i.upload', playParams: { id: 'i.upload', kind: 'song', isLibrary: true } };
@@ -448,5 +503,5 @@ const lastState = () => messages.filter(event => event.type === 'state').at(-1);
   await activeFavorite;
   assert(!messages.some(event => event.id === 2113), 'A late confirmation cannot reach a new account');
   assert.equal(readTimers.size, 0);
-  console.log('Bridge self-check passed: uploaded IDs, occurrences, pagination, read deadlines, responsive transport, playlist/favorites writes, failures, stale authorization.');
+  console.log('Bridge self-check passed: SDK startup deadline, uploaded IDs, occurrences, pagination, read deadlines, responsive transport, playlist/favorites writes, failures, stale authorization.');
 })().catch(failure => { console.error(failure); process.exitCode = 1; });

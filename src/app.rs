@@ -18477,8 +18477,14 @@ mod tests {
         let mut app = headless_app();
         app.backend.set_offline(true);
         let mut apple = crate::apple::State::default();
-        apple.loading = false;
-        apple.error = Some("Playback host could not start.".into());
+        assert!(apple.loading && !apple.ready);
+        let startup_error = "MusicKit rejected an operation. Check authorization, subscription, connection, or the selected item.";
+        apple.event(
+            apple.generation,
+            &serde_json::json!({"type":"error","session":1,"message":startup_error}),
+        );
+        assert!(!apple.loading && !apple.ready && !apple.authorized);
+        assert_eq!(apple.error.as_deref(), Some(startup_error));
         apple.token_path = "unchanged-token-path".into();
         let old_generation = apple.generation;
         app.apple = Some(apple);

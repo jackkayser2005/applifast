@@ -38,6 +38,11 @@ default URL handler are not supported yet.
    production runtime; install or repair Evergreen if it is missing or still
    fails after other builds exit. See [Microsoft's distribution guidance](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution)
    and [environment errors](https://learn.microsoft.com/microsoft-edge/webview2/reference/win32/webview2-idl).
+   After the local playback page loads, the app waits up to 45 seconds for Apple's
+   SDK. A missing SDK produces the existing connection error and enables Retry
+   connection. Check your network, then retry. A late SDK arrival cannot finish
+   that failed attempt; retry creates a fresh host. This does not time-limit the
+   initial WebView2 environment creation or an Apple authorization popup.
 3. Keep the included **developer-token.txt** beside **Applifast.exe**. It
    authenticates the app; it contains a signed MusicKit JWT, with no listener
    credentials or private signing key. It loads automatically when no valid

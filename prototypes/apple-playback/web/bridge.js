@@ -11,10 +11,21 @@
   let requestGeneration = 0;
   let seekTarget = null;
   let desiredPlaying = false;
-  const sdkLoaded = new Promise(resolve => {
-    if (window.MusicKit) resolve();
-    else document.addEventListener('musickitloaded', resolve, { once: true });
-  });
+  const sdkLoaded = () => {
+    if (window.MusicKit) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        clearTimeout(timeout);
+        document.removeEventListener('musickitloaded', loaded);
+      };
+      const loaded = () => { cleanup(); resolve(); };
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('MusicKit did not load before the startup deadline.'));
+      }, 45_000);
+      document.addEventListener('musickitloaded', loaded, { once: true });
+    });
+  };
   const send = (type, fields = {}, generation = session) => {
     if (generation !== session) return;
     const event = { type, session: generation, ...fields };
@@ -414,7 +425,7 @@
     if (initializing) return initializing;
     session = settings.session;
     initializing = (async () => {
-      await sdkLoaded;
+      await sdkLoaded();
       music = await window.MusicKit.configure({ developerToken: settings.developerToken,
         app: { name: 'Applifast Playback Probe', build: '0.1.0' } });
       if (settings.userToken) music.musicUserToken = settings.userToken;
