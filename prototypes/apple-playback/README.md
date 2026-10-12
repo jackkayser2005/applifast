@@ -164,10 +164,12 @@ afterward without sending Sign out or deleting the saved grant. This is not
 fresh-account onboarding or a new-favorite write. See the
 [native account evidence](../../docs/applifast/favorites-write-evidence.md).
 
-The separate muted playback test passed real reads/search, playback, seek and
-pause in this isolated setup, but timed out restoring the paused queue at the
-saved position. Its timeout reports numeric playback state only. The complete
-native playback gate remains failed until restoration and resume are verified.
+The separate muted playback test now passes real reads/search, playback, seek,
+pause, paused restoration and actual saved-position resume with duplicate queue
+occurrences retained. The fix converts SDK stopped/ended/stalled states into
+the native transport contract. Actual SDK position stays separate from the
+requested paused position. Full tracks and a real desktop restart remain
+unchecked; see the [native results](../../docs/applifast/paused-restoration.md).
 
 Repeat modes are 0=off, 1=current occurrence, 2=queue. Sign-out invalidates old
 responses, deletes the protected user grant, closes popups and clears the

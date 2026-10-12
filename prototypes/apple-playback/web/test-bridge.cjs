@@ -28,7 +28,10 @@ const eventNames = ['playbackTimeDidChange', 'playbackStateDidChange', 'nowPlayi
 const sandbox = {
   window: { MusicKit: { configure: async () => music, version: 'test',
     Events: Object.fromEntries(eventNames.map(name => [name, name])),
-    PlaybackMode: { FULL_PLAYBACK_ONLY: 2 }, PlaybackStates: { ended: 10, playing: 2 } },
+    PlaybackMode: { FULL_PLAYBACK_ONLY: 2 }, PlaybackStates: {
+      none: 0, loading: 1, playing: 2, paused: 3, stopped: 4,
+      ended: 5, seeking: 6, waiting: 8, stalled: 9, completed: 10
+    } },
     chrome: { webview: { postMessage: event => messages.push(event) } }, isSecureContext: true },
   document: { addEventListener: () => {}, dispatchEvent: () => {} },
   CustomEvent: class { constructor(name, properties) { Object.assign(this, properties); } },
@@ -284,6 +287,13 @@ async function checkSdkStartup() {
   music.api.music = api;
   music.pause = pause;
   await app.dispatch({ type: 'play', items: [uploaded, catalog, uploaded], index: 0 });
+  for (const [sdk, native] of [[0, 0], [1, 1], [2, 2], [3, 3], [4, 0],
+    [5, 10], [6, 6], [8, 8], [9, 8], [10, 10]]) {
+    music.playbackState = sdk;
+    emit('playbackTimeDidChange');
+    assert.equal(lastState().status, native, `SDK state ${sdk} must match the native contract`);
+  }
+  music.playbackState = 2;
   await app.dispatch({ type: 'next' });
   await app.dispatch({ type: 'next' });
   assert.deepEqual(calls.map(call => call.items[0].id), ['i.upload', '123', 'i.upload']);
@@ -379,7 +389,7 @@ async function checkSdkStartup() {
   assert.equal(lastState().index, 1);
   assert.equal(lastState().queueLength, 3);
   const failedCalls = calls.length;
-  music.playbackState = 10; emit('playbackStateDidChange');
+  music.playbackState = 5; emit('playbackStateDidChange');
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(calls.length, failedCalls); // Failure cannot silently skip to catalog.
   assert(!JSON.stringify(messages).includes('secret SDK response'));
@@ -409,7 +419,7 @@ async function checkSdkStartup() {
     order:{upcoming:[2,2],manualCount:2,context:[0,1]}});
   assert.equal(JSON.stringify(lastState().order),validOrder);
   const endedCalls = calls.length;
-  music.playbackState = 10; emit('playbackStateDidChange');
+  music.playbackState = 5; emit('playbackStateDidChange');
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(calls.length,endedCalls); // Native orders advance only after the native coordinator chooses the occurrence.
   await app.dispatch({type:'intent',generation:11,command:{type:'select',index:2,playing:true,
@@ -421,19 +431,56 @@ async function checkSdkStartup() {
   // Restoration retains occurrences, uses library parameters and never plays.
   played = false;
   music.playbackState = 3;
+  const restoreQueue = music.setQueue, restoreSeek = music.seekToTime;
+  const restorePlay = music.play, restorePause = music.pause;
+  let restoredSeekTarget;
+  music.setQueue = async options => {
+    await restoreQueue(options);
+    music.currentPlaybackTime = 0;
+    music.currentPlaybackDuration = 0;
+    music.playbackState = 0;
+  };
+  music.seekToTime = async seconds => {
+    restoredSeekTarget = seconds;
+    music.playbackState = 4;
+    emit('playbackStateDidChange');
+  };
+  music.play = async () => {
+    played = true;
+    music.currentPlaybackTime = restoredSeekTarget;
+    music.currentPlaybackDuration = 240;
+    music.playbackState = 2;
+    emit('playbackStateDidChange');
+  };
+  music.pause = async () => { music.playbackState = 3; emit('playbackStateDidChange'); };
   const restoredOrder = { upcoming: [2, 1], manualCount: 1, context: [0, 1], history: [] };
   await app.dispatch({ type: 'intent', generation: 12, command: {
     type: 'restore', items: [uploaded, catalog, uploaded], index: 0,
     order: restoredOrder, seconds: 42, shuffle: false, repeat: 0
   } });
   assert(!played);
+  assert.equal(lastState().status, 3, 'An unloaded paused seek must not leave restoration loading');
+  assert.equal(lastState().actualPosition, 0, 'Do not report the requested position as an actual SDK seek');
   assert.equal(lastState().position, 42);
   assert.equal(lastState().requestGeneration, 12);
   assert.equal(calls.at(-1).items[0].isLibrary, true);
   assert.deepEqual(Array.from(lastState().order.upcoming), [2, 1]);
+  await app.dispatch({ type: 'resume' });
+  assert(played);
+  assert.equal(lastState().status, 2);
+  assert.equal(lastState().actualPosition, 42);
+  await app.dispatch({ type: 'pause' });
+  played = false;
   await app.dispatch({ type: 'next' });
   assert(!played);
   assert.equal(lastState().index, 2);
+  assert.equal(lastState().position, 0, 'Next must discard the prior occurrence seek');
+  music.playbackState = 1; emit('playbackStateDidChange');
+  assert.equal(lastState().status, 1, 'Loading must remain loading');
+  music.playbackState = 3;
+  music.setQueue = restoreQueue; music.seekToTime = restoreSeek;
+  music.play = restorePlay; music.pause = restorePause;
+  music.currentPlaybackDuration = 240;
 
   let resolveRead;
   music.api.music = () => new Promise(resolve => {resolveRead=resolve;});

@@ -1358,6 +1358,20 @@ mod tests {
         assert!(state.skip(1));
         assert!(state.order.validate(state.queue.len(), state.index).is_ok());
     }
+    #[test]
+    fn ended_and_completed_notifications_advance_only_one_occurrence() {
+        let mut state = queue_state();
+        let generation = state.request_generation;
+        state.event(1, &json!({"type":"state","session":1,"requestGeneration":generation,"index":0,"position":1,"status":2}));
+        let ended = json!({"type":"state","session":1,"requestGeneration":generation,"index":0,"position":180,"status":10});
+        let next = state.event(1, &ended).unwrap();
+        assert_eq!(next["generation"], generation + 1);
+        assert_eq!(state.index, Some(1));
+        assert_eq!(state.order.upcoming, [2]);
+        assert!(state.event(1, &ended).is_none());
+        assert_eq!(state.index, Some(1));
+        assert_eq!(state.order.upcoming, [2]);
+    }
     #[cfg(windows)]
     #[test]
     #[ignore = "Uses local authorization to re-add two already-confirmed favorites without playing audio"]
@@ -1604,15 +1618,39 @@ mod tests {
                 history: Vec::new(),
             };
             host.send(json!({"type":"intent","generation":4,"command":{"type":"restore","items":[song.item,song.item],"index":0,"order":order,"seconds":30,"shuffle":false,"repeat":0}}).to_string());
-            await_event("state", &|event| {
+            let restored = await_event("state", &|event| {
                 event["requestGeneration"] == 4
                     && event["status"] == 3
-                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 29.0
+                    && event["position"].as_f64().unwrap_or(0.0) >= 29.0
                     && event["queueLength"] == 2
                     && event["order"]["manualCount"] == 1
             });
             eprintln!(
-                "Embedded Windows host: restored authorization; {} library rows; real library shelves, library/catalog search, playback, seek and pause passed.",
+                "Restored host status: {}; actual position: {}",
+                restored["status"], restored["actualPosition"]
+            );
+            host.send(
+                json!({"type":"intent","generation":5,"command":{"type":"resume"}}).to_string(),
+            );
+            // MusicKit may defer the physical seek while paused; verify it after resume.
+            await_event("state", &|event| {
+                event["requestGeneration"] == 5
+                    && event["status"] == 2
+                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 29.0
+                    && event["queueLength"] == 2
+                    && event["order"]["manualCount"] == 1
+            });
+            host.send(
+                json!({"type":"intent","generation":6,"command":{"type":"pause"}}).to_string(),
+            );
+            await_event("state", &|event| {
+                event["requestGeneration"] == 6
+                    && event["status"] == 3
+                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 29.0
+                    && event["queueLength"] == 2
+            });
+            eprintln!(
+                "Embedded Windows host: restored authorization; {} library rows; real library shelves, library/catalog search, playback, seek, pause and saved-position queue resume passed.",
                 songs.len()
             );
         };

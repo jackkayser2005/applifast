@@ -46,6 +46,17 @@ shortcut, upgrade and uninstall fixtures pass without launching the app.
 
 ## Limits and next gate
 
+The replacement `292ab76` preview was checked separately on October 12. All
+53 published branch tips matched refreshed refs. The same historical/path scan
+covered 10,661 objects, 5,918 blobs and 596,805,140 raw bytes, with no historical
+secret paths or pattern hits. The new ZIP has the same six-file boundary and
+only the intended companion app JWT. Integration ignore patterns and the
+original checkout's actual key/token paths remain ignored and untracked.
+Reports are `.cache/paused-restore-ref-snapshot.json` and
+`.cache/paused-restore-secret-audit.json`. Payload, hashes, architecture and
+default-feature CLI checks pass. Dummy-token package and isolated QA-identity
+install/upgrade/uninstall fixtures also pass against this optimized build.
+
 This pattern check cannot prove the absence of opaque listener grants, encoded
 or encrypted payloads, credentials visible only in images, or remote history
 that is no longer reachable. It does not verify Apple's signature acceptance,

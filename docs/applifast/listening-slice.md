@@ -970,6 +970,11 @@ Ruby/Unix launcher tools, Jekyll/Nix and non-Windows coverage remain unavailable
 
 ## Restart restoration
 
+The [paused-restoration state fix](paused-restoration.md) converts MusicKit's
+stopped, ended and stalled states to the native transport contract. A restored
+song stays paused at its requested position while MusicKit defers the physical
+seek until resume. The SDK's actual position remains separate from that display.
+
 `apple-session.json` in Applifast's state directory stores only metadata and the
 local occurrence queue, not audio or credentials. It is atomically replaced on
 the backend, with a 32 MiB ceiling. Playback checkpoints are saved approximately
