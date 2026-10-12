@@ -37,6 +37,15 @@ queue occurrences retained. It used an owned workspace profile because of the
 recorded execution-environment asset-location issue. No popup, Sign out or
 account-write command was sent; this does not establish cancellation acceptance.
 
+The optimized `a15ba42` installer and ZIP are verified against a clean source
+manifest, six-file payload, SHA-256 records, executable headers and default-feature
+CLI help. Dummy-token packaging and isolated install/upgrade/shortcuts/uninstall
+fixtures pass without launching the app. The standalone host checks and dummy
+native credential-store round trip pass. The [history/package pattern audit](private-preview-audit.md)
+was repeated for this source and payload. The private preview remains unsigned,
+with its bundled app token expiring November 6; hosted CI and fresh-PC runtime
+acceptance remain separate gates.
+
 This removes the wait for the old authorization promise. It does not impose a
 deadline on MusicKit's pause or unauthorize operations. The popup, sign-in card,
 credentials, account-cache clearing and network destinations retain their
