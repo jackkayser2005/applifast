@@ -168,8 +168,19 @@ The separate muted playback test now passes real reads/search, playback, seek,
 pause, paused restoration and actual saved-position resume with duplicate queue
 occurrences retained. The fix converts SDK stopped/ended/stalled states into
 the native transport contract. Actual SDK position stays separate from the
-requested paused position. Full tracks and a real desktop restart remain
-unchecked; see the [native results](../../docs/applifast/paused-restoration.md).
+requested paused position; see the [native results](../../docs/applifast/paused-restoration.md).
+The separate full-track native check passed in 190.40 seconds: complete catalog
+and catalog-linked library tracks, then the repeated context occurrence started
+after its manual copy. Both tracks lasted 90.013 seconds, actual position reached
+90.00 seconds and each elapsed playing interval was 90.15 seconds. There were no
+seeks, audio output or account writes. It uses the production native coordinator
+and checks full duration, actual position and elapsed time. Catalog linkage does
+not establish uploaded or matched-file provenance. A real desktop restart and
+fresh-account sign-in remain unchecked. Quit other Applifast builds first:
+
+```powershell
+cargo test --locked --lib apple::tests::native_full_tracks_advance_manual_then_duplicate_context_occurrences -- --ignored --exact --nocapture
+```
 
 Repeat modes are 0=off, 1=current occurrence, 2=queue. Sign-out invalidates old
 responses, deletes the protected user grant, closes popups and clears the
