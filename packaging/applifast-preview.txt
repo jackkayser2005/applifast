@@ -61,6 +61,8 @@ an interrupted write. Pending hearts are not saved as confirmed favorites.
 Filled hearts are read-only; removing favorites requires Apple Music.
 The mini-player's inactive Apple EQ slot now shows the current song's heart.
 Its title-bar right-click menu offers Add to Favorites, including when rolled up.
+B adds the playing song from either window. It does nothing for an existing or
+pending favorite, while typing, or while a dialog is open.
 Appearance controls how many favorites appear in the sidebar; Show all favorites
 opens their page. Real-account favorite additions still need acceptance.
 Demo: --demo-show favorites-page. Fresh-Windows-account sign-in, full library

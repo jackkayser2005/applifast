@@ -159,12 +159,19 @@ pub fn handle(app: &mut App, ctx: &egui::Context) {
             key(Modifiers::NONE, Key::Slash, Action::FocusSearch);
         }
     });
-    if app.apple.is_none()
-        && !typing
+    if !typing
+        && (app.apple.is_none() || app.dialog.is_none())
         && ctx.input_mut(|input| input.consume_key(Modifiers::NONE, Key::B))
         && let Some(now) = app.now_playing().filter(|now| !now.is_episode)
     {
-        actions.push(Action::ToggleSaved(now.uri));
+        if app.apple.is_none() {
+            actions.push(Action::ToggleSaved(now.uri));
+        } else if app.is_saved(&now.uri) != Some(true) {
+            actions.push(Action::SetSavedMany {
+                uris: vec![now.uri],
+                saved: true,
+            });
+        }
     }
     // Resolve the "open current artist/album" placeholders.
     for action in actions {
@@ -238,7 +245,11 @@ pub fn shortcuts(locale: Locale, apple: bool) -> Vec<(Cow<'static, str>, Cow<'st
         (keys("M"), gettext(locale, "Mute or unmute")),
         (
             keys("B"),
-            gettext(locale, "Like or unlike the playing song"),
+            if apple {
+                gettext(locale, "Add to Favorites")
+            } else {
+                gettext(locale, "Like or unlike the playing song")
+            },
         ),
         (keys("S"), gettext(locale, "Toggle shuffle")),
         (keys("R"), gettext(locale, "Cycle repeat")),
@@ -351,7 +362,7 @@ pub fn shortcuts(locale: Locale, apple: bool) -> Vec<(Cow<'static, str>, Cow<'st
         rows.retain(|(key, _)| {
             !matches!(
                 key.as_ref(),
-                "B" | "Delete" | "Ctrl+X" | "Cmd+X" | "Ctrl+V" | "Cmd+V"
+                "Delete" | "Ctrl+X" | "Cmd+X" | "Ctrl+V" | "Cmd+V"
             )
         });
         rows.extend([
@@ -615,8 +626,12 @@ mod tests {
         );
         assert!(!rows.iter().any(|(key, _)| matches!(
             key.as_ref(),
-            "B" | "Delete" | "Ctrl+X" | "Cmd+X" | "Ctrl+V" | "Cmd+V"
+            "Delete" | "Ctrl+X" | "Cmd+X" | "Ctrl+V" | "Cmd+V"
         )));
+        assert!(
+            rows.iter()
+                .any(|(key, description)| { key == "B" && description == "Add to Favorites" })
+        );
     }
 
     #[test]
@@ -688,7 +703,6 @@ mod tests {
                 format!("{:?}", [Action::Reload(page)])
             );
         }
-        assert_eq!(press(&mut app, &mut text, Key::B, Modifiers::NONE), "[]");
         app.dialog = Some(Dialog::Shortcuts);
         for (key, modifiers) in [
             (Key::Num3, Modifiers::ALT),
@@ -772,6 +786,108 @@ mod tests {
             app.actions.as_slice(),
             [Action::ToggleSaved(uri)] if uri == "spotify:track:trk0"
         ));
+        app.backend.shutdown();
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_b_adds_only_and_waits_for_text_dialogs_and_pending_writes() {
+        let root = std::env::temp_dir().join(format!(
+            "applifast-favorite-shortcut-test-{}",
+            std::process::id()
+        ));
+        let mut app = App::new(
+            &crate::backend::Waker::default(),
+            AppDirs {
+                config: root.join("config"),
+                state: root.join("state"),
+                cache: root.join("cache"),
+            },
+            Settings::default(),
+            AppOptions {
+                media_controls: false,
+                restore_sign_in: false,
+                tray: false,
+            },
+        );
+        crate::demo::populate(&mut app);
+        let apple = crate::apple::State::demo(&app.library.liked.items);
+        app.local = apple.local.clone();
+        app.apple = Some(apple);
+        app.remote = None;
+        let uri = app.now_playing().unwrap().uri;
+        assert_eq!(uri, "apple:track:library.i.demo0");
+        let ctx = egui::Context::default();
+        let field = egui::Id::new("favorite-shortcut-text");
+        let mut text = String::new();
+        let mut press = |app: &mut App| {
+            app.actions.clear();
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    events: vec![egui::Event::Key {
+                        key: Key::B,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers: Modifiers::NONE,
+                    }],
+                    ..Default::default()
+                },
+                |ui| {
+                    handle(app, ui.ctx());
+                    ui.add(egui::TextEdit::singleline(&mut text).id(field));
+                },
+            );
+            output.textures_delta.clear();
+            format!("{:?}", app.actions)
+        };
+        assert_eq!(press(&mut app), "[]", "existing favorites are read-only");
+        for state in [Some(false), None] {
+            app.apple.as_mut().unwrap().songs[0].in_favorites = state;
+            assert_eq!(
+                press(&mut app),
+                format!(
+                    "{:?}",
+                    [Action::SetSavedMany {
+                        uris: vec![uri.clone()],
+                        saved: true
+                    }]
+                )
+            );
+        }
+        app.dialog = Some(Dialog::Shortcuts);
+        assert_eq!(press(&mut app), "[]");
+        app.dialog = None;
+        ctx.memory_mut(|memory| memory.request_focus(field));
+        press(&mut app);
+        assert!(ctx.text_edit_focused());
+        assert_eq!(press(&mut app), "[]", "typing cannot favorite a song");
+        ctx.memory_mut(|memory| memory.surrender_focus(field));
+        app.local.track.as_mut().unwrap().is_episode = true;
+        assert_eq!(press(&mut app), "[]");
+        app.local.track.as_mut().unwrap().is_episode = false;
+        let command = app
+            .apple
+            .as_mut()
+            .unwrap()
+            .favorite_songs(std::slice::from_ref(&uri))
+            .unwrap()
+            .unwrap();
+        assert_eq!(press(&mut app), "[]", "pending writes cannot be duplicated");
+        let apple = app.apple.as_mut().unwrap();
+        assert_eq!(
+            apple.complete_favorites(&serde_json::json!({
+                "type":"response", "session":apple.session, "id":command["id"], "ok":false
+            })),
+            Some(false)
+        );
+        assert!(
+            press(&mut app).contains("SetSavedMany"),
+            "failed writes can be retried"
+        );
+        app.local.track = None;
+        assert_eq!(press(&mut app), "[]", "no song means no favorite request");
         app.backend.shutdown();
         let _ = std::fs::remove_dir_all(root);
     }

@@ -369,14 +369,18 @@ or the local Queue.
 | Ctrl+Up / Ctrl+Down | Volume up / down |
 | M / S / R | Mute / Shuffle / Cycle repeat |
 | Ctrl+M | Toggle the mini player |
+| B | Add the playing song to Favorites |
 | L or Ctrl+Shift+K | Now Playing |
 | Esc | Close the dialog or leave Now Playing |
 | Ctrl+, / Ctrl+F | Settings / Search |
 
-Apple mode omits the unimplemented favorite-toggle, playlist removal, cut and
-paste bindings from this menu. The B favorite shortcut no longer emits an
-unsupported Apple action. Other existing shortcuts remain available. No global
-hotkey registration, new preference, storage or network access is added.
+Apple mode omits playlist removal, cut and paste bindings from this menu.
+**B** adds the playing song to Favorites in the main and mini-player windows;
+it does nothing for existing or pending favorites, while typing, or while a
+dialog is open. It reuses the same optimistic addition, exact confirmation and
+rollback as the heart controls. Removal still requires Apple Music. See the
+[Favorites shortcut comparison](review-favorite-shortcut/index.html).
+No global hotkey registration, new preference, storage or network access is added.
 Windows keyboard and accessible-button tests cover navigation, refresh,
 text/dialog guards and opening the menu without scrolling. See the matching
 [Settings and shortcut comparison](review-shortcuts/index.html).
