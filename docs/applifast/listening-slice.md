@@ -595,6 +595,11 @@ Now Playing shows artwork, transport controls and LRCLIB lyrics when available.
 Open it with **L** or **Ctrl+Shift+K**; **Esc** returns. **Ctrl+M** opens
 the mini-player.
 
+Reduce motion also snaps settings switches, player-bar artwork-color changes
+and collection/sidebar drag feedback to their final positions. These controls
+use the shared motion helpers, including when the setting changes during a
+transition. See the [motion follow-up checks](reduce-motion-controls.md).
+
 ### Apple lyrics
 
 In [PR #19](https://github.com/jackkayser2005/applifast/pull/19), on

@@ -3014,7 +3014,7 @@ pub fn switch(ui: &mut Ui, palette: &Palette, label: &str, on: &mut bool) -> egu
         response.mark_changed();
     }
     if ui.is_rect_visible(rect) {
-        let t = ui.ctx().animate_bool(response.id, *on);
+        let t = super::motion::animate_bool(ui.ctx(), response.id, *on, ui.style().animation_time);
         let fill = egui::lerp(
             egui::Rgba::from(palette.surface_active)..=egui::Rgba::from(palette.accent),
             t,
@@ -3273,6 +3273,72 @@ mod tests {
     use crate::model::{Action, Page};
     use crate::paths::AppDirs;
     use crate::settings::Settings;
+
+    #[test]
+    fn switches_finish_and_restart_motion_without_changing_click_behavior() {
+        for palette in [Palette::dark(), Palette::light()] {
+            let ctx = egui::Context::default();
+            let mut on = false;
+            let mut draw = |time, reduced, events| {
+                let mut response = None;
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(time),
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| {
+                        super::super::motion::set_reduced(ui.ctx(), reduced);
+                        response = Some(switch(ui, &palette, "Test switch", &mut on));
+                    },
+                );
+                output.textures_delta.clear();
+                let knob = output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::Shape::Circle(circle) if circle.radius == 8.0 => {
+                            Some(circle.center.x)
+                        }
+                        _ => None,
+                    })
+                    .expect("switch knob");
+                let response = response.unwrap();
+                (response.rect, knob, response.changed(), on)
+            };
+            let (rect, off, _, _) = draw(0.0, false, vec![]);
+            let click = || {
+                vec![
+                    egui::Event::PointerMoved(rect.center()),
+                    egui::Event::PointerButton {
+                        pos: rect.center(),
+                        button: egui::PointerButton::Primary,
+                        pressed: true,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                    egui::Event::PointerButton {
+                        pos: rect.center(),
+                        button: egui::PointerButton::Primary,
+                        pressed: false,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ]
+            };
+            let right = rect.right() - 11.0;
+            assert_eq!(off, rect.left() + 11.0);
+            let (_, moving, changed, selected) = draw(0.02, false, click());
+            assert!(changed && selected);
+            assert!(moving < right);
+            assert_eq!(draw(0.03, true, vec![]).1, right);
+            let (_, snapped, changed, selected) = draw(0.04, true, click());
+            assert!(changed && !selected);
+            assert_eq!(snapped, off);
+            let (_, moving, changed, selected) = draw(0.05, false, click());
+            assert!(changed && selected);
+            assert!(moving < right);
+            assert_eq!(draw(1.0, false, vec![]).1, right);
+        }
+    }
 
     #[test]
     fn editing_a_proxy_endpoint_clears_its_password_but_password_entry_is_preserved() {

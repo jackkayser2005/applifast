@@ -1330,7 +1330,8 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                     )
                 });
                 // Animate rows around the current track or entry drop target.
-                let shift = ui.ctx().animate_value_with_time(
+                let shift = super::motion::animate_value(
+                    ui.ctx(),
                     ui.id().with(("drop-shift", index)),
                     if let Some(slot) = reorder_slot {
                         if index < slot { -4.0 } else { 4.0 }

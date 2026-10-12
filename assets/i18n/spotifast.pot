@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-11 19:23-0400\n"
+"POT-Creation-Date: 2026-10-12 18:47-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -32,7 +32,7 @@ msgid "Play {name}"
 msgstr ""
 
 #: src/ui/sidebar.rs:298 src/app.rs:2566 src/app.rs:17330
-#: src/ui/collection.rs:1732 src/ui/collection.rs:1938
+#: src/ui/collection.rs:1733 src/ui/collection.rs:1939
 msgid "Playlist"
 msgstr ""
 
@@ -80,8 +80,8 @@ msgstr ""
 msgid "Search"
 msgstr ""
 
-#: src/ui/sidebar.rs:873 src/ui/player_bar.rs:678 src/ui/widgets.rs:1790
-#: src/ui/settings.rs:1211 src/ui/collection.rs:1926 src/ui/keys.rs:371
+#: src/ui/sidebar.rs:873 src/ui/player_bar.rs:679 src/ui/widgets.rs:1790
+#: src/ui/settings.rs:1211 src/ui/collection.rs:1927 src/ui/keys.rs:371
 #: src/ui/winamp/mod.rs:696
 msgid "Favorites"
 msgstr ""
@@ -157,29 +157,29 @@ msgstr ""
 msgid "No matches."
 msgstr ""
 
-#: src/ui/sidebar.rs:1585 src/ui/collection.rs:2028
+#: src/ui/sidebar.rs:1586 src/ui/collection.rs:2029
 msgid "No favorites in the loaded songs"
 msgstr ""
 
-#: src/ui/sidebar.rs:1666
+#: src/ui/sidebar.rs:1667
 msgid "Show all favorites"
 msgstr ""
 
-#: src/ui/sidebar.rs:1985
+#: src/ui/sidebar.rs:1986
 msgid "Sort by recently played"
 msgstr ""
 
-#: src/ui/sidebar.rs:2006 src/ui/player_bar.rs:814 src/ui/widgets.rs:1038
+#: src/ui/sidebar.rs:2007 src/ui/player_bar.rs:815 src/ui/widgets.rs:1038
 #: src/ui/artist.rs:327 src/ui/collection.rs:210 src/ui/collection.rs:216
 #: src/ui/search.rs:416 src/ui/show.rs:140 src/ui/show.rs:315
 msgid "Play"
 msgstr ""
 
-#: src/ui/sidebar.rs:2024
+#: src/ui/sidebar.rs:2025
 msgid "Unpin"
 msgstr ""
 
-#: src/ui/sidebar.rs:2026
+#: src/ui/sidebar.rs:2027
 msgid "Pin to top"
 msgstr ""
 
@@ -194,7 +194,7 @@ msgstr[1] ""
 #. Translators: Keep {count} exactly as written. It becomes a number of songs.
 #. Translators: Keep {count} exactly as written. It becomes the number of selected songs.
 #. Translators: {count} is a number of songs.
-#: src/i18n.rs:189 src/ui/widgets.rs:568 src/ui/collection.rs:2067
+#: src/i18n.rs:189 src/ui/widgets.rs:568 src/ui/collection.rs:2068
 #, rust-format
 msgid "{count} song"
 msgid_plural "{count} songs"
@@ -231,87 +231,87 @@ msgstr ""
 msgid "Click to change the visualizer"
 msgstr ""
 
-#: src/ui/player_bar.rs:498 src/ui/lyrics.rs:131 src/ui/lyrics.rs:808
+#: src/ui/player_bar.rs:499 src/ui/lyrics.rs:131 src/ui/lyrics.rs:808
 msgid "Nothing playing"
 msgstr ""
 
-#: src/ui/player_bar.rs:504 src/app.rs:7616
+#: src/ui/player_bar.rs:505 src/app.rs:7616
 msgid "Pick a song, album, or playlist"
 msgstr ""
 
-#: src/ui/player_bar.rs:642 src/ui/widgets.rs:596 src/ui/widgets.rs:860
+#: src/ui/player_bar.rs:643 src/ui/widgets.rs:596 src/ui/widgets.rs:860
 #: src/ui/widgets.rs:1816 src/ui/keys.rs:249 src/ui/winamp/mod.rs:698
 msgid "Add to Favorites"
 msgstr ""
 
-#: src/ui/player_bar.rs:648 src/ui/widgets.rs:600 src/ui/widgets.rs:864
+#: src/ui/player_bar.rs:649 src/ui/widgets.rs:600 src/ui/widgets.rs:864
 #: src/ui/widgets.rs:1818
 msgid "Remove from Liked Songs"
 msgstr ""
 
-#: src/ui/player_bar.rs:654 src/ui/widgets.rs:603 src/ui/widgets.rs:867
+#: src/ui/player_bar.rs:655 src/ui/widgets.rs:603 src/ui/widgets.rs:867
 #: src/ui/widgets.rs:1820
 msgid "Save to Liked Songs"
 msgstr ""
 
-#: src/ui/player_bar.rs:758 src/ui/player_bar.rs:765 src/ui/lyrics.rs:600
+#: src/ui/player_bar.rs:759 src/ui/player_bar.rs:766 src/ui/lyrics.rs:600
 #: src/ui/lyrics.rs:607 src/ui/collection.rs:212 src/ui/collection.rs:283
 msgid "Shuffle"
 msgstr ""
 
-#: src/ui/player_bar.rs:779 src/ui/lyrics.rs:619
+#: src/ui/player_bar.rs:780 src/ui/lyrics.rs:619
 msgid "Previous"
 msgstr ""
 
-#: src/ui/player_bar.rs:812 src/ui/collection.rs:208 src/ui/collection.rs:217
+#: src/ui/player_bar.rs:813 src/ui/collection.rs:208 src/ui/collection.rs:217
 msgid "Pause"
 msgstr ""
 
-#: src/ui/player_bar.rs:830 src/ui/lyrics.rs:657
+#: src/ui/player_bar.rs:831 src/ui/lyrics.rs:657
 msgid "Next"
 msgstr ""
 
-#: src/ui/player_bar.rs:838 src/ui/lyrics.rs:570
+#: src/ui/player_bar.rs:839 src/ui/lyrics.rs:570
 msgid "Repeat"
 msgstr ""
 
-#: src/ui/player_bar.rs:842 src/ui/lyrics.rs:571
+#: src/ui/player_bar.rs:843 src/ui/lyrics.rs:571
 msgid "Repeat one"
 msgstr ""
 
-#: src/ui/player_bar.rs:847 src/ui/lyrics.rs:572
+#: src/ui/player_bar.rs:848 src/ui/lyrics.rs:572
 msgid "Repeat off"
 msgstr ""
 
-#: src/ui/player_bar.rs:908 src/ui/lyrics.rs:539
+#: src/ui/player_bar.rs:909 src/ui/lyrics.rs:539
 msgid "Playback position (%)"
 msgstr ""
 
-#: src/ui/player_bar.rs:951
+#: src/ui/player_bar.rs:952
 msgid "Volume (%)"
 msgstr ""
 
-#: src/ui/player_bar.rs:984
+#: src/ui/player_bar.rs:985
 msgid "Unmute"
 msgstr ""
 
-#: src/ui/player_bar.rs:986
+#: src/ui/player_bar.rs:987
 msgid "Mute"
 msgstr ""
 
-#: src/ui/player_bar.rs:1002
+#: src/ui/player_bar.rs:1003
 msgid "This device's volume can't be changed from Applifast"
 msgstr ""
 
-#: src/ui/player_bar.rs:1018 src/ui/devices.rs:193
+#: src/ui/player_bar.rs:1019 src/ui/devices.rs:193
 msgid "Connect to a device"
 msgstr ""
 
-#: src/ui/player_bar.rs:1038 src/ui/queue.rs:38 src/ui/queue.rs:95
+#: src/ui/player_bar.rs:1039 src/ui/queue.rs:38 src/ui/queue.rs:95
 msgid "Queue"
 msgstr ""
 
-#: src/ui/player_bar.rs:1064 src/ui/lyrics.rs:67
+#: src/ui/player_bar.rs:1065 src/ui/lyrics.rs:67
 msgid "Lyrics"
 msgstr ""
 
@@ -358,7 +358,7 @@ msgid "Next up"
 msgstr ""
 
 #: src/ui/queue.rs:516 src/ui/queue.rs:549 src/ui/widgets.rs:2625
-#: src/ui/collection.rs:1102
+#: src/ui/collection.rs:1103
 msgid "Retry"
 msgstr ""
 
@@ -498,12 +498,12 @@ msgctxt "artist"
 msgid "Follow"
 msgstr ""
 
-#: src/ui/widgets.rs:1075 src/ui/collection.rs:1780 src/ui/collection.rs:1802
+#: src/ui/widgets.rs:1075 src/ui/collection.rs:1781 src/ui/collection.rs:1803
 #: src/ui/show.rs:173
 msgid "Remove from Your Library"
 msgstr ""
 
-#: src/ui/widgets.rs:1076 src/ui/collection.rs:1779
+#: src/ui/widgets.rs:1076 src/ui/collection.rs:1780
 msgid "Add to Your Library"
 msgstr ""
 
@@ -690,7 +690,7 @@ msgstr ""
 msgid "Spotify audio disconnected. Reconnecting local playback"
 msgstr ""
 
-#: src/app.rs:2540 src/app.rs:17335 src/ui/collection.rs:1930
+#: src/app.rs:2540 src/app.rs:17335 src/ui/collection.rs:1931
 #: src/ui/keys.rs:318 src/ui/winamp/playlist.rs:653
 msgid "Liked Songs"
 msgstr ""
@@ -1887,7 +1887,7 @@ msgctxt "filter"
 msgid "All"
 msgstr ""
 
-#: src/model.rs:649 src/ui/collection.rs:1928 src/ui/keys.rs:316
+#: src/model.rs:649 src/ui/collection.rs:1929 src/ui/keys.rs:316
 #: src/ui/keys.rs:370 src/ui/search.rs:451
 msgid "Songs"
 msgstr ""
@@ -2035,54 +2035,54 @@ msgstr ""
 msgid "Unavailable"
 msgstr ""
 
-#: src/ui/collection.rs:913
+#: src/ui/collection.rs:914
 msgid "Nothing here yet"
 msgstr ""
 
-#: src/ui/collection.rs:914
+#: src/ui/collection.rs:915
 msgid "Added songs appear here."
 msgstr ""
 
-#: src/ui/collection.rs:1324 src/ui/home.rs:790
+#: src/ui/collection.rs:1325 src/ui/home.rs:790
 msgid "Your top songs"
 msgstr ""
 
-#: src/ui/collection.rs:1333
+#: src/ui/collection.rs:1334
 msgid "Your most-played tracks from the last four weeks."
 msgstr ""
 
-#: src/ui/collection.rs:1728
+#: src/ui/collection.rs:1729
 msgid "Collaborative Playlist"
 msgstr ""
 
-#: src/ui/collection.rs:1730
+#: src/ui/collection.rs:1731
 msgid "Public Playlist"
 msgstr ""
 
-#: src/ui/collection.rs:1801
+#: src/ui/collection.rs:1802
 msgid "Save to Your Library"
 msgstr ""
 
-#: src/ui/collection.rs:1943
+#: src/ui/collection.rs:1944
 msgid ""
 "Favorites from loaded songs. Refresh Songs for changes made in Apple Music."
 msgstr ""
 
-#: src/ui/collection.rs:1954
+#: src/ui/collection.rs:1955
 msgid "Show only favorites"
 msgstr ""
 
-#: src/ui/collection.rs:2029
+#: src/ui/collection.rs:2030
 msgid "Only songs Apple marks as favorites appear here."
 msgstr ""
 
-#: src/ui/collection.rs:2032
+#: src/ui/collection.rs:2033
 msgid "Load more songs"
 msgstr ""
 
 #. Translators: {count} is a number of songs and {duration} their total
 #. length, such as "2 hr 13 min".
-#: src/ui/collection.rs:2080
+#: src/ui/collection.rs:2081
 #, rust-format
 msgid "{count} song, {duration}"
 msgid_plural "{count} songs, {duration}"
@@ -2090,19 +2090,19 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: {name} is the name of someone who added songs to the playlist.
-#: src/ui/collection.rs:2094
+#: src/ui/collection.rs:2095
 #, rust-format
 msgid "with {name}"
 msgstr ""
 
 #. Translators: {first} and {second} are names of people who added songs.
-#: src/ui/collection.rs:2098
+#: src/ui/collection.rs:2099
 #, rust-format
 msgid "with {first} and {second}"
 msgstr ""
 
 #. Translators: {count} is how many other people added songs to the playlist.
-#: src/ui/collection.rs:2105
+#: src/ui/collection.rs:2106
 #, rust-format
 msgid "and {count} other"
 msgid_plural "and {count} others"
