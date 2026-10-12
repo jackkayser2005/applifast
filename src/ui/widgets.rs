@@ -854,6 +854,17 @@ pub fn item_menu(
             label: label.clone(),
         });
     }
+    if matches!(context, Some(RowContext::Queue))
+        && let Some(action) = index.and_then(|index| app.queue_removal(vec![index]))
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::Minus),
+            &gettext(locale, "Remove from queue"),
+        )
+    {
+        app.actions.push(action);
+    }
     if item.is_track() {
         let saved = app.is_saved(&uri).unwrap_or(false);
         let (icon, text) = if app.apple.is_some() {
@@ -1932,32 +1943,38 @@ fn track_row_contents(
             });
         }
     }
-    egui::Popup::context_menu(&response)
-        .frame(menu_frame(&palette))
-        .show(|ui| {
-            // Right-clicking one of several picked rows acts on all of
-            // them; on anything else it is the ordinary single-song menu,
-            // including a picked row that is the only one picked.
-            if row.picked && row.picked_songs.len() > 1 {
-                // Every picked row shares this table's context, so one
-                // editable playlist covers the whole selection, including
-                // a sorted or filtered view where removal stays URI-based.
-                let editable = match row.context {
-                    RowContext::Context {
-                        editable_playlist: Some(playlist),
-                        ..
-                    }
-                    | RowContext::View {
-                        editable_playlist: Some(playlist),
-                        ..
-                    } => Some(playlist),
-                    _ => None,
-                };
-                picked_menu(ui, app, row.picked_songs, editable);
-            } else {
-                item_menu(ui, app, row.item, Some(row.context), Some(row.index));
-            }
-        });
+    let popup = egui::Popup::context_menu(&response);
+    #[cfg(feature = "demo")]
+    let popup = if app.demo_queue_menu && matches!(row.context, RowContext::Queue) && row.index == 0
+    {
+        popup.open(true).at_position(response.rect.left_bottom())
+    } else {
+        popup
+    };
+    popup.frame(menu_frame(&palette)).show(|ui| {
+        // Right-clicking one of several picked rows acts on all of
+        // them; on anything else it is the ordinary single-song menu,
+        // including a picked row that is the only one picked.
+        if row.picked && row.picked_songs.len() > 1 {
+            // Every picked row shares this table's context, so one
+            // editable playlist covers the whole selection, including
+            // a sorted or filtered view where removal stays URI-based.
+            let editable = match row.context {
+                RowContext::Context {
+                    editable_playlist: Some(playlist),
+                    ..
+                }
+                | RowContext::View {
+                    editable_playlist: Some(playlist),
+                    ..
+                } => Some(playlist),
+                _ => None,
+            };
+            picked_menu(ui, app, row.picked_songs, editable);
+        } else {
+            item_menu(ui, app, row.item, Some(row.context), Some(row.index));
+        }
+    });
     crate::autoscroll::row(ui, &response);
     (response, pick)
 }

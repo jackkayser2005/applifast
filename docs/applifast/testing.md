@@ -97,6 +97,14 @@ an existing or pending favorite, while typing, or while a dialog is open.
 The [current capabilities and pending checks](listening-slice.md) distinguish
 implemented controls from verified real-account behavior.
 
+For queue removal, right-click an upcoming song and choose **Remove from queue**.
+In the mini-player playlist, Ctrl-click rows, then choose **REM > Remove selected**.
+The currently playing row is excluded. Queue two copies of a song and remove
+just one; confirm the other remains and the current song keeps playing. Quit
+and reopen to check restoration. Removal affects this local listening queue,
+including its repeat context, and never changes your Apple library or playlists.
+The mini-player's **Remove all** keeps context songs and clears manual additions.
+
 Windows Settings > Apps can uninstall the installed preview. Uninstall removes
 the app files and shortcuts and preserves your Applifast settings, library/queue
 cache, WebView2 profile and Windows Credential Manager entries. Sign out in the

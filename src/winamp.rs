@@ -87,6 +87,8 @@ pub struct WinampState {
     pub open_presets: bool,
     #[cfg(feature = "demo")]
     pub demo_options_open: bool,
+    #[cfg(feature = "demo")]
+    pub demo_playlist_menu: Option<&'static str>,
     marquee_text: String,
     marquee_offset: usize,
     marquee_moved: Option<Instant>,
@@ -127,6 +129,8 @@ impl WinampState {
             open_presets: false,
             #[cfg(feature = "demo")]
             demo_options_open: false,
+            #[cfg(feature = "demo")]
+            demo_playlist_menu: None,
             marquee_text: String::new(),
             marquee_offset: 0,
             marquee_moved: None,

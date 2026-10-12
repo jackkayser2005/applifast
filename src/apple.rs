@@ -452,6 +452,29 @@ impl State {
         self.recent_adds.clear();
         self.compact_queue(&self.retained_occurrences());
     }
+    pub fn queue_generation(&self) -> (u64, u64, u64) {
+        (self.generation, self.session, self.request_generation)
+    }
+    pub fn remove_upcoming(&mut self, positions: &[usize]) -> bool {
+        if positions.is_empty() || positions.iter().any(|at| *at >= self.order.upcoming.len()) {
+            return false;
+        }
+        let removed: std::collections::HashSet<_> = positions
+            .iter()
+            .map(|at| self.order.upcoming[*at])
+            .collect();
+        for index in &removed {
+            self.recent_adds.remove(&self.queue[*index].uri());
+        }
+        self.order.manual_count = self.order.upcoming[..self.order.manual_count]
+            .iter()
+            .filter(|index| !removed.contains(index))
+            .count();
+        self.order.upcoming.retain(|index| !removed.contains(index));
+        self.order.context.retain(|index| !removed.contains(index));
+        self.compact_queue(&self.retained_occurrences());
+        true
+    }
     fn retained_occurrences(&self) -> std::collections::HashSet<usize> {
         self.order
             .context
@@ -1237,6 +1260,72 @@ mod tests {
         assert!(command.validate().is_ok());
     }
     #[test]
+    fn removing_upcoming_occurrences_preserves_current_upload_and_other_copies() {
+        let mut state = queue_state();
+        state.queue[0].item.play_params =
+            Some(json!({"id":"i.a","kind":"song","isLibrary":true,"assetId":"upload"}));
+        state.local.position_ms = 42000;
+        state.local.playback = Playback::Playing;
+        state.error = Some("Keep the playback error visible".into());
+        let current = serde_json::to_value(&state.queue[0].item).unwrap();
+        let uri = state.songs[1].uri();
+        let debounce = std::time::Duration::from_secs(60);
+        state.add_uris(&[uri.clone(), uri.clone()], 0, debounce, false);
+        state.error = Some("Keep the playback error visible".into());
+        // Remove one manual copy and its context copy, including a repeated selection.
+        assert!(state.remove_upcoming(&[0, 2, 0]));
+        assert_eq!(state.order.manual_count, 1);
+        assert_eq!(state.order.upcoming.len(), 2);
+        assert_eq!(state.queue[state.order.upcoming[0]].uri(), uri);
+        assert_eq!(state.queue[state.order.upcoming[1]].item.id, "i.c");
+        assert_eq!(state.order.context.len(), 2);
+        assert_eq!(
+            serde_json::to_value(&state.queue[state.index.unwrap()].item).unwrap(),
+            current
+        );
+        assert_eq!(state.local.position_ms, 42000);
+        assert_eq!(state.local.playback, Playback::Playing);
+        assert_eq!(
+            state.error.as_deref(),
+            Some("Keep the playback error visible")
+        );
+        state.set_shuffle(true);
+        state.set_shuffle(false);
+        assert_eq!(state.order.upcoming.len(), 2);
+        // An explicit removal permits immediately adding that song again.
+        assert_eq!(state.add_uris(&[uri], 1, debounce, false), Some(1));
+        let command = serde_json::from_value::<applifast_playback_probe::protocol::Command>(
+            state.queue_command(),
+        )
+        .unwrap();
+        assert!(command.validate().is_ok());
+    }
+
+    #[test]
+    fn removing_upcoming_is_atomic_and_does_not_resurrect_context_rows() {
+        let mut state = queue_state();
+        assert!(state.skip(1));
+        let before = state.queue_command();
+        for invalid in [&[][..], &[0, usize::MAX][..]] {
+            assert!(!state.remove_upcoming(invalid));
+            assert_eq!(state.queue_command(), before);
+        }
+        assert!(state.remove_upcoming(&[0]));
+        assert!(state.order.upcoming.is_empty());
+        assert_eq!(state.order.history.len(), 1);
+        assert_eq!(state.queue.len(), 2);
+        assert_eq!(state.queue[state.index.unwrap()].item.id, "i.b");
+        state.local.repeat = crate::player::RepeatMode::Context;
+        assert!(state.skip(1));
+        assert!(state.queue.iter().all(|song| song.item.id != "i.c"));
+        let command = serde_json::from_value::<applifast_playback_probe::protocol::Command>(
+            state.queue_command(),
+        )
+        .unwrap();
+        assert!(command.validate().is_ok());
+    }
+
+    #[test]
     fn batch_song_lookup_preserves_precedence_identity_and_atomic_failures() {
         let mut state = queue_state();
         let mut known = state.songs[0].clone();
@@ -1649,8 +1738,48 @@ mod tests {
                     && event["actualPosition"].as_f64().unwrap_or(0.0) >= 29.0
                     && event["queueLength"] == 2
             });
+            let mut queue = State {
+                songs: vec![song.clone()],
+                ..Default::default()
+            };
+            queue
+                .play_uris(&[song.uri(), song.uri(), song.uri()], 0)
+                .unwrap();
+            host.send(
+                json!({"type":"intent","generation":7,"command":queue.queue_command()}).to_string(),
+            );
+            await_event("state", &|event| {
+                event["requestGeneration"] == 7 && event["status"] == 3 && event["queueLength"] == 3
+            });
+            host.send(
+                json!({"type":"intent","generation":8,"command":{"type":"resume"}}).to_string(),
+            );
+            let playing = await_event("state", &|event| {
+                event["requestGeneration"] == 8
+                    && event["status"] == 2
+                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 29.0
+            });
+            assert!(queue.remove_upcoming(&[0]));
+            host.send(
+                json!({"type":"intent","generation":9,"command":queue.queue_command()}).to_string(),
+            );
+            await_event("state", &|event| {
+                event["requestGeneration"] == 9
+                    && event["status"] == 2
+                    && event["queueLength"] == 2
+                    && event["index"] == 0
+                    && event["order"]["upcoming"] == json!([1])
+                    && event["actualPosition"].as_f64().unwrap_or(0.0)
+                        >= playing["actualPosition"].as_f64().unwrap() - 1.0
+            });
+            host.send(
+                json!({"type":"intent","generation":10,"command":{"type":"pause"}}).to_string(),
+            );
+            await_event("state", &|event| {
+                event["requestGeneration"] == 10 && event["status"] == 3
+            });
             eprintln!(
-                "Embedded Windows host: restored authorization; {} library rows; real library shelves, library/catalog search, playback, seek, pause and saved-position queue resume passed.",
+                "Embedded Windows host: restored authorization; {} library rows; real library shelves, library/catalog search, playback, seek, pause, saved-position queue resume and removal of one duplicate during playback passed.",
                 songs.len()
             );
         };
