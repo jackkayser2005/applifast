@@ -1,7 +1,7 @@
 # Favorites write integration gate
 
 Baseline: `0cdfe6b235159796d4ec2cb16c70d36380356e5a` (PR #37).
-Windows investigation: October 11, 2026. This is unfinished feature work.
+Windows investigation: October 11-12, 2026. This is unfinished feature work.
 
 The host-boundary history below predates the draft
 [desktop add-only integration](favorite-controls.md). Its original read-only
@@ -146,3 +146,26 @@ restart behavior, a previously unfavorited song, matching visual comparisons
 and a new tested download. Removal remains unimplemented without a verified
 supported route. Neither the full favorites feature nor release readiness is
 claimed complete.
+
+## Isolated startup follow-up, October 12
+
+A separate startup check used a fresh browser profile under the worktree's
+ignored `.cache/` directory, selected through the child process's `LOCALAPPDATA`.
+A `signed-out` marker was created before startup so the host did not restore
+the stored listener token. It used the already-valid developer token from
+Credential Manager, without importing or replacing credentials. The only
+command sent to the host was shutdown; the running desktop app was left alone.
+
+The local page reported `success=true`, WebView2 error status `0` and HTTP
+status `200`, followed by MusicKit `ready` and process exit `0`. The diagnostic
+output retained only these fixed stages and numeric statuses. This establishes
+local-page navigation and SDK readiness with the isolated signed-out profile.
+It does not establish fresh-account authorization, account reads, audio or
+Favorites writes. The earlier existing-profile failure remains unexplained;
+it is not a universal failure to load this page in the automation environment.
+
+No source change was needed for this check. The existing `--self-check` still
+only creates the WebView2 controller and reports the runtime version; it does
+not navigate to the playback page or test MusicKit. The
+[current release checklist](release-readiness.md) tracks the remaining
+real-account and private-trial gates separately from this startup result.

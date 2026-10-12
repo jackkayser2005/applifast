@@ -34,15 +34,33 @@ public release readiness. The current previews are unsigned and their bundled
 app token expires November 6, 2026 at 17:47 UTC. Renew before expiry and ship a
 fresh preview. There is no renewal server or automatic updater.
 
+## Order of the remaining passes
+
+Allow one or two focused testing/fix passes for the first family trial, provided
+fresh-account sign-in does not reveal a larger issue. That is an estimate, not
+a completion promise. A verified installer already exists; the most useful next
+evidence comes from a different PC and account.
+
+1. **Private handoff:** finish candidate CI, then try the installer and the
+   sign-in/cancel/retry steps on Dad's PC. Fix anything that blocks opening,
+   authorization, loading his library or audible playback.
+2. **Daily-use trial:** finish the short listening/queue/tray/restart checklist
+   above and check any Favorites/playlist actions he uses. Record failures and
+   provide a new preview when a fix is needed.
+3. **Public-beta preparation:** complete the eleven areas below, including
+   reliability, measured gaming performance, account lifecycle, final PR
+   integration, token renewal, documentation and publication. This can take
+   several further passes; a successful family trial does not close these gates.
+
 ## Current evidence
 
 | Area | Evidence and limit |
 | --- | --- |
 | Ordinary desktop listening | The user confirmed library loading and audible catalog playback on optimized `9cb3a36`. This does not verify the later Favorites changes or full-track/gaming acceptance. |
 | Latest local checks | `a056b19`: Windows formatting, strict default/demo all-target Clippy, 1,016 default and 1,054 demo library tests, remaining binary/integration tests, doctests, strict Rustdoc, demo build, gettext and bridge/signer tests pass. Five opt-in tests were ignored per ordinary library suite; a separate native credential-store test passes using dummy grants. |
-| Hosted checks | PR #45 at `7489d72`: all seven [CI jobs](https://github.com/jackkayser2005/applifast/actions/runs/38183109632) pass, including Windows x64/ARM, macOS, Ubuntu, quality, docs and Nix. Every applicable [Packaging job](https://github.com/jackkayser2005/applifast/actions/runs/38183110613) passes. PR #46 validation is a separate gate. |
+| Hosted checks | PR #45 at `7489d72`: all seven [CI jobs](https://github.com/jackkayser2005/applifast/actions/runs/38183109632) and every applicable [Packaging job](https://github.com/jackkayser2005/applifast/actions/runs/38183110613) pass. PR #46 at `a056b19`: [CI](https://github.com/jackkayser2005/applifast/actions/runs/38269332681) quality, docs, Ubuntu and Nix pass; Windows x64/ARM and macOS remain in progress at this snapshot. Every applicable [Packaging job](https://github.com/jackkayser2005/applifast/actions/runs/38269334505) passes. |
 | Private installer | `a056b19` installer/ZIP: clean source manifest, six entries, payload/checksum/PE/default-feature-help checks pass. Dummy-token packaging and isolated install, upgrade, shortcuts and uninstall fixtures pass. Those fixtures never authorize or launch the app. This is a local private download, not a published GitHub release. |
-| Native account automation | The latest attempted Favorites account gate failed loading the local host page before sign-in or writes. Ordinary user desktop playback succeeds on `9cb3a36`; the automation failure remains unresolved. See [account gate evidence](favorites-write-evidence.md). |
+| Native host and account automation | A fresh, isolated signed-out profile loaded the local host page with HTTP 200, reached MusicKit readiness and shut down with exit 0 on October 12. This used the existing stored app token and sent no authorization, library, playback or Favorites commands. The earlier Favorites account gate failed local-page loading with the existing profile; its cause and real-account writes remain unresolved. See [account gate evidence](favorites-write-evidence.md). |
 | Resource budget | The standalone probe exceeded the original 250 MiB private-memory limit: 285.406 MiB playing and 278.297 MiB paused. Initial integration was approved with that footprint. Integrated five-minute samples and the one-hour gaming session remain unverified. Roughly 300 MB reported by the user is not a measurement against the original gate. |
 | Visual evidence | Motion/Now Playing, main controls and mini-player have native comparison artifacts. The [Favorites shortcut](favorite-shortcut.md) has eight inspected matching captures. HTML browser rendering and real motion/runtime acceptance remain distinct from still-image and selector checks. |
 
