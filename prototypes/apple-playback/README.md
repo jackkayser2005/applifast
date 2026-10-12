@@ -224,6 +224,13 @@ credential storage and runtime initialization do not establish actual audio.
 Non-Windows builds report unsupported playback. All ordinary application screens
 remain in egui; no production layout or theme changes are part of this probe.
 
+The bridge gives Apple's SDK 45 seconds to become available after bootstrap.
+A missing SDK reports the existing fixed configuration error and does not
+configure MusicKit if the SDK arrives later. Desktop Retry connection starts a
+new host. The deadline does not cover native environment creation, MusicKit
+configuration or the authorization popup. The Node bridge tests exercise this
+failure with a deterministic clock; they do not establish a real network outage.
+
 The probe source is MIT. Apple's SDK is loaded directly from Apple and is subject
 to Apple's developer/service terms. WebView2 is an installed Microsoft runtime,
 not a vendored CDM. Neither third-party runtime is relicensed by this repository.

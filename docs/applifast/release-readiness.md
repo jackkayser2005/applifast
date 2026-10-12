@@ -1,8 +1,9 @@
 # Applifast Windows beta readiness
 
 Snapshot: October 12, 2026. This is the release checklist, not a release claim.
-The candidate code is `a056b19` (PR #46), stacked on the mini-player Favorites
-change in PR #45. `main` remains at `995c768`; these preview changes have not
+The candidate code is `4f47613` (PR #48), adding an SDK startup deadline on top
+of PR #46's Favorites shortcut and PR #47's checklist. `main` remains at
+`995c768`; these preview changes have not
 been merged into a public release.
 
 ## Next private trial: Dad's PC
@@ -13,7 +14,7 @@ the app developer token; the tester authorizes their own Apple account. They
 do not need Developer Program membership, a signing key, Rust, Node, or commands.
 Use the [Windows tester guide](testing.md).
 
-- [x] Build and verify the optimized `a056b19` installer/ZIP, checksums,
+- [x] Build and verify the optimized `4f47613` installer/ZIP, checksums,
   six-file payload, source manifest and default-feature CLI help. Isolated
   dummy-token packaging and install/upgrade/uninstall fixtures pass.
 - [ ] Verify every required hosted CI job on the candidate commit.
@@ -57,10 +58,10 @@ evidence comes from a different PC and account.
 | Area | Evidence and limit |
 | --- | --- |
 | Ordinary desktop listening | The user confirmed library loading and audible catalog playback on optimized `9cb3a36`. This does not verify the later Favorites changes or full-track/gaming acceptance. |
-| Latest local checks | `a056b19`: Windows formatting, strict default/demo all-target Clippy, 1,016 default and 1,054 demo library tests, remaining binary/integration tests, doctests, strict Rustdoc, demo build, gettext and bridge/signer tests pass. Five opt-in tests were ignored per ordinary library suite; a separate native credential-store test passes using dummy grants. |
-| Hosted checks | PR #45 at `7489d72`: all seven [CI jobs](https://github.com/jackkayser2005/applifast/actions/runs/38183109632) and every applicable [Packaging job](https://github.com/jackkayser2005/applifast/actions/runs/38183110613) pass. PR #46 at `a056b19`: [CI](https://github.com/jackkayser2005/applifast/actions/runs/38269332681) quality, docs, Ubuntu and Nix pass; Windows x64/ARM and macOS remain in progress at this snapshot. Every applicable [Packaging job](https://github.com/jackkayser2005/applifast/actions/runs/38269334505) passes. |
-| Private installer | `a056b19` installer/ZIP: clean source manifest, six entries, payload/checksum/PE/default-feature-help checks pass. Dummy-token packaging and isolated install, upgrade, shortcuts and uninstall fixtures pass. Those fixtures never authorize or launch the app. This is a local private download, not a published GitHub release. |
-| Native host and account automation | A fresh, isolated signed-out profile loaded the local host page with HTTP 200, reached MusicKit readiness and shut down with exit 0 on October 12. This used the existing stored app token and sent no authorization, library, playback or Favorites commands. The earlier Favorites account gate failed local-page loading with the existing profile; its cause and real-account writes remain unresolved. See [account gate evidence](favorites-write-evidence.md). |
+| Latest local checks | `4f47613`: Windows formatting, strict default/demo all-target Clippy, 1,016 default and 1,054 demo library tests, remaining binary/integration tests, doctests, strict Rustdoc, demo build, gettext and bridge/signer tests pass. Five opt-in tests were ignored per ordinary library suite. The earlier separate native credential-store check passes using dummy grants; this change does not alter credential code. |
+| Hosted checks | PR #46 at `a056b19`: all seven [CI jobs](https://github.com/jackkayser2005/applifast/actions/runs/38269332681) and every applicable [Packaging job](https://github.com/jackkayser2005/applifast/actions/runs/38269334505) pass. PR #48's [candidate CI](https://github.com/jackkayser2005/applifast/actions/runs/38274872208) remains in progress at this snapshot. |
+| Private installer | `4f47613` installer/ZIP: clean source manifest, six entries, payload/checksum/PE/default-feature-help checks pass. Dummy-token packaging and isolated install, upgrade, shortcuts and uninstall fixtures pass. Those fixtures never authorize or launch the app. This is a local private download, not a published GitHub release. |
+| Native host and account automation | On October 12, fresh signed-out profiles loaded the local page with HTTP 200. Normal startup reached unauthorized MusicKit readiness in 2.88 seconds. A child-only refused proxy blocked external requests and produced the fixed SDK initialization error after 45.61 seconds. Both exited cleanly after shutdown; no authorization, account-read, playback or write commands were sent. See [SDK deadline evidence](listening-slice.md#retry-after-startup-failure). The earlier existing-profile failure and real-account Favorites writes remain unresolved; see [account gate evidence](favorites-write-evidence.md). |
 | Resource budget | The standalone probe exceeded the original 250 MiB private-memory limit: 285.406 MiB playing and 278.297 MiB paused. Initial integration was approved with that footprint. Integrated five-minute samples and the one-hour gaming session remain unverified. Roughly 300 MB reported by the user is not a measurement against the original gate. |
 | Visual evidence | Motion/Now Playing, main controls and mini-player have native comparison artifacts. The [Favorites shortcut](favorite-shortcut.md) has eight inspected matching captures. HTML browser rendering and real motion/runtime acceptance remain distinct from still-image and selector checks. |
 
