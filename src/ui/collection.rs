@@ -787,7 +787,8 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
             return;
         }
         // Shift neighboring rows around the current drop slot.
-        let shift = ui.ctx().animate_value_with_time(
+        let shift = super::motion::animate_value(
+            ui.ctx(),
             ui.id().with(("table-move-shift", row)),
             match move_slot {
                 Some(slot) if row < slot => -4.0,

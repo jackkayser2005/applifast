@@ -85,7 +85,7 @@ Token generation for maintainers is documented in the
 | Playlists | Create playlists, save the queue and append selected songs, albums or the queue. Real-account write acceptance remains pending. |
 | Favorites | Read flags, filter loaded songs, show a Favorites page and configurable sidebar shelf, and add up to 100 distinct non-favorite songs per action. Additions are locally tested; live-account acceptance is pending. Removal remains unavailable. |
 | Links and menus | Copy public Apple Music catalog links or exact internal library links. Radio and advanced playlist edits are hidden. Playlist creation, additions and queue controls remain available. |
-| Lyrics and motion | Optional LRCLIB lyrics and full-screen Now Playing; Reduce motion; decorative Ambient Pulse. Apple playback does not expose PCM for EQ, spectrum, oscilloscope or MilkDrop. |
+| Lyrics and motion | Optional LRCLIB lyrics and full-screen Now Playing; Reduce motion also stills settings switches, color fades and drag feedback; decorative Ambient Pulse. Apple playback does not expose PCM for EQ, spectrum, oscilloscope or MilkDrop. |
 | Shortcuts | Settings > Keyboard shortcuts or Ctrl+/. Alt+1–5 navigates, F5 refreshes music pages and Ctrl+M opens the mini player. |
 | Shared links | Paste an Apple Music share URL into Search and press Enter, or pass it to the executable. `play-uri` starts linked music explicitly; opening a link alone preserves playback. |
 

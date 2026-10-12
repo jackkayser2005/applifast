@@ -378,7 +378,8 @@ fn eased_fill(ctx: &egui::Context, panel: Color32, tint: Option<Color32>) -> Col
         *data.get_temp_mut_or_insert_with(egui::Id::new(TINT_SESSION_ID), || pass)
     });
     let channel = |axis: &'static str, value: u8| {
-        ctx.animate_value_with_time(
+        super::motion::animate_value(
+            ctx,
             egui::Id::new(("player-bar-tint", session, axis)),
             f32::from(value),
             TINT_FADE_SECONDS,
@@ -1152,6 +1153,25 @@ mod player_bar_tint_tests {
         assert_eq!(frame(&ctx, 0.2, panel, Some(third)), middle);
         assert_ne!(frame(&ctx, 0.2 + fade / 2.0, panel, Some(third)), middle);
         assert_eq!(frame(&ctx, 0.2 + fade, panel, Some(third)), third_fill);
+    }
+
+    #[test]
+    fn reducing_motion_finishes_a_tint_fade_and_resumes_from_that_colour() {
+        for panel in [Palette::dark().panel, Palette::light().panel] {
+            let ctx = egui::Context::default();
+            let art = Color32::from_rgb(220, 140, 160);
+            let target = super::super::blend(panel, art, TINT_STRENGTH);
+            assert_eq!(frame(&ctx, 0.0, panel, None), panel);
+            frame(&ctx, 0.1, panel, Some(art));
+            assert_ne!(frame(&ctx, 0.2, panel, Some(art)), target);
+
+            super::super::motion::set_reduced(&ctx, true);
+            assert_eq!(frame(&ctx, 0.21, panel, Some(art)), target);
+            assert_eq!(frame(&ctx, 0.22, panel, None), panel);
+            super::super::motion::set_reduced(&ctx, false);
+            assert_eq!(frame(&ctx, 0.23, panel, Some(art)), panel);
+            assert_eq!(frame(&ctx, 0.8, panel, Some(art)), target);
+        }
     }
 
     #[test]
