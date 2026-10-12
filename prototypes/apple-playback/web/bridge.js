@@ -4,7 +4,9 @@
   let music, session = 1, queue = [], index = -1, repeat = 0, shuffle = false;
   let order = { upcoming: [], manualCount: 0, context: [], history: [] };
   let nativeQueue = false;
-  let chain = Promise.resolve(), initializing, signingOut = false, authorizing = false;
+  let chain = Promise.resolve(), initializing, signingOut = false, authorization = null;
+  // The SDK can mutate its token after cancellation; retain only the accepted grant.
+  let userToken = '';
   let writes = Promise.resolve();
   const apiControllers = new Set();
   let transitioning = false, playbackFailed = false;
@@ -171,16 +173,33 @@
     }
     return -1;
   }
+  function cancelAuthorization() {
+    const attempt = authorization;
+    authorization = null;
+    attempt?.cancel();
+    if (attempt) music.musicUserToken = userToken;
+  }
   async function authorize(generation) {
-    if (authorizing || signingOut) return;
-    authorizing = true;
+    if (authorization || signingOut) return;
+    const attempt = {};
+    const canceled = new Promise(resolve => { attempt.cancel = () => resolve(null); });
+    authorization = attempt;
     try {
-      const token = await music.authorize();
-      if (generation !== session) { music.musicUserToken = ''; return; }
+      const requested = Promise.resolve(music.authorize()).then(token => {
+        if (generation !== session || authorization !== attempt) {
+          music.musicUserToken = userToken;
+          return null;
+        }
+        return token;
+      });
+      const token = await Promise.race([requested, canceled]);
+      if (token === null || generation !== session || authorization !== attempt) return;
       if (typeof token !== 'string' || !token) throw new Error('authorization');
+      userToken = token;
+      music.musicUserToken = token;
       send('authorized', { token, storefront: String(music.storefrontId || '') }, generation); // Native consumes the token; never renders/logs it.
-    } catch { error('authorization', generation); }
-    finally { authorizing = false; }
+    } catch { if (authorization === attempt) error('authorization', generation); }
+    finally { if (authorization === attempt) authorization = null; }
   }
   async function perform(command, generation) {
     if (generation !== session || signingOut) return;
@@ -386,6 +405,8 @@
       const pending = chain;
       const generation = ++session;
       signingOut = true;
+      userToken = '';
+      cancelAuthorization();
       for (const controller of apiControllers) controller.abort();
       writes = Promise.resolve();
       desiredPlaying = false;
@@ -395,6 +416,7 @@
         await music.pause();
         await pending;
         await music.unauthorize();
+        userToken = '';
         music.musicUserToken = '';
         if (generation === session) { signingOut = false; send('signedOut'); }
       })().catch(() => error('signOut', generation));
@@ -434,7 +456,8 @@
       await sdkLoaded();
       music = await window.MusicKit.configure({ developerToken: settings.developerToken,
         app: { name: 'Applifast Playback Probe', build: '0.1.0' } });
-      if (settings.userToken) music.musicUserToken = settings.userToken;
+      userToken = settings.userToken || '';
+      if (userToken) music.musicUserToken = userToken;
       // Never count a 30-second preview as full-track playback.
       music.playbackMode = window.MusicKit.PlaybackMode.FULL_PLAYBACK_ONLY;
       music.autoplayEnabled = false;
@@ -468,5 +491,5 @@
   }
   // Visible diagnostic controls use the same native command boundary as stdin.
   const request = command => window.chrome.webview.postMessage({ type: 'command', session, command });
-  window.applifast = { bootstrap, dispatch, request };
+  window.applifast = { bootstrap, dispatch, request, cancelAuthorization };
 })();
