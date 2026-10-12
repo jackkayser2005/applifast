@@ -50,6 +50,14 @@ demo build, gettext and Node bridge/signer checks pass. Five opt-in tests were
 ignored in each ordinary library run; the native result above is separate.
 All-feature and other-platform validation still require the fix's hosted CI.
 
+The optimized `292ab76` installer/ZIP is verified against a clean source manifest,
+six-file payload, SHA-256 records, executable headers and default-feature CLI
+help. Dummy-token packaging and isolated install/upgrade/uninstall fixtures pass
+without launching the app. The credential/history and package-pattern audit was
+repeated for this source and payload; its [limits](private-preview-audit.md) remain.
+This is an unsigned local preview with an app token expiring November 6, not a
+published release or a completed fresh-PC sign-in check.
+
 This changes playback reporting, without changing layout, credentials, files,
 network destinations, dependencies or media storage. Full-track listening,
 real application restart, fresh-PC authorization and gaming acceptance remain
