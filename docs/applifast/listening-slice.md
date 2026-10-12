@@ -1,5 +1,10 @@
 # First Windows listening slice
 
+For the current private-trial and public-beta gates, use the
+[release checklist](release-readiness.md). This page records the implementation
+history, including checks, capability limits and CI problems on earlier
+revisions. Those historical results do not establish the latest release state.
+
 Applifast reuses the original Rust/egui interface and an independent MusicKit JS v3 host.
 The host uses the installed Evergreen WebView2 runtime on its own COM STA thread
 with a message pump. Commands and sanitized events cross channels through the
@@ -1091,8 +1096,9 @@ network interruption and restart acceptance remain unverified.
 ## Storage and network
 
 Settings/state/cache paths use `applifast`, independent of Spotifast. The
-single-instance and media-control names also use Applifast. The development
-binary name and old packaging have not yet been renamed for distribution.
+single-instance and media-control names also use Applifast. The Cargo package
+and build target retain the technical name `spotifast`; private portable
+packages and the independent installer ship `Applifast.exe`.
 Developer and user tokens remain in Windows Credential Manager under
 `local.applifast.playback-probe`, reusing the account already authorized locally.
 The separate browser profile and embedded playback assets live under
@@ -1108,7 +1114,7 @@ or decrypted-media persistence. SDK/runtime behavior remains governed by Apple
 and Microsoft. Upstream update checks are disabled; the update configuration
 points to this fork, so it cannot select an upstream Spotifast release.
 
-## Validation and pending acceptance
+## Initial validation and pending acceptance (October 7, 2026)
 
 The standalone [evidence report](playback-evidence.md) records full catalog
 playback, hidden mixed queues, seeking and measured resource use. Its original
@@ -1162,8 +1168,10 @@ The attempted all-feature Clippy check failed because
 `VCPKG_INSTALLATION_ROOT` is unset. Packaging/site checks are blocked by missing
 Ruby/Bundler and Unix shell tooling; Nix is absent locally. These checks are
 pending, not passing.
-The draft PR has no GitHub checks: Actions permissions report enabled, but the
+At that initial revision, the draft PR had no GitHub checks: Actions permissions
+reported enabled, but the
 fork's workflow inventory is empty and activating `ci.yml` returns HTTP 404
 despite that file existing on `main`. CI has not run. This repository workflow
 registration must be resolved before relying on hosted checks or refreshing the
-Nix vendor hash from its build result.
+Nix vendor hash from its build result. This describes the October 7 investigation;
+subsequent hosted validation is recorded in the [current checklist](release-readiness.md).

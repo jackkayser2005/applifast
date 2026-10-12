@@ -8,6 +8,9 @@ tray or mini player while other apps are running.
 feature-parity release. Linux and macOS playback are unsupported. The original
 Spotifast downloads install a different product.
 
+See the [Windows beta checklist](docs/applifast/release-readiness.md) for the
+next private trial, current evidence and remaining public-release gates.
+
 ## Try the preview
 
 Invited testers: get the preview installer or portable ZIP and its checksum from
