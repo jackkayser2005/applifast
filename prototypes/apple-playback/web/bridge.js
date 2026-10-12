@@ -66,8 +66,14 @@
   const state = () => {
     const position = number(music.currentPlaybackTime);
     if (seekTarget !== null && Math.abs(position - seekTarget) <= 1) seekTarget = null;
+    // Normalize SDK states to the native transport contract, including unloaded pauses.
+    const states = window.MusicKit.PlaybackStates;
+    let status = number(music.playbackState);
+    if (status === states.stopped) status = !desiredPlaying && index >= 0 ? 3 : 0;
+    else if (status === states.ended || status === states.completed) status = 10;
+    else if (status === states.stalled) status = 8;
     send('state', {
-    status: transitioning ? 1 : number(music.playbackState), position: transitioning ? 0 : (seekTarget ?? position),
+    status: transitioning ? 1 : status, position: transitioning ? 0 : (seekTarget ?? position),
     duration: number(music.currentPlaybackDuration), actualPosition: position, index, queueLength: queue.length,
     requestGeneration, order: structuredClone(order)
   }); };

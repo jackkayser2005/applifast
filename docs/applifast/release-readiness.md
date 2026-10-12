@@ -26,9 +26,10 @@ Use the [Windows tester guide](testing.md).
   separately confirmed favorites without audio. New-favorite writes and
   fresh-PC authorization remain unchecked.
 - [x] Demonstrate muted native playback, seek and pause with restored protected
-  authorization. The complete test still fails at paused queue restoration.
-- [ ] Resolve the native paused-restoration timeout and verify resume starts at
-  the saved position without losing queue occurrences.
+  authorization.
+- [x] Resolve the native paused-restoration timeout and verify actual saved-position
+  resume with both queue occurrences retained. The corrected native check passes
+  in 44.86 seconds; see [state-conversion evidence](paused-restoration.md).
 - [ ] Verify every required hosted CI job on the candidate commit.
 - [ ] On Dad's PC, install through the wizard, open from Start, authorize in
   Apple's popup and load his library without copying another user's profile,
@@ -71,10 +72,10 @@ evidence comes from a different PC and account.
 | --- | --- |
 | Ordinary desktop listening | The user confirmed library loading and audible catalog playback on optimized `9cb3a36`. This does not verify the later Favorites changes or full-track/gaming acceptance. |
 | Latest local checks | `4f47613`: Windows formatting, strict default/demo all-target Clippy, 1,016 default and 1,054 demo library tests, remaining binary/integration tests, doctests, strict Rustdoc, demo build, gettext and bridge/signer tests pass. Five opt-in tests were ignored per ordinary library suite. The earlier separate native credential-store check passes using dummy grants; this change does not alter credential code. |
-| Hosted checks | PR #46 at `a056b19`: all seven [CI jobs](https://github.com/jackkayser2005/applifast/actions/runs/38269332681) and every applicable [Packaging job](https://github.com/jackkayser2005/applifast/actions/runs/38269334505) pass. PR #48's [candidate CI](https://github.com/jackkayser2005/applifast/actions/runs/38276771885) at `1410e27` has six successful jobs; Windows x64 remains in progress at this snapshot. |
+| Hosted checks | PR #46 at `a056b19`: all seven [CI jobs](https://github.com/jackkayser2005/applifast/actions/runs/38269332681) and every applicable [Packaging job](https://github.com/jackkayser2005/applifast/actions/runs/38269334505) pass. PR #48's [candidate CI](https://github.com/jackkayser2005/applifast/actions/runs/38276771885) at `1410e27` also passes all seven jobs. The later state-conversion fix needs its own CI result. |
 | Private installer | `4f47613` installer/ZIP: clean source manifest, six entries, payload/checksum/PE/default-feature-help checks pass. Dummy-token packaging and isolated install, upgrade, shortcuts and uninstall fixtures pass. Those fixtures never authorize or launch the app. This is a local private download, not a published GitHub release. |
 | Credential/package audit | At `1410e27`, all 50 published origin branch tips matched fetched refs. All local refs/reflogs and historical paths were inspected: 5,904 blobs, with no complete private-key blocks or MusicKit developer-JWT candidates. Original/integration ignore checks pass. The private ZIP contains only the intended app JWT in its declared companion file. [Scope and limits](private-preview-audit.md) remain explicit; this does not prove absence of every possible secret or replace the final release audit. |
-| Native host and account automation | The isolated [SDK startup checks](listening-slice.md#retry-after-startup-failure) pass for normal loading and a blocked SDK. The corrected idempotent Favorites check passed in 6.51 seconds with protected authorization restored into a workspace profile. A separate muted test passed reads, search, playback, seek and pause, then failed at paused restoration: SDK loading, actual position/duration zero, two retained entries. The existing-profile asset-location failure is narrowed but not fully explained. New-favorite writes, successful restoration and fresh-PC authorization remain unchecked; see [account gate evidence](favorites-write-evidence.md). |
+| Native host and account automation | The isolated SDK startup checks and 6.51-second idempotent Favorites check pass. The [state-conversion fix](paused-restoration.md) corrects SDK stopped/ended/stalled handling; the complete muted test now passes in 44.86 seconds, including actual saved-position resume and both retained queue occurrences. The initial failed album-detail read remains recorded. Existing-profile asset-location failure, real app restart, new-favorite writes and fresh-PC authorization remain distinct unresolved gates. |
 | Resource budget | The standalone probe exceeded the original 250 MiB private-memory limit: 285.406 MiB playing and 278.297 MiB paused. Initial integration was approved with that footprint. Integrated five-minute samples and the one-hour gaming session remain unverified. Roughly 300 MB reported by the user is not a measurement against the original gate. |
 | Visual evidence | Motion/Now Playing, main controls and mini-player have native comparison artifacts. The [Favorites shortcut](favorite-shortcut.md) has eight inspected matching captures. HTML browser rendering and real motion/runtime acceptance remain distinct from still-image and selector checks. |
 

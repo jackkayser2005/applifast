@@ -60,12 +60,16 @@ completed. Muted playback advanced beyond one second, seeking reached at least
 
 The complete test still failed. Its final paused-restoration assertion timed out
 after a total 59.70 seconds. Safe numeric diagnostics reported generation 4,
-SDK status 4 (loading), requested position 30, actual position 0, duration 0 and
+SDK status 4 (classified as loading by the native app), requested position 30, actual position 0, duration 0 and
 two queue entries. Earlier playback/seek/pause assertions had already passed.
 The test now retains those numeric fields on timeout without logging account
 identifiers, song metadata or authorization responses. Restoration needs further
 investigation; this result does not establish restart recovery or full-track
 listening. The disposable profiles were removed after shutdown.
+
+A later public-enum diagnostic identified SDK status 4 as `stopped`, not loading.
+The [state-conversion fix](paused-restoration.md) addresses that mismatch and
+extends the native test to verify the actual saved position after resume.
 
 ## Boundary
 
