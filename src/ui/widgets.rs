@@ -2675,19 +2675,35 @@ pub fn loading_row(ui: &mut Ui, palette: &Palette, locale: Locale) {
 
 pub fn error_row(ui: &mut Ui, app: &mut App, message: &str, retry: Option<Page>) {
     let palette = app.palette;
+    let retry_label = gettext(app.locale, "Retry");
     ui.horizontal(|ui| {
         ui.add_space(8.0);
         theme::icon(ui, Icon::CircleAlert, 16.0, palette.danger);
-        theme::text(ui, message, theme::regular(13.0), palette.secondary);
+        if app.apple.is_some() {
+            let reserved = retry.as_ref().map_or(0.0, |_| {
+                theme::soft_button_width(ui, &retry_label) + 21.0 + ui.spacing().item_spacing.x
+            });
+            ui.allocate_ui_with_layout(
+                vec2((ui.available_width() - reserved).max(1.0), 0.0),
+                egui::Layout::top_down(egui::Align::LEFT),
+                |ui| {
+                    let galley = crate::bidi::layout(
+                        ui.painter(),
+                        message,
+                        theme::regular(13.0),
+                        palette.secondary,
+                        ui.available_width(),
+                        usize::MAX,
+                        None,
+                    );
+                    ui.add(egui::Label::new(galley).selectable(false));
+                },
+            );
+        } else {
+            theme::text(ui, message, theme::regular(13.0), palette.secondary);
+        }
         if let Some(page) = retry
-            && theme::soft_button(
-                ui,
-                &palette,
-                Some(Icon::Refresh),
-                &gettext(app.locale, "Retry"),
-                false,
-            )
-            .clicked()
+            && theme::soft_button(ui, &palette, Some(Icon::Refresh), &retry_label, false).clicked()
         {
             app.actions.push(Action::Reload(page));
         }

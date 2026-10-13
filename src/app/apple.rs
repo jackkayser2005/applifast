@@ -635,7 +635,7 @@ impl App {
                 Some("Apple has not shown the saved tracks yet. Refresh to check again.".into());
         }
     }
-    pub(super) fn sync_apple_library(&mut self) {
+    pub(crate) fn sync_apple_library(&mut self) {
         let Some(apple) = &self.apple else { return };
         self.library.liked.items = apple
             .songs
@@ -647,6 +647,7 @@ impl App {
             .collect();
         self.library.liked.loaded_once = !apple.songs.is_empty() || !apple.loading;
         self.library.liked.loading = apple.loading;
+        self.library.liked.error = apple.library_error.clone();
         self.library.liked.total = Some(apple.songs.len() as u32);
         self.library.liked.next_offset = apple.next.as_ref().map(|_| apple.songs.len() as u32);
         self.library.liked.revision += 1;

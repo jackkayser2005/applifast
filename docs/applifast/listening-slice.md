@@ -11,6 +11,14 @@ with a message pump. Commands and sanitized events cross channels through the
 existing asynchronous backend. Closing an egui window does not own or destroy
 the playback host. Apple authorization is the only visible browser popup.
 
+## API failure recovery
+
+Failed Apple reads and mutations preserve only a validated HTTP status, with
+fixed guidance for rejected app/account credentials, rate limits and service
+failures. Songs shows its read error beside cached rows and clears it immediately
+on Retry. Apple error text wraps without hiding Retry. Errors do not open a popup,
+sign out, delete data or replay writes automatically. See [evidence](api-recovery.md).
+
 ## Play next
 
 Song, selected-song and album menus offer **Play next** in Apple mode. It

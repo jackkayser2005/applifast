@@ -101,6 +101,14 @@ To choose what follows the playing song, right-click a song, selected songs or
 an album and choose **Play next**. It goes before manual additions; **Add to
 queue** appends after them. Album choices wait for every page before appearing.
 
+If Songs cannot refresh, cached rows stay available and the error row offers
+Retry. Rejected app credentials require a fresh developer token imported in
+Settings > Account. Rejected account authorization points to checking your
+subscription and signing out/in there. Rate-limit and service errors ask you
+to wait before retrying. No error signs you out or repeats playlist/Favorites
+writes automatically. Include real rejection and recovery in the account-lifecycle
+checklist; simulated errors do not establish revoked-credential acceptance.
+
 For queue removal, right-click an upcoming song and choose **Remove from queue**.
 In the mini-player playlist, Ctrl-click rows, then choose **REM > Remove selected**.
 The currently playing row is excluded. Queue two copies of a song and remove

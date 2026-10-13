@@ -6,6 +6,21 @@ use serde_json::Value;
 use std::io::Read;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Fixed recovery guidance, without Apple's response body or credential details.
+pub fn api_failure_message(status: Option<u64>, fallback: &str) -> &str {
+    match status {
+        Some(401) => {
+            "Apple rejected the app's developer token. Import a fresh developer token in Settings > Account."
+        }
+        Some(403) => {
+            "Apple rejected this account authorization. Check your subscription, then sign out and sign in again in Settings > Account."
+        }
+        Some(429) => "Apple Music is limiting requests. Wait a little, then retry.",
+        Some(500..=599) => "Apple Music is temporarily unavailable. Try again later.",
+        _ => fallback,
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ItemKind {
@@ -480,6 +495,35 @@ fn validate_token_at(token: &str, now: u64) -> Result<(), String> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn api_failures_distinguish_credentials_limits_and_service_errors() {
+        for (status, expected) in [
+            (401, "developer token"),
+            (403, "account authorization"),
+            (429, "limiting requests"),
+            (500, "temporarily unavailable"),
+            (599, "temporarily unavailable"),
+        ] {
+            let message = api_failure_message(Some(status), "generic failure");
+            assert!(message.contains(expected));
+            assert!(message.len() <= 256);
+        }
+        for status in [
+            None,
+            Some(0),
+            Some(200),
+            Some(400),
+            Some(404),
+            Some(600),
+            Some(u64::MAX),
+        ] {
+            assert_eq!(
+                api_failure_message(status, "generic failure"),
+                "generic failure"
+            );
+        }
+    }
 
     #[test]
     fn reads_reject_external_paths_and_credential_parameters() {

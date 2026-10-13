@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast API recovery comparison</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}</style>
+<h1>Apple API recovery guidance</h1>
+<p>Baseline production code <code>bd361d8</code>, candidate <code>fix/apple-api-recovery</code>. Songs now shows the failed read beside its two cached songs. Fixed guidance distinguishes rejected app credentials, account authorization, request limits and service failures. Apple error text wraps while Retry stays visible. No navigation, shell or theme redesign.</p>
+<p>Both builds use identical demo-only error fixtures, data, artwork cache, pointer, zoom and Windows captures. The baseline loses the Songs error during state synchronization. A separate input-driven test reproduces truncation before wrapping is fixed. These screenshots simulate failures and never revoke or alter credentials.</p>
+<label>Failure <select id="view"><option value="developer">App token rejected</option><option value="account">Account authorization rejected</option><option value="limit">Request limit</option><option value="service">Service unavailable</option></select></label>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Size <select id="size"><option value="normal">Normal</option><option value="narrow">Narrow</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Native Windows API recovery error-row comparison">
+<p>Fresh-account sign-in, real credential rejection and rendered HTML remain separate checks. See <a href="../api-recovery.md">scope and verification</a>.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+(byId('size').value==='normal'?'1100x760':'760x760');byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['view','theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

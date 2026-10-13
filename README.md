@@ -68,6 +68,10 @@ Choose **Play next** on a song, selection or album to hear it after the current
 track, ahead of existing manual additions. **Add to queue** appends instead.
 Albums load all track pages before insertion. See [Play next](docs/applifast/play-next.md).
 
+Failed Apple library reads now keep cached songs visible with specific recovery
+guidance and a Retry action. Rejected credentials point to Settings > Account;
+rate limits and service failures ask you to wait. See [API recovery](docs/applifast/api-recovery.md).
+
 Right-click an upcoming Apple queue row to **Remove from queue**. In the
 mini-player playlist, select rows and use **REM > Remove selected**. This removes
 only those queued copies, leaves the playing song alone and survives restart.
