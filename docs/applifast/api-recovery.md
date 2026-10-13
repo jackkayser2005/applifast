@@ -43,7 +43,9 @@ or account mutation. The profile was removed after shutdown. An existing
 Applifast process was left running. This does not explain the earlier isolated
 rejections or establish revoked/expired-credential recovery against Apple's
 live service. The maintainer separately confirmed ordinary desktop refresh and
-audible playback in the installed preview, with revision not supplied.
+audible playback in the installed preview. A subsequent read-only process hash
+matches the clean `0745e94` package manifest; this confirms the running preview's
+source, not acceptance of later playback changes.
 
 The [native HTML comparison](review-api-recovery/index.html) uses identical
 deterministic fixtures on baseline `bd361d8` and the candidate, with two cached
@@ -64,5 +66,7 @@ recovery row visible in the candidate. Existing translations remain unchanged.
 The HTML's selectors and Before/After handlers pass a static Node VM check.
 Browser rendering remains unverified after the earlier browser-client EPERM;
 no alternative automation was used. Optimized package and hosted-CI results
-accompany the feature PR. Fresh-account authorization, live credential rejection,
+accompany the feature PR. All seven hosted [candidate jobs](https://github.com/jackkayser2005/applifast/actions/runs/38482784297)
+pass on `9865001`, including quality, docs, Windows x64/ARM, Linux, macOS and Nix.
+Fresh-account authorization, live credential rejection,
 audible playback, rendered HTML, interactive motion and gaming acceptance remain open.
