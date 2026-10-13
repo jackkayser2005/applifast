@@ -34,8 +34,12 @@
     window.chrome.webview.postMessage(event);
     document.dispatchEvent(new CustomEvent('applifast-event', { detail: event }));
   };
-  const error = (code, generation, intent = requestGeneration) => send('error', {
-    code, ...(['intent', 'play', 'restore', 'next', 'previous', 'pause', 'resume', 'seek', 'volume', 'repeat', 'playback'].includes(code) ? { requestGeneration: intent } : {}),
+  const apiFailure = failure => {
+    const status = failure?.data?.status;
+    return Number.isInteger(status) && status >= 400 && status < 600 ? { httpStatus: status } : {};
+  };
+  const error = (code, generation, intent = requestGeneration, failure) => send('error', {
+    code, ...apiFailure(failure), ...(['intent', 'play', 'restore', 'next', 'previous', 'pause', 'resume', 'seek', 'volume', 'repeat', 'playback'].includes(code) ? { requestGeneration: intent } : {}),
     message: 'Operation failed. Check authorization, subscription, connection, or song availability.'
   }, generation);
   const number = value => Number.isFinite(value) ? value : 0;
@@ -427,7 +431,7 @@
     if (['createPlaylist', 'appendPlaylist', 'favoriteSongs'].includes(command.type)) {
       // Writes serialize independently: a slow library mutation cannot stall playback controls.
       writes = writes.then(() => initializing).then(() => perform(command, generation))
-        .catch(() => send('response', { id: command.id,
+        .catch(failure => send('response', { id: command.id, ...apiFailure(failure),
           error: command.type === 'favoriteSongs'
             ? 'Apple Music could not confirm these favorites. Check sign-in and connection, then refresh your library before retrying.'
             : 'Apple Music could not save this playlist. Check sign-in, connection and playlist permissions, then retry.' }, generation));
@@ -435,15 +439,15 @@
     }
     if (command.type === 'request') {
       return Promise.resolve(initializing).then(() => perform(command, generation))
-        .catch(() => send('response', { id: command.id, error: 'Apple Music could not load this page. Check sign-in and connection, then retry.' }, generation));
+        .catch(failure => send('response', { id: command.id, ...apiFailure(failure), error: 'Apple Music could not load this page. Check sign-in and connection, then retry.' }, generation));
     }
     if (command.type === 'library') {
       // Metadata reads must not make transport commands wait for the network.
       return Promise.resolve(initializing).then(() => perform(command, generation))
-        .catch(() => Number.isSafeInteger(command.id) && command.id >= 0
-          ? send('library', { id: command.id, items: [], next: null,
+        .catch(failure => Number.isSafeInteger(command.id) && command.id >= 0
+          ? send('library', { id: command.id, items: [], next: null, ...apiFailure(failure),
             error: 'Apple Music could not load songs. Check sign-in and connection, then refresh Songs.' }, generation)
-          : error('library', generation));
+          : error('library', generation, undefined, failure));
     }
     chain = chain.then(() => initializing).then(() => perform(command, generation))
       .catch(() => error(command.type, generation));

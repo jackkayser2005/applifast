@@ -1260,6 +1260,23 @@ pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
             }
             continue;
         }
+        if let Some(status) = match flag {
+            "apple-api-developer" => Some(401),
+            "apple-api-account" => Some(403),
+            "apple-api-limit" => Some(429),
+            "apple-api-service" => Some(503),
+            _ => None,
+        } {
+            if let Some(apple) = &mut app.apple {
+                apple.songs.truncate(2);
+                let request = apple.refresh_library();
+                apple.event(apple.generation, &serde_json::json!({"type":"library","session":apple.session,
+                    "id":request["id"],"httpStatus":status,"error":"Fixed failure","items":[],"next":null}));
+            }
+            app.sync_apple_library();
+            app.open(Page::LikedSongs);
+            continue;
+        }
         if flag == "apple-search-empty" {
             app.search = crate::model::SearchState::default();
             app.settings.search_history.clear();
@@ -1818,6 +1835,89 @@ mod tests {
         assert_eq!(restored.queue_command(), before);
         app.apple.as_mut().unwrap().authorized = false;
         assert!(app.queue_removal(vec![0]).is_none());
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_api_recovery_is_visible_and_retry_preserves_cached_music() {
+        fn draw(app: &mut App, ui: &mut egui::Ui) {
+            crate::ui::collection::liked(app, ui);
+        }
+        for flag in [
+            "apple-api-developer",
+            "apple-api-account",
+            "apple-api-limit",
+            "apple-api-service",
+        ] {
+            let (ctx, mut app) = accessible_app(flag);
+            app.backend.set_offline(true);
+            app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+            apply_apple_flags(&mut app, Some(flag));
+            let expected = app.apple.as_ref().unwrap().library_error.clone().unwrap();
+            assert_eq!(app.library.liked.error.as_deref(), Some(expected.as_str()));
+            let queue = app.apple.as_ref().unwrap().queue_command();
+            view_frame(&ctx, &mut app, vec![], draw);
+            let text = view_frame(&ctx, &mut app, vec![], draw);
+            assert!(text.iter().any(|(label, _)| label == &expected));
+            let retry = text
+                .iter()
+                .find(|(label, _)| label == "Retry")
+                .unwrap()
+                .1
+                .center();
+            app.actions.clear();
+            view_frame(
+                &ctx,
+                &mut app,
+                pointer_click(retry, egui::PointerButton::Primary),
+                draw,
+            );
+            assert!(matches!(
+                app.actions.as_slice(),
+                [Action::Reload(Page::LikedSongs)]
+            ));
+            let action = app.actions.pop().unwrap();
+            app.apply(action, &ctx);
+            assert!(app.apple.as_ref().unwrap().library_error.is_none());
+            assert!(app.library.liked.error.is_none());
+            assert!(app.library.liked.loading);
+            app.sync_apple_library();
+            assert!(app.library.liked.error.is_none());
+            assert_eq!(app.library.liked.items.len(), 2);
+            assert_eq!(app.apple.as_ref().unwrap().queue_command(), queue);
+            app.apple.as_mut().unwrap().error = Some("Playback failed".into());
+            app.sync_apple_library();
+            assert!(app.library.liked.error.is_none());
+            app.backend.shutdown();
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_api_recovery_and_retry_fit_in_a_narrow_error_row() {
+        fn draw(app: &mut App, ui: &mut egui::Ui) {
+            ui.set_width(300.0);
+            let message =
+                applifast_playback_probe::protocol::api_failure_message(Some(403), "unused");
+            crate::ui::widgets::error_row(ui, app, message, Some(Page::LikedSongs));
+        }
+        let (ctx, mut app) = accessible_app("apple-api-recovery-narrow");
+        app.backend.set_offline(true);
+        app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let message = text
+            .iter()
+            .find(|(label, _)| label.contains("account authorization"))
+            .unwrap();
+        let retry = text.iter().find(|(label, _)| label == "Retry").unwrap();
+        assert!(
+            message.1.height() > 20.0,
+            "Recovery guidance must wrap instead of truncating"
+        );
+        assert!(message.1.right() <= 320.0);
+        assert!(retry.1.right() <= 320.0);
         app.backend.shutdown();
     }
 

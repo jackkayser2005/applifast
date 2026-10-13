@@ -4402,6 +4402,7 @@ impl App {
                         }
                         let request = apple.refresh_library();
                         self.library.liked.loading = true;
+                        self.library.liked.error = None;
                         self.backend.send(Command::AppleSend(request.to_string()));
                     }
                     return;

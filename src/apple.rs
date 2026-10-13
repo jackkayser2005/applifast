@@ -169,6 +169,7 @@ pub struct State {
     pub ready: bool,
     pub loading: bool,
     pub error: Option<String>,
+    pub library_error: Option<String>,
     pub songs: Vec<Song>,
     pub next: Option<String>,
     pub token_path: String,
@@ -221,6 +222,7 @@ impl Default for State {
             ready: false,
             loading: true,
             error: None,
+            library_error: None,
             songs: Vec::new(),
             next: None,
             token_path: String::new(),
@@ -303,6 +305,7 @@ impl State {
         self.local = LocalState::default();
         self.error = None;
         self.request_generation = 0;
+        self.library_error = None;
         self.account_tag = None;
         self.cache_checked = false;
         self.cache_dirty = false;
@@ -569,6 +572,7 @@ impl State {
         self.library_read_id = Some(self.read_serial);
         self.loading = true;
         self.error = None;
+        self.library_error = None;
         json!({"type":"library", "id":self.read_serial, "next":next})
     }
     pub fn create_playlist(
@@ -793,7 +797,11 @@ impl State {
                 self.library_read_id = None;
                 self.loading = false;
                 if event["error"].is_string() {
-                    self.error = Some("Apple Music could not load songs. Check sign-in and connection, then refresh Songs.".into());
+                    self.error = Some(applifast_playback_probe::protocol::api_failure_message(
+                        event["httpStatus"].as_u64(),
+                        "Apple Music could not load songs. Check sign-in and connection, then refresh Songs.",
+                    ).into());
+                    self.library_error = self.error.clone();
                     self.refresh_songs = None;
                     return None;
                 }
@@ -805,6 +813,7 @@ impl State {
                         if let Some(fresh) = &mut self.refresh_songs {
                             if songs.is_empty() && next.is_some() {
                                 self.error = Some("Apple returned an empty continuation page. Reload Songs to retry.".into());
+                                self.library_error = self.error.clone();
                                 self.refresh_songs = None;
                                 return None;
                             }
@@ -825,7 +834,8 @@ impl State {
                         self.error = Some(
                             "Apple returned an invalid library page. Reload or sign in again."
                                 .into(),
-                        )
+                        );
+                        self.library_error = self.error.clone();
                     }
                 }
             }
@@ -1627,7 +1637,11 @@ mod tests {
                             event["queueLength"].as_u64(),
                         ));
                     }
-                    assert_ne!(event["type"], "error", "{}", event["message"]);
+                    assert_ne!(
+                        event["type"], "error",
+                        "Awaiting {kind}; HTTP status {}: {}",
+                        event["httpStatus"], event["message"]
+                    );
                     if event["type"] == kind && matches(&event) {
                         return event;
                     }
@@ -2060,6 +2074,52 @@ mod tests {
         );
         assert_eq!(state.songs.len(), 1);
         assert!(state.next.is_none());
+    }
+
+    #[test]
+    fn api_failure_recovery_keeps_the_library_queue_and_current_playback() {
+        for status in [401, 403, 429, 503, 404] {
+            let mut state = queue_state();
+            state.authorized = true;
+            state.local.playback = Playback::Playing;
+            state.local.position_ms = 42_000;
+            let queue = state.queue_command();
+            let old = state.library_request(None);
+            let request = state.refresh_library();
+            state.event(
+                1,
+                &json!({"type":"library","id":old["id"],"httpStatus":status,"error":"SECRET"}),
+            );
+            assert!(state.error.is_none());
+            assert!(state.loading);
+            state.event(
+                1,
+                &json!({"type":"library","id":request["id"],"httpStatus":status,"error":"SECRET"}),
+            );
+            assert_eq!(
+                state.error.as_deref(),
+                Some(applifast_playback_probe::protocol::api_failure_message(
+                    Some(status),
+                    "Apple Music could not load songs. Check sign-in and connection, then refresh Songs."
+                ))
+            );
+            assert_eq!(state.songs.len(), 3);
+            assert_eq!(state.queue_command(), queue);
+            assert!(state.authorized);
+            assert!(!state.loading);
+            assert_eq!(state.local.playback, Playback::Playing);
+            assert_eq!(state.local.position_ms, 42_000);
+            assert!(!state.error.as_ref().unwrap().contains("SECRET"));
+            assert_eq!(state.library_error, state.error);
+            let request = state.refresh_library();
+            assert!(state.library_error.is_none());
+            state.event(
+                1,
+                &json!({"type":"library","id":request["id"],"items":state.songs,"next":null}),
+            );
+            assert_eq!(state.songs.len(), 3);
+            assert_eq!(state.queue_command(), queue);
+        }
     }
 
     #[test]

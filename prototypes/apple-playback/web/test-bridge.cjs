@@ -44,6 +44,41 @@ const app = sandbox.window.applifast;
 const emit = name => (listeners.get(name) || []).forEach(handler => handler());
 const lastState = () => messages.filter(event => event.type === 'state').at(-1);
 
+async function checkApiFailures() {
+  const events = [];
+  let status;
+  const localMusic = { ...music, addEventListener: () => {}, api: { music: async () => {
+    throw Object.assign(new Error('SECRET response body'), { data: { status, token: 'SECRET token' } });
+  } }, authorize: () => { throw new Error('A failed read must not open authorization'); } };
+  const context = { ...sandbox, window: { ...sandbox.window,
+    MusicKit: { ...sandbox.window.MusicKit, configure: async () => localMusic },
+    chrome: { webview: { postMessage: event => events.push(event) } }
+  } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), context);
+  const bridge = context.window.applifast;
+  await bridge.bootstrap({ developerToken: 'mock-only', session: 23 });
+  const item = { kind: 'catalog', id: '123', playParams: null };
+  for (status of [401, 403, 429, 503, 404, '401', 401.5, 200, 600, Infinity, null, { token: 'SECRET' }]) {
+    for (const command of [
+      { type: 'library', next: null }, { type: 'library', id: 70, next: null },
+      { type: 'request', id: 71, path: '/v1/me/library/albums' },
+      { type: 'createPlaylist', id: 72, name: 'Test', public: false, items: [] },
+      { type: 'appendPlaylist', id: 73, playlist: 'p.test', items: [item] },
+      { type: 'favoriteSongs', id: 74, items: [item] }
+    ]) {
+      const before = events.length;
+      await bridge.dispatch(command);
+      assert.equal(events.length, before + 1);
+      const event = events.at(-1);
+      assert.equal(event.httpStatus, Number.isInteger(status) && status >= 400 && status < 600 ? status : undefined);
+      assert.equal(event.session, 23);
+      if (command.id !== undefined) assert.equal(event.id, command.id);
+      assert(!JSON.stringify(event).includes('SECRET'));
+      assert.equal(readTimers.size, 0);
+    }
+  }
+}
+
 async function checkSdkStartup() {
   for (const outcome of ['timeout', 'loaded', 'preloaded', 'configuration-failed']) {
     const events = [], timers = new Map(), handlers = new Map();
@@ -180,6 +215,7 @@ async function checkAuthorizationCancellation() {
 }
 
 (async () => {
+  await checkApiFailures();
   await checkSdkStartup();
   await checkAuthorizationCancellation();
   await app.bootstrap({ developerToken: 'mock-only', session: 1 });

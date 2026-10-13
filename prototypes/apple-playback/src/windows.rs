@@ -125,8 +125,8 @@ fn sanitized_event(value: &Value) -> Option<Value> {
             "requestGeneration",
         ],
         "signedOut" => &[],
-        "library" => &["id", "next", "error"],
-        "response" => &["id", "error"],
+        "library" => &["id", "next", "error", "httpStatus"],
+        "response" => &["id", "error", "httpStatus"],
         _ => return None,
     };
     let mut result = json!({"type":kind,"session":value.get("session")?.as_u64()?});
@@ -134,6 +134,9 @@ fn sanitized_event(value: &Value) -> Option<Value> {
         if let Some(data) = value.get(field) {
             let valid = match *field {
                 "drm" | "authorized" | "secureContext" => data.is_boolean(),
+                "httpStatus" => data
+                    .as_u64()
+                    .is_some_and(|status| (400..600).contains(&status)),
                 "status" | "position" | "actualPosition" | "duration" | "index" | "queueLength"
                 | "requestGeneration" | "id" => data.is_number(),
                 "next" => {
@@ -153,6 +156,12 @@ fn sanitized_event(value: &Value) -> Option<Value> {
                 result[*field] = data.clone();
             }
         }
+    }
+    if let Some(error) = result["error"].as_str() {
+        result["error"] = json!(crate::protocol::api_failure_message(
+            result["httpStatus"].as_u64(),
+            error
+        ));
     }
     if kind == "response"
         && let Some(data) = value.get("data")
@@ -590,7 +599,14 @@ fn serve(
                         } else {
                             "MusicKit rejected an operation. Check authorization, subscription, connection, or the selected item."
                         };
+                        let status = value["httpStatus"]
+                            .as_u64()
+                            .filter(|status| (400..600).contains(status));
+                        let message = crate::protocol::api_failure_message(status, message);
                         let mut event = json!({"type":"error","session":epoch,"message":message});
+                        if let Some(status) = status {
+                            event["httpStatus"] = json!(status);
+                        }
                         if let Some(generation) =
                             value.get("requestGeneration").and_then(Value::as_u64)
                         {
@@ -1295,6 +1311,37 @@ mod tests {
                     flag.is_boolean().then_some(&flag)
                 );
                 assert!(!attribute.to_string().contains("SECRET"));
+            }
+        }
+    }
+    #[test]
+    fn api_failure_statuses_are_bounded_and_recovery_messages_hide_response_details() {
+        for kind in ["library", "response"] {
+            for status in [
+                json!(401),
+                json!(403),
+                json!(429),
+                json!(503),
+                json!(404),
+                json!("SECRET"),
+                json!(401.5),
+                json!(-1),
+                json!(200),
+                json!(600),
+                json!({"token":"SECRET"}),
+                Value::Null,
+            ] {
+                let event = sanitized_event(&json!({"type":kind,"session":4,"id":7,"items":[],
+                    "error":"Fixed failure","httpStatus":status,"token":"SECRET","data":{"token":"SECRET"}})).unwrap();
+                let valid = status.as_u64().filter(|status| (400..600).contains(status));
+                assert_eq!(event["httpStatus"].as_u64(), valid);
+                assert_eq!(
+                    event["error"],
+                    crate::protocol::api_failure_message(valid, "Fixed failure")
+                );
+                assert_eq!(event["id"], 7);
+                assert_eq!(event["session"], 4);
+                assert!(!event.to_string().contains("SECRET"));
             }
         }
     }
