@@ -668,18 +668,23 @@ impl App {
             self.queued_toast(count);
         }
     }
-    pub(super) fn apple_queue_album(&mut self, uri: &str, label: &str) {
+    pub(super) fn apple_queue_album(&mut self, uri: &str, label: &str, play_next: bool) {
+        if !self.apple.as_ref().is_some_and(|apple| apple.authorized) {
+            return;
+        }
         if self
             .last_album_queue
             .as_ref()
-            .is_some_and(|(previous, at)| previous == uri && at.elapsed() < QUEUE_ADD_DEBOUNCE)
+            .is_some_and(|(previous, next, at)| {
+                previous == uri && *next == play_next && at.elapsed() < QUEUE_ADD_DEBOUNCE
+            })
         {
             return;
         }
         let Some(id) = util::uri_id(uri).map(str::to_owned) else {
             return;
         };
-        self.last_album_queue = Some((uri.into(), Instant::now()));
+        self.last_album_queue = Some((uri.into(), play_next, Instant::now()));
         self.album_queue_serial = self.album_queue_serial.wrapping_add(1);
         self.pending_album_queues.insert(
             self.album_queue_serial,
@@ -689,23 +694,32 @@ impl App {
                 target: Target::Local,
                 offset: 0,
                 tracks: Vec::new(),
+                play_next,
             },
         );
         self.apple_ensure_loaded(Page::Album(id));
         self.apple_finish_album_queues();
+        if self
+            .pending_album_queues
+            .contains_key(&self.album_queue_serial)
+        {
+            self.toast(gettext(self.locale, "Loading {name} to queue…").replace("{name}", label));
+        }
     }
     pub(super) fn apple_finish_album_queues(&mut self) {
-        let pending = self
+        let mut pending = self
             .pending_album_queues
             .iter()
             .map(|(request, album)| (*request, album.id.clone()))
             .collect::<Vec<_>>();
+        // Complete album choices in click order, even when later reads finish first.
+        pending.sort_unstable_by_key(|(request, _)| *request);
         for (request, id) in pending {
             let Some(page) = self.album_pages.get(&id) else {
-                continue;
+                break;
             };
             if page.tracks.loading {
-                continue;
+                break;
             }
             if let Some(error) = &page.tracks.error {
                 let error = error.clone();
@@ -718,14 +732,18 @@ impl App {
                     .iter()
                     .map(|track| track.uri.clone())
                     .collect::<Vec<_>>();
-                self.pending_album_queues.remove(&request);
-                let position = self
-                    .apple
-                    .as_ref()
-                    .map_or(0, |apple| apple.order.manual_count);
+                let album = self.pending_album_queues.remove(&request).unwrap();
+                let position = if album.play_next {
+                    0
+                } else {
+                    self.apple
+                        .as_ref()
+                        .map_or(0, |apple| apple.order.manual_count)
+                };
                 self.apple_queue_add(&uris, position, true);
             } else {
                 self.apple_load_more(Page::Album(id));
+                break;
             }
         }
     }
@@ -3423,6 +3441,207 @@ mod tests {
         assert!(app.apple.as_ref().unwrap().playlist_confirms.is_empty());
         app.backend.shutdown();
     }
+    #[test]
+    fn play_next_preserves_current_song_manual_additions_and_selected_copies() {
+        let mut app = super::super::tests::test_app("apple-play-next");
+        app.backend.set_offline(true);
+        let songs = ["i.upload", "i.b", "i.c"].iter().map(|id| models::song(&json!({
+            "id":id,"type":"library-songs","attributes":{"name":id,"playParams":{"id":id,"kind":"song","isLibrary":true}},
+        })).unwrap()).collect::<Vec<_>>();
+        let uris = songs
+            .iter()
+            .map(crate::apple::Song::uri)
+            .collect::<Vec<_>>();
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        state.songs = songs;
+        app.apple = Some(state);
+        let ctx = egui::Context::default();
+        app.apply(
+            Action::PlayUris {
+                uris: uris.clone(),
+                index: 0,
+            },
+            &ctx,
+        );
+        app.apply(Action::Seek(42_000), &ctx);
+        app.apply(
+            Action::AddToQueue {
+                uri: uris[1].clone(),
+                label: "B".into(),
+            },
+            &ctx,
+        );
+        app.apply(
+            Action::PlayNext {
+                uri: uris[2].clone(),
+                label: "C".into(),
+            },
+            &ctx,
+        );
+        let state = app.apple.as_ref().unwrap();
+        assert_eq!(state.local.track.as_ref().unwrap().uri, uris[0]);
+        assert_eq!(state.local.position_ms, 42_000);
+        assert_eq!(state.order.manual_count, 2);
+        assert_eq!(
+            state
+                .order
+                .upcoming
+                .iter()
+                .map(|at| state.queue[*at].uri())
+                .collect::<Vec<_>>(),
+            [
+                uris[2].clone(),
+                uris[1].clone(),
+                uris[1].clone(),
+                uris[2].clone()
+            ]
+        );
+        app.apply(Action::ClearQueue, &ctx);
+        let state = app.apple.as_ref().unwrap();
+        let selected = [1, 2, 1]
+            .map(|at| PlayableItem::Track(state.songs[at].track()))
+            .to_vec();
+        app.apply(
+            Action::InsertInQueue {
+                items: selected,
+                position: 0,
+            },
+            &ctx,
+        );
+        let state = app.apple.as_ref().unwrap();
+        assert_eq!(state.order.manual_count, 3);
+        assert_eq!(
+            state
+                .order
+                .upcoming
+                .iter()
+                .take(3)
+                .map(|at| state.queue[*at].uri())
+                .collect::<Vec<_>>(),
+            [uris[1].clone(), uris[2].clone(), uris[1].clone()]
+        );
+        app.apply(Action::Next, &ctx);
+        assert_eq!(app.local.track.as_ref().unwrap().uri, uris[1]);
+        assert_eq!(app.apple.as_ref().unwrap().order.manual_count, 2);
+        app.apply(Action::SignOut, &ctx);
+        app.apply(
+            Action::PlayNext {
+                uri: "apple:album:library.l.denied".into(),
+                label: "Denied".into(),
+            },
+            &ctx,
+        );
+        assert!(app.pending_album_queues.is_empty());
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn play_next_albums_wait_for_all_pages_and_complete_in_click_order() {
+        let mut app = super::super::tests::test_app("apple-play-next-albums");
+        app.backend.set_offline(true);
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        app.apple = Some(state);
+        let ctx = egui::Context::default();
+        let song = |id: &str| json!({"id":id,"type":"library-songs","attributes":{"name":id,"playParams":{"id":id,"kind":"song","isLibrary":true}}});
+        let read = |app: &App, album: &str| {
+            *app.apple
+                .as_ref()
+                .unwrap()
+                .reads
+                .iter()
+                .find(|(_, (target, _))| matches!(target, Read::AlbumTracks(id) if id == album))
+                .unwrap()
+                .0
+        };
+        for id in ["library.l.first", "library.l.second"] {
+            app.apply(
+                Action::PlayNext {
+                    uri: format!("apple:album:{id}"),
+                    label: id.into(),
+                },
+                &ctx,
+            );
+        }
+        app.apple_response(
+            &json!({"id":read(&app, "library.l.second"),"data":{"data":[song("i.second")]}}),
+        );
+        app.apple_finish_album_queues();
+        assert_eq!(app.queued_rows_len(), 0); // The newer album cannot overtake a pending older one.
+        app.apple_response(&json!({"id":read(&app, "library.l.first"),"data":{"data":[song("i.first")],"next":"/v1/me/library/albums/l.first/tracks?offset=1"}}));
+        app.apple_finish_album_queues();
+        assert_eq!(app.queued_rows_len(), 0); // No partial album is inserted.
+        app.apple_response(
+            &json!({"id":read(&app, "library.l.first"),"data":{"data":[song("i.first")]}}),
+        );
+        app.apple_finish_album_queues();
+        let state = app.apple.as_ref().unwrap();
+        assert_eq!(state.order.manual_count, 3);
+        assert_eq!(
+            state
+                .order
+                .upcoming
+                .iter()
+                .map(|at| state.queue[*at].item.id.as_str())
+                .collect::<Vec<_>>(),
+            ["i.second", "i.first", "i.first"]
+        );
+        app.apply(
+            Action::AddToQueue {
+                uri: "apple:album:library.l.first".into(),
+                label: "First".into(),
+            },
+            &ctx,
+        );
+        assert_eq!(app.apple.as_ref().unwrap().order.manual_count, 5);
+        app.apply(Action::ClearQueue, &ctx);
+        for id in ["library.l.failed", "library.l.ready"] {
+            app.apply(
+                Action::PlayNext {
+                    uri: format!("apple:album:{id}"),
+                    label: id.into(),
+                },
+                &ctx,
+            );
+        }
+        app.apple_response(
+            &json!({"id":read(&app, "library.l.ready"),"data":{"data":[song("i.ready")]}}),
+        );
+        app.apple_response(&json!({"id":read(&app, "library.l.failed"),"error":"Unavailable"}));
+        app.apple_finish_album_queues();
+        assert!(app.pending_album_queues.is_empty());
+        assert_eq!(app.apple.as_ref().unwrap().order.manual_count, 1);
+        app.apply(
+            Action::PlayNext {
+                uri: "apple:album:library.l.late".into(),
+                label: "Late".into(),
+            },
+            &ctx,
+        );
+        let late = read(&app, "library.l.late");
+        app.apply(Action::ClearQueue, &ctx);
+        app.apple_response(&json!({"id":late,"data":{"data":[song("i.late")]}}));
+        app.apple_finish_album_queues();
+        assert_eq!(app.queued_rows_len(), 0);
+        app.apply(
+            Action::PlayNext {
+                uri: "apple:album:library.l.signedout".into(),
+                label: "Signed out".into(),
+            },
+            &ctx,
+        );
+        let late = read(&app, "library.l.signedout");
+        app.apply(Action::SignOut, &ctx);
+        app.apple_response(&json!({"id":late,"data":{"data":[song("i.signedout")]}}));
+        app.apple_finish_album_queues();
+        assert!(app.pending_album_queues.is_empty());
+        assert!(app.apple.as_ref().unwrap().queue.is_empty());
+        app.backend.shutdown();
+    }
+
     #[test]
     fn mini_player_queue_actions_preserve_occurrences_and_album_adds_are_atomic() {
         let mut app = super::super::tests::test_app("apple-mini-queue");

@@ -577,6 +577,19 @@ pub fn picked_menu(
     });
     ui.add_space(4.0);
     menu_separator(ui, &palette);
+    if app.apple.is_some()
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::ListPlus),
+            &gettext(locale, "Play next"),
+        )
+    {
+        app.actions.push(Action::InsertInQueue {
+            items: songs.to_vec(),
+            position: 0,
+        });
+    }
     if menu_item(
         ui,
         &palette,
@@ -843,6 +856,21 @@ pub fn item_menu(
     ui.set_max_width(300.0);
     let uri = item.uri().to_string();
     let label = item.name().to_string();
+    if app.apple.is_some()
+        && item.is_track()
+        && !matches!(context, Some(RowContext::Queue))
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::ListPlus),
+            &gettext(locale, "Play next"),
+        )
+    {
+        app.actions.push(Action::PlayNext {
+            uri: uri.clone(),
+            label: label.clone(),
+        });
+    }
     if menu_item(
         ui,
         &palette,
@@ -1062,6 +1090,20 @@ pub fn context_menu_items(
         )
     {
         app.actions.push(Action::ShufflePlay(uri.to_string()));
+    }
+    if kind == "album"
+        && app.apple.is_some()
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::ListPlus),
+            &gettext(locale, "Play next"),
+        )
+    {
+        app.actions.push(Action::PlayNext {
+            uri: uri.to_string(),
+            label: name.to_string(),
+        });
     }
     if kind == "album"
         && menu_item(
@@ -1945,7 +1987,10 @@ fn track_row_contents(
     }
     let popup = egui::Popup::context_menu(&response);
     #[cfg(feature = "demo")]
-    let popup = if app.demo_queue_menu && matches!(row.context, RowContext::Queue) && row.index == 0
+    let popup = if row.index == 0
+        && (app.demo_queue_menu && matches!(row.context, RowContext::Queue)
+            || matches!(app.demo_play_next_menu, Some("song" | "selection"))
+                && !matches!(row.context, RowContext::Queue))
     {
         popup.open(true).at_position(response.rect.left_bottom())
     } else {

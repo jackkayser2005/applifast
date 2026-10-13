@@ -18,6 +18,14 @@ playing from somewhere Spotify reports.
 These are the rules the app follows. The queue tests in `src/app.rs`
 check every one of them.
 
+In Applifast Apple mode, **Play next** puts a song, selected songs in displayed
+order, or an album before your existing manual additions. It leaves the current
+song playing. **Add to queue** still appends after your manual additions and
+before context tracks. Album choices wait for all pages and complete in click
+order, even if Apple's responses arrive out of order. A newer **Play next**
+album therefore comes before an older one. Clear queue and sign-out cancel
+pending album additions; failed fetches insert no partial album.
+
 In the Applifast Apple mode, **Remove from queue** removes that exact upcoming
 occurrence. The mini-player playlist's **REM > Remove selected** removes selected
 upcoming occurrences together, excluding the playing row. Other copies of the

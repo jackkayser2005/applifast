@@ -11,6 +11,15 @@ with a message pump. Commands and sanitized events cross channels through the
 existing asynchronous backend. Closing an egui window does not own or destroy
 the playback host. Apple authorization is the only visible browser popup.
 
+## Play next
+
+Song, selected-song and album menus offer **Play next** in Apple mode. It
+prepends to manual additions without interrupting the playing song. Selections
+preserve displayed occurrences. Albums wait for all pages and complete in
+click order; a newer **Play next** album precedes an older one. Clear queue
+and sign-out cancel pending albums. **Add to queue** still appends.
+See [scope and verification](play-next.md).
+
 ## Removing queued occurrences
 
 Apple queue rows now offer **Remove from queue**. The mini-player playlist's

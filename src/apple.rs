@@ -1778,8 +1778,54 @@ mod tests {
             await_event("state", &|event| {
                 event["requestGeneration"] == 10 && event["status"] == 3
             });
+            host.send(
+                json!({"type":"intent","generation":11,"command":{"type":"resume"}}).to_string(),
+            );
+            let playing = await_event("state", &|event| {
+                event["requestGeneration"] == 11
+                    && event["status"] == 2
+                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 29.0
+            });
+            assert_eq!(
+                queue.add_uris(&[song.uri()], 0, std::time::Duration::ZERO, false),
+                Some(1)
+            );
+            host.send(
+                json!({"type":"intent","generation":12,"command":queue.queue_command()})
+                    .to_string(),
+            );
+            await_event("state", &|event| {
+                event["requestGeneration"] == 12
+                    && event["status"] == 2
+                    && event["queueLength"] == 3
+                    && event["index"] == 0
+                    && event["order"]["manualCount"] == 1
+                    && event["order"]["upcoming"] == json!([2, 1])
+                    && event["actualPosition"].as_f64().unwrap_or(0.0)
+                        >= playing["actualPosition"].as_f64().unwrap() - 1.0
+            });
+            assert!(queue.skip(1));
+            host.send(
+                json!({"type":"intent","generation":13,"command":queue.selection_command(true)})
+                    .to_string(),
+            );
+            await_event("state", &|event| {
+                event["requestGeneration"] == 13
+                    && event["status"] == 2
+                    && event["index"] == 2
+                    && event["order"]["manualCount"] == 0
+                    && event["order"]["upcoming"] == json!([1])
+                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 1.0
+                    && event["actualPosition"].as_f64().unwrap_or(100.0) < 15.0
+            });
+            host.send(
+                json!({"type":"intent","generation":14,"command":{"type":"pause"}}).to_string(),
+            );
+            await_event("state", &|event| {
+                event["requestGeneration"] == 14 && event["status"] == 3
+            });
             eprintln!(
-                "Embedded Windows host: restored authorization; {} library rows; real library shelves, library/catalog search, playback, seek, pause, saved-position queue resume and removal of one duplicate during playback passed.",
+                "Embedded Windows host: restored authorization; {} library rows; real library shelves, library/catalog search, playback, seek, pause, saved-position queue resume, duplicate removal and Play next insertion during playback followed by Next passed.",
                 songs.len()
             );
         };

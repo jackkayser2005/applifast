@@ -1000,6 +1000,10 @@ pub enum Action {
         uri: String,
         label: String,
     },
+    PlayNext {
+        uri: String,
+        label: String,
+    },
     ToggleSaved(String),
     /// Queue several songs in order and show one notification.
     QueueMany {
