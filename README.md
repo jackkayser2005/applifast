@@ -64,6 +64,10 @@ Windows saves now preserve open readers while replacing library, queue and
 session files. Read-only files and locks that deny deletion still produce save
 errors. See the [save evidence](docs/applifast/windows-save-evidence.md).
 
+Choose **Play next** on a song, selection or album to hear it after the current
+track, ahead of existing manual additions. **Add to queue** appends instead.
+Albums load all track pages before insertion. See [Play next](docs/applifast/play-next.md).
+
 Right-click an upcoming Apple queue row to **Remove from queue**. In the
 mini-player playlist, select rows and use **REM > Remove selected**. This removes
 only those queued copies, leaves the playing song alone and survives restart.

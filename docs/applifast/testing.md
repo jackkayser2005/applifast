@@ -97,6 +97,10 @@ an existing or pending favorite, while typing, or while a dialog is open.
 The [current capabilities and pending checks](listening-slice.md) distinguish
 implemented controls from verified real-account behavior.
 
+To choose what follows the playing song, right-click a song, selected songs or
+an album and choose **Play next**. It goes before manual additions; **Add to
+queue** appends after them. Album choices wait for every page before appearing.
+
 For queue removal, right-click an upcoming song and choose **Remove from queue**.
 In the mini-player playlist, Ctrl-click rows, then choose **REM > Remove selected**.
 The currently playing row is excluded. Queue two copies of a song and remove

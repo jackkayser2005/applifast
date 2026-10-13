@@ -157,6 +157,7 @@ struct PendingAlbumQueue {
     target: Target,
     offset: u32,
     tracks: Vec<Track>,
+    play_next: bool,
 }
 
 struct PendingQueueAdd {
@@ -283,6 +284,8 @@ pub struct App {
     pub demo_windows_controls: bool,
     #[cfg(feature = "demo")]
     pub demo_queue_menu: bool,
+    #[cfg(feature = "demo")]
+    pub demo_play_next_menu: Option<&'static str>,
     applied_dark: Option<bool>,
     /// Reveals new colours from the middle of the window outwards.
     theme_transition: fastframe_theme::Transition,
@@ -533,7 +536,7 @@ pub struct App {
     pending_album_queues: HashMap<u64, PendingAlbumQueue>,
     pending_queue_batches: HashMap<u64, Target>,
     album_queue_serial: u64,
-    last_album_queue: Option<(String, Instant)>,
+    last_album_queue: Option<(String, bool, Instant)>,
     /// The account's playlist tree from Spotify, folders and all; empty
     /// until the session answers.
     pub rootlist: Vec<crate::player::RootlistEntry>,
@@ -782,6 +785,8 @@ impl App {
             demo_windows_controls: false,
             #[cfg(feature = "demo")]
             demo_queue_menu: false,
+            #[cfg(feature = "demo")]
+            demo_play_next_menu: None,
             applied_dark: None,
             theme_transition: fastframe_theme::Transition::default(),
             reveal_theme_changes: true,
@@ -7863,14 +7868,14 @@ impl App {
         if self
             .last_album_queue
             .as_ref()
-            .is_some_and(|(previous, at)| previous == &uri && at.elapsed() < QUEUE_ADD_DEBOUNCE)
+            .is_some_and(|(previous, _, at)| previous == &uri && at.elapsed() < QUEUE_ADD_DEBOUNCE)
         {
             return;
         }
         let Some(id) = util::uri_id(&uri).map(str::to_string) else {
             return;
         };
-        self.last_album_queue = Some((uri, Instant::now()));
+        self.last_album_queue = Some((uri, false, Instant::now()));
         if let Some(page) = self.album_pages.get(&id)
             && page.tracks.is_complete()
         {
@@ -7887,6 +7892,7 @@ impl App {
                 target: self.target(),
                 offset: 0,
                 tracks: Vec::new(),
+                play_next: false,
             },
         );
         self.backend.api(ApiRequest::AlbumQueueTracks {
@@ -8749,13 +8755,21 @@ impl App {
             }
             Action::AddToQueue { uri, label } => {
                 if util::uri_kind(uri) == Some("album") {
-                    self.apple_queue_album(uri, label);
+                    self.apple_queue_album(uri, label, false);
                 } else {
                     let position = self
                         .apple
                         .as_ref()
                         .map_or(0, |apple| apple.order.manual_count);
                     self.apple_queue_add(std::slice::from_ref(uri), position, false);
+                }
+                return true;
+            }
+            Action::PlayNext { uri, label } => {
+                if util::uri_kind(uri) == Some("album") {
+                    self.apple_queue_album(uri, label, true);
+                } else {
+                    self.apple_queue_add(std::slice::from_ref(uri), 0, false);
                 }
                 return true;
             }
@@ -9207,6 +9221,7 @@ impl App {
             | Action::AppleSend(_)
             | Action::ApplePlaySong(_)
             | Action::AppleShowFavorites(_)
+            | Action::PlayNext { .. }
             | Action::RemoveFromQueue { .. } => {}
             Action::Open(page) => self.open(page),
             Action::OpenSongRadio { uri, track } => self.open_song_radio(&uri, &track),

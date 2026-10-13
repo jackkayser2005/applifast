@@ -778,6 +778,9 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 app.show_queue_panel = true;
                 app.demo_queue_menu = true;
             }
+            "song-menu" => app.demo_play_next_menu = Some("song"),
+            "selection-menu" => app.demo_play_next_menu = Some("selection"),
+            "album-menu" => app.demo_play_next_menu = Some("album"),
             // The first cover card as under the pointer.
             "card-hover" => crate::ui::motion::force_hover("card"),
             "ambient-pulse" => app.settings.ambient_pulse = true,
@@ -1820,6 +1823,89 @@ mod tests {
 
     #[cfg(feature = "demo")]
     #[test]
+    fn apple_play_next_menus_dispatch_songs_selections_and_albums() {
+        fn song(app: &mut App, ui: &mut egui::Ui) {
+            let track = app
+                .apple
+                .as_ref()
+                .map(|apple| apple.songs[0].track())
+                .unwrap_or_else(|| app.library.liked.items[0].track.clone());
+            crate::ui::widgets::item_menu(ui, app, &PlayableItem::Track(track), None, None);
+        }
+        fn selection(app: &mut App, ui: &mut egui::Ui) {
+            let tracks = app
+                .apple
+                .as_ref()
+                .map(|apple| {
+                    apple
+                        .songs
+                        .iter()
+                        .take(2)
+                        .map(crate::apple::Song::track)
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_else(|| {
+                    app.library.liked.items[..2]
+                        .iter()
+                        .map(|saved| saved.track.clone())
+                        .collect()
+                });
+            let items = [0, 1, 0].map(|index| PlayableItem::Track(tracks[index].clone()));
+            crate::ui::widgets::picked_menu(ui, app, &items, None);
+        }
+        fn album(app: &mut App, ui: &mut egui::Ui) {
+            crate::ui::widgets::context_menu_items(
+                ui,
+                app,
+                "apple:album:library.l.album",
+                "Album",
+                None,
+            );
+        }
+        for (index, draw) in [song as fn(&mut App, &mut egui::Ui), selection, album]
+            .into_iter()
+            .enumerate()
+        {
+            let (ctx, mut app) = accessible_app(&format!("apple-play-next-menu-{index}"));
+            app.backend.set_offline(true);
+            app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+            view_frame(&ctx, &mut app, vec![], draw);
+            let text = view_frame(&ctx, &mut app, vec![], draw);
+            let next = text
+                .iter()
+                .find(|(label, _)| label == "Play next")
+                .unwrap()
+                .1
+                .center();
+            app.actions.clear();
+            view_frame(
+                &ctx,
+                &mut app,
+                pointer_click(next, egui::PointerButton::Primary),
+                draw,
+            );
+            match app.actions.as_slice() {
+                [Action::PlayNext { uri, .. }] => assert_eq!(
+                    crate::util::uri_kind(uri),
+                    Some(if index == 0 { "track" } else { "album" })
+                ),
+                [Action::InsertInQueue { items, position: 0 }] => {
+                    assert_eq!(index, 1);
+                    assert_eq!(items.len(), 3);
+                    assert_eq!(items[0].uri(), items[2].uri());
+                    assert_ne!(items[0].uri(), items[1].uri());
+                }
+                _ => panic!("Play next did not dispatch the selected rows"),
+            }
+            app.apple = None;
+            let text = view_frame(&ctx, &mut app, vec![], draw);
+            assert!(!text.iter().any(|(label, _)| label == "Play next"));
+            app.backend.shutdown();
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
     fn apple_queue_row_menu_removes_only_the_selected_occurrence() {
         fn draw(app: &mut App, ui: &mut egui::Ui) {
             let apple = app.apple.as_ref().unwrap();
@@ -1831,6 +1917,7 @@ mod tests {
         app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
         view_frame(&ctx, &mut app, vec![], draw);
         let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(!text.iter().any(|(label, _)| label == "Play next"));
         let remove = text
             .iter()
             .find(|(label, _)| label == "Remove from queue")

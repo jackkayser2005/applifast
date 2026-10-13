@@ -331,51 +331,56 @@ pub fn actions_row(
                 palette.text,
                 &gettext(locale, "More"),
             );
-            egui::Popup::menu(&more)
-                .frame(widgets::menu_frame(&palette))
-                .show(|ui| {
-                    if let Some(seed) = &actions.save_radio {
-                        // As narrow as every other item menu.
-                        ui.set_min_width(200.0);
-                        ui.set_max_width(300.0);
-                        if widgets::menu_item(
-                            ui,
-                            &palette,
-                            Some(Icon::CirclePlus),
-                            &gettext(locale, "Save as playlist"),
-                        ) {
-                            app.actions.push(Action::SaveRadio(seed.clone()));
-                        }
-                    } else {
-                        widgets::context_menu_items(
-                            ui,
-                            app,
-                            uri,
-                            actions.name,
-                            actions.owned_playlist.as_ref(),
-                        );
+            let popup = egui::Popup::menu(&more);
+            #[cfg(feature = "demo")]
+            let popup = if app.demo_play_next_menu == Some("album") {
+                popup.open(true)
+            } else {
+                popup
+            };
+            popup.frame(widgets::menu_frame(&palette)).show(|ui| {
+                if let Some(seed) = &actions.save_radio {
+                    // As narrow as every other item menu.
+                    ui.set_min_width(200.0);
+                    ui.set_max_width(300.0);
+                    if widgets::menu_item(
+                        ui,
+                        &palette,
+                        Some(Icon::CirclePlus),
+                        &gettext(locale, "Save as playlist"),
+                    ) {
+                        app.actions.push(Action::SaveRadio(seed.clone()));
                     }
-                    if let Some((page, loading)) = &actions.reload {
-                        widgets::menu_separator(ui, &palette);
-                        let clicked = ui
-                            .add_enabled_ui(!loading, |ui| {
-                                widgets::menu_item(
-                                    ui,
-                                    &palette,
-                                    Some(Icon::Refresh),
-                                    &if *loading {
-                                        gettext(locale, "Refreshing…")
-                                    } else {
-                                        gettext(locale, "Refresh")
-                                    },
-                                )
-                            })
-                            .inner;
-                        if clicked {
-                            app.actions.push(Action::Reload(page.clone()));
-                        }
+                } else {
+                    widgets::context_menu_items(
+                        ui,
+                        app,
+                        uri,
+                        actions.name,
+                        actions.owned_playlist.as_ref(),
+                    );
+                }
+                if let Some((page, loading)) = &actions.reload {
+                    widgets::menu_separator(ui, &palette);
+                    let clicked = ui
+                        .add_enabled_ui(!loading, |ui| {
+                            widgets::menu_item(
+                                ui,
+                                &palette,
+                                Some(Icon::Refresh),
+                                &if *loading {
+                                    gettext(locale, "Refreshing…")
+                                } else {
+                                    gettext(locale, "Refresh")
+                                },
+                            )
+                        })
+                        .inner;
+                    if clicked {
+                        app.actions.push(Action::Reload(page.clone()));
                     }
-                });
+                }
+            });
         }
         if let Some(filter) = filter {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -721,6 +726,12 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
     app.keep_picked_rows_for(&table.page, &view);
     let picked: std::collections::BTreeSet<usize> =
         app.picked_rows(&table.page).cloned().unwrap_or_default();
+    #[cfg(feature = "demo")]
+    let picked = if app.demo_play_next_menu == Some("selection") {
+        (0..3.min(rows)).collect()
+    } else {
+        picked
+    };
     // Keep complete rows for immediate optimistic playlist additions.
     let picked_songs: Vec<PlayableItem> = picked
         .iter()
