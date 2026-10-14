@@ -41,8 +41,11 @@ default URL handler are not supported yet.
    After the local playback page loads, the app waits up to 45 seconds for Apple's
    SDK. A missing SDK produces the existing connection error and enables Retry
    connection. Check your network, then retry. A late SDK arrival cannot finish
-   that failed attempt; retry creates a fresh host. This does not time-limit the
-   initial WebView2 environment creation or an Apple authorization popup.
+   that failed attempt; retry creates a fresh host. Native environment/controller
+   creation, profile clearing and bootstrap registration now share their own
+   45-second completion deadline. A timeout offers Retry connection and preserves
+   saved setup. This does not time-limit Apple's authorization popup or guarantee
+   a total startup duration. See [native setup checks](native-setup-deadline.md).
 3. Keep the included **developer-token.txt** beside **Applifast.exe**. It
    authenticates the app; it contains a signed MusicKit JWT, with no listener
    credentials or private signing key. It loads automatically when no valid
@@ -180,6 +183,7 @@ if invoked explicitly.
 | Invalid token dates or origin | Check Windows date/time. Ask the maintainer to regenerate for `https://applifast.invalid`. |
 | WebView2 could not start with the current browser profile | Quit other Applifast builds through their tray menus, then click Retry connection. The app keeps your saved setup. |
 | WebView2 host failed | Check/install Evergreen, then click Retry connection. Report the fixed host error or HRESULT without credentials. |
+| WebView2 setup timed out | Check the Evergreen runtime and retry the connection. Saved setup is retained. Include the build revision and fixed error if it repeats. |
 | Apple playback page could not load | Click Retry connection. If it persists, report the app revision and this fixed error, without credentials or browser-profile files. |
 | Authorization cancelled or rejected | Cancel the pending authorization and retry Sign in with Apple. Check the intended subscriber account and Apple Music access. |
 | Apple rejects requests after sign-in | Refresh/retry. Persistent authorization failures may require reauthorization or developer-token renewal. They do not always mean an expired subscription. |

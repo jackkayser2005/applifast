@@ -73,8 +73,9 @@ Use the [Windows tester guide](testing.md).
   The app never launches in those installer fixtures. Local refs/reflogs and ZIP
   pattern checks find no private keys or developer JWTs outside the declared
   companion token, within the [audit limits](private-preview-audit.md).
-- [ ] Verify the playlist-pin follow-up's own hosted CI. Quality, docs and Linux
-  pass in run 38625838481; Windows x64/ARM, macOS and Nix remain in progress.
+- [x] Verify the playlist-pin follow-up's own hosted CI: all seven jobs pass on
+  `7dd1650` in [run 38625838481](https://github.com/jackkayser2005/applifast/actions/runs/38625838481).
+  Repeat required checks on the final integrated release source.
 - [ ] On Dad's PC, install through the wizard, open from Start, authorize in
   Apple's popup and load his library without copying another user's profile,
   user token or account cache. Check cancel and retry before successful sign-in.
@@ -145,6 +146,11 @@ real-account and release checks; passing mocks alone does not close a row.
      compilation/test results do not establish Apple playback support.
 
 2. **Sign-in and account lifecycle**
+   - Native setup now shares a 45-second callback deadline and releases its
+     main controller/window and COM apartment on failure. Native timeout/message
+     fixtures and two real Evergreen setup/reuse checks pass without Apple grants
+     or audio. See [scope and limits](native-setup-deadline.md). This does not close
+     the fresh-PC, popup or real sign-out gates below.
    - [ ] Complete fresh-PC authorization, popup cancellation/retry, revoked or
      expired app/user credentials, token replacement and sign-out/re-sign-in.
    - [ ] Verify Windows Credential Manager storage, profile/account-cache

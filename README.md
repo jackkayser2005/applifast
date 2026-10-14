@@ -43,6 +43,8 @@ popup. Never share account credentials, user tokens or the `.p8` signing key.
 If the playback host fails during startup, quit other Applifast builds and click
 **Retry connection**. It reuses the saved setup; a missing or expired developer
 token still needs renewal through the import control.
+Native WebView2 setup callbacks share a 45-second deadline and offer the existing
+Retry connection action if they stall. See [scope and runtime checks](docs/applifast/native-setup-deadline.md).
 
 Developers can run from this checkout:
 
