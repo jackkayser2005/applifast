@@ -31,6 +31,12 @@ an Apple playlist. See [checks and visual comparison](playlist-pins.md).
 
 ## API failure recovery
 
+Native WebView2 environment/controller creation, profile clearing and bootstrap
+registration share a 45-second completion deadline. Timeout preserves setup and
+offers Retry connection. Owning guards release main-window/controller/COM state
+on failure. This is separate from SDK loading and user authorization, and does
+not guarantee a total startup time. See [native setup evidence](native-setup-deadline.md).
+
 Failed Apple reads and mutations preserve only a validated HTTP status, with
 fixed guidance for rejected app/account credentials, rate limits and service
 failures. Songs shows its read error beside cached rows and clears it immediately

@@ -11,11 +11,15 @@ use std::{
     sync::Arc,
     sync::mpsc,
     thread,
+    time::{Duration, Instant},
 };
 use webview2_com::{Microsoft::Web::WebView2::Win32::*, *};
 use windows::{
     Win32::{
-        Foundation::{ERROR_INVALID_STATE, HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM},
+        Foundation::{
+            ERROR_INVALID_STATE, ERROR_TIMEOUT, HINSTANCE, HWND, LPARAM, LRESULT, RECT,
+            WAIT_FAILED, WPARAM,
+        },
         System::{Com::*, LibraryLoader::GetModuleHandleW, Threading::GetCurrentThreadId},
         UI::WindowsAndMessaging::*,
     },
@@ -29,6 +33,96 @@ const AUTH_CLOSED: u32 = WM_APP + 2;
 const AUTH_DISMISSED: u32 = WM_APP + 3;
 const VIEW_CHANGED: u32 = WM_APP + 4;
 const MAX_MESSAGE: usize = 1024 * 1024;
+const NATIVE_SETUP_TIMEOUT: Duration = Duration::from_secs(45);
+
+fn wait_for_setup<T>(
+    rx: mpsc::Receiver<T>,
+    deadline: Instant,
+) -> Result<T, Box<dyn std::error::Error>> {
+    loop {
+        let remaining = deadline
+            .checked_duration_since(Instant::now())
+            .ok_or_else(|| {
+                windows::core::Error::from_hresult(windows::core::HRESULT::from_win32(
+                    ERROR_TIMEOUT.0,
+                ))
+            })?;
+        match rx.try_recv() {
+            Ok(result) => return Ok(result),
+            Err(mpsc::TryRecvError::Disconnected) => {
+                return Err("WebView2 setup callback disconnected.".into());
+            }
+            Err(mpsc::TryRecvError::Empty) => {}
+        }
+        unsafe {
+            // Pump on the owning STA, with a finite wait even when no callback arrives.
+            if MsgWaitForMultipleObjectsEx(
+                None,
+                remaining.as_millis().clamp(1, 50) as u32,
+                QS_ALLINPUT,
+                MWMO_INPUTAVAILABLE,
+            ) == WAIT_FAILED
+            {
+                return Err(windows::core::Error::from_thread().into());
+            }
+            let mut message = MSG::default();
+            if PeekMessageW(&mut message, None, 0, 0, PM_REMOVE).as_bool() {
+                if message.message == WM_QUIT {
+                    return Err("WebView2 setup was canceled.".into());
+                }
+                let _ = TranslateMessage(&message);
+                DispatchMessageW(&message);
+            }
+        }
+    }
+}
+
+struct NativeApartment;
+impl Drop for NativeApartment {
+    fn drop(&mut self) {
+        unsafe {
+            CoUninitialize();
+        }
+    }
+}
+
+struct NativeWindow(Option<HWND>);
+impl NativeWindow {
+    fn close(mut self) -> windows::core::Result<()> {
+        unsafe { DestroyWindow(self.0.take().expect("owned host window")) }
+    }
+}
+impl Drop for NativeWindow {
+    fn drop(&mut self) {
+        if let Some(window) = self.0.take() {
+            unsafe {
+                let _ = DestroyWindow(window);
+            }
+        }
+    }
+}
+
+struct NativeController(Option<ICoreWebView2Controller>);
+impl NativeController {
+    fn close(mut self) -> windows::core::Result<()> {
+        unsafe { self.0.take().expect("owned host controller").Close() }
+    }
+}
+impl std::ops::Deref for NativeController {
+    type Target = ICoreWebView2Controller;
+    fn deref(&self) -> &Self::Target {
+        self.0.as_ref().expect("owned host controller")
+    }
+}
+impl Drop for NativeController {
+    fn drop(&mut self) {
+        if let Some(controller) = self.0.take() {
+            unsafe {
+                let _ = controller.Close();
+            }
+        }
+    }
+}
 
 fn authorization_tag(token: &str) -> String {
     use sha2::{Digest, Sha256};
@@ -48,7 +142,9 @@ enum Output {
 }
 
 fn host_failure_message(code: Option<i32>) -> &'static str {
-    if code == Some(windows::core::HRESULT::from_win32(ERROR_INVALID_STATE.0).0) {
+    if code == Some(windows::core::HRESULT::from_win32(ERROR_TIMEOUT.0).0) {
+        "WebView2 setup timed out. Check the Evergreen runtime and retry the connection."
+    } else if code == Some(windows::core::HRESULT::from_win32(ERROR_INVALID_STATE.0).0) {
         "WebView2 could not start with the current browser profile. Quit other Applifast builds through their tray menus, then retry the connection."
     } else {
         "WebView2 host failed. Install or repair the Evergreen runtime."
@@ -741,22 +837,23 @@ unsafe fn create_window() -> windows::core::Result<HWND> {
 fn controller(
     environment: &ICoreWebView2Environment,
     hwnd: HWND,
-) -> Result<ICoreWebView2Controller, Box<dyn std::error::Error>> {
+    deadline: Instant,
+) -> Result<NativeController, Box<dyn std::error::Error>> {
     let (tx, rx) = mpsc::channel();
-    let environment = environment.clone();
-    CreateCoreWebView2ControllerCompletedHandler::wait_for_async_operation(
-        Box::new(move |handler| unsafe {
-            environment
-                .CreateCoreWebView2Controller(hwnd, &handler)
-                .map_err(webview2_com::Error::WindowsError)
-        }),
-        Box::new(move |result, controller| {
-            result?;
-            let _ = tx.send(controller.ok_or_else(windows::core::Error::from_thread));
+    let completed = CreateCoreWebView2ControllerCompletedHandler::create(Box::new(
+        move |result, controller| {
+            let _ = tx.send(result.and_then(|()| {
+                controller
+                    .map(|controller| NativeController(Some(controller)))
+                    .ok_or_else(windows::core::Error::from_thread)
+            }));
             Ok(())
-        }),
-    )?;
-    let controller = rx.recv()??;
+        },
+    ));
+    unsafe {
+        environment.CreateCoreWebView2Controller(hwnd, &completed)?;
+    }
+    let controller = wait_for_setup(rx, deadline)??;
     unsafe {
         controller.SetBounds(RECT {
             left: 0,
@@ -855,29 +952,32 @@ fn host_loop(
     unsafe {
         CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok()?;
     }
+    let _apartment = NativeApartment;
+    let deadline = Instant::now() + NATIVE_SETUP_TIMEOUT;
     let data = profile_directory()?;
     std::fs::create_dir_all(&data)?;
     let path = wide(&data.to_string_lossy());
     let (tx, env_rx) = mpsc::channel();
-    CreateCoreWebView2EnvironmentCompletedHandler::wait_for_async_operation(
-        Box::new(move |handler| unsafe {
-            CreateCoreWebView2EnvironmentWithOptions(
-                PCWSTR::null(),
-                PCWSTR(path.as_ptr()),
-                None,
-                &handler,
-            )
-            .map_err(webview2_com::Error::WindowsError)
-        }),
-        Box::new(move |result, environment| {
-            result?;
-            let _ = tx.send(environment.ok_or_else(windows::core::Error::from_thread));
+    let completed = CreateCoreWebView2EnvironmentCompletedHandler::create(Box::new(
+        move |result, environment| {
+            let _ = tx.send(
+                result.and_then(|()| environment.ok_or_else(windows::core::Error::from_thread)),
+            );
             Ok(())
-        }),
-    )?;
-    let environment = env_rx.recv()??;
-    let hwnd = unsafe { create_window()? };
-    let main_controller = controller(&environment, hwnd)?;
+        },
+    ));
+    unsafe {
+        CreateCoreWebView2EnvironmentWithOptions(
+            PCWSTR::null(),
+            PCWSTR(path.as_ptr()),
+            None,
+            &completed,
+        )?;
+    }
+    let environment = wait_for_setup(env_rx, deadline)??;
+    let window = NativeWindow(Some(unsafe { create_window()? }));
+    let hwnd = window.0.expect("owned host window");
+    let main_controller = controller(&environment, hwnd, deadline)?;
     let webview = unsafe { main_controller.CoreWebView2()? };
     set_view_visibility(&main_controller, &webview, embedded)?;
     {
@@ -899,7 +999,7 @@ fn host_loop(
                     .ClearBrowsingData(COREWEBVIEW2_BROWSING_DATA_KINDS_DISK_CACHE, &completed)?;
             }
         }
-        webview2_com::wait_with_pump(clear_rx)??;
+        wait_for_setup(clear_rx, deadline)??;
     }
     restrict(&webview, false)?;
     let assets = data.join("assets");
@@ -931,16 +1031,17 @@ fn host_loop(
         "if(location.href === {page}) document.addEventListener('DOMContentLoaded', () => window.applifast.bootstrap({bootstrap}));",
         page = serde_json::to_string(PAGE)?
     ));
-    let init_webview = webview.clone();
     // Navigation must wait until WebView2 has registered the bootstrap script.
-    AddScriptToExecuteOnDocumentCreatedCompletedHandler::wait_for_async_operation(
-        Box::new(move |handler| unsafe {
-            init_webview
-                .AddScriptToExecuteOnDocumentCreated(PCWSTR(init.as_ptr()), &handler)
-                .map_err(webview2_com::Error::WindowsError)
-        }),
-        Box::new(|result, _| result),
-    )?;
+    let (init_tx, init_rx) = mpsc::channel();
+    let completed =
+        AddScriptToExecuteOnDocumentCreatedCompletedHandler::create(Box::new(move |result, _| {
+            let _ = init_tx.send(result);
+            Ok(())
+        }));
+    unsafe {
+        webview.AddScriptToExecuteOnDocumentCreated(PCWSTR(init.as_ptr()), &completed)?;
+    }
+    wait_for_setup(init_rx, deadline)??;
     unsafe {
         let navigation_output = output.clone();
         webview.add_NavigationCompleted(
@@ -1213,10 +1314,9 @@ fn host_loop(
             let _ = controller.Close();
             let _ = DestroyWindow(window);
         }
-        main_controller.Close()?;
-        DestroyWindow(hwnd)?;
-        CoUninitialize();
     }
+    main_controller.close()?;
+    window.close()?;
     Ok(())
 }
 
@@ -1224,10 +1324,144 @@ fn host_loop(
 mod tests {
     use super::*;
     #[test]
+    fn native_setup_wait_expires_without_a_callback_and_rejects_late_completion() {
+        let (callback, result) = mpsc::channel();
+        let (thread_tx, thread_rx) = mpsc::channel();
+        let (done_tx, done_rx) = mpsc::channel();
+        let worker = thread::spawn(move || {
+            let mut message = MSG::default();
+            unsafe {
+                let _ = PeekMessageW(&mut message, None, 0, 0, PM_NOREMOVE);
+                thread_tx.send(GetCurrentThreadId()).unwrap();
+            }
+            let result = wait_for_setup(result, Instant::now() + Duration::from_millis(20));
+            done_tx.send(result.is_err()).unwrap();
+        });
+        let id = thread_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        let finished = done_rx.recv_timeout(Duration::from_secs(1));
+        // Release the old unbounded wait too, so a failing regression leaves no thread.
+        let late = callback.send(());
+        if matches!(finished, Err(mpsc::RecvTimeoutError::Timeout)) {
+            unsafe {
+                let _ = PostThreadMessageW(id, WAKE, WPARAM(0), LPARAM(0));
+            }
+        }
+        worker.join().unwrap();
+        assert_eq!(
+            finished,
+            Ok(true),
+            "The native wait must expire without a callback"
+        );
+        assert!(
+            late.is_err(),
+            "A late callback must find its receiver closed"
+        );
+    }
+
+    #[test]
+    fn native_setup_wait_dispatches_window_callbacks_and_preserves_failures() {
+        unsafe extern "system" fn completion(
+            hwnd: HWND,
+            message: u32,
+            wp: WPARAM,
+            lp: LPARAM,
+        ) -> LRESULT {
+            unsafe {
+                if message == WAKE {
+                    let sender =
+                        &*(GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *const mpsc::Sender<u8>);
+                    let _ = sender.send(7);
+                    return LRESULT(0);
+                }
+                DefWindowProcW(hwnd, message, wp, lp)
+            }
+        }
+        let (tx, rx) = mpsc::channel::<u8>();
+        let window = NativeWindow(Some(unsafe { create_window().unwrap() }));
+        let hwnd = window.0.unwrap();
+        unsafe {
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, &tx as *const mpsc::Sender<u8> as isize);
+            SetWindowLongPtrW(hwnd, GWLP_WNDPROC, completion as *const () as isize);
+            PostMessageW(Some(hwnd), WAKE, WPARAM(0), LPARAM(0)).unwrap();
+        }
+        let deadline = Instant::now() + Duration::from_secs(5);
+        assert_eq!(wait_for_setup(rx, deadline).unwrap(), 7u8);
+        window.close().unwrap();
+        let (tx, rx) = mpsc::channel();
+        let failure = windows::core::Error::from_hresult(windows::core::HRESULT::from_win32(
+            ERROR_INVALID_STATE.0,
+        ));
+        tx.send(Err::<(), _>(failure.clone())).unwrap();
+        assert_eq!(
+            wait_for_setup(rx, deadline).unwrap().unwrap_err().code(),
+            failure.code()
+        );
+        drop(tx);
+        let (tx, rx) = mpsc::channel::<()>();
+        drop(tx);
+        assert!(
+            wait_for_setup(rx, deadline)
+                .unwrap_err()
+                .to_string()
+                .contains("disconnected")
+        );
+        let (_tx, rx) = mpsc::channel::<()>();
+        unsafe {
+            PostQuitMessage(0);
+        }
+        assert!(
+            wait_for_setup(rx, deadline)
+                .unwrap_err()
+                .to_string()
+                .contains("canceled")
+        );
+    }
+
+    #[test]
+    fn failed_native_setup_releases_the_window_and_apartment_before_retry() {
+        fn fail_setup(window_id: &Cell<HWND>) -> Result<(), Box<dyn std::error::Error>> {
+            unsafe {
+                CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok()?;
+            }
+            let _apartment = NativeApartment;
+            let window = NativeWindow(Some(unsafe { create_window()? }));
+            window_id.set(window.0.unwrap());
+            let (_tx, rx) = mpsc::channel::<()>();
+            wait_for_setup(rx, Instant::now())?;
+            unreachable!()
+        }
+        let hwnd = Cell::new(HWND::default());
+        let failure = fail_setup(&hwnd).unwrap_err();
+        assert_eq!(
+            failure
+                .downcast_ref::<windows::core::Error>()
+                .unwrap()
+                .code(),
+            windows::core::HRESULT::from_win32(ERROR_TIMEOUT.0)
+        );
+        assert!(
+            !unsafe { IsWindow(Some(hwnd.get())) }.as_bool(),
+            "A failed setup must release its native window"
+        );
+        unsafe {
+            CoInitializeEx(None, COINIT_MULTITHREADED)
+                .ok()
+                .expect("The failed STA must be uninitialized before retry");
+        }
+        let _apartment = NativeApartment;
+        let retry = NativeWindow(Some(unsafe { create_window().unwrap() }));
+        retry.close().unwrap();
+    }
+
+    #[test]
     fn host_failure_explains_profile_conflicts_without_echoing_native_errors() {
         let conflict = windows::core::HRESULT::from_win32(ERROR_INVALID_STATE.0).0;
         assert_eq!(conflict as u32, 0x8007139F);
         assert!(host_failure_message(Some(conflict)).contains("Quit other Applifast builds"));
+        assert_eq!(
+            host_failure_message(Some(windows::core::HRESULT::from_win32(ERROR_TIMEOUT.0).0)),
+            "WebView2 setup timed out. Check the Evergreen runtime and retry the connection."
+        );
         assert!(host_failure_message(None).contains("Evergreen runtime"));
         assert_eq!(host_failure_message(Some(-1)), host_failure_message(None));
     }
