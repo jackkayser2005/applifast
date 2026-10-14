@@ -68,8 +68,13 @@ Use the [Windows tester guide](testing.md).
   [candidate jobs](https://github.com/jackkayser2005/applifast/actions/runs/38489782963)
   pass, including quality, docs, Windows x64/ARM, Linux, macOS and Nix. Repeat
   on the final release commit after integration or further changes.
-- [ ] Verify the playlist-pin follow-up's own hosted CI and optimized package.
-  The `abd1295` handoff above predates its added page-menu control.
+- [x] Verify the optimized `7dd1650` playlist-pin installer/ZIP, source/payload,
+  checksums, dummy-token packaging and isolated install/upgrade/uninstall fixtures.
+  The app never launches in those installer fixtures. Local refs/reflogs and ZIP
+  pattern checks find no private keys or developer JWTs outside the declared
+  companion token, within the [audit limits](private-preview-audit.md).
+- [ ] Verify the playlist-pin follow-up's own hosted CI. Quality, docs and Linux
+  pass in run 38625838481; Windows x64/ARM, macOS and Nix remain in progress.
 - [ ] On Dad's PC, install through the wizard, open from Start, authorize in
   Apple's popup and load his library without copying another user's profile,
   user token or account cache. Check cancel and retry before successful sign-in.
@@ -200,6 +205,10 @@ real-account and release checks; passing mocks alone does not close a row.
      oscilloscope, EQ and MilkDrop controls absent.
 
 8. **Reliability and gaming performance**
+   - The [API cancellation regression](read-cancellation.md) reproduces an
+     unresolved SDK read after abort and verifies local deadline/sign-out release,
+     ignored late results and no automatic mutation retry. This deterministic
+     check does not close the live network-loss or account-lifecycle gates below.
    - [ ] Test network loss/recovery, auth expiry, queue failures and output-device
      changes without stale UI reversals or lost queue entries.
    - [ ] After a two-minute warm-up, sample each state for five minutes and count

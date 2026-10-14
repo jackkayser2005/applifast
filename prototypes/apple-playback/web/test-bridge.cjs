@@ -79,6 +79,76 @@ async function checkApiFailures() {
   }
 }
 
+async function checkNonCooperatingRequests() {
+  for (const kind of ['library', 'page', 'favorite-confirmation', 'sign-out-read', 'sign-out-write']) {
+    for (const lateOutcome of ['resolve', 'reject']) {
+      const events = [], timers = new Map(), requests = [];
+      let finish, fail, signal, timer = 0, paused = false;
+      const localMusic = { ...music, addEventListener: () => {},
+        pause: async () => { paused = true; },
+        api: { music: (path, parameters, options) => {
+          requests.push({ path, parameters, options });
+          if (kind === 'favorite-confirmation' && options.fetchOptions.method === 'POST') return Promise.resolve();
+          signal = options.fetchOptions.signal;
+          // The SDK deliberately ignores abort and never settles until after our check.
+          return new Promise((resolve, reject) => { finish = resolve; fail = reject; });
+        } }
+      };
+      const context = { ...sandbox, window: { ...sandbox.window,
+        MusicKit: { ...sandbox.window.MusicKit, configure: async () => localMusic },
+        chrome: { webview: { postMessage: event => events.push(event) } }
+      },
+      setTimeout: (callback, delay) => { assert.equal(delay, 20_000); timers.set(++timer, callback); return timer; },
+      clearTimeout: id => timers.delete(id) };
+      vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), context);
+      const bridge = context.window.applifast;
+      await bridge.bootstrap({ developerToken: 'mock-only', session: 31 });
+      const command = kind === 'library' ? { type: 'library', id: 91, next: null }
+        : kind === 'favorite-confirmation' ? { type: 'favoriteSongs', id: 91, items: [{ kind: 'catalog', id: '123', playParams: null }] }
+        : kind === 'sign-out-write' ? { type: 'createPlaylist', id: 91, name: 'Test', public: false, items: [] }
+        : { type: 'request', id: 91, path: '/v1/me/library/albums' };
+      const pending = bridge.dispatch(command);
+      while (!finish) await new Promise(resolve => setImmediate(resolve));
+      const queued = kind === 'sign-out-write'
+        ? bridge.dispatch({ type: 'appendPlaylist', id: 92, playlist: 'p.test', items: [{ kind: 'catalog', id: '123', playParams: null }] })
+        : Promise.resolve();
+      await bridge.dispatch({ type: 'pause' });
+      assert(paused, 'A stalled metadata request must not block transport');
+      if (kind.startsWith('sign-out-')) {
+        await bridge.dispatch({ type: 'signOut' });
+        assert.equal(events.at(-1).type, 'signedOut');
+        assert.equal(events.at(-1).session, 32);
+      } else {
+        assert.equal(timers.size, 1);
+        [...timers.values()][0]();
+      }
+      await Promise.race([Promise.all([pending, queued]),
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`SDK ignored abort: ${kind}`)), 250))]);
+      assert(signal.aborted);
+      assert.equal(timers.size, 0, 'A canceled read must release its timer immediately');
+      const response = events.find(event => event.id === 91);
+      if (kind.startsWith('sign-out-')) assert.equal(response, undefined);
+      else {
+        assert(response.error);
+        assert.equal(response.session, 31);
+        if (kind === 'favorite-confirmation') {
+          assert.equal(requests.filter(request => request.options.fetchOptions.method === 'POST').length, 1);
+          assert.equal(response.data.data[0].attributes.inFavorites, undefined);
+          assert(response.error.includes('Refresh your library before retrying'));
+        }
+      }
+      const count = events.length;
+      if (lateOutcome === 'resolve') finish({ data: { data: [{ id: '123', type: 'songs', attributes: { inFavorites: true } }], secret: 'SECRET' } });
+      else fail(new Error('SECRET late SDK rejection'));
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(events.length, count, 'Late SDK completion must not publish stale success');
+      assert(!events.some(event => event.id === 92), 'An old-account queued write must not publish');
+      assert(!JSON.stringify(events).includes('SECRET'));
+      assert.equal(requests.length, kind === 'favorite-confirmation' ? 2 : 1, 'Cancellation must not retry a request');
+    }
+  }
+}
+
 async function checkSdkStartup() {
   for (const outcome of ['timeout', 'loaded', 'preloaded', 'configuration-failed']) {
     const events = [], timers = new Map(), handlers = new Map();
@@ -216,6 +286,7 @@ async function checkAuthorizationCancellation() {
 
 (async () => {
   await checkApiFailures();
+  await checkNonCooperatingRequests();
   await checkSdkStartup();
   await checkAuthorizationCancellation();
   await app.bootstrap({ developerToken: 'mock-only', session: 1 });

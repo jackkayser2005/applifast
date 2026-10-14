@@ -35,7 +35,12 @@ Failed Apple reads and mutations preserve only a validated HTTP status, with
 fixed guidance for rejected app/account credentials, rate limits and service
 failures. Songs shows its read error beside cached rows and clears it immediately
 on Retry. Apple error text wraps without hiding Retry. Errors do not open a popup,
-sign out, delete data or replay writes automatically. See [evidence](api-recovery.md).
+sign out, delete data or replay writes automatically. Reads release their local
+wait after 20 seconds even when the SDK ignores abort. Sign-out releases pending
+API waits and discards late old-account results. A timed-out Favorites confirmation
+remains unconfirmed, with refresh-before-retry guidance. POST requests still have
+no automatic deadline or retry because their server outcome can be ambiguous.
+See [recovery evidence](api-recovery.md) and [cancellation checks](read-cancellation.md).
 
 ## Play next
 
