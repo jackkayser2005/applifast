@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast source integration comparison</title>
+<style>
+body { font: 16px system-ui; margin: 24px; color: #eee; background: #202022; }
+p { max-width: 1000px; line-height: 1.5; }
+select, button { font: inherit; margin: 4px; padding: 8px; }
+a { color: #ff7a80; }
+img { display: block; max-width: 100%; height: auto; border: 1px solid #666; margin-top: 16px; }
+button[aria-pressed="true"] { outline: 2px solid #ff7a80; }
+</style>
+<h1>Windows Apple Music integration</h1>
+<p>Visible scope: coral/grey themes, accent sidebar and Favorites shelf, supported Apple controls,
+playlist/song wording, labelled Play/Shuffle buttons, striped rows, quieter artwork tint, and the
+recoloured/branded mini-player. This is the maintainer-requested port and imported design scope.
+The new heart fix preserves its existing pop after an optimistic Apple favorite becomes a
+read-only filled heart; resting screenshots cannot demonstrate that transition.</p>
+<p>Baseline: clean <code>main</code> at <code>995c768</code>, built on Windows with demo and without
+MilkDrop. Candidate: <code>release/apple-windows-integration</code>, application source based on
+<code>833edfa</code> plus the tested filled-heart motion fix, using its default/demo build.
+Neither capture build uses MilkDrop. Both use the same upstream sample song titles, artwork,
+playlist names, volume and playhead, isolated profiles, window requests and neutral pointer.
+Identifiers and fields follow each service's model: Apple songs are typed library resources,
+favorite flags are distinct from Spotify saved state, and the unsupported song Date added
+column/Spotify controls are absent. Some shared sample collection names still mention Spotify;
+these are fixture metadata, not an Apple account result.</p>
+<p>Main views match 1100×760 and 760×760 in both themes. The mini-player fixture fixes the built-in
+skin at 2×, so both requested main-window sizes capture the same 550×232 mini-player. Its width
+selector is disabled here; these files do not prove multiple mini-player scales. Settings and
+queue states use existing deterministic flags. No account authorization, audio or live write was
+performed. Images are native captures, not HTML mockups.</p>
+<p>All 32 captures were inspected and each pair has matching actual dimensions. UI interaction
+tests verify painted heart geometry after real sample-data clicks, Reduce motion interruption,
+no resumed pop after re-enabling motion and read-only filled controls. Still images and static
+selector checks do not establish live motion, rendered HTML, fresh-PC sign-in, public release
+approval or gaming performance. See <a href="../integration.md">the source/motion trace</a>,
+<a href="../reviews.html">individual feature comparisons</a>, and
+<a href="../release-readiness.md">remaining acceptance gates</a>.</p>
+<label>View <select id="view">
+<option value="songs">Songs</option><option value="queue">Songs and queue</option>
+<option value="settings">Settings</option><option value="mini">Mini-player (fixed 2×)</option>
+</select></label>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal, 1100×760</option><option value="760x760">Narrow, 760×760</option></select></label>
+<button id="before" aria-pressed="true">Before</button><button id="after" aria-pressed="false">After</button>
+<p id="caption" aria-live="polite"></p>
+<img id="capture" alt="Source integration comparison">
+<script>
+const byId = id => document.getElementById(id);
+let phase = 'before';
+function draw() {
+ const view = byId('view').value, theme = byId('theme').value, mini = view === 'mini';
+ const size = mini ? '1100x760' : byId('size').value;
+ byId('size').disabled = mini;
+ byId('capture').src = `${phase}-${view}-${theme}-${size}.png`;
+ byId('capture').alt = `${phase} ${view}, ${theme}, ${mini ? '550×232 at 2×' : size}`;
+ byId('caption').textContent = `${phase === 'before' ? 'Before: main 995c768' : 'After: Apple integration candidate'} · ${view} · ${theme} · ${mini ? 'fixed 550×232 mini-player' : size}`;
+ byId('before').setAttribute('aria-pressed', String(phase === 'before'));
+ byId('after').setAttribute('aria-pressed', String(phase === 'after'));
+}
+for (const name of ['view','theme','size']) byId(name).onchange = draw;
+byId('before').onclick = () => { phase = 'before'; draw(); };
+byId('after').onclick = () => { phase = 'after'; draw(); };
+draw();
+</script>
+</html>

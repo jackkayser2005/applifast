@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-14 15:27-0400\n"
+"POT-Creation-Date: 2026-10-14 17:24-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -166,7 +166,7 @@ msgstr "显示所有收藏"
 msgid "Sort by recently played"
 msgstr "按最近播放排序"
 
-#: src/ui/sidebar.rs:2007 src/ui/player_bar.rs:815 src/ui/widgets.rs:1077
+#: src/ui/sidebar.rs:2007 src/ui/player_bar.rs:818 src/ui/widgets.rs:1077
 #: src/ui/artist.rs:327 src/ui/collection.rs:210 src/ui/collection.rs:216
 #: src/ui/search.rs:416 src/ui/show.rs:140 src/ui/show.rs:315
 msgid "Play"
@@ -233,78 +233,78 @@ msgid "Pick a song, album, or playlist"
 msgstr "选择歌曲、专辑或歌单"
 
 #: src/ui/player_bar.rs:643 src/ui/widgets.rs:609 src/ui/widgets.rs:899
-#: src/ui/widgets.rs:1869 src/ui/keys.rs:249 src/ui/winamp/mod.rs:698
+#: src/ui/widgets.rs:1872 src/ui/keys.rs:249 src/ui/winamp/mod.rs:698
 msgid "Add to Favorites"
 msgstr "添加到收藏"
 
 #: src/ui/player_bar.rs:649 src/ui/widgets.rs:613 src/ui/widgets.rs:903
-#: src/ui/widgets.rs:1871
+#: src/ui/widgets.rs:1874
 msgid "Remove from Liked Songs"
 msgstr "从已点赞的歌曲中移除"
 
 #: src/ui/player_bar.rs:655 src/ui/widgets.rs:616 src/ui/widgets.rs:906
-#: src/ui/widgets.rs:1873
+#: src/ui/widgets.rs:1876
 msgid "Save to Liked Songs"
 msgstr "保存到已点赞的歌曲"
 
-#: src/ui/player_bar.rs:759 src/ui/player_bar.rs:766 src/ui/lyrics.rs:600
+#: src/ui/player_bar.rs:762 src/ui/player_bar.rs:769 src/ui/lyrics.rs:600
 #: src/ui/lyrics.rs:607 src/ui/collection.rs:212 src/ui/collection.rs:283
 msgid "Shuffle"
 msgstr "随机播放"
 
-#: src/ui/player_bar.rs:780 src/ui/lyrics.rs:619
+#: src/ui/player_bar.rs:783 src/ui/lyrics.rs:619
 msgid "Previous"
 msgstr "上一首"
 
-#: src/ui/player_bar.rs:813 src/ui/collection.rs:208 src/ui/collection.rs:217
+#: src/ui/player_bar.rs:816 src/ui/collection.rs:208 src/ui/collection.rs:217
 msgid "Pause"
 msgstr "暂停"
 
-#: src/ui/player_bar.rs:831 src/ui/lyrics.rs:657
+#: src/ui/player_bar.rs:834 src/ui/lyrics.rs:657
 msgid "Next"
 msgstr "下一首"
 
-#: src/ui/player_bar.rs:839 src/ui/lyrics.rs:570
+#: src/ui/player_bar.rs:842 src/ui/lyrics.rs:570
 msgid "Repeat"
 msgstr "列表循环"
 
-#: src/ui/player_bar.rs:843 src/ui/lyrics.rs:571
+#: src/ui/player_bar.rs:846 src/ui/lyrics.rs:571
 msgid "Repeat one"
 msgstr "单曲循环"
 
-#: src/ui/player_bar.rs:848 src/ui/lyrics.rs:572
+#: src/ui/player_bar.rs:851 src/ui/lyrics.rs:572
 msgid "Repeat off"
 msgstr "关闭循环"
 
-#: src/ui/player_bar.rs:909 src/ui/lyrics.rs:539
+#: src/ui/player_bar.rs:912 src/ui/lyrics.rs:539
 msgid "Playback position (%)"
 msgstr "播放进度 (%)"
 
-#: src/ui/player_bar.rs:952
+#: src/ui/player_bar.rs:955
 msgid "Volume (%)"
 msgstr "音量 (%)"
 
-#: src/ui/player_bar.rs:985
+#: src/ui/player_bar.rs:988
 msgid "Unmute"
 msgstr "取消静音"
 
-#: src/ui/player_bar.rs:987
+#: src/ui/player_bar.rs:990
 msgid "Mute"
 msgstr "静音"
 
-#: src/ui/player_bar.rs:1003
+#: src/ui/player_bar.rs:1006
 msgid "This device's volume can't be changed from Applifast"
 msgstr "无法从 Applifast 更改此设备的音量"
 
-#: src/ui/player_bar.rs:1019 src/ui/devices.rs:193
+#: src/ui/player_bar.rs:1022 src/ui/devices.rs:193
 msgid "Connect to a device"
 msgstr "连接到设备"
 
-#: src/ui/player_bar.rs:1039 src/ui/queue.rs:38 src/ui/queue.rs:95
+#: src/ui/player_bar.rs:1042 src/ui/queue.rs:38 src/ui/queue.rs:95
 msgid "Queue"
 msgstr "播放队列"
 
-#: src/ui/player_bar.rs:1065 src/ui/lyrics.rs:67
+#: src/ui/player_bar.rs:1068 src/ui/lyrics.rs:67
 msgid "Lyrics"
 msgstr "歌词"
 
@@ -350,7 +350,7 @@ msgstr "接下来播放"
 msgid "Next up"
 msgstr "后续曲目"
 
-#: src/ui/queue.rs:516 src/ui/queue.rs:549 src/ui/widgets.rs:2678
+#: src/ui/queue.rs:516 src/ui/queue.rs:549 src/ui/widgets.rs:2681
 #: src/ui/collection.rs:1121
 msgid "Retry"
 msgstr "重试"
@@ -408,7 +408,7 @@ msgstr "纯音乐"
 msgid "No timed lyrics for this track."
 msgstr "这首歌没有同步歌词。"
 
-#: src/ui/lyrics.rs:409 src/ui/widgets.rs:2672 src/app.rs:11194
+#: src/ui/lyrics.rs:409 src/ui/widgets.rs:2675 src/app.rs:11194
 #: src/ui/collection.rs:782
 msgid "Loading…"
 msgstr "加载中…"
@@ -542,105 +542,105 @@ msgstr "在 Spotify 中打开"
 msgid "Play {title}, {subtitle}"
 msgstr "播放 {title}，{subtitle}"
 
-#: src/ui/widgets.rs:1932 src/ui/artist.rs:377 src/ui/collection.rs:332
+#: src/ui/widgets.rs:1935 src/ui/artist.rs:377 src/ui/collection.rs:332
 #: src/ui/show.rs:191 src/ui/show.rs:393
 msgid "More"
 msgstr "更多"
 
 #. Translators: The label beside the pointer while songs are dragged. {name} is the first song's name and {count} how many more songs are dragged with it.
-#: src/ui/widgets.rs:2077
+#: src/ui/widgets.rs:2080
 #, rust-format
 msgid "{name} + {count} more"
 msgid_plural "{name} + {count} more"
 msgstr[0] "{name} 及另外 {count} 项"
 
 #. Translators: {column} is a column heading of a song list, such as Title.
-#: src/ui/widgets.rs:2194
+#: src/ui/widgets.rs:2197
 #, rust-format
 msgid "Sort by {column}"
 msgstr "按{column}排序"
 
-#: src/ui/widgets.rs:2244
+#: src/ui/widgets.rs:2247
 msgid "Sort by playlist order"
 msgstr "按歌单顺序排序"
 
-#: src/ui/widgets.rs:2279
+#: src/ui/widgets.rs:2282
 msgid "Original order, reversed"
 msgstr "原始顺序，倒序"
 
-#: src/ui/widgets.rs:2292
+#: src/ui/widgets.rs:2295
 msgctxt "column heading"
 msgid "TITLE"
 msgstr "标题"
 
-#: src/ui/widgets.rs:2315
+#: src/ui/widgets.rs:2318
 msgctxt "column heading"
 msgid "ALBUM"
 msgstr "专辑"
 
-#: src/ui/widgets.rs:2324
+#: src/ui/widgets.rs:2327
 msgctxt "column heading"
 msgid "ADDED BY"
 msgstr "添加者"
 
-#: src/ui/widgets.rs:2333
+#: src/ui/widgets.rs:2336
 msgctxt "column heading"
 msgid "DATE ADDED"
 msgstr "添加日期"
 
-#: src/ui/widgets.rs:2354 src/ui/widgets.rs:2384
+#: src/ui/widgets.rs:2357 src/ui/widgets.rs:2387
 msgid "Sort by duration"
 msgstr "按时长排序"
 
-#: src/ui/widgets.rs:2945
+#: src/ui/widgets.rs:2948
 msgid "Cut"
 msgstr "剪切"
 
-#: src/ui/widgets.rs:2950
+#: src/ui/widgets.rs:2953
 msgid "Copy"
 msgstr "复制"
 
-#: src/ui/widgets.rs:2955
+#: src/ui/widgets.rs:2958
 msgid "Paste"
 msgstr "粘贴"
 
-#: src/ui/widgets.rs:2972
+#: src/ui/widgets.rs:2975
 msgid "Select all"
 msgstr "全选"
 
-#: src/ui/widgets.rs:3075
+#: src/ui/widgets.rs:3078
 msgid "Clear"
 msgstr "清除"
 
 #. Translators: {name} is replaced by the author's name, shown as a link.
-#: src/ui/widgets.rs:3120
+#: src/ui/widgets.rs:3123
 #, rust-format
 msgid "Built with love by {name}"
 msgstr "由 {name} 用心打造"
 
-#: src/ui/widgets.rs:3265
+#: src/ui/widgets.rs:3268
 msgid "Host"
 msgstr "主机"
 
-#: src/ui/widgets.rs:3282
+#: src/ui/widgets.rs:3285
 msgid "Port"
 msgstr "端口"
 
-#: src/ui/widgets.rs:3300
+#: src/ui/widgets.rs:3303
 msgid "Username"
 msgstr "用户名"
 
-#: src/ui/widgets.rs:3311
+#: src/ui/widgets.rs:3314
 msgid "Password"
 msgstr "密码"
 
-#: src/ui/widgets.rs:3329
+#: src/ui/widgets.rs:3332
 msgid ""
 "Proxy login applies to Web requests. Local playback uses this proxy only "
 "without a login."
 msgstr "代理登录信息仅用于 Web 请求。本地播放仅在不需要登录时使用此代理。"
 
-#: src/ui/widgets.rs:3333
+#: src/ui/widgets.rs:3336
 msgid ""
 "Spotify hostnames are resolved by the proxy. Local playback connects "
 "directly."

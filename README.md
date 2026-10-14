@@ -10,6 +10,8 @@ Spotifast downloads install a different product.
 
 See the [Windows beta checklist](docs/applifast/release-readiness.md) for the
 next private trial, current evidence and remaining public-release gates.
+The [source integration proposal](docs/applifast/integration.md) traces the Apple
+feature stack and PR #13's motion into the candidate targeting `main`.
 
 Artwork refreshes when switching between the main and mini player or reopening
 from the tray. See the [window artwork checks](docs/applifast/window-artwork.md)

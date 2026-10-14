@@ -9,14 +9,16 @@ select, button { font: inherit; padding: 8px; margin: 4px; } a { color: #ff7a80;
 iframe { width: 100%; height: 90vh; border: 1px solid #666; }
 </style>
 <h1>Applifast integration comparisons</h1>
-<p>Windows sample-data captures. Motion has a candidate gallery; its matching
-baseline is still pending. Runtime and release checks remain separate.</p>
+<p>Windows sample-data captures. The overall integration compares clean main with
+the assembled Apple candidate. The older motion-specific gallery remains
+candidate-only; live motion, rendered HTML and release checks stay separate.</p>
 <p><a href="https://github.com/jackkayser2005/applifast/pull/22">PR #22: favorite metadata requests</a> changes library reads only. It retains the existing Favorites drawing and deterministic fixtures, so the PR #20 comparison applies without new interface captures.</p>
 <p><a href="https://github.com/jackkayser2005/applifast/pull/33">PR #33: Windows saves with open readers</a> changes file replacement only. It adds no visual scope; the PR #31 and #32 captures still apply. See the <a href="windows-save-evidence.md">native reproduction and validation evidence</a>.</p>
 <p><a href="https://github.com/jackkayser2005/applifast/pull/34">PR #34: collection and search favorite metadata</a> adds fields to existing Apple reads without changing the drawing or interaction. The PR #31 and #32 captures still apply. See the <a href="collection-favorites-evidence.md">read-only account results and regression evidence</a>.</p>
 <p><a href="https://github.com/jackkayser2005/applifast/pull/35">PR #35: Applifast preview installer</a> adds a native installer wizard, Start entry and optional desktop shortcut. Native wizard captures and visual approval are pending. The egui interface is unchanged, so its PR #31 and #32 comparisons still apply. See the <a href="windows-installer-evidence.md">native install, upgrade and uninstall evidence</a>.</p>
 <button id="previous">Previous</button>
 <label>Review <select id="review">
+<option value="review-integration/index.html">Windows Apple integration: overall main comparison</option>
 <option value="review-polish/index.html">PR #14: motion, cache and polish</option>
 <option value="review-playlists/index.html">PR #15: create and save playlists</option>
 <option value="review-playlist-additions/index.html">PR #16: append songs, albums and queue</option>
@@ -32,6 +34,15 @@ baseline is still pending. Runtime and release checks remain separate.</p>
 <option value="review-token-onboarding/index.html">PR #27: token import and private tester setup</option>
 <option value="review-product-identity/index.html">PR #28: product identity and independent window storage</option>
 <option value="review-links/index.html">PR #29: shared Apple Music links and exact-song navigation</option>
+<option value="review-favorite-controls/index.html">PR #44: optimistic Apple Favorites controls</option>
+<option value="review-mini-favorites/index.html">PR #45: mini-player Favorites</option>
+<option value="review-favorite-shortcut/index.html">PR #46: Favorites shortcut</option>
+<option value="review-reduced-motion-controls/index.html">PR #54: Reduce motion controls</option>
+<option value="review-queue-removal/index.html">PR #55: exact queue occurrence removal</option>
+<option value="review-play-next/index.html">PR #56: Play next</option>
+<option value="review-api-recovery/index.html">PR #57: cached Songs and API recovery</option>
+<option value="review-window-artwork/index.html">PR #59: window artwork lifetime</option>
+<option value="review-playlist-pins/index.html">PR #60: playlist pin menu</option>
 </select></label>
 <button id="next">Next</button> <a id="direct">Open selected comparison</a>
 <iframe id="comparison" title="Selected integration comparison"></iframe>

@@ -28,6 +28,9 @@ settings-reload regressions pass. See [playlist pins](playlist-pins.md).
 `main` remains at
 `995c768`; these preview changes have not
 been merged into a public release.
+The `release/apple-windows-integration` branch assembles the feature stack for
+review against that `main` baseline. See the [source and PR #13 trace](integration.md)
+for scope, evidence and the remaining integration gates.
 
 ## Next private trial: Dad's PC
 

@@ -1716,6 +1716,149 @@ mod tests {
 
     #[cfg(feature = "demo")]
     #[test]
+    fn apple_filled_hearts_keep_the_pop_after_optimistic_add() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        fn images(shape: &egui::Shape, found: &mut Vec<egui::Rect>) {
+            match shape {
+                egui::Shape::Mesh(_) => found.push(shape.visual_bounding_rect()),
+                egui::Shape::Rect(rect) if rect.brush.is_some() => found.push(rect.rect),
+                egui::Shape::Vec(shapes) => {
+                    for shape in shapes {
+                        images(shape, found);
+                    }
+                }
+                _ => {}
+            }
+        }
+        let check_hearts = |tree: &egui::accesskit::TreeUpdate,
+                            painted: &[egui::Rect],
+                            enlarged: bool| {
+            let hearts = tree
+                .nodes
+                .iter()
+                .filter(|(_, node)| node.label() == Some("Favorites") && node.role() == Role::Image)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                hearts.len(),
+                2,
+                "the row and player switch to filled read-only hearts"
+            );
+            for (_, heart) in hearts {
+                let bounds = heart.bounds().unwrap();
+                let area = egui::Rect::from_min_max(
+                    egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                    egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                );
+                let icon = painted
+                    .iter()
+                    .find(|rect| area.contains_rect(**rect))
+                    .expect("painted heart image within its accessibility cell");
+                let base = if bounds.y0 > 700.0 { 17.0 } else { 16.0 };
+                if enlarged {
+                    assert!(
+                        icon.width() > base * 1.2,
+                        "the filled heart must keep the pop: {icon:?}"
+                    );
+                } else {
+                    assert!(
+                        (icon.width() - base).abs() < 0.01,
+                        "the heart must settle to its normal size: {icon:?}"
+                    );
+                }
+                assert!(!heart.supports_action(AccessibleAction::Click));
+            }
+        };
+        for light in [false, true] {
+            for width in [760.0, 1100.0] {
+                for from_player in [false, true] {
+                    let (ctx, mut app) =
+                        accessible_app(&format!("apple-heart-pop-{light}-{width}-{from_player}"));
+                    if light {
+                        app.palette = crate::theme::Palette::light();
+                    }
+                    let mut apple = crate::apple::State::demo(&app.library.liked.items);
+                    for song in &mut apple.songs {
+                        song.in_favorites = Some(false);
+                    }
+                    app.library.liked.items = apple
+                        .songs
+                        .iter()
+                        .map(|song| SavedTrack {
+                            added_at: None,
+                            track: song.track(),
+                        })
+                        .collect();
+                    app.local = apple.local.clone();
+                    app.apple = Some(apple);
+                    app.remote = None;
+                    app.open(Page::LikedSongs);
+                    let uri = app.now_playing().unwrap().uri;
+                    let frame = |app: &mut App, time: f64, events: Vec<egui::Event>| {
+                        let mut output = ctx.run_ui(
+                            egui::RawInput {
+                                time: Some(time),
+                                screen_rect: Some(egui::Rect::from_min_size(
+                                    egui::Pos2::ZERO,
+                                    egui::vec2(width, 800.0),
+                                )),
+                                events,
+                                ..Default::default()
+                            },
+                            |ui| app.frame_ui(ui),
+                        );
+                        output.textures_delta.clear();
+                        let mut painted = Vec::new();
+                        for shape in &output.shapes {
+                            images(&shape.shape, &mut painted);
+                        }
+                        (output.platform_output.accesskit_update.unwrap(), painted)
+                    };
+                    frame(&mut app, 0.0, vec![]);
+                    let (tree, _) = frame(&mut app, 0.0, vec![]);
+                    let button = tree
+                        .nodes
+                        .iter()
+                        .filter(|(_, node)| {
+                            node.label() == Some("Add to Favorites") && node.role() == Role::Button
+                        })
+                        .filter(|(_, node)| {
+                            node.bounds().is_some_and(|rect| {
+                                if from_player {
+                                    rect.y0 > 700.0 && rect.x0 < width as f64 / 2.0
+                                } else {
+                                    rect.y0 < 700.0 && rect.x0 > width as f64 / 2.0
+                                }
+                            })
+                        })
+                        .min_by(|(_, a), (_, b)| {
+                            a.bounds().unwrap().y0.total_cmp(&b.bounds().unwrap().y0)
+                        })
+                        .expect("first song or player favorite control")
+                        .0;
+                    frame(
+                        &mut app,
+                        0.01,
+                        vec![accessible_action(button, AccessibleAction::Click, None)],
+                    );
+                    let (tree, painted) = frame(&mut app, 0.08, vec![]);
+                    check_hearts(&tree, &painted, true);
+                    app.settings.reduce_motion = true;
+                    let (tree, painted) = frame(&mut app, 0.09, vec![]);
+                    check_hearts(&tree, &painted, false);
+                    app.settings.reduce_motion = false;
+                    let (tree, painted) = frame(&mut app, 0.1, vec![]);
+                    check_hearts(&tree, &painted, false);
+                    let (tree, painted) = frame(&mut app, 0.3, vec![]);
+                    check_hearts(&tree, &painted, false);
+                    assert_eq!(app.is_saved(&uri), Some(true));
+                    app.backend.shutdown();
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
     fn apple_mini_player_favorites_are_accessible_at_each_scale_and_share_rollback() {
         use egui::accesskit::{Action as AccessibleAction, Role};
         for scale in 1..=4 {

@@ -1844,7 +1844,10 @@ fn track_row_contents(
             child
                 .add(
                     Icon::HeartFilled
-                        .image(palette.accent, 16.0)
+                        .image(
+                            palette.accent,
+                            16.0 * super::motion::heart_scale(ui.ctx(), row.item.uri()),
+                        )
                         .alt_text(label.as_ref()),
                 )
                 .on_hover_text(label.as_ref());

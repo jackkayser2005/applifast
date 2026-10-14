@@ -680,7 +680,10 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
             heart_ui
                 .add(
                     Icon::HeartFilled
-                        .image(palette.accent, 17.0)
+                        .image(
+                            palette.accent,
+                            17.0 * super::motion::heart_scale(ui.ctx(), &now.uri),
+                        )
                         .alt_text(label.as_ref()),
                 )
                 .on_hover_text(label.as_ref());
