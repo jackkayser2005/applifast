@@ -1006,6 +1006,9 @@ impl App {
         ctx.set_theme(self.theme_preference());
         self.applied_dark = None;
         self.winamp.forget_textures();
+        // Texture IDs and pending artwork completions belong to the old window.
+        self.lyrics_backdrop = Default::default();
+        self.softened_covers = Default::default();
         self.window_hidden = false;
         self.hide_intent = false;
         self.wants_show = false;

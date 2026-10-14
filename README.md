@@ -11,6 +11,10 @@ Spotifast downloads install a different product.
 See the [Windows beta checklist](docs/applifast/release-readiness.md) for the
 next private trial, current evidence and remaining public-release gates.
 
+Artwork refreshes when switching between the main and mini player or reopening
+from the tray. See the [window artwork checks](docs/applifast/window-artwork.md)
+for the stale-texture fix and remaining desktop acceptance.
+
 ## Try the preview
 
 Invited testers: get the preview installer or portable ZIP and its checksum from
