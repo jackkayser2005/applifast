@@ -90,7 +90,7 @@ jobs:
           if ($headers -notmatch '${{ matrix.pe-machine }}') { throw "$binary is not built for ${{ matrix.target }}:`n$headers" }
           # Each Windows build runs on its own processor: start it once.
           $version = (& $binary --version | Out-String).Trim()
-          if ($version -notmatch '^spotifast \d+\.\d+\.\d+') { throw "Unexpected --version output: $version" }
+          if ($version -notmatch '^applifast \d+\.\d+\.\d+') { throw "Unexpected --version output: $version" }
 
       - name: Package
         shell: bash

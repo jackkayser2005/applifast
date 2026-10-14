@@ -75,7 +75,11 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 24.0;
         let (rect, _) = ui.allocate_exact_size(Vec2::splat(cover_size), Sense::hover());
-        let radius = if hero.round { cover_size / 2.0 } else { 6.0 };
+        let radius = if hero.round {
+            cover_size / 2.0
+        } else {
+            f32::from(theme::RADIUS)
+        };
         widgets::paint_shadow(ui, &palette, rect, radius);
         if hero.liked {
             super::sidebar::liked_cover(ui, rect, radius);
@@ -101,19 +105,19 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
             ui.set_width(width);
             ui.spacing_mut().item_spacing.y = 6.0;
             ui.add_space(cover_size * 0.08);
-            theme::text(ui, hero.kind.as_ref(), theme::medium(12.5), palette.text);
-            let mut size = if cover_size > 200.0 { 56.0 } else { 40.0 };
-            loop {
-                let galley = ui.painter().layout_no_wrap(
-                    hero.title.to_string(),
-                    theme::bold(size),
-                    palette.text,
-                );
-                if galley.size().x <= width || size <= 22.0 {
-                    break;
-                }
-                size -= 6.0;
-            }
+            theme::text(
+                ui,
+                hero.kind.as_ref(),
+                theme::semibold(12.5),
+                palette.secondary,
+            );
+            let size = hero_title_size(cover_size, |size| {
+                ui.painter()
+                    .layout_no_wrap(hero.title.to_string(), theme::bold(size), palette.text)
+                    .size()
+                    .x
+                    <= width
+            });
             theme::text(ui, hero.title, theme::bold(size), palette.text);
             if let Some(description) = &hero.description
                 && !description.is_empty()
@@ -133,7 +137,8 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
                     }
                     match page {
                         Some(page) => {
-                            if theme::link(ui, text, theme::semibold(13.5), palette.text).clicked()
+                            if theme::link(ui, text, theme::semibold(13.5), palette.accent)
+                                .clicked()
                             {
                                 app.actions.push(Action::Open(page.clone()));
                             }
@@ -147,6 +152,16 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
         });
     });
     ui.add_space(20.0);
+}
+
+/// The largest title size that fits, stepping down from the cover's
+/// starting size; past the floor a title is cut instead.
+fn hero_title_size(cover_size: f32, fits: impl Fn(f32) -> bool) -> f32 {
+    let mut size = if cover_size > 200.0 { 40.0 } else { 32.0 };
+    while size > 22.0 && !fits(size) {
+        size -= 4.0;
+    }
+    size
 }
 
 pub struct Actions<'a> {
@@ -184,36 +199,47 @@ pub fn actions_row(
             // A radio is mixed afresh each time Spotify is asked, so it
             // always plays the songs on screen.
             let play_view = actions.view.is_some()
-                && (!app.playing_context_shuffle() || is_filtered || actions.save_radio.is_some());
+                && (app.apple.is_some()
+                    || !app.playing_context_shuffle()
+                    || is_filtered
+                    || actions.save_radio.is_some());
             let can_start = actions.view.as_ref().is_none_or(|uris| !uris.is_empty());
-            let icon = if now_playing_here {
-                Icon::PauseFilled
+            let (icon, play_label) = if now_playing_here {
+                (Icon::PauseFilled, gettext(locale, "Pause"))
             } else {
-                Icon::PlayFilled
+                (Icon::PlayFilled, gettext(locale, "Play"))
             };
+            let shuffle_label = gettext(locale, "Shuffle");
+            let width = theme::header_button_width(
+                ui,
+                &[
+                    &gettext(locale, "Play"),
+                    &gettext(locale, "Pause"),
+                    &shuffle_label,
+                ],
+            );
+            // Room left once the icon buttons and the filter have theirs.
+            let room =
+                ui.available_width() - 3.0 * 56.0 - if filter.is_some() { 238.0 } else { 0.0 };
+            let width = if room >= width * 2.0 + 10.0 {
+                width
+            } else {
+                theme::HEADER_BUTTON_COMPACT
+            };
+            ui.spacing_mut().item_spacing.x = 10.0;
             if app.play_pending(uri) {
-                theme::circle_spinner(
+                theme::header_button(
                     ui,
-                    56.0,
-                    palette.accent,
-                    palette.on_accent,
+                    &palette,
+                    None,
+                    &play_label,
+                    width,
+                    false,
                     &gettext(locale, "Starting…"),
                 );
             } else if ui
                 .add_enabled_ui(now_playing_here || can_start, |ui| {
-                    theme::circle_button(
-                        ui,
-                        icon,
-                        56.0,
-                        palette.accent,
-                        palette.accent_hover,
-                        palette.on_accent,
-                        &if now_playing_here {
-                            gettext(locale, "Pause")
-                        } else {
-                            gettext(locale, "Play")
-                        },
-                    )
+                    theme::header_button(ui, &palette, Some(icon), &play_label, width, false, "")
                 })
                 .inner
                 .on_disabled_hover_text(gettext(locale, "No playable songs in this view").as_ref())
@@ -244,16 +270,13 @@ pub fn actions_row(
                 }
             }
             let shuffle = app.playing_context_shuffle();
-            if theme::icon_button(
+            if theme::header_button(
                 ui,
-                Icon::Shuffle,
-                26.0,
-                if shuffle {
-                    palette.accent
-                } else {
-                    palette.secondary
-                },
-                palette.text,
+                &palette,
+                Some(Icon::Shuffle),
+                &shuffle_label,
+                width,
+                shuffle,
                 &if shuffle {
                     gettext(locale, "Shuffle off")
                 } else {
@@ -264,8 +287,11 @@ pub fn actions_row(
             {
                 app.actions.push(Action::SetShuffle(!shuffle));
             }
+            ui.spacing_mut().item_spacing.x = 18.0;
         }
-        if let Some((uri, saved)) = &actions.saved {
+        if app.apple.is_none()
+            && let Some((uri, saved)) = &actions.saved
+        {
             let (icon, tooltip, color) = if *saved {
                 (
                     actions.saved_icons.1,
@@ -305,51 +331,63 @@ pub fn actions_row(
                 palette.text,
                 &gettext(locale, "More"),
             );
-            egui::Popup::menu(&more)
-                .frame(widgets::menu_frame(&palette))
-                .show(|ui| {
-                    if let Some(seed) = &actions.save_radio {
-                        // As narrow as every other item menu.
-                        ui.set_min_width(200.0);
-                        ui.set_max_width(300.0);
-                        if widgets::menu_item(
-                            ui,
-                            &palette,
-                            Some(Icon::CirclePlus),
-                            &gettext(locale, "Save as playlist"),
-                        ) {
-                            app.actions.push(Action::SaveRadio(seed.clone()));
-                        }
-                    } else {
-                        widgets::context_menu_items(
-                            ui,
-                            app,
-                            uri,
-                            actions.name,
-                            actions.owned_playlist.as_ref(),
-                        );
+            let popup = egui::Popup::menu(&more);
+            #[cfg(feature = "demo")]
+            let popup = if app.demo_play_next_menu == Some("album") {
+                popup.open(true)
+            } else {
+                popup
+            };
+            popup.frame(widgets::menu_frame(&palette)).show(|ui| {
+                if let Some(seed) = &actions.save_radio {
+                    // As narrow as every other item menu.
+                    ui.set_min_width(200.0);
+                    ui.set_max_width(300.0);
+                    if widgets::menu_item(
+                        ui,
+                        &palette,
+                        Some(Icon::CirclePlus),
+                        &gettext(locale, "Save as playlist"),
+                    ) {
+                        app.actions.push(Action::SaveRadio(seed.clone()));
                     }
-                    if let Some((page, loading)) = &actions.reload {
-                        widgets::menu_separator(ui, &palette);
-                        let clicked = ui
-                            .add_enabled_ui(!loading, |ui| {
-                                widgets::menu_item(
-                                    ui,
-                                    &palette,
-                                    Some(Icon::Refresh),
-                                    &if *loading {
-                                        gettext(locale, "Refreshing…")
-                                    } else {
-                                        gettext(locale, "Refresh")
-                                    },
-                                )
-                            })
-                            .inner;
-                        if clicked {
-                            app.actions.push(Action::Reload(page.clone()));
-                        }
+                } else {
+                    widgets::context_menu_items(
+                        ui,
+                        app,
+                        uri,
+                        actions.name,
+                        actions.owned_playlist.as_ref(),
+                    );
+                    if app.apple.is_some()
+                        && app.library.playlists.get().is_some_and(|playlists| {
+                            playlists.iter().any(|playlist| playlist.uri == *uri)
+                        })
+                    {
+                        super::sidebar::pin_menu(app, ui, uri);
                     }
-                });
+                }
+                if let Some((page, loading)) = &actions.reload {
+                    widgets::menu_separator(ui, &palette);
+                    let clicked = ui
+                        .add_enabled_ui(!loading, |ui| {
+                            widgets::menu_item(
+                                ui,
+                                &palette,
+                                Some(Icon::Refresh),
+                                &if *loading {
+                                    gettext(locale, "Refreshing…")
+                                } else {
+                                    gettext(locale, "Refresh")
+                                },
+                            )
+                        })
+                        .inner;
+                    if clicked {
+                        app.actions.push(Action::Reload(page.clone()));
+                    }
+                }
+            });
         }
         if let Some(filter) = filter {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -506,7 +544,12 @@ pub fn prepare_table_view(
     } else {
         let visible = view_indices(items, needle, sort);
         let mut view_positions = Vec::new();
-        let view_uris = (sort.is_some() || !needle.is_empty()).then(|| {
+        let view_uris = (sort.is_some()
+            || !needle.is_empty()
+            || *page == Page::Favorites
+            || (*page == Page::LikedSongs
+                && app.apple.as_ref().is_some_and(|apple| apple.favorites_only)))
+        .then(|| {
             let mut uris = Vec::new();
             for &index in &visible {
                 let item = &items[index].0;
@@ -690,6 +733,12 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
     app.keep_picked_rows_for(&table.page, &view);
     let picked: std::collections::BTreeSet<usize> =
         app.picked_rows(&table.page).cloned().unwrap_or_default();
+    #[cfg(feature = "demo")]
+    let picked = if app.demo_play_next_menu == Some("selection") {
+        (0..3.min(rows)).collect()
+    } else {
+        picked
+    };
     // Keep complete rows for immediate optimistic playlist additions.
     let picked_songs: Vec<PlayableItem> = picked
         .iter()
@@ -756,7 +805,8 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
             return;
         }
         // Shift neighboring rows around the current drop slot.
-        let shift = ui.ctx().animate_value_with_time(
+        let shift = super::motion::animate_value(
+            ui.ctx(),
             ui.id().with(("table-move-shift", row)),
             match move_slot {
                 Some(slot) if row < slot => -4.0,
@@ -788,6 +838,7 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
                 shift,
                 picked: picked.contains(&row),
                 picked_songs: &picked_songs,
+                striped: row % 2 == 1,
             },
         );
         row_responses.push((row, response));
@@ -922,7 +973,7 @@ fn list_shortcuts(
         | RowContext::View {
             editable_playlist: Some((id, _)),
             ..
-        } => Some(id.clone()),
+        } if app.apple.is_none() => Some(id.clone()),
         _ => None,
     };
     let can_delete = editable.is_some()
@@ -1834,14 +1885,32 @@ fn album_hero(
 
 pub fn liked(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
+    let page = if app.page() == &Page::Favorites {
+        Page::Favorites
+    } else {
+        Page::LikedSongs
+    };
+    let favorites_only =
+        page == Page::Favorites || app.apple.as_ref().is_some_and(|apple| apple.favorites_only);
     let revision = app.library.liked.revision;
     let names = app.user_names_revision;
-    let items =
-        if let Some(items) = table_items_hit(app, &Page::LikedSongs, revision, revision, names) {
-            items
+    let items = if let Some(items) = table_items_hit(app, &page, revision, revision, names) {
+        items
+    } else {
+        let rows = if favorites_only {
+            app.apple
+                .as_ref()
+                .into_iter()
+                .flat_map(|apple| &apple.songs)
+                .filter(|song| {
+                    app.apple
+                        .as_ref()
+                        .is_some_and(|apple| apple.song_favorite(song) == Some(true))
+                })
+                .map(|song| (PlayableItem::Track(song.track()), None, None))
+                .collect()
         } else {
-            let rows = app
-                .library
+            app.library
                 .liked
                 .items
                 .iter()
@@ -1852,10 +1921,15 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
                         None,
                     )
                 })
-                .collect();
-            remember_table_items(app, Page::LikedSongs, revision, revision, names, rows)
+                .collect()
         };
-    let total = app.library.liked.total.unwrap_or(items.len() as u32);
+        remember_table_items(app, page.clone(), revision, revision, names, rows)
+    };
+    let total = if favorites_only {
+        items.len() as u32
+    } else {
+        app.library.liked.total.unwrap_or(items.len() as u32)
+    };
     let user = app
         .user
         .as_ref()
@@ -1867,7 +1941,13 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
     } else {
         song_count(locale, total)
     };
-    let liked_title = gettext(locale, "Liked Songs");
+    let liked_title = if favorites_only {
+        gettext(locale, "Favorites")
+    } else if app.apple.is_some() {
+        gettext(locale, "Songs")
+    } else {
+        gettext(locale, "Liked Songs")
+    };
     hero(
         app,
         ui,
@@ -1876,25 +1956,46 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
             liked: true,
             kind: gettext(locale, "Playlist"),
             title: &liked_title,
-            description: None,
+            description: favorites_only.then(|| {
+                gettext(
+                    locale,
+                    "Favorites from loaded songs. Refresh Songs for changes made in Apple Music.",
+                )
+                .into_owned()
+            }),
             byline: vec![(user, None), (count_text, None)],
             round: false,
         },
     );
-    let collection_uri = app
-        .user
-        .as_ref()
-        .map(|user| format!("spotify:user:{}:collection", user.id));
-    let filter_id = egui::Id::new("liked-filter");
+    if app.apple.is_some() && page == Page::LikedSongs {
+        let mut only = favorites_only;
+        if ui
+            .checkbox(&mut only, gettext(locale, "Show only favorites"))
+            .changed()
+        {
+            app.actions.push(Action::AppleShowFavorites(only));
+        }
+        ui.add_space(8.0);
+    }
+    let collection_uri = if page == Page::Favorites {
+        Some("apple:collection:favorites".into())
+    } else {
+        app.songs_context_uri()
+    };
+    let filter_id = egui::Id::new(if page == Page::Favorites {
+        "favorites-filter"
+    } else {
+        "liked-filter"
+    });
     let mut filter = ui
         .data(|data| data.get_temp::<String>(filter_id))
         .unwrap_or_default();
     let needle = filter.trim().to_lowercase();
-    let sort = app.table_sorts.get(&Page::LikedSongs).copied();
+    let sort = app.table_sorts.get(&page).copied();
     let table_view = prepare_table_view(
         ui,
         app,
-        &Page::LikedSongs,
+        &page,
         &items,
         &needle,
         sort,
@@ -1906,7 +2007,7 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
         ui,
         Actions {
             play_uri: collection_uri.clone(),
-            view: liked_view,
+            view: liked_view.clone(),
             saved: None,
             saved_icons: (Icon::Heart, Icon::HeartFilled),
             saved_tooltips: Default::default(),
@@ -1924,6 +2025,11 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
         .collect::<Vec<_>>()
         .into();
     let context = match collection_uri {
+        Some(uri) if favorites_only => RowContext::View {
+            uris: liked_view.unwrap_or_else(|| Arc::from([])),
+            context_uri: uri,
+            editable_playlist: None,
+        },
         Some(uri) if app.library.liked.is_complete() => RowContext::Context {
             uri,
             editable_playlist: None,
@@ -1933,7 +2039,22 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
     let loading = app.library.liked.loading;
     let error = app.library.liked.error.clone();
     let can_load_more = app.library.liked.can_load_more();
-    let _ = &palette;
+    if favorites_only && items.is_empty() && !loading && error.is_none() {
+        widgets::empty_state(
+            ui,
+            &palette,
+            Icon::Heart,
+            &gettext(locale, "No favorites in the loaded songs"),
+            &gettext(locale, "Only songs Apple marks as favorites appear here."),
+        );
+        if can_load_more
+            && theme::pill_button(ui, &palette, &gettext(locale, "Load more songs"), false)
+                .clicked()
+        {
+            app.actions.push(Action::LoadMore(page.clone()));
+        }
+        return;
+    }
     table(
         app,
         ui,
@@ -1944,9 +2065,10 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
             context,
             show_album: true,
             show_cover: true,
-            show_added: true,
+            // Apple documents library album add dates, but not song add dates.
+            show_added: app.apple.is_none(),
             show_added_by: false,
-            page: Page::LikedSongs,
+            page,
             loading,
             error: error.as_deref(),
             can_load_more,
@@ -2037,6 +2159,16 @@ mod tests {
     use super::*;
     use crate::api::models::{Album, ArtistRef, Image, Track};
     use crate::model::PlaylistPage;
+
+    /// Titles sit beside the cover at a page-title scale rather than as a
+    /// poster, and long ones step down before they are cut.
+    #[test]
+    fn hero_titles_start_at_a_page_title_scale_and_step_down_to_fit() {
+        assert_eq!(hero_title_size(212.0, |_| true), 40.0);
+        assert_eq!(hero_title_size(160.0, |_| true), 32.0);
+        assert_eq!(hero_title_size(212.0, |size| size <= 30.0), 28.0);
+        assert_eq!(hero_title_size(212.0, |_| false), 20.0);
+    }
 
     #[test]
     fn hero_images_keep_the_previous_art_until_the_new_cover_is_ready() {
@@ -2910,6 +3042,46 @@ mod tests {
     /// Cut copies the picked songs and removes them from a playlist the
     /// account can edit; elsewhere it does nothing to the list (#539).
     #[test]
+    fn apple_playlist_shortcuts_keep_copy_but_do_not_cut_paste_or_delete() {
+        let mut table = KeyboardTable::new();
+        table.app.apple = Some(crate::apple::State::default());
+        table.editable = true;
+        table.frame(vec![]);
+        let command = if cfg!(target_os = "macos") {
+            egui::Modifiers::MAC_CMD | egui::Modifiers::COMMAND
+        } else {
+            egui::Modifiers::CTRL | egui::Modifiers::COMMAND
+        };
+        table.frame(vec![egui::Event::Key {
+            key: egui::Key::A,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: command,
+        }]);
+        table.app.actions.clear();
+        for event in [
+            egui::Event::Cut,
+            egui::Event::Paste("apple:track:library.i.upload".into()),
+            egui::Event::Key {
+                key: egui::Key::Delete,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ] {
+            table.frame(vec![event]);
+            assert!(table.app.actions.is_empty());
+        }
+        table.frame(vec![egui::Event::Copy]);
+        assert!(
+            matches!(table.app.actions.as_slice(), [Action::CopySongs(items)] if items.len() == table.items.len())
+        );
+        table.app.backend.shutdown();
+    }
+
+    #[test]
     fn cut_copies_and_removes_songs_from_an_editable_playlist() {
         let command = if cfg!(target_os = "macos") {
             egui::Modifiers::MAC_CMD | egui::Modifiers::COMMAND
@@ -3397,6 +3569,141 @@ mod tests {
     }
 
     #[test]
+    fn apple_playlist_more_pins_and_unpins_locally_across_restart() {
+        for width in [400.0, 800.0] {
+            let ctx = egui::Context::default();
+            ctx.enable_accesskit();
+            theme::install(&ctx);
+            let mut app = test_app();
+            app.apple = Some(crate::apple::State::default());
+            let uri = "apple:playlist:library.p.target";
+            let other = "apple:playlist:library.p.other";
+            app.settings.liked_songs_pinned = false;
+            app.settings.pinned_contexts = vec![other.into()];
+            app.library.playlists = Loadable::Loaded(vec![Playlist {
+                id: "library.p.target".into(),
+                uri: uri.into(),
+                name: "Test playlist".into(),
+                ..Default::default()
+            }]);
+            let frame = |app: &mut App, events| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            vec2(width, 520.0),
+                        )),
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| {
+                        actions_row(
+                            app,
+                            ui,
+                            Actions {
+                                play_uri: Some(uri.into()),
+                                view: None,
+                                saved: None,
+                                saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
+                                saved_tooltips: Default::default(),
+                                owned_playlist: None,
+                                reload: Some((Page::Playlist("library.p.target".into()), false)),
+                                name: "Test playlist",
+                                save_radio: None,
+                            },
+                            None,
+                        )
+                    },
+                );
+                output.textures_delta.clear();
+                output.platform_output.accesskit_update.unwrap()
+            };
+            let click = |bounds: egui::accesskit::Rect| {
+                let pos = pos2(
+                    ((bounds.x0 + bounds.x1) / 2.0) as f32,
+                    ((bounds.y0 + bounds.y1) / 2.0) as f32,
+                );
+                vec![
+                    egui::Event::PointerMoved(pos),
+                    egui::Event::PointerButton {
+                        pos,
+                        button: egui::PointerButton::Primary,
+                        pressed: true,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                    egui::Event::PointerButton {
+                        pos,
+                        button: egui::PointerButton::Primary,
+                        pressed: false,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ]
+            };
+            frame(&mut app, vec![]);
+            for (label, expected) in [
+                ("Pin to top", vec![other.to_owned(), uri.to_owned()]),
+                ("Unpin", vec![other.to_owned()]),
+            ] {
+                let closed = frame(&mut app, vec![]);
+                let more = closed
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| node.label() == Some("More"))
+                    .and_then(|(_, node)| node.bounds())
+                    .expect("More button");
+                frame(&mut app, click(more));
+                let opened = frame(&mut app, vec![]);
+                let controls: Vec<_> = opened
+                    .nodes
+                    .iter()
+                    .filter(|(_, node)| node.label() == Some(label))
+                    .collect();
+                assert_eq!(controls.len(), 1, "playlist More must offer {label} once");
+                frame(&mut app, click(controls[0].1.bounds().unwrap()));
+                assert!(matches!(
+                    app.actions.as_slice(),
+                    [Action::ArrangeLibrary {
+                        playlist_order: None,
+                        ..
+                    }]
+                ));
+                for action in std::mem::take(&mut app.actions) {
+                    app.apply(action, &ctx);
+                }
+                assert_eq!(app.settings.pinned_contexts, expected);
+                assert_eq!(app.library.playlists.get().unwrap()[0].uri, uri);
+                app.settings.save(&app.dirs.settings_file());
+                let restored = crate::settings::Settings::load(&app.dirs.settings_file());
+                assert_eq!(restored.pinned_contexts, expected);
+            }
+            app.library.playlists = Loadable::Loaded(vec![Playlist {
+                uri: "apple:playlist:catalog.p.target".into(),
+                ..Default::default()
+            }]);
+            let closed = frame(&mut app, vec![]);
+            let more = closed
+                .nodes
+                .iter()
+                .find(|(_, node)| node.label() == Some("More"))
+                .and_then(|(_, node)| node.bounds())
+                .unwrap();
+            frame(&mut app, click(more));
+            let opened = frame(&mut app, vec![]);
+            assert!(
+                !opened
+                    .nodes
+                    .iter()
+                    .any(|(_, node)| matches!(node.label(), Some("Pin to top" | "Unpin"))),
+                "A catalog identifier must not stand in for this library playlist"
+            );
+            app.backend.shutdown();
+            let _ = std::fs::remove_dir_all(&app.dirs.config);
+            let _ = std::fs::remove_dir_all(&app.dirs.state);
+            let _ = std::fs::remove_dir_all(&app.dirs.cache);
+        }
+    }
+
+    #[test]
     fn playlist_refresh_lives_in_more_and_accepts_pointer_and_keyboard() {
         use egui::accesskit::{Action as AccessibleAction, ActionRequest, TreeId};
         for width in [400.0, 800.0] {
@@ -3531,6 +3838,7 @@ mod tests {
     #[test]
     fn collection_shuffle_button_changes_mode_without_starting_playback() {
         let ctx = egui::Context::default();
+        theme::install(&ctx);
         let mut app = test_app();
         let input = |events| egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
@@ -3563,7 +3871,7 @@ mod tests {
         };
 
         draw(vec![]);
-        let pos = egui::pos2(87.0, 28.0);
+        let pos = egui::pos2(170.0, 18.0);
         draw(vec![
             egui::Event::PointerMoved(pos),
             egui::Event::PointerButton {
@@ -3590,6 +3898,7 @@ mod tests {
     #[test]
     fn sorted_collection_play_button_plays_context_when_shuffling() {
         let ctx = egui::Context::default();
+        theme::install(&ctx);
         let mut app = test_app();
         app.apply(Action::SetShuffle(true), &ctx);
         app.actions.clear();
@@ -3624,7 +3933,7 @@ mod tests {
         });
         out.textures_delta.clear();
 
-        let click_pos = egui::pos2(28.0, 28.0);
+        let click_pos = egui::pos2(28.0, 18.0);
         let input_click = egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
                 egui::Pos2::ZERO,
@@ -3688,6 +3997,7 @@ mod tests {
     #[test]
     fn sorted_collection_play_button_plays_from_top_when_not_shuffling() {
         let ctx = egui::Context::default();
+        theme::install(&ctx);
         let mut app = test_app();
         app.apply(Action::SetShuffle(false), &ctx);
         app.actions.clear();
@@ -3722,7 +4032,7 @@ mod tests {
         });
         out.textures_delta.clear();
 
-        let click_pos = egui::pos2(28.0, 28.0);
+        let click_pos = egui::pos2(28.0, 18.0);
         let input_click = egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
                 egui::Pos2::ZERO,
@@ -3786,6 +4096,7 @@ mod tests {
     #[test]
     fn sorted_collection_play_button_preserves_filtered_view_when_shuffling() {
         let ctx = egui::Context::default();
+        theme::install(&ctx);
         let mut app = test_app();
         app.apply(Action::SetShuffle(true), &ctx);
         app.actions.clear();
@@ -3821,7 +4132,7 @@ mod tests {
         });
         out.textures_delta.clear();
 
-        let click_pos = egui::pos2(28.0, 28.0);
+        let click_pos = egui::pos2(28.0, 18.0);
         let input_click = egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
                 egui::Pos2::ZERO,

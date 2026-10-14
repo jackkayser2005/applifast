@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast tester sign-in review</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
+<h1>Tester sign-in with an app token in the ZIP</h1>
+<p><a href="https://github.com/jackkayser2005/applifast/pull/32">PR #32</a>, implementation <code>873e18d</code>. Scope ledger: the maintainer requested download-and-sign-in onboarding. This slice simplifies only the existing sign-in card; fresh-account acceptance remains outstanding.</p>
+<p>Candidate <code>feat/apple-bundled-token</code>, baseline <code>642cfac</code> (PR #31). When Apple sign-in is ready, the card hides manual developer-token setup and is 80 pixels shorter. Errors and pending imports retain manual recovery. Settings retains its import control. The shell and Apple authorization popup are unchanged.</p>
+<p>Matching Windows native captures use identical signed-out demo ready/error states, theme, window size, neutral pointer, zoom and Reduce motion. No real account data or playback is used. The maintainer's download-and-sign-in request authorizes this setup change. It does not establish release acceptance.</p>
+<label>State <select id="view"><option value="ready">Ready for Apple sign-in</option><option value="error">Setup error and recovery</option></select></label>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Matching native Windows tester sign-in comparison">
+<p>Tests cover startup token precedence, expiry renewal, bounded companion files, isolated native credential storage, sign-in/recovery accessibility and a whitelist/checksum package with dummy tokens. Apple catalog API acceptance was checked with the existing app token on October 10, 2026. A fresh Windows user's popup authorization and HTML browser rendering still require acceptance. No signing key or listener credential is packaged.</p>
+<p>All 16 matching native captures were inspected and their selector paths/dimensions pass. Formatting, strict default/demo Clippy, 1,006 default and 1,040 demo library tests, binary/integration suites, default doctests, strict demo Rustdoc, the build, gettext and Node bridge/signer checks pass. The standalone host passes 13 ordinary tests, strict Clippy and its isolated native Credential Manager round trip. Translation messages are unchanged. Optional projectM, launcher/site tooling, Nix and non-Windows checks remain unverified; earlier intermittent persistence failures remain a separate release risk.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['view','theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

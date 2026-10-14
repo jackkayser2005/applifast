@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast playlist additions review</title>
+<style>
+body { font: 16px system-ui; margin: 24px; background: #202022; color: #eee; }
+p { max-width: 950px; line-height: 1.5; } select, button { font: inherit; padding: 8px; margin: 4px; }
+a { color: #ff7a80; } img { display: block; max-width: 100%; height: auto; border: 1px solid #666; }
+</style>
+<h1>Add songs, albums and the queue to Apple playlists</h1>
+<p>The existing picker now offers Apple library playlists marked writable.
+Sidebar drops append songs. An album's menu adds the whole album, after loading
+every track page. Right-click the queue's Save as a playlist button to append
+its current and upcoming songs. Left-click still creates a new playlist.
+Unsupported playlist editing remains unavailable. There are no changes to the
+shell, navigation, spacing or colors. The album menu gains Add to playlist and
+the queue save button gains a context menu.</p>
+<p>Baseline: Windows preview <code>abbfcd6</code> (PR #15).
+Candidate: <code>feat/apple-playlist-additions</code>. The matching frames show
+the same created playlist before any append. New states demonstrate adding two
+more copies, duplicate confirmation and rollback using sample responses.
+These captures do not establish real-account writes. Keyboard picker behavior is
+tested; open album/queue menu captures remain pending. PR #14's motion comparison
+and visual approval are separate outstanding gates.</p>
+<p>All twelve PNGs and gallery controls passed validation. Three common frame
+pairs are byte-identical. The dark/narrow pair differs at 80 pixels by one
+channel level inside the toast check icon (553,623 to 568,639); its layout and
+content match. Candidate executable SHA-256:
+<code>bdec7917c013b74feed9669cc4a1c75e8fb479b6b457dd5d9c97a29289155a65</code>.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<button id="before">Before</button><button id="after">After</button>
+<p id="label"></p>
+<img id="capture" alt="The same sample Apple playlist before an append">
+<h2>New interaction states</h2>
+<label>State <select id="state">
+<option value="appending-dark-1100x760">Appending, dark / normal</option>
+<option value="appended-light-760x760">Confirmed, light / narrow</option>
+<option value="duplicates-dark-760x760">Duplicate confirmation, dark / narrow</option>
+<option value="error-light-1100x760">Rollback after an error, light / normal</option>
+</select></label>
+<p>Appending immediately adds both occurrences and their count. Confirmation
+retains all three copies. An ambiguous failure restores the original song and
+asks users to inspect the playlist before retrying. Add anyway preserves repeats;
+Cancel writes nothing.</p>
+<img id="interaction" alt="A sample Apple playlist append interaction state">
+<p><a href="../review-playlists/index.html">Playlist creation review (PR #15)</a>
+and <a href="../review-polish/index.html">motion candidate gallery (PR #14)</a>.</p>
+<script>
+let side = 'after';
+const byId = id => document.getElementById(id);
+function draw() {
+  const theme = byId('theme').value, size = byId('size').value;
+  byId('capture').src = `${side}-created-${theme}-${size}.png`;
+  byId('label').textContent = `${side === 'before' ? 'Before' : 'After'}: ${theme}, ${size}`;
+  byId('interaction').src = `${byId('state').value}.png`;
+  byId('before').disabled = side === 'before'; byId('after').disabled = side === 'after';
+}
+for (const id of ['theme', 'size', 'state']) byId(id).onchange = draw;
+byId('before').onclick = () => { side = 'before'; draw(); };
+byId('after').onclick = () => { side = 'after'; draw(); };
+draw();
+</script>
+</html>

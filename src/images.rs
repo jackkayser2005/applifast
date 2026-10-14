@@ -1100,6 +1100,87 @@ mod tests {
     }
 
     #[test]
+    fn recreated_windows_release_artwork_and_reject_old_completions() {
+        let root =
+            std::env::temp_dir().join(format!("applifast-window-artwork-{}", std::process::id()));
+        let mut app = crate::app::App::new(
+            &crate::backend::Waker::default(),
+            crate::paths::AppDirs {
+                config: root.join("config"),
+                state: root.join("state"),
+                cache: root.join("cache"),
+            },
+            crate::settings::Settings::default(),
+            crate::app::AppOptions {
+                media_controls: false,
+                restore_sign_in: false,
+                tray: false,
+            },
+        );
+        let mut ctx = egui::Context::default();
+        app.attach(&ctx);
+        for mini in [true, false, true] {
+            let old_manager = Arc::downgrade(&ctx.tex_manager());
+            let (old_backdrop_tx, old_backdrop_rx) = std::sync::mpsc::channel();
+            app.lyrics_backdrop = LyricsBackdrop {
+                uri: Some("https://example.invalid/cover".into()),
+                requested: true,
+                pending: Some(old_backdrop_rx),
+                texture: Some(ctx.load_texture(
+                    "old-backdrop",
+                    softened_test_image(),
+                    egui::TextureOptions::LINEAR,
+                )),
+                ..Default::default()
+            };
+            let old_cover_tx = app.softened_covers.ready_tx.clone();
+            old_cover_tx
+                .send(("cover".into(), Some(softened_test_image())))
+                .unwrap();
+            app.softened_covers.receive_ready(&ctx);
+            app.softened_covers.pending.insert("late".into());
+            app.softened_covers.failed.insert("failed".into());
+
+            ctx = egui::Context::default();
+            app.settings.winamp_window = mini;
+            app.attach(&ctx);
+
+            assert!(
+                old_manager.upgrade().is_none(),
+                "recreating a window must release its artwork texture manager"
+            );
+            assert!(app.lyrics_backdrop.texture.is_none());
+            assert!(app.lyrics_backdrop.uri.is_none());
+            assert!(app.lyrics_backdrop.pending.is_none());
+            assert!(!app.lyrics_backdrop.requested);
+            assert!(app.softened_covers.textures.is_empty());
+            assert!(app.softened_covers.pending.is_empty());
+            assert!(app.softened_covers.failed.is_empty());
+            assert!(
+                old_backdrop_tx
+                    .send(Ok(Some(softened_test_image())))
+                    .is_err()
+            );
+            assert!(
+                old_cover_tx
+                    .send(("late".into(), Some(softened_test_image())))
+                    .is_err()
+            );
+
+            app.softened_covers
+                .ready_tx
+                .send(("fresh".into(), Some(softened_test_image())))
+                .unwrap();
+            app.softened_covers.receive_ready(&ctx);
+            assert_eq!(app.softened_covers.textures.len(), 1);
+            let fresh = &app.softened_covers.textures["fresh"].texture;
+            assert!(ctx.tex_manager().read().meta(fresh.id()).is_some());
+        }
+        app.backend.shutdown();
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn blurred_background_blurs_edges_and_bounds_texture_size() {
         let image = image::RgbImage::from_fn(640, 320, |x, _| {
             if x < 320 {

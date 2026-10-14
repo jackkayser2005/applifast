@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast favorites filter review</title>
+<style>
+body { font: 16px system-ui; margin: 24px; background: #202022; color: #eee; }
+p { max-width: 950px; line-height: 1.5; } select, button { font: inherit; padding: 8px; margin: 4px; }
+a { color: #ff7a80; } img { display: block; max-width: 100%; height: auto; border: 1px solid #666; }
+</style>
+<h1>Read Apple favorites in Songs</h1>
+<p>Visible change: Songs gains a Show only favorites checkbox below its hero.
+Checking it changes the heading and count and shows only loaded songs Apple
+marks as favorites. Unavailable favorites stay visible. Missing flags remain
+unknown. An empty loaded subset offers Load more songs when another page exists.
+The player, mini-player and navigation are otherwise unchanged.</p>
+<p>Baseline: Windows preview <code>0b67031</code> (PR #16).
+Candidate: <code>feat/apple-favorites-view</code> (PR #17). Before/After compares the same
+sample Songs page at matching size, theme and scale. Additional captures show
+the selected filter and empty/unknown state. These are actual Windows egui
+captures using sample data. They do not establish real-account favorite reads,
+restart acceptance, playback or favorite writes.</p>
+<p>All fourteen PNGs were inspected and their dimensions and selectors checked.
+The narrow hero description uses the existing ellipsis behavior.
+Candidate executable SHA-256:
+<code>18f20384e2b8bd945d470909f697051bdd5f820785b8af7504498c4c9daefcb2</code>.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<button id="before">Before</button><button id="after">After</button>
+<p id="label"></p>
+<img id="capture" alt="The same sample Songs page with the new favorites filter">
+<h2>Selected filter</h2>
+<img id="favorites" alt="Only favorited sample songs, at the selected theme and size">
+<h2>Unknown favorite state with more songs available</h2>
+<label>Window <select id="empty-state"><option value="light-1100x760">Light / normal</option><option value="dark-760x760">Dark / narrow</option></select></label>
+<img id="empty" alt="No favorites in loaded songs, with an explicit Load more songs action">
+<p><a href="../reviews.html">All integration comparisons</a>.
+Favorite metadata uses the existing session cache; favorite writes and the compact
+shelf remain pending. The filter preference is local to this signed-in session.</p>
+<script>
+let side = 'after';
+const byId = id => document.getElementById(id);
+function draw() {
+  const theme = byId('theme').value, size = byId('size').value;
+  byId('capture').src = `${side}-songs-${theme}-${size}.png`;
+  byId('favorites').src = `favorites-${theme}-${size}.png`;
+  byId('empty').src = `empty-${byId('empty-state').value}.png`;
+  byId('label').textContent = `${side === 'before' ? 'Before' : 'After'}: ${theme}, ${size}`;
+  byId('before').disabled = side === 'before'; byId('after').disabled = side === 'after';
+}
+for (const id of ['theme', 'size', 'empty-state']) byId(id).onchange = draw;
+byId('before').onclick = () => { side = 'before'; draw(); };
+byId('after').onclick = () => { side = 'after'; draw(); };
+draw();
+</script>
+</html>

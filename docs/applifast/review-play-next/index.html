@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast Play next comparison</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}</style>
+<h1>Play next</h1>
+<p>Baseline production code <code>0745e94</code>, candidate <code>feat/apple-play-next</code>. Song, selected-song and album menus gain Play next. Add to queue keeps its append behavior. Both builds use identical demo-only fixtures to open actual menus; the selection fixture picks the first three rows. No shell, layout, sizing or theme redesign.</p>
+<p>Matching native Windows captures use deterministic Apple data, the same artwork cache, pointer, zoom, themes and window sizes. Album metadata pagination and queue ordering are checked separately by regression tests.</p>
+<label>View <select id="view"><option value="song">Song menu</option><option value="selection">Selected songs</option><option value="album">Album menu</option></select></label>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Size <select id="size"><option value="normal">Normal</option><option value="narrow">Narrow</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Native Windows Play next menu comparison">
+<p>Fresh-PC sign-in, audible desktop listening and rendered HTML review remain separate checks. See <a href="../play-next.md">scope and verification</a>.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+(byId('size').value==='normal'?'1100x760':'760x760');byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['view','theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

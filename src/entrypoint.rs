@@ -2,29 +2,28 @@ use spotifast::{app, backend, paths, settings, single_instance, util};
 
 use clap::{CommandFactory, FromArgMatches, Parser};
 
-/// A fast, native Spotify client.
+/// Apple Music for Windows, with a native Rust interface.
 #[derive(Debug, Parser)]
-#[command(name = env!("CARGO_BIN_NAME"), version, about)]
+#[command(name = "applifast", bin_name = "applifast", version, about)]
 struct Cli {
     /// A command for the running instance; without one, the app starts.
     #[command(subcommand)]
     control: Option<Control>,
 
-    /// A Spotify link to open: spotify:track:…, or an open.spotify.com
-    /// address. The running Spotifast opens it when there is one, which
-    /// is how the desktop hands links over.
+    /// An Apple Music share URL or apple:<kind>:catalog.<id> URI to open.
+    /// An existing instance opens it; otherwise it waits for Apple sign-in.
     #[arg(value_name = "LINK")]
     link: Option<String>,
 
     /// Spotify Connect device name for this session.
-    #[arg(long)]
+    #[arg(long, hide = true)]
     device_name: Option<String>,
 
-    /// Log more from librespot and the Web API client.
+    /// Enable detailed application logging. Credentials remain redacted.
     #[arg(short, long)]
     verbose: bool,
 
-    /// Start with sample data and no Spotify connection (for screenshots).
+    /// Start with sample data and no account connection (for screenshots).
     #[cfg(feature = "demo")]
     #[arg(long)]
     demo: bool,
@@ -126,16 +125,19 @@ enum Control {
     /// Cycle the repeat mode, or set it outright
     Repeat { mode: Option<Repeat> },
     /// Save the playing track to your library, or take it back out
+    #[command(hide = true)]
     Like,
-    /// Play a Spotify URI: a track, album, playlist, artist, or show
+    /// Play an Apple Music share URL or internal song/album/playlist/artist URI
     PlayUri { uri: String },
     /// List the Spotify Connect devices
+    #[command(hide = true)]
     Devices {
         /// Print the JSON the running instance sent instead.
         #[arg(long)]
         raw: bool,
     },
     /// Move playback to a device, by the id `devices` prints
+    #[command(hide = true)]
     Transfer { device_id: String },
     /// Print the playing track
     NowPlaying {
@@ -170,6 +172,13 @@ enum Repeat {
 /// Sends one control verb to the running instance over the
 /// single-instance channel.
 fn run_control(control: Control) -> i32 {
+    if matches!(
+        control,
+        Control::Like | Control::Devices { .. } | Control::Transfer { .. }
+    ) {
+        eprintln!("this control is not supported in the Apple Music preview");
+        return 2;
+    }
     let raw = matches!(
         control,
         Control::NowPlaying { raw: true } | Control::Devices { raw: true }
@@ -204,7 +213,13 @@ fn run_control(control: Control) -> i32 {
             format!("repeat-set {mode}")
         }
         Control::Like => "save-toggle".to_owned(),
-        Control::PlayUri { uri } => format!("play-uri {uri}"),
+        Control::PlayUri { uri } => {
+            let Some(uri) = spotifast::link::parse_apple(&uri) else {
+                eprintln!("not a supported Apple Music link");
+                return 2;
+            };
+            format!("play-uri {uri}")
+        }
         Control::Devices { .. } => "devices".to_owned(),
         Control::Transfer { device_id } => format!("transfer {device_id}"),
         Control::NowPlaying { .. } => "nowplaying".to_owned(),
@@ -228,7 +243,7 @@ fn run_control(control: Control) -> i32 {
             }
         }
         Err(error) => {
-            eprintln!("Spotifast is not running or does not support remote control: {error}");
+            eprintln!("Applifast is not running or does not support remote control: {error}");
             return 1;
         }
     };
@@ -352,6 +367,10 @@ pub(crate) fn run() -> eframe::Result<()> {
 
     let cli = Cli::from_arg_matches(&Cli::command().get_matches_from(&launch.arguments))
         .unwrap_or_else(|error| error.exit());
+    if cli.device_name.is_some() {
+        eprintln!("this control is not supported in the Apple Music preview");
+        std::process::exit(2);
+    }
     // Demo mode invents plays, settings, and a signed-in account. Without a
     // folder of its own it would write them into the real profile, where
     // they would pass for the user's history.
@@ -371,15 +390,15 @@ pub(crate) fn run() -> eframe::Result<()> {
     if let Some(control) = cli.control {
         std::process::exit(run_control(control));
     }
-    // A link is read before anything starts: one that is not a Spotify
+    // A link is read before anything starts: one that is not an Apple Music
     // link ends the launch here rather than reaching the running instance.
     let link = cli
         .link
         .as_deref()
-        .map(|text| match spotifast::link::parse(text) {
+        .map(|text| match spotifast::link::parse_apple(text) {
             Some(uri) => uri,
             None => {
-                eprintln!("not a Spotify link: {text}");
+                eprintln!("not a supported Apple Music link");
                 std::process::exit(2);
             }
         });
@@ -401,7 +420,7 @@ pub(crate) fn run() -> eframe::Result<()> {
         match single_instance::acquire(&waker, link.as_deref()) {
             single_instance::Outcome::Only(guard) => Some(guard),
             single_instance::Outcome::Surfaced => {
-                log::info!("Spotifast is already running; asked it to show its window");
+                log::info!("Applifast is already running; asked it to show its window");
                 return Ok(());
             }
         }
@@ -413,7 +432,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     } else {
         // Which system face draws each script the interface font lacks,
         // one line per script at startup, for reports of odd-looking text.
-        "warn,spotifast=info,fastframe_fonts=info"
+        "warn,applifast=info,spotifast=info,fastframe_fonts=info"
     };
     let dirs = paths::AppDirs::discover();
     #[cfg(feature = "demo")]
@@ -430,7 +449,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     // Launched from a desktop, stderr goes nowhere; keep the run's log where
     // a bug report can find it, and a line per panic in the panic log (with
     // any link in its message removed: a URL can carry a token).
-    if let Err(error) = fastframe_log::Logging::new("spotifast", env!("CARGO_PKG_VERSION"))
+    if let Err(error) = fastframe_log::Logging::new("applifast", env!("CARGO_PKG_VERSION"))
         .filter(default_filter)
         .file(dirs.log_file())
         .panic_log(dirs.panic_log())
@@ -444,10 +463,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     if let Err(error) = dirs_ready {
         log::warn!("unable to create the application directories: {error}");
     }
-    let mut settings = settings::Settings::load(&dirs.settings_file());
-    if let Some(name) = cli.device_name {
-        settings.device_name = name;
-    }
+    let settings = settings::Settings::load(&dirs.settings_file());
     spotifast::window::set_custom_titlebar(settings.custom_titlebar);
     // Colour emoji: the fonts are found off this thread. A demo capture
     // draws every picture in the frame that shows it.
@@ -476,6 +492,7 @@ pub(crate) fn run() -> eframe::Result<()> {
             restore_sign_in: false,
             tray: false,
         };
+        spotifast::ui::motion::hold_still();
     }
     #[cfg(windows)]
     let desktop_surfaces = options.media_controls;
@@ -527,6 +544,46 @@ pub(crate) fn run() -> eframe::Result<()> {
         }
     }
     #[cfg(feature = "demo")]
+    if demo
+        && !cli
+            .demo_show
+            .as_deref()
+            .is_some_and(|flags| flags.split(',').any(|flag| flag == "legacy"))
+    {
+        let mut apple = spotifast::apple::State::demo(&app.library.liked.items);
+        for flag in cli.demo_show.as_deref().unwrap_or("").split(',') {
+            match flag {
+                "signed-out" => apple.clear_account(),
+                "connecting" => { apple.clear_account(); apple.ready = false; apple.loading = true; },
+                "collection-loading" => apple.loading = true,
+                "apple-error" => apple.error = Some("Example playback error. Check connection or song availability. The queue is retained.".into()),
+                _ => {}
+            }
+        }
+        app.local = apple.local.clone();
+        app.local_ready = apple.authorized;
+        app.library.liked.items = apple
+            .songs
+            .iter()
+            .map(|song| spotifast::api::models::SavedTrack {
+                added_at: None,
+                track: song.track(),
+            })
+            .collect();
+        app.library.liked.loading = apple.loading;
+        app.library.liked.revision += 1;
+        for saved in &app.library.liked.items {
+            if let Some(id) = &saved.track.id {
+                app.track_cache.insert(id.clone(), saved.track.clone());
+            }
+        }
+        if let Some(error) = &apple.error {
+            app.toast_error(error.clone());
+        }
+        app.apple = Some(apple);
+        spotifast::demo::apply_apple_flags(&mut app, cli.demo_show.as_deref());
+    }
+    #[cfg(feature = "demo")]
     let shot = cli.demo_shot.clone().map(|path| Shot {
         path,
         due: std::time::Instant::now() + std::time::Duration::from_millis(cli.demo_shot_delay),
@@ -574,7 +631,7 @@ pub(crate) fn run() -> eframe::Result<()> {
             #[cfg(target_os = "linux")]
             let hide_from_taskbar = options.viewport.taskbar == Some(false);
             eframe::run_native(
-                "Spotifast",
+                "Applifast",
                 options,
                 Box::new(move |cc| {
                     if let Some(gl) = &cc.gl {
@@ -763,7 +820,7 @@ fn native_options(
     #[cfg(target_os = "linux")]
     let app_id = desktop_entry();
     #[cfg(not(target_os = "linux"))]
-    let app_id = "spotifast";
+    let app_id = "applifast";
     let icon = if cfg!(target_os = "macos") {
         // macOS takes the dock icon from the bundle's .icns, which is the
         // 1024px drawing with the platform's rounding. Setting a window
@@ -773,7 +830,7 @@ fn native_options(
         app_icon()
     };
     let viewport = egui::ViewportBuilder::default()
-        .with_title("Spotifast")
+        .with_title("Applifast")
         .with_app_id(app_id)
         .with_taskbar(true)
         .with_icon(icon);
@@ -832,7 +889,8 @@ fn native_options(
 
 fn profile_options(mut options: eframe::NativeOptions) -> eframe::NativeOptions {
     if options.persist_window {
-        options.persistence_path = eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"));
+        // Keep window geometry and egui memory out of the upstream profile too.
+        options.persistence_path = Some(paths::AppDirs::discover().state.join("window.ron"));
     }
     options
 }
@@ -876,6 +934,10 @@ mod native_window_tests {
         let main = profile_options(native_options(false, None, None));
         assert_eq!(
             main.persistence_path,
+            Some(paths::AppDirs::discover().state.join("window.ron"))
+        );
+        assert_ne!(
+            main.persistence_path,
             eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"))
         );
         let demo_path = std::path::PathBuf::from("temporary/demo.ron");
@@ -884,6 +946,19 @@ mod native_window_tests {
             demo_path.clone(),
         ));
         assert_eq!(demo.persistence_path, Some(demo_path));
+        let mini_path = std::path::PathBuf::from("cache/winamp.ron");
+        let mini = profile_options(native_options(
+            false,
+            Some(MiniWindow {
+                size: egui::vec2(550.0, 232.0),
+                position: None,
+                on_top: false,
+                taskbar: true,
+                storage_path: mini_path.clone(),
+            }),
+            None,
+        ));
+        assert_eq!(mini.persistence_path, Some(mini_path));
     }
 
     #[test]
@@ -913,7 +988,7 @@ mod native_window_tests {
         }
         #[cfg(not(target_os = "linux"))]
         {
-            assert_eq!(main.viewport.app_id.as_deref(), Some("spotifast"));
+            assert_eq!(main.viewport.app_id.as_deref(), Some("applifast"));
             assert_eq!(mini.viewport.app_id, main.viewport.app_id);
             assert_eq!(main.persistence_path, None);
         }
@@ -1384,17 +1459,14 @@ mod tests {
     #[test]
     fn a_link_and_a_verb_are_told_apart() {
         // #given / #when / #then
-        let launch = Cli::try_parse_from(["spotifast", "spotify:track:4uLU6hMCjMI75M1A2tKUQC"])
+        let launch = Cli::try_parse_from(["spotifast", "apple:track:library.i.upload"])
             .expect("a link parses");
-        assert_eq!(
-            launch.link.as_deref(),
-            Some("spotify:track:4uLU6hMCjMI75M1A2tKUQC")
-        );
+        assert_eq!(launch.link.as_deref(), Some("apple:track:library.i.upload"));
         assert!(launch.control.is_none());
 
         let launch = Cli::try_parse_from([
             "spotifast",
-            "https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3?si=x",
+            "https://music.apple.com/us/album/name/123?i=456",
             "--verbose",
         ])
         .expect("a web address parses");

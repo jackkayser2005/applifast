@@ -4,20 +4,20 @@ description: What Spotify's Web API and librespot provide, and what neither supp
 nav_order: 3
 ---
 
-Spotifast uses Spotify's
+Applifast uses Spotify's
 [Web API](https://developer.spotify.com/documentation/web-api) for account and
 catalogue data. It uses [librespot](https://github.com/librespot-org/librespot)
 for a few extra details and for audio playback.
 
-Features missing from both cannot be added to Spotifast. They may become
+Features missing from both cannot be added to Applifast. They may become
 possible if Spotify adds an API or librespot adds lawful support.
 
 ## Web API
 
-Spotifast uses the Web API for:
+Applifast uses the Web API for:
 
 - **Account:** profile details, followed artists, top artists and tracks, and
-  the last fifty plays. Spotifast keeps a longer local
+  the last fifty plays. Applifast keeps a longer local
   [history](/using-spotifast/#recent).
 - **Library:** playlists, saved tracks, albums, shows, and episodes. It can
   also save and remove items.
@@ -31,7 +31,7 @@ Spotifast uses the Web API for:
   next, previous, seek, shuffle, repeat, volume, and reading or adding to the
   queue.
 
-Users of the default app share Spotify's quota. Spotifast limits heavy
+Users of the default app share Spotify's quota. Applifast limits heavy
 requests and pauses a session when Spotify sends a `Retry-After` response.
 
 Spotify also limits apps created since November 2024. These apps cannot access
@@ -44,13 +44,13 @@ while local playback is signed in. See [How It Connects](/how-it-connects/).
 ## librespot session
 
 librespot signs in to Spotify and uses the same protocol as Spotify's own
-clients. Spotifast uses its session for:
+clients. Applifast uses its session for:
 
-- **Playlist folders and order.** Spotifast can read them from Spotify's
+- **Playlist folders and order.** Applifast can read them from Spotify's
   rootlist. librespot cannot create, rename, or move folders.
 - **Playlist permissions.** The rootlist shows when a playlist shared by
   invitation can be edited. The Web API's `collaborative` flag does not cover
-  these playlists. Spotifast cannot manage collaborators.
+  these playlists. Applifast cannot manage collaborators.
 - **Playlists the shared app would otherwise serve.** Title, cover, and
   songs of other people's playlists, and of the account's own when there is
   no personal app, so they open without the shared app's quota. Whether a
@@ -84,7 +84,7 @@ librespot provides:
 
 Spotify Premium is required. librespot cannot play audio with a free account.
 
-Spotifast uses a small librespot fork. Its patches add queue controls,
+Applifast uses a small librespot fork. Its patches add queue controls,
 normalisation data for the visualisers, and an event for rejected audio keys.
 They are listed in `Cargo.toml`. Larger changes go upstream first.
 
@@ -94,28 +94,28 @@ The Web API and librespot do not provide these features:
 
 - **Pins shared with the Spotify app.** Spotify stores pins in its private
   `your-library` service. There is no Web API for it, and librespot does not
-  support its protocol. Spotifast's pins are local and are stored in
+  support its protocol. Applifast's pins are local and are stored in
   `settings.json`. See [issue #31](https://github.com/crmne/spotifast/issues/31).
 - **Editing playlist folders.** librespot can only read them.
 - **Smart Shuffle, Jam, Blend, and similar Spotify features.** Spotify
-  generates these for its own clients. Spotifast only has plain shuffle.
-- **Lossless audio.** librespot does not receive lossless streams. Spotifast
+  generates these for its own clients. Applifast only has plain shuffle.
+- **Lossless audio.** librespot does not receive lossless streams. Applifast
   will reconsider this if librespot gains lawful support, but it will not
   bypass Spotify's DRM.
 - **Local files.** librespot only streams Spotify's catalogue. It cannot fetch
   audio for a `spotify:local:` entry. Playing files from disk would require a
   separate player. See [issue #3](https://github.com/crmne/spotifast/issues/3).
 - **Audiobooks.** librespot does not play them. Spotify lists some
-  audiobooks among saved shows; since 0.10.0, Spotifast asks the
+  audiobooks among saved shows; since 0.10.0, Applifast asks the
   librespot session which ones and leaves them out of the Podcasts shelf.
 - **Google Cast.** Spotify's own apps find Cast speakers on the local
   network and start Spotify's receiver on them. librespot has no Cast
   sender, and the Web API only lists a Cast device once a Spotify app has
-  already woken it, so Spotifast cannot discover or start one itself. See
+  already woken it, so Applifast cannot discover or start one itself. See
   [issue #566](https://github.com/crmne/spotifast/issues/566).
 - **Offline listening and downloads.** Spotify's DRM and the project's scope
   rule these out.
-- **Playback speed and crossfade.** librespot supports neither. Spotifast
+- **Playback speed and crossfade.** librespot supports neither. Applifast
   would have to add them to its own audio path.
 - **Free-account playback.** Replacing Spotify audio with another source is
   also out of scope. See the

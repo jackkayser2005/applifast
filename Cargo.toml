@@ -5,9 +5,9 @@ version = "0.12.0"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
-description = "A native Spotify client"
-repository = "https://github.com/crmne/spotifast"
-keywords = ["spotify", "music", "egui", "librespot", "player"]
+description = "A lightweight Apple Music client for Windows"
+repository = "https://github.com/jackkayser2005/applifast"
+keywords = ["apple-music", "music", "egui", "windows", "player"]
 categories = ["multimedia::audio"]
 
 [lib]
@@ -19,6 +19,8 @@ name = "spotifast"
 path = "src/spotifast.rs"
 
 [dependencies]
+# The tested MusicKit boundary is shared with the diagnostic CLI; it owns its STA.
+applifast-playback-probe = { path = "prototypes/apple-playback" }
 anyhow = "1"
 thiserror = "2"
 clap = { version = "4.5", features = ["derive"] }
@@ -202,7 +204,9 @@ tokio = { version = "1", features = ["test-util"] }
 winresource = "0.1"
 
 [features]
-default = ["milkdrop"]
+# MusicKit does not expose the PCM tap used by MilkDrop. The listening build
+# leaves that optional upstream renderer out rather than implying it works.
+default = []
 # Sample data and screenshot flags; never part of a release build.
 demo = []
 # MilkDrop, through libprojectM: a C++ library that CMake builds into the
