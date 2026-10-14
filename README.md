@@ -15,6 +15,10 @@ Artwork refreshes when switching between the main and mini player or reopening
 from the tray. See the [window artwork checks](docs/applifast/window-artwork.md)
 for the stale-texture fix and remaining desktop acceptance.
 
+Pin a library playlist from its **More** menu or by right-clicking it in the
+sidebar. Pins stay above other playlists and survive restart on this PC.
+They do not change the playlist in Apple Music. See [playlist pins](docs/applifast/playlist-pins.md).
+
 ## Try the preview
 
 Invited testers: get the preview installer or portable ZIP and its checksum from

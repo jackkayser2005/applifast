@@ -2018,7 +2018,7 @@ fn entry_menu(app: &mut App, response: &egui::Response, entry: &Entry, custom_or
     }
 }
 
-fn pin_menu(app: &mut App, ui: &mut egui::Ui, key: &str) {
+pub(super) fn pin_menu(app: &mut App, ui: &mut egui::Ui, key: &str) {
     let mut pins = app.settings.library_pins();
     let pinned = pins.iter().any(|held| held == key);
     let label = if pinned {
@@ -2363,6 +2363,52 @@ mod ordering_tests {
         assert_eq!(ids(&entries), ["a", "b", "c", "d"]);
         assert_eq!(ids(&rows(&app)), ["a", "b", "c", "d"]);
         app.backend.shutdown();
+    }
+
+    #[test]
+    fn apple_playlist_pins_keep_their_order_after_refresh_and_settings_reload() {
+        let mut app = app("apple-pins");
+        app.apple = Some(crate::apple::State::default());
+        if let Loadable::Loaded(playlists) = &mut app.library.playlists {
+            for playlist in playlists {
+                playlist.id = format!("library.p.{}", playlist.id);
+                playlist.uri = format!("apple:playlist:{}", playlist.id);
+            }
+        }
+        app.settings.liked_songs_pinned = false;
+        let a = "apple:playlist:library.p.a".to_string();
+        let c = "apple:playlist:library.p.c".to_string();
+        app.actions.push(Action::ArrangeLibrary {
+            pinned: vec![a.clone(), c.clone()],
+            playlist_order: None,
+        });
+        apply_actions(&mut app);
+        let original = app.library.playlists.get().unwrap().clone();
+        for sort in [
+            LibrarySort::Name,
+            LibrarySort::RecentlyPlayed,
+            LibrarySort::Library,
+        ] {
+            let mut entries = rows(&app);
+            order_entries(&app, Filter::Playlists, sort, &mut entries);
+            assert_eq!([&entries[0].uri, &entries[1].uri], [&a, &c]);
+        }
+        let mut entries = rows(&app);
+        order_entries(&app, Filter::Playlists, LibrarySort::Name, &mut entries);
+        drop_row(&mut app, &entries, 2, 0, &c);
+        apply_actions(&mut app);
+        assert_eq!(app.settings.pinned_contexts, [c.clone(), a.clone()]);
+        assert!(app.settings.sidebar_order.is_empty());
+        app.settings.save(&app.dirs.settings_file());
+        app.settings = Settings::load(&app.dirs.settings_file());
+        app.library.playlists = Loadable::Loaded(original.into_iter().rev().collect());
+        let mut refreshed = rows(&app);
+        order_entries(&app, Filter::Playlists, LibrarySort::Name, &mut refreshed);
+        assert_eq!([&refreshed[0].uri, &refreshed[1].uri], [&c, &a]);
+        app.backend.shutdown();
+        let _ = std::fs::remove_dir_all(&app.dirs.config);
+        let _ = std::fs::remove_dir_all(&app.dirs.state);
+        let _ = std::fs::remove_dir_all(&app.dirs.cache);
     }
 
     #[test]

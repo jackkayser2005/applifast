@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-13 20:07-0400\n"
+"POT-Creation-Date: 2026-10-14 15:27-0400\n"
 "PO-Revision-Date: 2026-09-23 20:00+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Russian\n"
@@ -30,7 +30,7 @@ msgid "Play {name}"
 msgstr "Воспроизвести {name}"
 
 #: src/ui/sidebar.rs:298 src/app.rs:2578 src/app.rs:17383
-#: src/ui/collection.rs:1744 src/ui/collection.rs:1950
+#: src/ui/collection.rs:1751 src/ui/collection.rs:1957
 msgid "Playlist"
 msgstr "Плейлист"
 
@@ -79,7 +79,7 @@ msgid "Search"
 msgstr "Поиск"
 
 #: src/ui/sidebar.rs:873 src/ui/player_bar.rs:679 src/ui/widgets.rs:1843
-#: src/ui/settings.rs:1211 src/ui/collection.rs:1938 src/ui/keys.rs:371
+#: src/ui/settings.rs:1211 src/ui/collection.rs:1945 src/ui/keys.rs:371
 #: src/ui/winamp/mod.rs:696
 msgid "Favorites"
 msgstr "Избранное"
@@ -155,7 +155,7 @@ msgstr "Здесь пока ничего нет."
 msgid "No matches."
 msgstr "Ничего не найдено."
 
-#: src/ui/sidebar.rs:1586 src/ui/collection.rs:2040
+#: src/ui/sidebar.rs:1586 src/ui/collection.rs:2047
 msgid "No favorites in the loaded songs"
 msgstr "Среди загруженных треков нет избранных"
 
@@ -193,7 +193,7 @@ msgstr[2] "Плейлист • {count} треков"
 #. Translators: Keep {count} exactly as written. It becomes a number of songs.
 #. Translators: Keep {count} exactly as written. It becomes the number of selected songs.
 #. Translators: {count} is a number of songs.
-#: src/i18n.rs:189 src/ui/widgets.rs:568 src/ui/collection.rs:2079
+#: src/i18n.rs:189 src/ui/widgets.rs:568 src/ui/collection.rs:2086
 #, rust-format
 msgid "{count} song"
 msgid_plural "{count} songs"
@@ -360,7 +360,7 @@ msgid "Next up"
 msgstr "Далее"
 
 #: src/ui/queue.rs:516 src/ui/queue.rs:549 src/ui/widgets.rs:2678
-#: src/ui/collection.rs:1114
+#: src/ui/collection.rs:1121
 msgid "Retry"
 msgstr "Повторить"
 
@@ -418,7 +418,7 @@ msgid "No timed lyrics for this track."
 msgstr "Для этого трека нет синхронизированного текста."
 
 #: src/ui/lyrics.rs:409 src/ui/widgets.rs:2672 src/app.rs:11194
-#: src/ui/collection.rs:775
+#: src/ui/collection.rs:782
 msgid "Loading…"
 msgstr "Загрузка…"
 
@@ -508,12 +508,12 @@ msgctxt "artist"
 msgid "Follow"
 msgstr "Подписаться"
 
-#: src/ui/widgets.rs:1128 src/ui/collection.rs:1792 src/ui/collection.rs:1814
+#: src/ui/widgets.rs:1128 src/ui/collection.rs:1799 src/ui/collection.rs:1821
 #: src/ui/show.rs:173
 msgid "Remove from Your Library"
 msgstr "Удалить из медиатеки"
 
-#: src/ui/widgets.rs:1129 src/ui/collection.rs:1791
+#: src/ui/widgets.rs:1129 src/ui/collection.rs:1798
 msgid "Add to Your Library"
 msgstr "Добавить в медиатеку"
 
@@ -707,7 +707,7 @@ msgstr "Локальное воспроизведение: {error}"
 msgid "Spotify audio disconnected. Reconnecting local playback"
 msgstr "Звук Spotify отключился. Переподключаем локальное воспроизведение"
 
-#: src/app.rs:2552 src/app.rs:17388 src/ui/collection.rs:1942
+#: src/app.rs:2552 src/app.rs:17388 src/ui/collection.rs:1949
 #: src/ui/keys.rs:318
 msgid "Liked Songs"
 msgstr "Любимые треки"
@@ -1982,7 +1982,7 @@ msgctxt "filter"
 msgid "All"
 msgstr "Все"
 
-#: src/model.rs:649 src/ui/collection.rs:1940 src/ui/keys.rs:316
+#: src/model.rs:649 src/ui/collection.rs:1947 src/ui/keys.rs:316
 #: src/ui/keys.rs:370 src/ui/search.rs:451
 msgid "Songs"
 msgstr "Треки"
@@ -2125,72 +2125,72 @@ msgstr "Выключить перемешивание"
 msgid "Save as playlist"
 msgstr "Сохранить как плейлист"
 
-#: src/ui/collection.rs:372
+#: src/ui/collection.rs:379
 msgid "Refreshing…"
 msgstr "Обновление…"
 
-#: src/ui/collection.rs:374 src/ui/devices.rs:206 src/ui/keys.rs:376
+#: src/ui/collection.rs:381 src/ui/devices.rs:206 src/ui/keys.rs:376
 msgid "Refresh"
 msgstr "Обновить"
 
-#: src/ui/collection.rs:393
+#: src/ui/collection.rs:400
 msgid "Filter"
 msgstr "Фильтр"
 
-#: src/ui/collection.rs:769 src/ui/collection.rs:795
+#: src/ui/collection.rs:776 src/ui/collection.rs:802
 msgid "Unavailable"
 msgstr "Недоступно"
 
-#: src/ui/collection.rs:925
+#: src/ui/collection.rs:932
 msgid "Nothing here yet"
 msgstr "Здесь пока ничего нет"
 
-#: src/ui/collection.rs:926
+#: src/ui/collection.rs:933
 msgid "Added songs appear here."
 msgstr "Здесь появятся добавленные треки."
 
-#: src/ui/collection.rs:1336 src/ui/home.rs:790
+#: src/ui/collection.rs:1343 src/ui/home.rs:790
 msgid "Your top songs"
 msgstr "Твои топ-треки"
 
-#: src/ui/collection.rs:1345
+#: src/ui/collection.rs:1352
 msgid "Your most-played tracks from the last four weeks."
 msgstr "Самое прослушиваемое за последние четыре недели."
 
-#: src/ui/collection.rs:1740
+#: src/ui/collection.rs:1747
 msgid "Collaborative Playlist"
 msgstr "Совместный плейлист"
 
-#: src/ui/collection.rs:1742
+#: src/ui/collection.rs:1749
 msgid "Public Playlist"
 msgstr "Открытый плейлист"
 
-#: src/ui/collection.rs:1813
+#: src/ui/collection.rs:1820
 msgid "Save to Your Library"
 msgstr "Сохранить в медиатеке"
 
-#: src/ui/collection.rs:1955
+#: src/ui/collection.rs:1962
 msgid ""
 "Favorites from loaded songs. Refresh Songs for changes made in Apple Music."
 msgstr ""
 "Избранное среди загруженных треков. Обновите Треки, чтобы увидеть изменения "
 "из Apple Music."
 
-#: src/ui/collection.rs:1966
+#: src/ui/collection.rs:1973
 msgid "Show only favorites"
 msgstr "Показывать только избранное"
 
-#: src/ui/collection.rs:2041
+#: src/ui/collection.rs:2048
 msgid "Only songs Apple marks as favorites appear here."
 msgstr "Здесь отображаются только треки, отмеченные Apple как избранные."
 
-#: src/ui/collection.rs:2044
+#: src/ui/collection.rs:2051
 msgid "Load more songs"
 msgstr "Загрузить ещё треки"
 
 #. Translators: {count} is a number of songs and {duration} their total
 #. length, such as "2 hr 13 min".
-#: src/ui/collection.rs:2092
+#: src/ui/collection.rs:2099
 #, rust-format
 msgid "{count} song, {duration}"
 msgid_plural "{count} songs, {duration}"
@@ -2199,19 +2199,19 @@ msgstr[1] "{count} трека, {duration}"
 msgstr[2] "{count} треков, {duration}"
 
 #. Translators: {name} is the name of someone who added songs to the playlist.
-#: src/ui/collection.rs:2106
+#: src/ui/collection.rs:2113
 #, rust-format
 msgid "with {name}"
 msgstr "с {name}"
 
 #. Translators: {first} and {second} are names of people who added songs.
-#: src/ui/collection.rs:2110
+#: src/ui/collection.rs:2117
 #, rust-format
 msgid "with {first} and {second}"
 msgstr "с {first} и {second}"
 
 #. Translators: {count} is how many other people added songs to the playlist.
-#: src/ui/collection.rs:2117
+#: src/ui/collection.rs:2124
 #, rust-format
 msgid "and {count} other"
 msgid_plural "and {count} others"
