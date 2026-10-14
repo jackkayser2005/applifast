@@ -20,6 +20,15 @@ cannot populate it. Artwork can reload from the existing disk cache. The
 playback host, library, queue, lyrics content and settings remain independent
 of these window-owned caches. See [verification and limits](window-artwork.md).
 
+## Local playlist pins
+
+The More menu on a loaded Apple library playlist now offers **Pin to top** or
+**Unpin**, using the same local pin action as the sidebar context menu. Pins
+remain above unpinned playlists, can be reordered within their block and are
+stored in the existing settings file for restart. Only the exact loaded library
+URI qualifies; a catalog ID is not substituted. This does not edit or synchronize
+an Apple playlist. See [checks and visual comparison](playlist-pins.md).
+
 ## API failure recovery
 
 Failed Apple reads and mutations preserve only a validated HTTP status, with

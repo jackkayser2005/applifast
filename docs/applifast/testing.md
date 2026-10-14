@@ -108,6 +108,14 @@ To choose what follows the playing song, right-click a song, selected songs or
 an album and choose **Play next**. It goes before manual additions; **Add to
 queue** appends after them. Album choices wait for every page before appearing.
 
+To keep a library playlist at the top of the sidebar, open the playlist, click
+**More** and choose **Pin to top**. The menu changes to **Unpin** while it is pinned.
+Right-clicking the playlist in the sidebar offers the same controls. Drag within
+the pinned block to choose its order. Pins are saved locally in settings, persist
+after Quit/reopen and do not synchronize to Apple's apps or change playlist songs.
+The page menu offers pinning only when that exact playlist is in the loaded
+library. See [playlist pin checks](playlist-pins.md).
+
 If Songs cannot refresh, cached rows stay available and the error row offers
 Retry. Rejected app credentials require a fresh developer token imported in
 Settings > Account. Rejected account authorization points to checking your

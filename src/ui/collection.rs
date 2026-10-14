@@ -359,6 +359,13 @@ pub fn actions_row(
                         actions.name,
                         actions.owned_playlist.as_ref(),
                     );
+                    if app.apple.is_some()
+                        && app.library.playlists.get().is_some_and(|playlists| {
+                            playlists.iter().any(|playlist| playlist.uri == *uri)
+                        })
+                    {
+                        super::sidebar::pin_menu(app, ui, uri);
+                    }
                 }
                 if let Some((page, loading)) = &actions.reload {
                     widgets::menu_separator(ui, &palette);
@@ -3559,6 +3566,141 @@ mod tests {
             "the menu must not stretch across the page: {}",
             refresh.width()
         );
+    }
+
+    #[test]
+    fn apple_playlist_more_pins_and_unpins_locally_across_restart() {
+        for width in [400.0, 800.0] {
+            let ctx = egui::Context::default();
+            ctx.enable_accesskit();
+            theme::install(&ctx);
+            let mut app = test_app();
+            app.apple = Some(crate::apple::State::default());
+            let uri = "apple:playlist:library.p.target";
+            let other = "apple:playlist:library.p.other";
+            app.settings.liked_songs_pinned = false;
+            app.settings.pinned_contexts = vec![other.into()];
+            app.library.playlists = Loadable::Loaded(vec![Playlist {
+                id: "library.p.target".into(),
+                uri: uri.into(),
+                name: "Test playlist".into(),
+                ..Default::default()
+            }]);
+            let frame = |app: &mut App, events| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            vec2(width, 520.0),
+                        )),
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| {
+                        actions_row(
+                            app,
+                            ui,
+                            Actions {
+                                play_uri: Some(uri.into()),
+                                view: None,
+                                saved: None,
+                                saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
+                                saved_tooltips: Default::default(),
+                                owned_playlist: None,
+                                reload: Some((Page::Playlist("library.p.target".into()), false)),
+                                name: "Test playlist",
+                                save_radio: None,
+                            },
+                            None,
+                        )
+                    },
+                );
+                output.textures_delta.clear();
+                output.platform_output.accesskit_update.unwrap()
+            };
+            let click = |bounds: egui::accesskit::Rect| {
+                let pos = pos2(
+                    ((bounds.x0 + bounds.x1) / 2.0) as f32,
+                    ((bounds.y0 + bounds.y1) / 2.0) as f32,
+                );
+                vec![
+                    egui::Event::PointerMoved(pos),
+                    egui::Event::PointerButton {
+                        pos,
+                        button: egui::PointerButton::Primary,
+                        pressed: true,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                    egui::Event::PointerButton {
+                        pos,
+                        button: egui::PointerButton::Primary,
+                        pressed: false,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ]
+            };
+            frame(&mut app, vec![]);
+            for (label, expected) in [
+                ("Pin to top", vec![other.to_owned(), uri.to_owned()]),
+                ("Unpin", vec![other.to_owned()]),
+            ] {
+                let closed = frame(&mut app, vec![]);
+                let more = closed
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| node.label() == Some("More"))
+                    .and_then(|(_, node)| node.bounds())
+                    .expect("More button");
+                frame(&mut app, click(more));
+                let opened = frame(&mut app, vec![]);
+                let controls: Vec<_> = opened
+                    .nodes
+                    .iter()
+                    .filter(|(_, node)| node.label() == Some(label))
+                    .collect();
+                assert_eq!(controls.len(), 1, "playlist More must offer {label} once");
+                frame(&mut app, click(controls[0].1.bounds().unwrap()));
+                assert!(matches!(
+                    app.actions.as_slice(),
+                    [Action::ArrangeLibrary {
+                        playlist_order: None,
+                        ..
+                    }]
+                ));
+                for action in std::mem::take(&mut app.actions) {
+                    app.apply(action, &ctx);
+                }
+                assert_eq!(app.settings.pinned_contexts, expected);
+                assert_eq!(app.library.playlists.get().unwrap()[0].uri, uri);
+                app.settings.save(&app.dirs.settings_file());
+                let restored = crate::settings::Settings::load(&app.dirs.settings_file());
+                assert_eq!(restored.pinned_contexts, expected);
+            }
+            app.library.playlists = Loadable::Loaded(vec![Playlist {
+                uri: "apple:playlist:catalog.p.target".into(),
+                ..Default::default()
+            }]);
+            let closed = frame(&mut app, vec![]);
+            let more = closed
+                .nodes
+                .iter()
+                .find(|(_, node)| node.label() == Some("More"))
+                .and_then(|(_, node)| node.bounds())
+                .unwrap();
+            frame(&mut app, click(more));
+            let opened = frame(&mut app, vec![]);
+            assert!(
+                !opened
+                    .nodes
+                    .iter()
+                    .any(|(_, node)| matches!(node.label(), Some("Pin to top" | "Unpin"))),
+                "A catalog identifier must not stand in for this library playlist"
+            );
+            app.backend.shutdown();
+            let _ = std::fs::remove_dir_all(&app.dirs.config);
+            let _ = std::fs::remove_dir_all(&app.dirs.state);
+            let _ = std::fs::remove_dir_all(&app.dirs.cache);
+        }
     }
 
     #[test]

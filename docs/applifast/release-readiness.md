@@ -1,6 +1,6 @@
 # Applifast Windows beta readiness
 
-Snapshot: October 13, 2026. This is the release checklist, not a release claim.
+Snapshot: October 14, 2026. This is the release checklist, not a release claim.
 The `a15ba42` baseline (PR #53) fixes pending-authorization cancellation
 on top of paused restoration, full-track regressions, the SDK startup deadline
 and Favorites shortcut.
@@ -22,6 +22,9 @@ The `fix/window-artwork-lifetime` follow-up resets softened covers and the lyric
 backdrop when attaching a recreated window, releasing stale texture ownership
 and rejecting old pending image results. Its regression reproduces the retained
 old manager before the fix and passes afterward. See [window artwork evidence](window-artwork.md).
+The `feat/apple-playlist-pins` follow-up exposes the existing local pin/unpin
+action in a loaded library playlist's More menu. Pointer, ordering, refresh and
+settings-reload regressions pass. See [playlist pins](playlist-pins.md).
 `main` remains at
 `995c768`; these preview changes have not
 been merged into a public release.
@@ -34,7 +37,7 @@ the app developer token; the tester authorizes their own Apple account. They
 do not need Developer Program membership, a signing key, Rust, Node, or commands.
 Use the [Windows tester guide](testing.md).
 
-- [x] Build and verify the optimized `9865001` installer/ZIP, checksums,
+- [x] Build and verify the optimized `abd1295` installer/ZIP, checksums,
   six-file payload, source manifest and default-feature CLI help. Isolated
   dummy-token packaging and install/upgrade/uninstall fixtures pass.
 - [x] Complete the October 12 candidate [credential/package audit](private-preview-audit.md):
@@ -61,10 +64,12 @@ Use the [Windows tester guide](testing.md).
 - [x] Verify removal of one duplicate during muted native playback, with the
   current position and other occurrence retained. The extended account test
   passes in 45.43 seconds; fresh-PC UI use and audible listening remain open.
-- [x] Verify every required hosted CI job on `9865001` (PR #57): all seven
-  [candidate jobs](https://github.com/jackkayser2005/applifast/actions/runs/38482784297)
+- [x] Verify every required hosted CI job on `abd1295` (PR #59): all seven
+  [candidate jobs](https://github.com/jackkayser2005/applifast/actions/runs/38489782963)
   pass, including quality, docs, Windows x64/ARM, Linux, macOS and Nix. Repeat
   on the final release commit after integration or further changes.
+- [ ] Verify the playlist-pin follow-up's own hosted CI and optimized package.
+  The `abd1295` handoff above predates its added page-menu control.
 - [ ] On Dad's PC, install through the wizard, open from Start, authorize in
   Apple's popup and load his library without copying another user's profile,
   user token or account cache. Check cancel and retry before successful sign-in.
