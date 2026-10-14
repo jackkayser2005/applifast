@@ -18,6 +18,10 @@ The `fix/apple-api-recovery` follow-up preserves safe API failure status and
 shows recovery guidance in Songs without losing cached rows or playback.
 Its read-only fresh-profile probe passes library/catalog reads; earlier isolated
 rejections remain unexplained. See [API recovery evidence](api-recovery.md).
+The `fix/window-artwork-lifetime` follow-up resets softened covers and the lyrics
+backdrop when attaching a recreated window, releasing stale texture ownership
+and rejecting old pending image results. Its regression reproduces the retained
+old manager before the fix and passes afterward. See [window artwork evidence](window-artwork.md).
 `main` remains at
 `995c768`; these preview changes have not
 been merged into a public release.
@@ -157,6 +161,9 @@ real-account and release checks; passing mocks alone does not close a row.
      behavior. An unavailable or failed song must not silently drain the queue.
    - [ ] Exercise main/mini-player window recreation, tray, taskbar and media
      controls, including closing and reopening windows during playback.
+     The [artwork lifetime regression](window-artwork.md) now checks repeated
+     attachment to fresh egui contexts; audible native window recreation is
+     still a separate acceptance step.
 
 5. **Favorites**
    - [ ] Verify real false-to-true writes from the player bar, mini-player, song

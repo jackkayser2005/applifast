@@ -97,6 +97,13 @@ an existing or pending favorite, while typing, or while a dialog is open.
 The [current capabilities and pending checks](listening-slice.md) distinguish
 implemented controls from verified real-account behavior.
 
+After playing a song with artwork, open its lyrics or Now Playing view, switch
+to the mini player and back, then close to the tray and reopen. Check that the
+cover and backdrop match the song while music and the queue continue. Recreated
+windows now discard stale artwork handles and old pending image results; they
+can load the images again from the artwork cache. The automated lifetime check
+does not replace this desktop trial. See [window artwork evidence](window-artwork.md).
+
 To choose what follows the playing song, right-click a song, selected songs or
 an album and choose **Play next**. It goes before manual additions; **Add to
 queue** appends after them. Album choices wait for every page before appearing.

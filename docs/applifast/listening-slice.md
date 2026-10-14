@@ -11,6 +11,15 @@ with a message pump. Commands and sanitized events cross channels through the
 existing asynchronous backend. Closing an egui window does not own or destroy
 the playback host. Apple authorization is the only visible browser popup.
 
+## Artwork after window recreation
+
+Attaching a recreated main or mini-player window discards the old softened-cover
+and lyrics-backdrop textures, pending results and failed-image markers. New
+textures belong to the new renderer; late completions for the closed window
+cannot populate it. Artwork can reload from the existing disk cache. The
+playback host, library, queue, lyrics content and settings remain independent
+of these window-owned caches. See [verification and limits](window-artwork.md).
+
 ## API failure recovery
 
 Failed Apple reads and mutations preserve only a validated HTTP status, with
