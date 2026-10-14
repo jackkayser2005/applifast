@@ -123,6 +123,12 @@ subscription and signing out/in there. Rate-limit and service errors ask you
 to wait before retrying. No error signs you out or repeats playlist/Favorites
 writes automatically. Include real rejection and recovery in the account-lifecycle
 checklist; simulated errors do not establish revoked-credential acceptance.
+Each metadata read has a 20-second deadline. It releases the app's local wait
+even if MusicKit ignores abort; a late response cannot replace the error with
+stale data. Favorites confirmation reads use the same deadline and leave unknown
+results unconfirmed. Refresh before retrying a write. Signing out releases pending
+API waits locally, but cannot undo a write Apple may already have accepted.
+See [the deterministic cancellation checks](read-cancellation.md).
 
 For queue removal, right-click an upcoming song and choose **Remove from queue**.
 In the mini-player playlist, Ctrl-click rows, then choose **REM > Remove selected**.

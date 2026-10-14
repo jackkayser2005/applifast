@@ -46,15 +46,25 @@
   async function requestMusic(path, parameters = {}, options = {}) {
     const controller = new AbortController();
     apiControllers.add(controller);
+    let abort;
+    const canceled = new Promise((_, reject) => {
+      abort = () => reject(new Error('Request canceled.'));
+      controller.signal.addEventListener('abort', abort, { once: true });
+    });
     // Reads have a deadline. A timed-out write could have applied at Apple,
     // so mutations retain their existing acceptance/confirmation behavior.
     const timeout = options.method === 'POST' ? null : setTimeout(() => controller.abort(), 20_000);
     try {
-      return await music.api.music(path, parameters, {
-        fetchOptions: { ...options, signal: controller.signal }
-      });
+      // The SDK may ignore abort; release our wait and ignore its late result.
+      return await Promise.race([canceled, Promise.resolve().then(() => {
+        if (controller.signal.aborted) throw new Error('Request canceled.');
+        return music.api.music(path, parameters, {
+          fetchOptions: { ...options, signal: controller.signal }
+        });
+      })]);
     } finally {
       if (timeout !== null) clearTimeout(timeout);
+      controller.signal.removeEventListener('abort', abort);
       apiControllers.delete(controller);
     }
   }

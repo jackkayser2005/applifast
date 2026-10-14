@@ -78,7 +78,10 @@ Albums load all track pages before insertion. See [Play next](docs/applifast/pla
 
 Failed Apple library reads now keep cached songs visible with specific recovery
 guidance and a Retry action. Rejected credentials point to Settings > Account;
-rate limits and service failures ask you to wait. See [API recovery](docs/applifast/api-recovery.md).
+rate limits and service failures ask you to wait. Stalled reads release after
+20 seconds even if the SDK ignores cancellation; late results cannot restore
+stale data. See [API recovery](docs/applifast/api-recovery.md) and
+[cancellation checks](docs/applifast/read-cancellation.md).
 
 Right-click an upcoming Apple queue row to **Remove from queue**. In the
 mini-player playlist, select rows and use **REM > Remove selected**. This removes
