@@ -238,6 +238,10 @@ $report.Samples[-1].Processes | Sort-Object PrivateBytes -Descending | Format-Ta
 The focused sampler check now runs a short-lived Windows helper and verifies
 the per-process sum, identity and names against real counters. Its deliberately
 short sample cannot pass the acceptance duration or establish playback results.
+The helper waits on its owned input pipe until cleanup. Cold compilation of the
+sampler's native process inventory must not expire the fixture before sampling
+starts. Cleanup closes that pipe and forcibly stops only this helper if it does
+not exit within five seconds.
 
 ## Focused checks
 

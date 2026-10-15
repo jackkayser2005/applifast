@@ -242,6 +242,9 @@ real-account and release checks; passing mocks alone does not close a row.
      memory growth, media controls and click-to-play responsiveness.
 
 9. **Automated and visual verification**
+   - The [sampler fixture lifetime fix](sampler-fixture.md) addresses a confirmed
+     Windows CI failure before sampling. It changes no resource acceptance gate;
+     the updated source still needs its hosted checks.
    - [ ] Run every applicable contribution check on the final release commit,
      including all features, Node/credential tests, packaging, docs and Nix.
    - [ ] Resolve or account for the failing native account harness and rerun
