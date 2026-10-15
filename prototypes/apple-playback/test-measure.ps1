@@ -24,7 +24,16 @@ Assert ($selected.Count -eq 0) 'A reused root must not match.'
 if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
     $fixture = $null
     try {
-        $fixture = Start-Process -FilePath (Join-Path $PSHOME 'pwsh.exe') -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 30') -WindowStyle Hidden -PassThru
+        # Cold Add-Type compilation in the sampler can exceed a fixed sleep on CI.
+        # Keep the owned fixture alive until this test closes its input instead.
+        $start = [Diagnostics.ProcessStartInfo]::new((Join-Path $PSHOME 'pwsh.exe'))
+        $start.UseShellExecute = $false
+        $start.CreateNoWindow = $true
+        $start.RedirectStandardInput = $true
+        foreach ($argument in @('-NoProfile', '-NonInteractive', '-Command', '[Console]::In.ReadLine() | Out-Null')) {
+            [void]$start.ArgumentList.Add($argument)
+        }
+        $fixture = [Diagnostics.Process]::Start($start)
         $report = (& "$PSScriptRoot/measure.ps1" -RootProcessId $fixture.Id -State paused -WarmupSeconds 0 -DurationSeconds 1 -IntervalSeconds 0.1) | ConvertFrom-Json
         Assert (-not $report.ResourceBudgetPassed) 'A short tooling smoke check must not pass the acceptance budget.'
         Assert (-not $report.PlaybackStateVerified) 'The sampler must not claim it verified playback.'
@@ -45,7 +54,8 @@ if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
         }
     } finally {
         if ($null -ne $fixture) {
-            if (-not $fixture.HasExited) { $fixture.Kill(); $fixture.WaitForExit() }
+            $fixture.StandardInput.Close()
+            if (-not $fixture.WaitForExit(5000)) { $fixture.Kill(); $fixture.WaitForExit() }
             $fixture.Dispose()
         }
     }
