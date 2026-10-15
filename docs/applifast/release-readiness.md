@@ -259,6 +259,10 @@ real-account and release checks; passing mocks alone does not close a row.
       or DRM circumvention. Document Apple/Microsoft and optional lyrics traffic.
 
 11. **Packaging and publication**
+    - The [fork publishing boundary](fork-publishing.md) guards inherited
+      Spotifast Pages/releases/Flatpak and native-package publication while
+      retaining CI and manual Windows previews. It must pass hosted validation
+      and land before the main-branch integration. It creates no public release.
     - [ ] Review/integrate the feature PR stack into the release source while
       preserving linear history and contributor credit. Do not tag an old `main`.
     - [ ] Set the beta version in Cargo/lockfile, applicable release metadata,

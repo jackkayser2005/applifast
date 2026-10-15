@@ -135,6 +135,7 @@ ask again only if the resulting scope goes beyond what was approved or requested
 Run the same checks CI runs before submitting:
 
 ```sh
+ruby packaging/test-fork-workflows.rb
 python3 packaging/test-launchers.py
 cargo fmt --all --check
 cargo clippy --locked --all-targets -- -D warnings
