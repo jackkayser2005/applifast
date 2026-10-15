@@ -202,6 +202,10 @@ real-account and release checks; passing mocks alone does not close a row.
      their support is verified. Creation and appending do not prove those capabilities.
 
 7. **Settings, motion and lyrics**
+   - The [hidden preset scan fix](settings-preset-scan.md) keeps Apple Settings
+     from enumerating unsupported MilkDrop folders. It preserves the visible
+     controls and retained Spotify preset behavior; resource acceptance remains
+     separate from removing that unnecessary work.
    - [ ] Verify theme, volume, tray/startup behavior, queue restoration,
      mini-player settings and Reduce motion after restart.
    - [ ] Run PR #13's cover hover, playing indicators, seek hover, crossfade,

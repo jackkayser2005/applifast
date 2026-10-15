@@ -1569,7 +1569,9 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     }
 
     let presets_folder = app.dirs.milkdrop_dir();
-    app.winamp.presets.refresh(&presets_folder);
+    if app.apple.is_none() {
+        app.winamp.presets.refresh(&presets_folder);
+    }
     let count = app.winamp.presets.count();
     let screen_hz = app.settings.milkdrop_screen_hz;
     let milkdrop_window = gettext(locale, "MilkDrop window");

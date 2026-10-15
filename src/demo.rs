@@ -5076,6 +5076,32 @@ mod tests {
     }
 
     #[test]
+    fn apple_settings_do_not_scan_hidden_milkdrop_presets() {
+        let (ctx, mut app) = accessible_app("apple-settings-no-preset-scan");
+        let folder = app.dirs.milkdrop_dir();
+        std::fs::create_dir_all(folder.join("nested")).unwrap();
+        std::fs::write(folder.join("one.milk"), b"").unwrap();
+        std::fs::write(folder.join("nested/two.milk"), b"").unwrap();
+        assert_eq!(app.winamp.presets.count(), 0);
+
+        app.apple = Some(crate::apple::State::default());
+        for query in ["", "MilkDrop", "Reduce motion"] {
+            settings_text(&ctx, &mut app, query);
+            assert_eq!(
+                app.winamp.presets.count(),
+                0,
+                "Apple Settings must not scan unsupported preset folders"
+            );
+        }
+
+        app.apple = None;
+        settings_text(&ctx, &mut app, "MilkDrop");
+        assert_eq!(app.winamp.presets.count(), 2);
+        app.backend.shutdown();
+        std::fs::remove_dir_all(folder).unwrap();
+    }
+
+    #[test]
     fn apple_settings_offer_motion_and_hide_unsupported_audio_controls() {
         let (ctx, mut app) = accessible_app("apple-settings-capabilities");
         app.apple = Some(crate::apple::State::default());
