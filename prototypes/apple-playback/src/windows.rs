@@ -873,9 +873,12 @@ fn set_view_visibility(
 ) -> windows::core::Result<()> {
     unsafe {
         controller.SetIsVisible(visible)?;
+        // The embedded renderer stays active while its native parent is hidden.
+        let mut parent = HWND::default();
+        controller.ParentWindow(&mut parent)?;
         webview
             .cast::<ICoreWebView2_19>()?
-            .SetMemoryUsageTargetLevel(if visible {
+            .SetMemoryUsageTargetLevel(if visible && IsWindowVisible(parent).as_bool() {
                 COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL
             } else {
                 COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW
@@ -1194,6 +1197,26 @@ fn host_loop(
             &mut token,
         )?;
         if self_check {
+            // Exercise the embedded host: active renderer, hidden native parent.
+            set_view_visibility(&main_controller, &webview, true)?;
+            let mut visible = Default::default();
+            main_controller.IsVisible(&mut visible)?;
+            let mut target = COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL;
+            webview
+                .cast::<ICoreWebView2_19>()?
+                .MemoryUsageTargetLevel(&mut target)?;
+            let parent_visible = IsWindowVisible(hwnd).as_bool();
+            output.send(Output::Diagnostic(json!({
+                "type":"memoryPolicy", "rendererVisible":visible.as_bool(),
+                "parentVisible":parent_visible, "targetLevel":target.0
+            })))?;
+            if !visible.as_bool()
+                || parent_visible
+                || target != COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW
+            {
+                return Err("Hidden active renderer must request the low memory target.".into());
+            }
+            set_view_visibility(&main_controller, &webview, embedded)?;
             let browser = com_string(|out| environment.BrowserVersionString(out))?;
             output.send(Output::Diagnostic(
                 json!({"type":"runtime","version":browser,"pid":std::process::id()}),
@@ -1323,6 +1346,82 @@ fn host_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[ignore = "Restores saved Apple authorization into an isolated profile; library/catalog reads only"]
+    fn embedded_host_reads_library_and_catalog_without_playback() {
+        let profile = PathBuf::from(std::env::var_os("APPLIFAST_NATIVE_READ_PROFILE").expect(
+            "Set APPLIFAST_NATIVE_READ_PROFILE and LOCALAPPDATA to a fresh test directory",
+        ));
+        assert_eq!(
+            std::env::var_os("LOCALAPPDATA"),
+            Some(profile.clone().into())
+        );
+        assert!(
+            profile.is_absolute() && !profile.join("Applifast").exists(),
+            "Use a fresh isolated test directory, never the installed app profile"
+        );
+        let (commands, input) = mpsc::channel();
+        let (sender, events) = mpsc::channel();
+        let worker = thread::spawn(move || {
+            attach(None, input, move |event| {
+                let _ = sender.send(event);
+            })
+        });
+        let outcome = std::panic::catch_unwind(|| {
+            let await_event = |kind: &str| {
+                let deadline = Instant::now() + Duration::from_secs(45);
+                loop {
+                    let event = events
+                        .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                        .unwrap_or_else(|_| panic!("Embedded host timed out awaiting {kind}"));
+                    assert_ne!(
+                        event["type"], "error",
+                        "Embedded host failed awaiting {kind}"
+                    );
+                    if event["type"] == kind {
+                        return event;
+                    }
+                }
+            };
+            let ready = await_event("ready");
+            assert_eq!(ready["authorized"], true, "Authorize Applifast first");
+            commands
+                .send(json!({"type":"library","next":null}).to_string())
+                .unwrap();
+            let library = await_event("library");
+            assert!(library["error"].is_null(), "Embedded library read failed");
+            let songs = library["items"].as_array().expect("Library items");
+            assert!(!songs.is_empty(), "The test needs a populated library");
+            let storefront = ready["storefront"].as_str().expect("Storefront");
+            assert_eq!(storefront.len(), 2);
+            assert!(storefront.bytes().all(|byte| byte.is_ascii_lowercase()));
+            let path = format!("/v1/catalog/{storefront}/search?term=Bonobo&types=songs&limit=10");
+            commands
+                .send(json!({"type":"request","id":2,"path":path}).to_string())
+                .unwrap();
+            let response = await_event("response");
+            assert_eq!(response["id"], 2);
+            assert!(response["error"].is_null(), "Embedded catalog read failed");
+            let catalog = response["data"]["results"]["songs"]["data"]
+                .as_array()
+                .expect("Catalog songs");
+            assert!(!catalog.is_empty());
+            eprintln!(
+                "Embedded host: {} library songs and {} catalog results; no playback or account writes.",
+                songs.len(),
+                catalog.len()
+            );
+        });
+        // EOF shuts down the owning STA even when an assertion fails.
+        drop(commands);
+        let result = worker.join().expect("Embedded host thread");
+        if let Err(failure) = outcome {
+            std::panic::resume_unwind(failure);
+        }
+        result.expect("Embedded host shutdown");
+    }
+
     #[test]
     fn native_setup_wait_expires_without_a_callback_and_rejects_late_completion() {
         let (callback, result) = mpsc::channel();
