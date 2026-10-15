@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-14 17:24-0400\n"
+"POT-Creation-Date: 2026-10-15 17:25-0400\n"
 "PO-Revision-Date: 2026-09-23 20:00+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Russian\n"
@@ -1489,7 +1489,7 @@ msgid "Follow system uses your desktop's light or dark appearance."
 msgstr ""
 "«Как в системе» использует светлое или тёмное оформление рабочего стола."
 
-#: src/ui/settings.rs:866 src/ui/settings.rs:2092
+#: src/ui/settings.rs:866 src/ui/settings.rs:2094
 msgid "Language"
 msgstr "Язык"
 
@@ -1709,11 +1709,11 @@ msgid ""
 "Now showing {skin}. Another one is picked each time the mini player opens."
 msgstr "Сейчас: {skin}. При каждом открытии мини-плеера выбирается другой."
 
-#: src/ui/settings.rs:1575
+#: src/ui/settings.rs:1577
 msgid "MilkDrop window"
 msgstr "Окно MilkDrop"
 
-#: src/ui/settings.rs:1583
+#: src/ui/settings.rs:1585
 msgid ""
 "A projectM visualiser for local playback. Open it here, from the top bar, "
 "with Ctrl+Shift+K, or from the mini player's V menu. Press ? or F1 for its "
@@ -1723,7 +1723,7 @@ msgstr ""
 "верхней панели, по Ctrl+Shift+K или из меню V мини-плеера. Нажми ? или F1, "
 "чтобы увидеть сочетания клавиш."
 
-#: src/ui/settings.rs:1587
+#: src/ui/settings.rs:1589
 msgid ""
 "A projectM visualiser for local playback. Open it here, from the top bar, "
 "with Cmd+Shift+K, or from the mini player's V menu. Press ? or F1 for its "
@@ -1733,12 +1733,12 @@ msgstr ""
 "верхней панели, по Cmd+Shift+K или из меню V мини-плеера. Нажми ? или F1, "
 "чтобы увидеть сочетания клавиш."
 
-#: src/ui/settings.rs:1593 src/ui/settings.rs:1823
+#: src/ui/settings.rs:1595 src/ui/settings.rs:1825
 msgid "Presets"
 msgstr "Пресеты"
 
 #. Translators: {folder} is the path of the MilkDrop presets folder.
-#: src/ui/settings.rs:1598
+#: src/ui/settings.rs:1600
 #, rust-format
 msgid ""
 "None yet in {folder}. Add .milk files here. Applifast downloads presets when "
@@ -1748,7 +1748,7 @@ msgstr ""
 "когда MilkDrop впервые откроется с пустой папкой."
 
 #. Translators: {folder} is the path of the MilkDrop presets folder.
-#: src/ui/settings.rs:1604
+#: src/ui/settings.rs:1606
 #, rust-format
 msgid ""
 "One preset in {folder}. Add .milk files here. Applifast downloads presets "
@@ -1758,7 +1758,7 @@ msgstr ""
 "когда MilkDrop впервые откроется с пустой папкой."
 
 #. Translators: {count} is the number of presets, {folder} the path of the MilkDrop presets folder.
-#: src/ui/settings.rs:1610
+#: src/ui/settings.rs:1612
 #, rust-format
 msgid ""
 "{count} preset in {folder}. Add .milk files here. Applifast downloads "
@@ -1776,26 +1776,26 @@ msgstr[2] ""
 "В {folder} {count} пресетов. Добавь сюда файлы .milk. Applifast загрузит "
 "пресеты, когда MilkDrop впервые откроется с пустой папкой."
 
-#: src/ui/settings.rs:1619
+#: src/ui/settings.rs:1621
 msgid "Time per preset"
 msgstr "Время на пресет"
 
-#: src/ui/settings.rs:1622
+#: src/ui/settings.rs:1624
 msgid "How long each preset plays before the next fades in."
 msgstr "Сколько длится пресет до плавного перехода к следующему."
 
-#: src/ui/settings.rs:1626
+#: src/ui/settings.rs:1628
 msgid "Frame rate"
 msgstr "Частота кадров"
 
-#: src/ui/settings.rs:1630
+#: src/ui/settings.rs:1632
 msgid "Lower rates use fewer resources. Uncapped draws as fast as possible."
 msgstr ""
 "Низкая частота расходует меньше ресурсов. «Без ограничения» рисует так "
 "быстро, как возможно."
 
 #. Translators: {hz} is the screen's refresh rate in hertz.
-#: src/ui/settings.rs:1635
+#: src/ui/settings.rs:1637
 #, rust-format
 msgid ""
 "Your screen refreshes at {hz} Hz. Higher rates do not add visible frames. "
@@ -1804,51 +1804,51 @@ msgstr ""
 "Частота обновления экрана: {hz} Гц. Более высокая частота не добавит видимых "
 "кадров. «Без ограничения» рисует так быстро, как возможно."
 
-#: src/ui/settings.rs:1642
+#: src/ui/settings.rs:1644
 msgid "Resolution"
 msgstr "Разрешение"
 
-#: src/ui/settings.rs:1645
+#: src/ui/settings.rs:1647
 msgid "Half and Quarter use fewer resources and scale the image back up."
 msgstr ""
 "«Половина» и «Четверть» расходуют меньше ресурсов и затем растягивают "
 "изображение."
 
 #. Translators: search keywords for the MilkDrop preset download buttons.
-#: src/ui/settings.rs:1652
+#: src/ui/settings.rs:1654
 msgid "Get presets"
 msgstr "Получить пресеты"
 
-#: src/ui/settings.rs:1690
+#: src/ui/settings.rs:1692
 msgid "Fetching..."
 msgstr "Получение..."
 
 #. Translators: {pack} is the name of a MilkDrop preset pack.
-#: src/ui/settings.rs:1693
+#: src/ui/settings.rs:1695
 #, rust-format
 msgid "Get {pack}"
 msgstr "Получить {pack}"
 
-#: src/ui/settings.rs:1795
+#: src/ui/settings.rs:1797
 msgctxt "resolution"
 msgid "Full"
 msgstr "Полное"
 
-#: src/ui/settings.rs:1796
+#: src/ui/settings.rs:1798
 msgctxt "resolution"
 msgid "Half"
 msgstr "Половина"
 
-#: src/ui/settings.rs:1797
+#: src/ui/settings.rs:1799
 msgctxt "resolution"
 msgid "Quarter"
 msgstr "Четверть"
 
-#: src/ui/settings.rs:1811
+#: src/ui/settings.rs:1813
 msgid "Equalizer"
 msgstr "Эквалайзер"
 
-#: src/ui/settings.rs:1817
+#: src/ui/settings.rs:1819
 msgid ""
 "A ten-band equalizer for playback on this computer. It does not affect other "
 "devices."
@@ -1857,100 +1857,100 @@ msgstr ""
 "устройства не влияет."
 
 #. Translators: a search keyword for the equalizer's preamplifier slider.
-#: src/ui/settings.rs:1825
+#: src/ui/settings.rs:1827
 msgid "Preamp"
 msgstr "Предусилитель"
 
 #. Translators: a search keyword for the equalizer's frequency band sliders.
-#: src/ui/settings.rs:1827
+#: src/ui/settings.rs:1829
 msgid "Bands"
 msgstr "Полосы"
 
 #. Translators: short label under the equalizer's preamplifier slider.
-#: src/ui/settings.rs:1877
+#: src/ui/settings.rs:1879
 msgctxt "equalizer"
 msgid "Pre"
 msgstr "Пред"
 
-#: src/ui/settings.rs:1894
+#: src/ui/settings.rs:1896
 msgid "Storage"
 msgstr "Хранилище"
 
-#: src/ui/settings.rs:1897
+#: src/ui/settings.rs:1899
 msgid "Artwork cache"
 msgstr "Кэш обложек"
 
 #. Translators: {folder} is the path of a cache folder.
-#: src/ui/settings.rs:1899 src/ui/settings.rs:1905
+#: src/ui/settings.rs:1901 src/ui/settings.rs:1907
 #, rust-format
 msgid "Stored in {folder}"
 msgstr "Хранится в {folder}"
 
-#: src/ui/settings.rs:1912
+#: src/ui/settings.rs:1914
 msgid "Play history"
 msgstr "История прослушивания"
 
 #. Translators: {file} is the path of the play history file.
-#: src/ui/settings.rs:1916
+#: src/ui/settings.rs:1918
 #, rust-format
 msgid "Tracks played here are stored in {file}. This file is never uploaded."
 msgstr ""
 "Треки, прослушанные здесь, хранятся в {file}. Этот файл никуда не "
 "отправляется."
 
-#: src/ui/settings.rs:1921
+#: src/ui/settings.rs:1923
 msgid "Sign-in"
 msgstr "Вход"
 
-#: src/ui/settings.rs:1924
+#: src/ui/settings.rs:1926
 msgid "Sign-ins are saved in the system credential store when available."
 msgstr ""
 "Данные входа сохраняются в системном хранилище учётных данных, если оно "
 "доступно."
 
-#: src/ui/settings.rs:1936
+#: src/ui/settings.rs:1938
 msgid "Clear artwork"
 msgstr "Очистить обложки"
 
-#: src/ui/settings.rs:1950
+#: src/ui/settings.rs:1952
 msgid "Clear history"
 msgstr "Очистить историю"
 
-#: src/ui/settings.rs:1962 src/ui/show.rs:34
+#: src/ui/settings.rs:1964 src/ui/show.rs:34
 msgid "About"
 msgstr "О программе"
 
-#: src/ui/settings.rs:1966
+#: src/ui/settings.rs:1968
 msgid "Built with Rust, egui, and MusicKit. Not affiliated with Apple."
 msgstr "Создано с Rust, egui и MusicKit. Не связано с Apple."
 
-#: src/ui/settings.rs:1971
+#: src/ui/settings.rs:1973
 msgid "Built with Rust, egui, and librespot. Not affiliated with Spotify."
 msgstr "Создано на Rust, egui и librespot. Не связано со Spotify."
 
-#: src/ui/settings.rs:1974
+#: src/ui/settings.rs:1976
 msgid "Check for updates"
 msgstr "Проверить обновления"
 
-#: src/ui/settings.rs:1975
+#: src/ui/settings.rs:1977
 msgid "Checking…"
 msgstr "Проверка…"
 
-#: src/ui/settings.rs:1976
+#: src/ui/settings.rs:1978
 msgid "Source code"
 msgstr "Исходный код"
 
 #. Translators: {query} is the text typed into the settings search field.
-#: src/ui/settings.rs:2048
+#: src/ui/settings.rs:2050
 #, rust-format
 msgid "No settings for “{query}”"
 msgstr "Нет настроек по запросу «{query}»"
 
-#: src/ui/settings.rs:2049
+#: src/ui/settings.rs:2051
 msgid "Try fewer words, or check the spelling."
 msgstr "Попробуй меньше слов или проверь написание."
 
-#: src/ui/settings.rs:2065
+#: src/ui/settings.rs:2067
 msgctxt "language"
 msgid "System"
 msgstr "Системный"
