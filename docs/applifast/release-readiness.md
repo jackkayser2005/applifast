@@ -218,6 +218,11 @@ real-account and release checks; passing mocks alone does not close a row.
      oscilloscope, EQ and MilkDrop controls absent.
 
 8. **Reliability and gaming performance**
+   - The [hidden-host memory policy candidate](hidden-host-memory.md) preserves
+     the active renderer while requesting Low for its hidden native parent.
+     Real native property checks and read-only embedded SDK startup pass, but
+     playback/latency acceptance and measured savings remain open. It is not
+     included in the qualified `1742628` private installer.
    - A second [uncontrolled integrated sample](integrated-performance.md#october-15-latest-installed-integration-preview)
      on the installed `64db4c3` preview reaches 503.637 MiB private memory,
      including 210.965 MiB native and 292.672 MiB across eight WebView2 processes
