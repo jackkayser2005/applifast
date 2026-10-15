@@ -84,3 +84,56 @@ Its integrated minimized playing/paused samples and the one-hour gaming trial
 remain required. The earlier [standalone probe measurements](playback-evidence.md)
 also retain their failed memory results; neither measurement is relabeled as
 a passing release gate.
+
+## October 15: latest installed integration preview
+
+A second read-only normal-use sample identifies the clean `64db4c3` integration
+preview, whose installed executable matches SHA256
+`1d367ca97aec1396646dc87d905a249c4ba214b39f03d8a2a76d828e5dd01b4a`.
+It uses Windows build 26200, 16 logical processors and Evergreen
+`155.0.4283.45`. The native PID 28232 started at 21:19:01.888 UTC. A 120-second
+warm-up preceded 300.769 seconds of measurement, finishing at 21:33:28.260 UTC.
+All 290 snapshots include the same nine process identities: the native app and
+eight WebView2 processes. Detailed private-byte sums match each aggregate and
+the sampler reports no accounting failures.
+
+The maintainer continued using the app. Playback state and minimization were
+not observed or controlled. The sampler's required `StateTag` was supplied as
+`paused`, but `PlaybackStateVerified` is false. That input is not evidence of
+paused playback. This is not a minimized paused/playing or gaming acceptance
+test. No playback, volume, queue, authorization or window command was sent.
+Source checks and compilation ran separately on the PC during sampling.
+
+| Measurement | Result |
+| --- | ---: |
+| Minimum aggregate private memory | 502.176 MiB |
+| Maximum aggregate private memory | 503.637 MiB |
+| First / last aggregate sample | 502.789 / 503.246 MiB |
+| Average total CPU | 0.005844% |
+| Native app at aggregate memory peak | 210.965 MiB |
+| All WebView2 processes at that same peak | 292.672 MiB |
+
+| Process role | PID | Mean private memory | Peak private memory |
+| --- | ---: | ---: | ---: |
+| Native app | 28232 | 210.973 MiB | 210.996 MiB |
+| WebView2 browser | 34336 | 41.177 MiB | 41.633 MiB |
+| WebView2 crash handler | 34824 | 2.940 MiB | 3.012 MiB |
+| WebView2 GPU | 9728 | 76.104 MiB | 76.223 MiB |
+| WebView2 network | 28464 | 12.029 MiB | 12.203 MiB |
+| WebView2 storage | 25844 | 7.542 MiB | 7.629 MiB |
+| WebView2 renderer | 35848 | 75.400 MiB | 76.137 MiB |
+| WebView2 CDM broker | 29656 | 68.542 MiB | 68.637 MiB |
+| WebView2 audio | 25260 | 8.153 MiB | 8.230 MiB |
+
+Roles come only from Chromium type/subtype flags, not complete command lines,
+URLs or profile contents. Individual peaks need not share a snapshot. The raw
+counter report is retained locally with SHA256
+`e89899674b6ff2f625d058ce35da7b1207b615edece59020c33c40887e88ca1a`.
+Polling cannot see a helper created and exited entirely between snapshots.
+
+This sample still exceeds the original 250 MiB private-memory limit. WebView2
+alone exceeds that value at the aggregate peak. The earlier preview differs in
+runtime version, process set, uptime and uncontrolled interaction; the numerical
+difference is not a measured improvement or a diagnosis of a leak. Neither
+sample measures the effect of the [hidden preset scan fix](settings-preset-scan.md).
+Controlled latest-preview samples and the one-hour gaming test remain open.

@@ -218,6 +218,11 @@ real-account and release checks; passing mocks alone does not close a row.
      oscilloscope, EQ and MilkDrop controls absent.
 
 8. **Reliability and gaming performance**
+   - A second [uncontrolled integrated sample](integrated-performance.md#october-15-latest-installed-integration-preview)
+     on the installed `64db4c3` preview reaches 503.637 MiB private memory,
+     including 210.965 MiB native and 292.672 MiB across eight WebView2 processes
+     at the aggregate peak. It does not verify playback state, minimization or
+     gaming, and does not measure the later hidden preset scan fix.
    - The [API cancellation regression](read-cancellation.md) reproduces an
      unresolved SDK read after abort and verifies local deadline/sign-out release,
      ignored late results and no automatic mutation retry. This deterministic
