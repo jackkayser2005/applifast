@@ -43,6 +43,8 @@ jobs:
           cache-generation: quality-v1
       - name: Formatting
         run: cargo fmt --all --check
+      - name: Fork publishing boundary regressions
+        run: ruby packaging/test-fork-workflows.rb
       - name: Flatpak release metadata regression tests
         run: python3 packaging/flatpak/test-metainfo.py
       - name: Linux launcher packaging regressions
