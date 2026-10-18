@@ -42,7 +42,7 @@
     return Number.isInteger(status) && status >= 400 && status < 600 ? { httpStatus: status } : {};
   };
   const error = (code, generation, intent = requestGeneration, failure) => send('error', {
-    code, ...apiFailure(failure), ...(['intent', 'play', 'restore', 'next', 'previous', 'pause', 'resume', 'seek', 'volume', 'repeat', 'playback'].includes(code) ? { requestGeneration: intent } : {}),
+    code, ...apiFailure(failure), ...(['intent', 'play', 'nativeQueue', 'restore', 'next', 'previous', 'pause', 'resume', 'seek', 'volume', 'repeat', 'playback'].includes(code) ? { requestGeneration: intent } : {}),
     message: 'Operation failed. Check authorization, subscription, connection, or song availability.'
   }, generation);
   const number = value => Number.isFinite(value) ? value : 0;

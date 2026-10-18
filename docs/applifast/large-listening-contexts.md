@@ -21,6 +21,11 @@ limit, playlist-write batch limits and authorization-generation checks remain.
 Occurrence-order validation now reuses membership sets instead of repeatedly
 scanning the context for every upcoming row.
 
+Initial compact playback errors carry the same playback-generation tag as
+ordinary play errors. An older failed selection can therefore be rejected
+without canceling a newer selection or an independent library refresh. The
+error remains actionable and the local queue is retained.
+
 ## Storage and network
 
 The session JSON schema remains version 1. New builds still read existing small
@@ -47,6 +52,11 @@ uploads, establish a resource-budget pass or alter the interface layout.
   native ownership of advancement, paused seek, invalid-command retention and
   transition back to the original bulk protocol. These fixtures do not establish
   real-account playback or resource measurements.
+- A forced SDK rejection reproduces a missing generation on the initial compact
+  play error before the follow-up fix. Direct play now retains generation 47,
+  and an intent-wrapped request retains generation 48. The failure message does
+  not expose the SDK response. The native model's existing error regressions
+  protect stale selection and in-progress metadata refresh state.
 - On October 18, 2026, the focused real-account Windows regression passes in
   10.06 seconds using an isolated app-owned profile and restored local grants:
   1,001-item playback, metadata edits without restart, advancing to a manual
@@ -61,16 +71,27 @@ uploads, establish a resource-budget pass or alter the interface layout.
 - In the isolated profile, the broader native regression reaches generation 13
   and fails its earlier small-queue Next check after seek/restore: stopped state,
   zero duration and queue length three. It has not yet sent the new compact
-  command at that point. This remains an overall listening acceptance failure;
-  the focused large-context pass does not waive it.
-- Local Windows checks pass: formatting, strict default/demo all-target Clippy,
+  command at that point. A later repeat on unchanged `72eb9c0` passes the entire
+  sequence, including its compact-context checks, in 53.44 seconds. The first
+  playable library row supplies catalog playback metadata and a 169,409 ms
+  duration. The earlier failure remains unexplained and intermittent; a passing
+  repeat does not establish sustained listening reliability.
+- Local Windows checks pass both at `72eb9c0` and after the error-generation
+  follow-up: formatting, strict default/demo all-target Clippy,
   default/demo all-target tests, doctests, strict demo Rustdoc, demo build,
   gettext consistency and Node bridge/signer checks. The library suites pass
   1,029/1,075 tests with seven opt-in checks ignored in each ordinary suite.
   Standalone host checks pass strict Clippy and 24 tests, with its dummy native
   credential-store check ignored in the ordinary run. Credential storage is
   unchanged by this slice.
-- Hosted all-feature/platform/site/Nix checks remain required. The local runs
+- The optimized private `72eb9c0` installer and ZIP pass clean-source, payload,
+  checksum and executable checks, dummy-token packaging, and isolated per-user
+  install/upgrade/shortcuts/uninstall fixtures. The raw Git/package pattern audit
+  has no secret-pattern hits outside the declared companion app token, subject
+  to its opaque/encoded/remote-history limits. The unsigned preview is version
+  0.12.0 and its token expires November 6, 2026. That package precedes the
+  playback-error generation follow-up.
+- Hosted all-feature/platform/site/Nix checks on the final source remain
+  required. The local runs
   above do not establish MilkDrop feature coverage, Linux/macOS runtime support,
-  full listening acceptance or a resource-budget pass. No new private installer
-  has been qualified for this change yet.
+  full listening acceptance or a resource-budget pass.

@@ -109,6 +109,34 @@ async function checkCompactNativeQueue() {
   assert.equal(events.at(-1).type, 'signedOut');
 }
 
+async function checkCompactPlaybackFailuresKeepTheirIntent() {
+  const events = [];
+  const localMusic = { ...music, addEventListener: () => {},
+    setQueue: async () => { throw new Error('SECRET SDK failure'); } };
+  const context = { ...sandbox, window: { ...sandbox.window,
+    MusicKit: { ...sandbox.window.MusicKit, configure: async () => localMusic },
+    chrome: { webview: { postMessage: event => events.push(event) } }
+  } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), context);
+  const bridge = context.window.applifast;
+  await bridge.bootstrap({ developerToken: 'mock-only', session: 51 });
+  const command = { type: 'nativeQueue', item: { kind: 'library', id: 'i.upload',
+    playParams: { id: 'i.upload', isLibrary: true } }, index: 1000, length: 1001,
+    playing: true, seconds: null, shuffle: false, repeat: 0, generation: 47 };
+  await bridge.dispatch(command);
+  let failure = events.filter(event => event.type === 'error').at(-1);
+  assert.equal(failure.code, 'nativeQueue');
+  assert.equal(failure.session, 51);
+  assert.equal(failure.requestGeneration, 47, 'A failed initial large-context play must retain its intent');
+  assert(!JSON.stringify(failure).includes('SECRET'));
+  const nested = { ...command };
+  delete nested.generation;
+  await bridge.dispatch({ type: 'intent', generation: 48, command: nested });
+  failure = events.filter(event => event.type === 'error').at(-1);
+  assert.equal(failure.requestGeneration, 48);
+  assert.equal(events.filter(event => event.type === 'state').at(-1).queueLength, 1001);
+}
+
 async function checkApiFailures() {
   const events = [];
   let status;
@@ -351,6 +379,7 @@ async function checkAuthorizationCancellation() {
 
 (async () => {
   await checkCompactNativeQueue();
+  await checkCompactPlaybackFailuresKeepTheirIntent();
   await checkApiFailures();
   await checkNonCooperatingRequests();
   await checkSdkStartup();
