@@ -80,6 +80,12 @@ Choose **Play next** on a song, selection or album to hear it after the current
 track, ahead of existing manual additions. **Add to queue** appends instead.
 Albums load all track pages before insertion. See [Play next](docs/applifast/play-next.md).
 
+Loaded listening contexts can now exceed 1,000 songs without rejecting the
+selected row. Rust keeps up to 100,000 queue occurrences and sends only the
+current song to the playback host for larger queues. The existing 32 MiB session
+file bound remains. See [large contexts](docs/applifast/large-listening-contexts.md)
+for validation status and remaining limits.
+
 Failed Apple library reads now keep cached songs visible with specific recovery
 guidance and a Retry action. Rejected credentials point to Settings > Account;
 rate limits and service failures ask you to wait. Stalled reads release after

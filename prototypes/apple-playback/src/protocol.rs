@@ -6,6 +6,9 @@ use serde_json::Value;
 use std::io::Read;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Rust owns the full local queue; the compact host command carries one item.
+pub const MAX_LOCAL_QUEUE_ITEMS: usize = 100_000;
+
 /// Fixed recovery guidance, without Apple's response body or credential details.
 pub fn api_failure_message(status: Option<u64>, fallback: &str) -> &str {
     match status {
@@ -91,28 +94,23 @@ pub struct QueueOrder {
 
 impl QueueOrder {
     pub fn validate(&self, len: usize, current: Option<usize>) -> Result<(), String> {
-        let unique = |indices: &[usize]| {
-            indices.len() <= len
-                && indices.iter().all(|index| *index < len)
-                && indices
-                    .iter()
-                    .copied()
-                    .collect::<std::collections::HashSet<_>>()
-                    .len()
-                    == indices.len()
-        };
-        if !unique(&self.upcoming)
-            || !unique(&self.context)
+        let upcoming: std::collections::HashSet<_> = self.upcoming.iter().copied().collect();
+        let context: std::collections::HashSet<_> = self.context.iter().copied().collect();
+        if self.upcoming.len() > len
+            || self.context.len() > len
+            || upcoming.len() != self.upcoming.len()
+            || context.len() != self.context.len()
+            || upcoming.iter().chain(&context).any(|index| *index >= len)
             || self.manual_count > self.upcoming.len()
             || self.history.len() > 64
             || self.history.iter().any(|index| *index >= len)
-            || current.is_some_and(|index| index >= len || self.upcoming.contains(&index))
+            || current.is_some_and(|index| index >= len || upcoming.contains(&index))
             || self.upcoming[..self.manual_count]
                 .iter()
-                .any(|index| self.context.contains(index))
+                .any(|index| context.contains(index))
             || self.upcoming[self.manual_count..]
                 .iter()
-                .any(|index| !self.context.contains(index))
+                .any(|index| !context.contains(index))
         {
             return Err("Invalid queue occurrence order.".into());
         }
@@ -180,6 +178,17 @@ pub enum Command {
         index: usize,
         order: QueueOrder,
         playing: bool,
+    },
+    NativeQueue {
+        item: Option<PlaybackItem>,
+        index: Option<usize>,
+        length: usize,
+        playing: Option<bool>,
+        seconds: Option<f64>,
+        shuffle: bool,
+        repeat: u8,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        generation: Option<u64>,
     },
     Pause,
     Resume,
@@ -301,6 +310,30 @@ impl Command {
                 }
                 items.iter().try_for_each(PlaybackItem::validate)?;
                 order.validate(items.len(), *index)
+            }
+            Self::NativeQueue {
+                item,
+                index,
+                length,
+                playing,
+                seconds,
+                repeat,
+                generation,
+                ..
+            } => {
+                if *length > MAX_LOCAL_QUEUE_ITEMS
+                    || index.is_some_and(|index| index >= *length)
+                    || item.is_some() != index.is_some()
+                    || (playing.is_some() && index.is_none())
+                    || seconds.is_some_and(|seconds| {
+                        !seconds.is_finite() || seconds < 0.0 || *playing != Some(false)
+                    })
+                    || *repeat > 2
+                    || generation.is_some_and(|value| value > 9_007_199_254_740_991)
+                {
+                    return Err("Invalid native queue selection.".into());
+                }
+                item.as_ref().map_or(Ok(()), PlaybackItem::validate)
             }
             Self::Jump { position } if *position >= 1000 => Err("Invalid queue row.".into()),
             Self::Select { index, order, .. } => order.validate(1000, Some(*index)),
@@ -723,6 +756,56 @@ mod tests {
             .validate()
             .is_err()
         );
+    }
+    #[test]
+    fn compact_native_queue_validates_one_exact_item_without_a_bulk_context() {
+        let command = json!({"type":"nativeQueue","item":{"kind":"library","id":"i.upload","playParams":{"id":"i.upload","isLibrary":true,"catalogId":"123"}},
+            "index":99_999,"length":100_000,"playing":true,"seconds":null,"shuffle":true,"repeat":2});
+        let valid = |value: Value| {
+            serde_json::from_value::<Command>(value).is_ok_and(|command| command.validate().is_ok())
+        };
+        assert!(valid(command.clone()));
+        for change in [
+            json!({"length":100_001}),
+            json!({"index":100_000}),
+            json!({"item":null}),
+            json!({"index":null}),
+            json!({"playing":true,"seconds":42}),
+            json!({"repeat":3}),
+            json!({"generation":9_007_199_254_740_992_u64}),
+            json!({"item":{"kind":"library","id":"i.upload","playParams":{"id":"123","isLibrary":true}}}),
+        ] {
+            let mut invalid = command.clone();
+            invalid
+                .as_object_mut()
+                .unwrap()
+                .extend(change.as_object().unwrap().clone());
+            assert!(!valid(invalid));
+        }
+        let mut restored = command.clone();
+        restored["playing"] = json!(false);
+        restored["seconds"] = json!(42);
+        assert!(valid(restored));
+        let mut empty = command;
+        for key in ["item", "index", "playing"] {
+            empty[key] = Value::Null;
+        }
+        empty["length"] = json!(0);
+        assert!(valid(empty));
+    }
+    #[test]
+    fn large_occurrence_order_validates_context_membership_without_pairwise_scans() {
+        let mut order = QueueOrder {
+            upcoming: (1..MAX_LOCAL_QUEUE_ITEMS).collect(),
+            manual_count: 0,
+            context: (0..MAX_LOCAL_QUEUE_ITEMS).collect(),
+            history: vec![0],
+        };
+        assert!(order.validate(MAX_LOCAL_QUEUE_ITEMS, Some(0)).is_ok());
+        order.manual_count = 1;
+        assert!(order.validate(MAX_LOCAL_QUEUE_ITEMS, Some(0)).is_err());
+        order.context.remove(1);
+        assert!(order.validate(MAX_LOCAL_QUEUE_ITEMS, Some(0)).is_ok());
     }
     #[test]
     fn occurrence_orders_reject_invalid_indices_and_manual_context_overlap() {

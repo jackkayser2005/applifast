@@ -4,6 +4,9 @@
   let music, session = 1, queue = [], index = -1, repeat = 0, shuffle = false;
   let order = { upcoming: [], manualCount: 0, context: [], history: [] };
   let nativeQueue = false;
+  let compactQueue = false, nativeItem = null, nativeLength = 0;
+  const queueLength = () => compactQueue ? nativeLength : queue.length;
+  const currentItem = () => compactQueue ? nativeItem : queue[index];
   let chain = Promise.resolve(), initializing, signingOut = false, authorization = null;
   // The SDK can mutate its token after cancellation; retain only the accepted grant.
   let userToken = '';
@@ -90,8 +93,8 @@
     else if (status === states.stalled) status = 8;
     send('state', {
     status: transitioning ? 1 : status, position: transitioning ? 0 : (seekTarget ?? position),
-    duration: number(music.currentPlaybackDuration), actualPosition: position, index, queueLength: queue.length,
-    requestGeneration, order: structuredClone(order)
+    duration: number(music.currentPlaybackDuration), actualPosition: position, index, queueLength: queueLength(),
+    requestGeneration, ...(!compactQueue ? { order: structuredClone(order) } : {})
   }); };
   function song(item) {
     if (!item) throw new Error('invalidItem');
@@ -109,8 +112,8 @@
   }
   async function playAt(position, generation, startPlaying = true) {
     if (generation !== session || signingOut) return;
-    if (position < 0 || position >= queue.length) return;
-    const descriptor = song(queue[position]);
+    if (position < 0 || position >= queueLength()) return;
+    const descriptor = song(compactQueue ? nativeItem : queue[position]);
     index = position;
     seekTarget = null;
     transitioning = true;
@@ -336,6 +339,7 @@
         order = queueOrder(command.order || {upcoming: Array.from({length: command.items.length - command.index - 1}, (_, at) => command.index + at + 1),
           manualCount: 0, context: command.items.map((_, at) => at)}, command.items, command.index);
         queue = structuredClone(command.items);
+        compactQueue = false; nativeItem = null; nativeLength = 0;
         nativeQueue = !!command.order;
 
         return playAt(command.index, generation);
@@ -347,6 +351,7 @@
         command.items.forEach(song);
         order = queueOrder(command.order, command.items, command.index);
         queue = structuredClone(command.items);
+        compactQueue = false; nativeItem = null; nativeLength = 0;
         index = command.index ?? -1;
         nativeQueue = true;
         shuffle = command.shuffle;
@@ -364,9 +369,10 @@
             (command.index !== null && (!Number.isInteger(command.index) || command.index < 0 || command.index >= command.items.length))) throw new Error('queue');
         command.items.forEach(song);
         const current = command.index ?? -1;
-        if ((current < 0) !== (index < 0) || (current >= 0 && JSON.stringify(command.items[current]) !== JSON.stringify(queue[index]))) throw new Error('queue');
+        if ((current < 0) !== (index < 0) || (current >= 0 && JSON.stringify(command.items[current]) !== JSON.stringify(currentItem()))) throw new Error('queue');
         order = queueOrder(command.order, command.items, current);
         queue = structuredClone(command.items);
+        compactQueue = false; nativeItem = null; nativeLength = 0;
         index = current;
         nativeQueue = true;
         break;
@@ -377,9 +383,42 @@
         nativeQueue = true;
         return playAt(command.index, generation, command.playing);
       }
-      case 'jump': return playAt(jump(command.position), generation, desiredPlaying);
-      case 'next': return playAt(nextPosition(1), generation, desiredPlaying);
-      case 'previous': return playAt(nextPosition(-1), generation, desiredPlaying);
+      case 'nativeQueue': {
+        if (!Number.isInteger(command.length) || command.length < 0 || command.length > 100_000 ||
+            !(command.index === null || Number.isInteger(command.index) && command.index >= 0 && command.index < command.length) ||
+            (command.item === null) !== (command.index === null) ||
+            !(command.playing === null || typeof command.playing === 'boolean') ||
+            (command.playing !== null && command.index === null) ||
+            !(command.seconds === null || Number.isFinite(command.seconds) && command.seconds >= 0 && command.playing === false) ||
+            typeof command.shuffle !== 'boolean' || ![0, 1, 2].includes(command.repeat) ||
+            !(command.generation === undefined || Number.isSafeInteger(command.generation) && command.generation >= 0)) throw new Error('queue');
+        if (command.item !== null) song(command.item);
+        if (command.playing === null && ((command.index === null) !== (index < 0) ||
+            command.item !== null && JSON.stringify(command.item) !== JSON.stringify(currentItem()))) throw new Error('queue');
+        requestGeneration = command.generation ?? requestGeneration;
+        nativeItem = structuredClone(command.item);
+        nativeLength = command.length;
+        index = command.index ?? -1;
+        queue = [];
+        order = { upcoming: [], manualCount: 0, context: [], history: [] };
+        compactQueue = nativeQueue = true;
+        shuffle = command.shuffle; repeat = command.repeat;
+        if (command.playing !== null) {
+          await playAt(index, generation, command.playing);
+          if (generation !== session) return;
+          if (command.seconds !== null) return perform({ type: 'seek', seconds: command.seconds }, generation);
+        }
+        break;
+      }
+      case 'jump':
+        if (compactQueue) throw new Error('queue');
+        return playAt(jump(command.position), generation, desiredPlaying);
+      case 'next':
+        if (compactQueue) throw new Error('queue');
+        return playAt(nextPosition(1), generation, desiredPlaying);
+      case 'previous':
+        if (compactQueue) throw new Error('queue');
+        return playAt(nextPosition(-1), generation, desiredPlaying);
       case 'pause': desiredPlaying = false; await music.pause(); break;
       case 'resume':
         desiredPlaying = true;
@@ -399,6 +438,7 @@
         music.volume = command.value; break;
       case 'shuffle':
         shuffle = command.enabled === true;
+        if (compactQueue) break;
         const rest = order.upcoming.splice(order.manualCount);
         order.upcoming.push(...(shuffle ? shuffled(rest) : rest.sort((a, b) => a - b)));
         if (shuffle) shuffled(order.context); else order.context.sort((a, b) => a - b);
@@ -425,6 +465,7 @@
       writes = Promise.resolve();
       desiredPlaying = false;
       queue = []; index = -1; order = { upcoming: [], manualCount: 0, context: [], history: [] };
+      compactQueue = false; nativeItem = null; nativeLength = 0;
       const result = (async () => {
         await initializing;
         await music.pause();

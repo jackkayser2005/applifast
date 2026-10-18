@@ -1663,4 +1663,21 @@ mod tests {
         delete_secret(&name).unwrap();
         assert!(read_secret(&name).unwrap().is_none());
     }
+    #[test]
+    fn compact_native_queue_crosses_the_same_bounded_command_and_state_boundary() {
+        let input = json!({"type":"nativeQueue","item":{"kind":"library","id":"i.upload","playParams":{"id":"i.upload","isLibrary":true,"catalogId":"123"}},
+            "index":50_001,"length":100_000,"playing":false,"seconds":42,"shuffle":false,"repeat":0});
+        assert!(input.to_string().len() < MAX_MESSAGE);
+        assert!(parse_command(input.clone()).is_ok());
+        let mut invalid = input;
+        invalid["token"] = json!("SECRET");
+        assert!(parse_command(invalid).is_err());
+        let state = sanitized_event(&json!({"type":"state","session":1,"index":50_001,
+            "queueLength":100_000,"requestGeneration":7,"status":3,"position":42,"token":"SECRET"}))
+        .unwrap();
+        assert_eq!(state["queueLength"], 100_000);
+        assert_eq!(state["index"], 50_001);
+        assert!(state.get("order").is_none());
+        assert!(!state.to_string().contains("SECRET"));
+    }
 }
