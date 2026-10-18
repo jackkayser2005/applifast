@@ -1,6 +1,6 @@
 //! Non-secret library metadata and local queue. Audio and tokens never go here.
 use super::Song;
-use applifast_playback_probe::protocol::QueueOrder;
+use applifast_playback_probe::protocol::{MAX_LOCAL_QUEUE_ITEMS, QueueOrder};
 use serde::{Deserialize, Serialize};
 use std::{io::Read, path::Path};
 
@@ -34,7 +34,7 @@ impl Snapshot {
             && storefront.len() == 2
             && storefront.bytes().all(|byte| byte.is_ascii_lowercase())
             && self.songs.len() <= 100_000
-            && self.queue.len() <= 1000
+            && self.queue.len() <= MAX_LOCAL_QUEUE_ITEMS
             && self.order.validate(self.queue.len(), self.index).is_ok()
             && self.repeat <= 2
             && self.songs.iter().chain(&self.queue).all(|song| {

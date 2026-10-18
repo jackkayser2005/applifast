@@ -622,8 +622,12 @@ the views and fixture rendering are unchanged.
   Sign-out invalidates pending account responses, clears in-memory account data,
   deletes the saved user token, and requests browser-profile clearing.
 
-The first context contains at most 1,000 loaded songs, the host's validated queue
-limit. Collection playback currently uses the loaded prefix; complete context
+The local queue accepts up to 100,000 loaded occurrences. Above 1,000, Rust keeps
+the complete occurrence order and sends only the selected item's original
+playback parameters to the host. It does not truncate a larger loaded context.
+The existing 32 MiB session-file limit still applies. See
+[large listening contexts](large-listening-contexts.md) for validation and limits.
+Collection playback currently uses the loaded prefix; complete context
 loading and streaming pagination need the queue slice. The existing queue view
 shows upcoming occurrences, including repeated songs. Manual queue additions,
 album additions, insertion, reordering, removal and clear use the local Apple

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::player::{LocalState, LocalTrack, Playback};
-use applifast_playback_probe::protocol::{PlaybackItem, QueueOrder};
+use applifast_playback_probe::protocol::{MAX_LOCAL_QUEUE_ITEMS, PlaybackItem, QueueOrder};
 use rand::seq::SliceRandom;
 pub mod cache;
 mod favorites;
@@ -334,8 +334,8 @@ impl State {
             self.error = Some("Apple supplied no playback parameters for this song. Try it in Apple Music; cloud-only uploads are not guaranteed yet.".into());
             return None;
         }
-        if uris.len() + self.order.manual_count > 1000 {
-            self.error = Some("This listening slice supports at most 1,000 queue occurrences. Clear manual additions or choose a smaller context.".into());
+        if uris.len() + self.order.manual_count > MAX_LOCAL_QUEUE_ITEMS {
+            self.error = Some("The local queue supports at most 100,000 occurrences. Clear manual additions or choose a smaller context.".into());
             return None;
         }
         let queue = self
@@ -380,12 +380,27 @@ impl State {
         self.local.position_ms = 0;
         self.error = None;
         self.request_generation += 1;
+        if self.queue.len() > 1000 {
+            let mut command = self.compact_queue_command(Some(true), None);
+            command["generation"] = json!(self.request_generation);
+            return Some(command);
+        }
         Some(
             json!({"type":"play","items":self.queue.iter().map(|song| &song.item).collect::<Vec<_>>(),"index":position,"generation":self.request_generation,"order":self.order}),
         )
     }
     pub fn queue_command(&self) -> Value {
+        if self.queue.len() > 1000 {
+            return self.compact_queue_command(None, None);
+        }
         json!({"type":"queue","items":self.queue.iter().map(|song| &song.item).collect::<Vec<_>>(),"index":self.index,"order":self.order})
+    }
+    fn compact_queue_command(&self, playing: Option<bool>, seconds: Option<f64>) -> Value {
+        json!({"type":"nativeQueue","item":self.index.and_then(|index| self.queue.get(index)).map(|song| &song.item),
+        "index":self.index,"length":self.queue.len(),"playing":playing,"seconds":seconds,
+        "shuffle":self.local.shuffle,"repeat":match self.local.repeat {
+            crate::player::RepeatMode::Off => 0, crate::player::RepeatMode::Track => 1, crate::player::RepeatMode::Context => 2
+        }})
     }
     pub fn selection_command(&mut self, playing: bool) -> Value {
         self.local.playback = if playing {
@@ -394,6 +409,9 @@ impl State {
             Playback::Paused
         };
         self.pending_playback = (!playing).then_some(Playback::Paused);
+        if self.queue.len() > 1000 {
+            return self.compact_queue_command(Some(playing), None);
+        }
         json!({"type":"select","index":self.index,"order":self.order,"playing":playing})
     }
     pub fn add_uris(
@@ -430,10 +448,12 @@ impl State {
             }
             return None;
         }
-        // ponytail: bounded wire snapshots allow 1,000 occurrences; paged queues are a later slice.
         let retained = self.retained_occurrences();
-        if retained.len() + additions.len() > 1000 {
-            self.error = Some("This listening slice supports at most 1,000 queue occurrences. Choose a smaller context.".into());
+        if retained.len() + additions.len() > MAX_LOCAL_QUEUE_ITEMS {
+            self.error = Some(
+                "The local queue supports at most 100,000 occurrences. Choose a smaller context."
+                    .into(),
+            );
             return None;
         }
         self.compact_queue(&retained);
@@ -984,7 +1004,15 @@ impl State {
             2 => crate::player::RepeatMode::Context,
             _ => crate::player::RepeatMode::Off,
         };
-        let request = json!({"type":"restore","items":self.queue.iter().map(|song| &song.item).collect::<Vec<_>>(),"index":self.index,"order":self.order,"seconds":f64::from(self.local.position_ms)/1000.0,"shuffle":snapshot.shuffle,"repeat":snapshot.repeat});
+        let request = if self.queue.len() > 1000 {
+            self.compact_queue_command(
+                self.index.map(|_| false),
+                self.index
+                    .map(|_| f64::from(self.local.position_ms) / 1000.0),
+            )
+        } else {
+            json!({"type":"restore","items":self.queue.iter().map(|song| &song.item).collect::<Vec<_>>(),"index":self.index,"order":self.order,"seconds":f64::from(self.local.position_ms)/1000.0,"shuffle":snapshot.shuffle,"repeat":snapshot.repeat})
+        };
         let request = self.intent(request);
         self.restore_position = self.index.map(|_| self.local.position_ms);
         self.pending_index = self.index;
@@ -1121,6 +1149,91 @@ mod tests {
         };
         state.play(0).unwrap();
         state
+    }
+    #[test]
+    fn large_context_keeps_selected_occurrence_manual_queue_and_paused_restore() {
+        let mut state = queue_state();
+        state.songs[2].item.play_params =
+            Some(json!({"id":"i.c","isLibrary":true,"catalogId":"123"}));
+        let manual = state.songs[1].uri();
+        state.add_uris(
+            &[manual.clone(), manual],
+            0,
+            std::time::Duration::ZERO,
+            true,
+        );
+        let uris = (0..1005)
+            .map(|at| state.songs[at % 3].uri())
+            .collect::<Vec<_>>();
+        let command = state
+            .play_uris(&uris, 1001)
+            .expect("A loaded large context must play");
+        assert_eq!(state.queue.len(), 1007);
+        assert_eq!(state.index, Some(1001));
+        assert_eq!(&state.order.upcoming[..2], &[1005, 1006]);
+        assert_eq!(state.order.context.len(), 1005);
+        assert_eq!(command["type"], "nativeQueue");
+        assert_eq!(command["item"]["id"], "i.c");
+        assert_eq!(command["item"]["playParams"]["id"], "i.c");
+        assert_eq!(command["item"]["playParams"]["catalogId"], "123");
+        assert_eq!(command["length"], 1007);
+        assert_eq!(command["index"], 1001);
+        assert!(command.to_string().len() < 1024);
+        serde_json::from_value::<applifast_playback_probe::protocol::Command>(command)
+            .unwrap()
+            .validate()
+            .unwrap();
+        let generation = state.request_generation;
+        state.event(1, &json!({"type":"state","session":1,"requestGeneration":generation,"index":1001,"position":1,"status":2}));
+        let next = state.event(1, &json!({"type":"state","session":1,"requestGeneration":generation,"index":1001,"position":180,"status":10})).unwrap();
+        assert_eq!(next["command"]["type"], "nativeQueue");
+        assert_eq!(next["command"]["item"]["id"], "i.b");
+        assert_eq!(state.index, Some(1005));
+        assert_eq!(state.order.upcoming[0], 1006);
+        let upcoming = state.order.upcoming.clone();
+        assert!(state.event(1, &json!({"type":"state","session":1,"requestGeneration":generation,"index":1001,"status":10})).is_none());
+        assert_eq!(state.order.upcoming, upcoming);
+        let select = state.selection_command(false);
+        assert_eq!(select["item"]["id"], "i.b");
+        assert_eq!(select["playing"], false);
+        assert!(state.remove_upcoming(&[0]));
+        assert_eq!(state.queue.len(), 1006);
+        assert_eq!(state.order.manual_count, 0);
+        assert!(state.order.validate(state.queue.len(), state.index).is_ok());
+        state.authorized = true;
+        state.cache_checked = true;
+        state.account_tag = Some("a".repeat(64));
+        state.storefront = "us".into();
+        state.seek(42_000);
+        let snapshot = state.cache_snapshot(true).unwrap();
+        assert!(snapshot.valid_for(&"a".repeat(64), "us"));
+        let snapshot =
+            serde_json::from_slice::<cache::Snapshot>(&serde_json::to_vec(&snapshot).unwrap())
+                .unwrap();
+        let mut restored = State {
+            authorized: true,
+            account_tag: state.account_tag.clone(),
+            storefront: "us".into(),
+            ..Default::default()
+        };
+        let restore = restored.restore_cache(Some(snapshot)).unwrap();
+        assert_eq!(restore["command"]["type"], "nativeQueue");
+        assert_eq!(restore["command"]["seconds"], 42.0);
+        assert_eq!(restore["command"]["playing"], false);
+        assert_eq!(restored.queue.len(), state.queue.len());
+        assert_eq!(restored.order.upcoming, state.order.upcoming);
+        assert_eq!(restored.order.history, state.order.history);
+        assert_eq!(restored.order.context, state.order.context);
+        assert_eq!(restored.local.playback, Playback::Paused);
+    }
+    #[test]
+    fn excessive_context_is_rejected_before_replacing_the_playing_queue() {
+        let mut state = queue_state();
+        let before = state.queue_command();
+        let uris = vec![state.songs[0].uri(); MAX_LOCAL_QUEUE_ITEMS + 1];
+        assert!(state.play_uris(&uris, 1001).is_none());
+        assert_eq!(state.queue_command(), before);
+        assert!(state.error.as_ref().unwrap().contains("100,000"));
     }
     #[test]
     fn saved_library_and_occurrences_restore_paused_and_reject_other_grants() {
@@ -1838,12 +1951,177 @@ mod tests {
             await_event("state", &|event| {
                 event["requestGeneration"] == 14 && event["status"] == 3
             });
+            let mut large = State {
+                songs: vec![song.clone()],
+                request_generation: 14,
+                ..Default::default()
+            };
+            host.send(
+                large
+                    .play_uris(&vec![song.uri(); 1001], 1000)
+                    .unwrap()
+                    .to_string(),
+            );
+            let playing = await_event("state", &|event| {
+                event["requestGeneration"] == 15
+                    && event["status"] == 2
+                    && event["index"] == 1000
+                    && event["queueLength"] == 1001
+                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 1.0
+            });
+            assert!(playing.get("order").is_none());
+            assert_eq!(
+                large.add_uris(
+                    &[song.uri(), song.uri()],
+                    0,
+                    std::time::Duration::ZERO,
+                    true
+                ),
+                Some(2)
+            );
+            host.send(large.intent(large.queue_command()).to_string());
+            await_event("state", &|event| {
+                event["requestGeneration"] == 16
+                    && event["status"] == 2
+                    && event["index"] == 1000
+                    && event["queueLength"] == 1003
+                    && event["actualPosition"].as_f64().unwrap_or(0.0)
+                        >= playing["actualPosition"].as_f64().unwrap() - 0.5
+            });
+            assert!(large.skip(1));
+            let command = large.selection_command(true);
+            host.send(large.intent(command).to_string());
+            await_event("state", &|event| {
+                event["requestGeneration"] == 17
+                    && event["status"] == 2
+                    && event["index"] == 1001
+                    && event["queueLength"] == 1003
+                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 1.0
+                    && event["actualPosition"].as_f64().unwrap_or(100.0) < 15.0
+            });
+            let command = large.compact_queue_command(Some(false), Some(2.0));
+            host.send(large.intent(command).to_string());
+            await_event("state", &|event| {
+                event["requestGeneration"] == 18
+                    && event["status"] == 3
+                    && event["index"] == 1001
+                    && event["queueLength"] == 1003
+                    && event["position"]
+                        .as_f64()
+                        .is_some_and(|seconds| (1.5..3.0).contains(&seconds))
+            });
             eprintln!(
-                "Embedded Windows host: restored authorization; {} library rows; real library shelves, library/catalog search, playback, seek, pause, saved-position queue resume, duplicate removal and Play next insertion during playback followed by Next passed.",
+                "Embedded Windows host: restored authorization; {} library rows; real library shelves, library/catalog search, playback, seek, pause, saved-position queue resume, duplicate removal, Play next, and a 1,001-item native context with manual duplicates and paused restore passed.",
                 songs.len()
             );
         };
         // Shut down even if an assertion fails, so the profile is never left locked.
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(result));
+        host.shutdown();
+        if let Err(failure) = outcome {
+            std::panic::resume_unwind(failure);
+        }
+    }
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "Uses local Apple authorization and starts muted large-context playback"]
+    fn native_large_context_plays_edits_advances_and_restores_paused() {
+        let (sender, events) = std::sync::mpsc::channel();
+        let host = crate::player::AppleHost::start(None, move |event| {
+            let _ = sender.send(event);
+        });
+        let result = || {
+            let await_event = |kind: &str, matches: &dyn Fn(&Value) -> bool| -> Value {
+                let deadline = Instant::now() + std::time::Duration::from_secs(45);
+                let mut last_state = None;
+                loop {
+                    let event = events.recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                        .unwrap_or_else(|_| panic!("Large-context host timed out awaiting {kind}; last state (generation, status, index, position): {last_state:?}"));
+                    assert_ne!(event["type"], "error", "{}", event["message"]);
+                    if event["type"] == "state" {
+                        last_state = Some((
+                            event["requestGeneration"].as_u64(),
+                            event["status"].as_u64(),
+                            event["index"].as_u64(),
+                            event["position"].as_f64(),
+                        ));
+                    }
+                    if event["type"] == kind && matches(&event) {
+                        return event;
+                    }
+                }
+            };
+            assert_eq!(await_event("ready", &|_| true)["authorized"], true);
+            host.send(json!({"type":"library","next":null}).to_string());
+            let songs: Vec<Song> =
+                serde_json::from_value(await_event("library", &|_| true)["items"].clone()).unwrap();
+            let song = songs
+                .into_iter()
+                .find(Song::available)
+                .expect("No playable library song");
+            host.send(json!({"type":"volume","value":0}).to_string());
+            let mut state = State {
+                songs: vec![song.clone()],
+                ..Default::default()
+            };
+            host.send(
+                state
+                    .play_uris(&vec![song.uri(); 1001], 1000)
+                    .unwrap()
+                    .to_string(),
+            );
+            let playing = await_event("state", &|event| {
+                event["requestGeneration"] == 1
+                    && event["status"] == 2
+                    && event["index"] == 1000
+                    && event["queueLength"] == 1001
+                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 1.0
+            });
+            assert!(playing.get("order").is_none());
+            assert_eq!(
+                state.add_uris(
+                    &[song.uri(), song.uri()],
+                    0,
+                    std::time::Duration::ZERO,
+                    true
+                ),
+                Some(2)
+            );
+            host.send(state.intent(state.queue_command()).to_string());
+            await_event("state", &|event| {
+                event["requestGeneration"] == 2
+                    && event["status"] == 2
+                    && event["index"] == 1000
+                    && event["queueLength"] == 1003
+                    && event["actualPosition"].as_f64().unwrap_or(0.0)
+                        >= playing["actualPosition"].as_f64().unwrap() - 0.5
+            });
+            assert!(state.skip(1));
+            let command = state.selection_command(true);
+            host.send(state.intent(command).to_string());
+            await_event("state", &|event| {
+                event["requestGeneration"] == 3
+                    && event["status"] == 2
+                    && event["index"] == 1001
+                    && event["queueLength"] == 1003
+                    && event["actualPosition"].as_f64().unwrap_or(0.0) >= 1.0
+                    && event["actualPosition"].as_f64().unwrap_or(100.0) < 15.0
+            });
+            let command = state.compact_queue_command(Some(false), Some(2.0));
+            host.send(state.intent(command).to_string());
+            await_event("state", &|event| {
+                event["requestGeneration"] == 4
+                    && event["status"] == 3
+                    && event["index"] == 1001
+                    && event["queueLength"] == 1003
+                    && event["position"]
+                        .as_f64()
+                        .is_some_and(|seconds| (1.5..3.0).contains(&seconds))
+            });
+            eprintln!(
+                "Muted native 1,001-item playback, metadata edit without restart, manual duplicate advancement and paused restore passed."
+            );
+        };
         let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(result));
         host.shutdown();
         if let Err(failure) = outcome {

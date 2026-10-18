@@ -242,6 +242,10 @@ real-account and release checks; passing mocks alone does not close a row.
      memory growth, media controls and click-to-play responsiveness.
 
 9. **Automated and visual verification**
+   - The [large-context queue path](large-listening-contexts.md) removes the
+     1,000-occurrence selection failure without sending the entire context to
+     JavaScript. Its focused muted native check passes in an isolated profile;
+     broader listening acceptance and final hosted checks remain required.
    - The [sampler fixture lifetime fix](sampler-fixture.md) addresses a confirmed
      Windows CI failure before sampling. It changes no resource acceptance gate;
      the updated source still needs its hosted checks.

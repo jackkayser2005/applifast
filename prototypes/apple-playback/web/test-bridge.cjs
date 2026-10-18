@@ -44,6 +44,99 @@ const app = sandbox.window.applifast;
 const emit = name => (listeners.get(name) || []).forEach(handler => handler());
 const lastState = () => messages.filter(event => event.type === 'state').at(-1);
 
+async function checkCompactNativeQueue() {
+  const events = [], loads = [], localListeners = new Map(), seeks = [];
+  const localMusic = { ...music, playbackState: 2,
+    addEventListener: (name, callback) => {
+      if (!localListeners.has(name)) localListeners.set(name, []);
+      localListeners.get(name).push(callback);
+    },
+    setQueue: async options => { loads.push(options); },
+    seekToTime: async seconds => { seeks.push(seconds); }
+  };
+  const context = { ...sandbox, window: { ...sandbox.window,
+    MusicKit: { ...sandbox.window.MusicKit, configure: async () => localMusic },
+    chrome: { webview: { postMessage: event => events.push(event) } }
+  } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), context);
+  const bridge = context.window.applifast;
+  await bridge.bootstrap({ developerToken: 'mock-only', session: 41 });
+  const uploaded = { kind: 'library', id: 'i.upload', playParams: { id: 'i.upload', kind: 'song', isLibrary: true, catalogId: '123' } };
+  const command = { type: 'nativeQueue', item: uploaded, index: 1001, length: 50_000,
+    playing: true, seconds: null, shuffle: false, repeat: 2 };
+  const dispatch = (command, generation = 1) => bridge.dispatch({ type: 'intent', generation, command });
+  const state = () => events.filter(event => event.type === 'state').at(-1);
+  await dispatch(command);
+  assert.equal(loads.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(loads[0].items)), [uploaded.playParams]);
+  assert.equal(state().index, 1001);
+  assert.equal(state().queueLength, 50_000);
+  assert.equal(state().requestGeneration, 1);
+  assert.equal(state().order, undefined);
+  assert(JSON.stringify(state()).length < 512);
+  // Rust owns automatic advancement and the next occurrence, including duplicates.
+  localMusic.playbackState = 5;
+  for (const callback of localListeners.get('playbackStateDidChange')) callback();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(loads.length, 1);
+  assert.equal(state().status, 10);
+  await dispatch({ ...command, length: 50_001, index: 1002, playing: null }, 2);
+  assert.equal(loads.length, 1, 'Queue edits must not reload the current track');
+  assert.equal(state().index, 1002);
+  await dispatch({ ...command, index: 49_999, playing: false, seconds: 42 }, 3);
+  assert.equal(loads.length, 2);
+  assert.deepEqual(seeks, [42]);
+  assert.equal(state().index, 49_999);
+  for (const change of [{ length: 100_001 }, { index: 50_000 }, { item: null },
+    { playing: true, seconds: 10 }, { type: 'next' }, { type: 'previous' }, { type: 'jump', position: 0 },
+    { item: { ...uploaded, id: 'i.other' }, playing: null }]) {
+    const before = loads.length;
+    await dispatch({ ...command, ...change }, 4);
+    assert.equal(events.at(-1).type, 'error');
+    assert.equal(loads.length, before);
+    assert.equal(state().index, 49_999, 'Invalid commands must not drain or replace the queue');
+  }
+  // Shrinking below the bulk boundary keeps the playing item and transport position.
+  await dispatch({ type: 'queue', items: [uploaded, uploaded], index: 0,
+    order: { upcoming: [1], manualCount: 0, context: [0, 1], history: [] } }, 5);
+  assert.equal(loads.length, 2);
+  assert.equal(state().queueLength, 2);
+  await dispatch({ type: 'select', index: 1, playing: true,
+    order: { upcoming: [], manualCount: 0, context: [0, 1], history: [0] } }, 6);
+  assert.equal(loads.length, 3);
+  assert.equal(state().index, 1);
+  await bridge.dispatch({ type: 'signOut' });
+  assert.equal(events.at(-1).type, 'signedOut');
+}
+
+async function checkCompactPlaybackFailuresKeepTheirIntent() {
+  const events = [];
+  const localMusic = { ...music, addEventListener: () => {},
+    setQueue: async () => { throw new Error('SECRET SDK failure'); } };
+  const context = { ...sandbox, window: { ...sandbox.window,
+    MusicKit: { ...sandbox.window.MusicKit, configure: async () => localMusic },
+    chrome: { webview: { postMessage: event => events.push(event) } }
+  } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), context);
+  const bridge = context.window.applifast;
+  await bridge.bootstrap({ developerToken: 'mock-only', session: 51 });
+  const command = { type: 'nativeQueue', item: { kind: 'library', id: 'i.upload',
+    playParams: { id: 'i.upload', isLibrary: true } }, index: 1000, length: 1001,
+    playing: true, seconds: null, shuffle: false, repeat: 0, generation: 47 };
+  await bridge.dispatch(command);
+  let failure = events.filter(event => event.type === 'error').at(-1);
+  assert.equal(failure.code, 'nativeQueue');
+  assert.equal(failure.session, 51);
+  assert.equal(failure.requestGeneration, 47, 'A failed initial large-context play must retain its intent');
+  assert(!JSON.stringify(failure).includes('SECRET'));
+  const nested = { ...command };
+  delete nested.generation;
+  await bridge.dispatch({ type: 'intent', generation: 48, command: nested });
+  failure = events.filter(event => event.type === 'error').at(-1);
+  assert.equal(failure.requestGeneration, 48);
+  assert.equal(events.filter(event => event.type === 'state').at(-1).queueLength, 1001);
+}
+
 async function checkApiFailures() {
   const events = [];
   let status;
@@ -285,6 +378,8 @@ async function checkAuthorizationCancellation() {
 }
 
 (async () => {
+  await checkCompactNativeQueue();
+  await checkCompactPlaybackFailuresKeepTheirIntent();
   await checkApiFailures();
   await checkNonCooperatingRequests();
   await checkSdkStartup();
