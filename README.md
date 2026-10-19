@@ -10,6 +10,8 @@ Spotifast downloads install a different product.
 
 See the [Windows beta checklist](docs/applifast/release-readiness.md) for the
 next private trial, current evidence and remaining public-release gates.
+The [prioritized roadmap](docs/applifast/roadmap.md) orders the remaining work
+toward a Windows beta and 1.0, starting with memory and listening reliability.
 The [source integration proposal](docs/applifast/integration.md) traces the Apple
 feature stack and PR #13's motion into the candidate targeting `main`.
 

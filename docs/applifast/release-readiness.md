@@ -1,5 +1,8 @@
 # Applifast Windows beta readiness
 
+The [prioritized roadmap](roadmap.md) orders P0 memory/reliability, P1 supported
+feature acceptance and P2 distribution. Every applicable gate below still applies.
+
 Snapshot: October 14, 2026. This is the release checklist, not a release claim.
 The `a15ba42` baseline (PR #53) fixes pending-authorization cancellation
 on top of paused restoration, full-track regressions, the SDK startup deadline
