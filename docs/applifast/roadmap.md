@@ -18,9 +18,10 @@ passing mocks and cross-platform compilation do not replace runtime acceptance.
 The minimal hidden page is [PR #69](https://github.com/jackkayser2005/applifast/pull/69).
 The [native investigation](native-memory.md) adds window-artwork and interrupted
 theme-reveal cleanup, plus an isolated font-storage prototype that saves about
-59 MiB of private memory in matched demo runs. The dependency prototype still
-needs its fork/pin and integration. Measured impact on the complete live player
-remains required. The family's `63d85dd` installer predates these changes.
+59 MiB of private memory in matched demo runs. A [credited upstream backport](font-memory.md)
+now has a maintainer-owned revision pin; app checks and package qualification
+remain separate from the initial prototype. Measured impact on the complete live
+player remains required. The family's `63d85dd` installer predates these changes.
 
 ## P1: verify the supported Apple experience
 

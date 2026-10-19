@@ -3,7 +3,7 @@
 The [prioritized roadmap](roadmap.md) orders P0 memory/reliability, P1 supported
 feature acceptance and P2 distribution. Every applicable gate below still applies.
 
-Snapshot: October 14, 2026. This is the release checklist, not a release claim.
+Snapshot: October 19, 2026. This is the release checklist, not a release claim.
 The `a15ba42` baseline (PR #53) fixes pending-authorization cancellation
 on top of paused restoration, full-track regressions, the SDK startup deadline
 and Favorites shortcut.
@@ -226,6 +226,11 @@ real-account and release checks; passing mocks alone does not close a row.
      oscilloscope, EQ and MilkDrop controls absent.
 
 8. **Reliability and gaming performance**
+   - The [font backport](font-memory.md) now has a maintainer-owned revision pin
+     and matched native demo measurements: 57 to 60 MiB less private memory and
+     57 to 62 MiB less resident memory across both themes and window sizes,
+     with identical screenshot pairs. It does not include the playback host;
+     full-player measurements and optimized package qualification remain open.
    - The [minimal playback host investigation](minimal-playback-host.md) removes
      a confirmed hidden duplicate library and diagnostic DOM work. A short
      read-only sample of the installed `63d85dd` baseline reaches 713.992 MiB
