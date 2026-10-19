@@ -60,6 +60,13 @@ try {
             $version=(Get-Item -LiteralPath $Binary).VersionInfo.FileVersion
             if(-not $version -or -not $build.Contains("File version: $version`n") -or $build.Contains('Inherited version: spotifast')){throw 'Packaged file version does not match its executable.'}
         } finally {$reader.Dispose()}
+        $reader=[IO.StreamReader]::new($archive.GetEntry('LICENSE').Open())
+        try {
+            $license=$reader.ReadToEnd()
+            foreach($notice in @('LICENSE','assets/fonts/Inter-LICENSE.txt','assets/fonts/NotoEmoji-LICENSE.txt','assets/icons/LICENSE.txt')){
+                if(-not $license.Contains((Get-Content -LiteralPath $notice -Raw))){throw ('Packaged license omits '+$notice)}
+            }
+        } finally {$reader.Dispose()}
         $reader=[IO.StreamReader]::new($archive.GetEntry('developer-token.txt').Open())
         try {if($reader.ReadToEnd().Trim() -ne $token){throw 'Packaged app token changed.'}}
         finally {$reader.Dispose()}

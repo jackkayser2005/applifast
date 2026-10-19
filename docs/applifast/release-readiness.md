@@ -278,6 +278,9 @@ real-account and release checks; passing mocks alone does not close a row.
      required visual approval. Keep approved appearance separate from test gates.
 
 10. **Documentation, privacy and security**
+    - [Package notices](package-notices.md) now retain the existing MIT,
+      bundled-font and icon texts in the installer/ZIP. A full dependency-notice
+      inventory remains part of release review.
     - [ ] Finalize install/sign-in, account/token renewal, storage/cache behavior,
       supported capabilities, WebView2 dependency and actionable troubleshooting.
     - [ ] Recheck ignored secret paths and tracked history before publishing.

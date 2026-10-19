@@ -55,7 +55,15 @@ try {
     if((Test-Path -LiteralPath $directory) -or (Test-Path -LiteralPath $zip) -or (Test-Path -LiteralPath $installer)){throw 'Package destination already exists.'}
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     Copy-Item -LiteralPath $Binary -Destination (Join-Path $directory 'Applifast.exe')
-    Copy-Item -LiteralPath 'LICENSE' -Destination (Join-Path $directory 'LICENSE')
+    $license=Get-Content -LiteralPath 'LICENSE' -Raw
+    foreach($notice in @(
+        @('Inter font','assets/fonts/Inter-LICENSE.txt'),
+        @('Noto Emoji font','assets/fonts/NotoEmoji-LICENSE.txt'),
+        @('Lucide icons','assets/icons/LICENSE.txt')
+    )){
+        $license+="`n`n$($notice[0])`n"+(Get-Content -LiteralPath $notice[1] -Raw)
+    }
+    [IO.File]::WriteAllText((Join-Path $directory 'LICENSE'),$license,[Text.UTF8Encoding]::new($false))
     Copy-Item -LiteralPath 'packaging/applifast-preview.txt' -Destination (Join-Path $directory 'README.txt')
     $guide=(Get-Content -LiteralPath 'docs/applifast/testing.md' -Raw).Replace('(listening-slice.md)',"(https://github.com/jackkayser2005/applifast/blob/$source/docs/applifast/listening-slice.md)").Replace('(windows-save-evidence.md)',"(https://github.com/jackkayser2005/applifast/blob/$source/docs/applifast/windows-save-evidence.md)")
     [IO.File]::WriteAllText((Join-Path $directory 'TESTING.md'),$guide,[Text.UTF8Encoding]::new($false))
