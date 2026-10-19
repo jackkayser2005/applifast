@@ -78,6 +78,19 @@ doctests, strict demo Rustdoc, demo/profiler builds, gettext and Node bridge/tok
 self-checks pass. The updated Nix vendor hash, hosted all-feature/platform/site
 checks and optimized package qualification remain required on the final source.
 
+The read-only embedded-host check also passes on application source `1eedaad`:
+100 typed library songs and ten catalog results in 3.929 seconds, navigation
+HTTP 200, with the minimal page's hash confirmed. It restores protected local
+authorization in a fresh owned profile and sends no audio, popup, sign-out or
+account-write commands. The Windows credential-store round trip separately
+passes using only its temporary dummy entry. Neither check proves fresh sign-in
+or audible playback on this candidate.
+
+The initial [Nix discovery job](https://github.com/jackkayser2005/applifast/actions/runs/39330041761)
+reports `sha256-DUDZPNu7M1yuGj0sCRRrb9F8EsFm4JiixbTyfMmmHsk=` for the updated
+vendor staging output. That measured value replaces the intentional fake hash;
+the full Nix build must pass on the resulting commit before merge.
+
 At runtime, no new network endpoint, credential access, settings format, application file,
 telemetry or audio cache is introduced. The family's `63d85dd` installer predates
 this change. The complete-player 250 MiB and CPU/gaming acceptance gates remain

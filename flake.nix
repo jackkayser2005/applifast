@@ -120,9 +120,7 @@
                 pname = "spotifast";
                 version = (pkgs.lib.importTOML ./Cargo.toml).package.version;
                 src = self;
-                # Discover the new fixed-output hash in Nix CI after the font pin.
-                # Replace this before merge; a fake hash intentionally cannot pass.
-                hash = pkgs.lib.fakeHash;
+                hash = "sha256-DUDZPNu7M1yuGj0sCRRrb9F8EsFm4JiixbTyfMmmHsk=";
               };
               # projectm-sys only searches lib, while CMake may otherwise install to lib64.
               postPatch = ''
