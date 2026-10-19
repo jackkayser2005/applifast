@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-19 11:50-0400\n"
+"POT-Creation-Date: 2026-10-19 18:23-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Spanish\n"
@@ -1609,7 +1609,7 @@ msgstr ""
 "Desactivado ignora las variables de entorno. Sistema las usa, junto con el "
 "proxy del sistema operativo en macOS y Windows."
 
-#: src/ui/settings.rs:1358 src/ui/login.rs:257
+#: src/ui/settings.rs:1358 src/ui/login.rs:262
 msgid "Apply settings"
 msgstr "Aplicar ajustes"
 
@@ -2726,7 +2726,13 @@ msgid "Proxy Settings"
 msgstr "Ajustes del proxy"
 
 #. Translators: {version} is the app's version number, such as 1.2.0.
-#: src/ui/login.rs:196
+#: src/ui/login.rs:197
+#, rust-format
+msgid "Applifast {version} • not affiliated with Apple"
+msgstr "Applifast {version} • sin relación con Apple"
+
+#. Translators: {version} is the app's version number, such as 1.2.0.
+#: src/ui/login.rs:200
 #, rust-format
 msgid "Applifast {version} • not affiliated with Spotify"
 msgstr "Applifast {version} • sin relación con Spotify"

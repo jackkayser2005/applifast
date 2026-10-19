@@ -148,6 +148,9 @@ The original eleven areas stay in scope. Implemented behavior still needs its
 real-account and release checks; passing mocks alone does not close a row.
 
 1. **Product identity and supported controls**
+   - The [sign-in footer correction](apple-sign-in-footer.md) names Apple in
+     Apple mode while retaining Spotify's disclaimer in the legacy mode. It
+     preserves the layout and does not close the full identity audit below.
    - [ ] Audit the final executable, window, mutex, installer/uninstaller,
      shortcuts/icons, storage, credential keys, browser profile and updater
      identity together. Preserve upstream credit and MIT licensing.
