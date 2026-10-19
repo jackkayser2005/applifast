@@ -940,6 +940,14 @@ fn restrict(webview: &ICoreWebView2, auth: bool) -> windows::core::Result<()> {
     Ok(())
 }
 
+fn playback_page(embedded: bool) -> &'static str {
+    if embedded {
+        include_str!("../web/host.html")
+    } else {
+        include_str!("../web/index.html")
+    }
+}
+
 fn host_loop(
     rx: mpsc::Receiver<HostCommand>,
     output: mpsc::Sender<Output>,
@@ -1005,7 +1013,7 @@ fn host_loop(
     let assets = data.join("assets");
     std::fs::create_dir_all(&assets)?;
     // Embedded assets keep installed builds independent of the source checkout.
-    std::fs::write(assets.join("index.html"), include_str!("../web/index.html"))?;
+    std::fs::write(assets.join("index.html"), playback_page(embedded))?;
     std::fs::write(assets.join("bridge.js"), include_str!("../web/bridge.js"))?;
     let folder = wide(&assets.to_string_lossy());
     if !self_check {
@@ -1679,5 +1687,20 @@ mod tests {
         assert_eq!(state["index"], 50_001);
         assert!(state.get("order").is_none());
         assert!(!state.to_string().contains("SECRET"));
+    }
+    #[test]
+    fn embedded_page_has_playback_scripts_without_diagnostic_library_controls() {
+        let page = playback_page(true);
+        assert!(page.contains("src=\"bridge.js\""));
+        assert!(page.contains("src=\"https://js-cdn.music.apple.com/musickit/v3/musickit.js\""));
+        assert!(
+            !page.contains("id=\"songs\""),
+            "The native host must not retain a second library list"
+        );
+        assert!(!page.contains("applifast-event"));
+        assert!(!page.contains("<button"));
+        let diagnostic = playback_page(false);
+        assert!(diagnostic.contains("id=\"songs\""));
+        assert!(diagnostic.contains("id=\"authorize\""));
     }
 }

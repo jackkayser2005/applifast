@@ -44,6 +44,62 @@ const app = sandbox.window.applifast;
 const emit = name => (listeners.get(name) || []).forEach(handler => handler());
 const lastState = () => messages.filter(event => event.type === 'state').at(-1);
 
+async function checkProductionPageDoesNotRetainDiagnosticRows() {
+  for (const [filename, expectedRows] of [['index.html', 1000], ['host.html', 0]]) {
+    const html = fs.readFileSync(path.join(__dirname, filename), 'utf8');
+    const ids = new Map(), documentListeners = new Map();
+    let allocations = 0, deliveredRows = 0;
+    const element = () => ({ children: [], append(child) { this.children.push(child); },
+      replaceChildren() { this.children = []; } });
+    for (const match of html.matchAll(/\bid="([^"]+)"/g)) ids.set(match[1], element());
+    const document = {
+      getElementById: id => {
+        assert(ids.has(id), `Missing ${id} in ${filename}`);
+        return ids.get(id);
+      },
+      createElement: () => { allocations++; return element(); },
+      addEventListener: (name, handler) => {
+        if (!documentListeners.has(name)) documentListeners.set(name, []);
+        documentListeners.get(name).push(handler);
+      },
+      dispatchEvent: event => (documentListeners.get(event.name) || []).forEach(handler => handler(event))
+    };
+    const rows = Array.from({ length: 100 }, (_, at) => ({ id: `i.test${at}`, attributes: {
+      name: `Test ${at}`, artistName: 'Example', albumName: 'Example', durationInMillis: 180000,
+      playParams: { id: `i.test${at}`, kind: 'song', isLibrary: true }
+    } }));
+    const localMusic = { ...music, addEventListener: () => {},
+      api: { music: async () => ({ data: { data: rows, next: null } }) } };
+    const context = { ...sandbox, document,
+      CustomEvent: class { constructor(name, properties) { this.name = name; Object.assign(this, properties); } },
+      window: { ...sandbox.window,
+        MusicKit: { ...sandbox.window.MusicKit, configure: async () => localMusic },
+        chrome: { webview: { postMessage: event => {
+          if (event.type === 'library') deliveredRows += event.items.length;
+        } } }
+      }
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), context);
+    for (const script of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) {
+      if (!script[1].includes('src=')) vm.runInNewContext(script[2], context);
+    }
+    const bridge = context.window.applifast;
+    await bridge.bootstrap({ developerToken: 'mock-only', session: 71 });
+    for (let page = 0; page < 10; page++) await bridge.dispatch({ type: 'library', next: null });
+    assert.equal(deliveredRows, 1000, `${filename} must keep native library delivery`);
+    assert.equal(ids.get('songs')?.children.length || 0, expectedRows);
+    if (filename === 'host.html') {
+      assert.equal(allocations, 0, 'The production page must not build diagnostic song DOM');
+      assert.equal(documentListeners.get('applifast-event')?.length || 0, 0);
+      const sources = Array.from(html.matchAll(/<script[^>]*src="([^"]+)"/g), match => match[1]);
+      assert.deepEqual(sources, ['bridge.js', 'https://js-cdn.music.apple.com/musickit/v3/musickit.js']);
+    } else {
+      assert.equal(allocations, 11000, 'The diagnostic comparison rebuilds its growing list');
+    }
+  }
+  console.log('Playback page fixture passed: 1,000 native rows delivered without diagnostic DOM; probe comparison retains 1,000 rows and allocates 11,000 nodes.');
+}
+
 async function checkCompactNativeQueue() {
   const events = [], loads = [], localListeners = new Map(), seeks = [];
   const localMusic = { ...music, playbackState: 2,
@@ -378,6 +434,7 @@ async function checkAuthorizationCancellation() {
 }
 
 (async () => {
+  await checkProductionPageDoesNotRetainDiagnosticRows();
   await checkCompactNativeQueue();
   await checkCompactPlaybackFailuresKeepTheirIntent();
   await checkApiFailures();

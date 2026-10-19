@@ -86,6 +86,12 @@ current song to the playback host for larger queues. The existing 32 MiB session
 file bound remains. See [large contexts](docs/applifast/large-listening-contexts.md)
 for validation status and remaining limits.
 
+The native Windows app now uses a minimal playback document instead of keeping
+the diagnostic probe's song list and controls hidden in its renderer. The
+standalone probe retains those controls. See the [playback host investigation](docs/applifast/minimal-playback-host.md)
+for the regression and memory measurements; a measured RAM reduction remains
+to be established.
+
 Failed Apple library reads now keep cached songs visible with specific recovery
 guidance and a Retry action. Rejected credentials point to Settings > Account;
 rate limits and service failures ask you to wait. Stalled reads release after
