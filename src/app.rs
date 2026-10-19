@@ -1005,6 +1005,7 @@ impl App {
         ctx.add_bytes_loader(std::sync::Arc::new(self.backend.art().clone()));
         ctx.set_theme(self.theme_preference());
         self.applied_dark = None;
+        self.theme_transition = Default::default();
         self.winamp.forget_textures();
         // Texture IDs and pending artwork completions belong to the old window.
         self.lyrics_backdrop = Default::default();
@@ -1095,7 +1096,11 @@ impl App {
         // The Winamp window went with it; it comes back where it was.
         self.winamp.remember_position();
         self.winamp.forget_textures();
+        // These textures and queued results belong to the window that closed.
+        self.lyrics_backdrop = Default::default();
+        self.softened_covers = Default::default();
         self.window_hidden = true;
+        self.theme_transition = Default::default();
         self.hide_intent = false;
         self.wants_show = false;
     }
@@ -24141,6 +24146,68 @@ mod tests {
         );
         drop(restored);
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn closed_or_recreated_windows_release_an_in_progress_theme_reveal() {
+        for close_first in [false, true] {
+            let mut app = headless_app();
+            let ctx = egui::Context::default();
+            let mut requested = ctx.run_ui(
+                egui::RawInput {
+                    time: Some(0.0),
+                    ..Default::default()
+                },
+                |ui| app.theme_transition.begin(ui.ctx()),
+            );
+            let marker = requested.viewport_output[&egui::ViewportId::ROOT]
+                .commands
+                .iter()
+                .find_map(|command| {
+                    if let egui::ViewportCommand::Screenshot(marker) = command {
+                        Some(marker.clone())
+                    } else {
+                        None
+                    }
+                })
+                .expect("theme screenshot request");
+            requested.textures_delta.clear();
+            let mut captured = ctx.run_ui(
+                egui::RawInput {
+                    time: Some(0.05),
+                    events: vec![egui::Event::Screenshot {
+                        viewport_id: egui::ViewportId::ROOT,
+                        user_data: marker,
+                        image: std::sync::Arc::new(egui::ColorImage::filled(
+                            [128, 128],
+                            egui::Color32::RED,
+                        )),
+                    }],
+                    ..Default::default()
+                },
+                |ui| {
+                    assert!(!app.theme_transition.holding(ui.ctx()));
+                },
+            );
+            captured.textures_delta.clear();
+            assert!(app.theme_transition.active());
+            let manager = std::sync::Arc::downgrade(&ctx.tex_manager());
+            drop(ctx);
+            assert!(manager.upgrade().is_some(), "the reveal owns its texture");
+            if close_first {
+                app.window_gone();
+            } else {
+                app.attach(&egui::Context::default());
+            }
+            assert!(
+                !app.theme_transition.active(),
+                "a retired window's reveal must end"
+            );
+            assert!(
+                manager.upgrade().is_none(),
+                "the old texture manager must be released"
+            );
+        }
     }
 
     #[test]

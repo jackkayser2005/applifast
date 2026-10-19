@@ -17,6 +17,22 @@ network destination is introduced.
 
 ## Regression and acceptance
 
+The close-to-tray follow-up also resets backdrop and softened-cover ownership in
+`App::window_gone`, immediately after the skin texture cleanup. Previously the
+old manager and pending artwork results remained owned until a later attachment.
+An additional regression fails before this change and passes afterward: dropping
+the closing context releases its texture manager and disconnects old completion
+channels before another window opens. The existing repeated-attachment regression
+remains in place. This adds no account, queue, playback or persistent-state reset.
+Actual native window recreation and measured process-memory savings remain
+separate acceptance gates.
+
+An interrupted theme reveal also owns a screenshot texture. Its new regression
+arms a real transition through egui screenshot request/response events, drops
+the old context, and reproduces retained transition ownership before the fix.
+Both close and attachment now cancel that window's reveal and release its
+manager. This does not remove ordinary theme animations from a live window.
+
 The regression first fails because the old texture manager is still alive
 after window recreation. It passes with the fix across repeated main/mini-player
 attachments, checking real egui texture handles and a weak reference to the old

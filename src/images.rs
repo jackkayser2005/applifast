@@ -1101,8 +1101,19 @@ mod tests {
 
     #[test]
     fn recreated_windows_release_artwork_and_reject_old_completions() {
-        let root =
-            std::env::temp_dir().join(format!("applifast-window-artwork-{}", std::process::id()));
+        check_window_artwork_release(false);
+    }
+
+    #[test]
+    fn closing_to_tray_releases_artwork_before_another_window_opens() {
+        check_window_artwork_release(true);
+    }
+
+    fn check_window_artwork_release(close_before_reopen: bool) {
+        let root = std::env::temp_dir().join(format!(
+            "applifast-window-artwork-{}-{close_before_reopen}",
+            std::process::id()
+        ));
         let mut app = crate::app::App::new(
             &crate::backend::Waker::default(),
             crate::paths::AppDirs {
@@ -1142,6 +1153,24 @@ mod tests {
             app.softened_covers.failed.insert("failed".into());
 
             ctx = egui::Context::default();
+            if close_before_reopen {
+                app.window_gone();
+                assert!(app.window_hidden);
+                assert!(
+                    old_manager.upgrade().is_none(),
+                    "closing to the tray must release artwork without waiting for reopen"
+                );
+                assert!(
+                    old_backdrop_tx
+                        .send(Ok(Some(softened_test_image())))
+                        .is_err()
+                );
+                assert!(
+                    old_cover_tx
+                        .send(("late".into(), Some(softened_test_image())))
+                        .is_err()
+                );
+            }
             app.settings.winamp_window = mini;
             app.attach(&ctx);
 
