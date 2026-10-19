@@ -30,7 +30,11 @@ The counters exclude allocator overhead, memory-mapped files, native driver/GPU
 allocations and every WebView2 helper. Compare them with OS private bytes and
 working set, rather than treating them as total application memory.
 
-## Font prototype, not integrated
+## Initial font prototype
+
+These results describe the initial API-compatible prototype. The subsequent
+[credited upstream backport](font-memory.md) supersedes it for app integration;
+its measurements and package qualification are separate.
 
 The existing `fastframe-fonts` Windows fallback cache retains selected font
 files as owned byte vectors for every later window. The selected payload on

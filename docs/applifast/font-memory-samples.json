@@ -1,0 +1,143 @@
+{
+  "scope": "Isolated native debug demo; no Apple host, account or audio; twelve-second runs; medians from 5 to 11.5 seconds; not gaming-budget acceptance",
+  "provenance": {
+    "SourceBase": "5eb1f2f5bbfa0f6b78f3c86f40915ec8d803e9b3",
+    "ManifestSHA256": "bbf1ede6e850ebf676a54d4569c2d3a39acf1f5565656e7eb3bb906d982ca0b1",
+    "LockSHA256": "bec58341b0f568501d32503ace94cbb0f62b7ad6985c68b9599d60c6e26d3b2c",
+    "DependencyRevision": "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87",
+    "BaselineSHA256": "96e6da1fbe8d9fb34cb40f4794045e7f311c93021e0dc0f9df376b149a5c0094",
+    "CandidateSHA256": "f25070e9feab740ee7eb60b5a9e669f4bf20fbb9840433b5f14ed3b0d89f2ec1"
+  },
+  "samples": [
+    {
+      "phase": "before",
+      "theme": "dark",
+      "size": "1100x760",
+      "binary_sha256": "96e6da1fbe8d9fb34cb40f4794045e7f311c93021e0dc0f9df376b149a5c0094",
+      "report_sha256": "a5bd84e09567ff40d17f1deb241d349dacb32f7ac1fd83b241b5a47edb9983b6",
+      "median_private_mib": 172.90625,
+      "median_resident_mib": 174.51953125,
+      "median_rust_heap_mib": 69.79187393188477,
+      "peak_rust_heap_mib": 75.5286283493042,
+      "private_working_set_mib": 122.13671875,
+      "private_working_set_at_seconds": 6.9986858
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "size": "1100x760",
+      "binary_sha256": "f25070e9feab740ee7eb60b5a9e669f4bf20fbb9840433b5f14ed3b0d89f2ec1",
+      "report_sha256": "72450271f0eeb7d7012d7f8473321b1a9ee6c5ee6aa7259b18ad71fbaef87b79",
+      "median_private_mib": 115.63671875,
+      "median_resident_mib": 117.10546875,
+      "median_rust_heap_mib": 11.783653259277344,
+      "peak_rust_heap_mib": 16.68595314025879,
+      "private_working_set_mib": 65.20703125,
+      "private_working_set_at_seconds": 5.4762694
+    },
+    {
+      "phase": "before",
+      "theme": "dark",
+      "size": "760x760",
+      "binary_sha256": "96e6da1fbe8d9fb34cb40f4794045e7f311c93021e0dc0f9df376b149a5c0094",
+      "report_sha256": "66a394df80a692412329f378817ed11f34682db160bc9760795fa554a6801d68",
+      "median_private_mib": 175.1953125,
+      "median_resident_mib": 179.55078125,
+      "median_rust_heap_mib": 71.64878559112549,
+      "peak_rust_heap_mib": 74.68832588195801,
+      "private_working_set_mib": 125.109375,
+      "private_working_set_at_seconds": 5.4770521
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "size": "760x760",
+      "binary_sha256": "f25070e9feab740ee7eb60b5a9e669f4bf20fbb9840433b5f14ed3b0d89f2ec1",
+      "report_sha256": "401e04cf649312717f3eb9c8ffa42e6b9c41a8b6823ae2996732897162d77e47",
+      "median_private_mib": 117.3046875,
+      "median_resident_mib": 118.640625,
+      "median_rust_heap_mib": 13.345178604125977,
+      "peak_rust_heap_mib": 19.414182662963867,
+      "private_working_set_mib": 66.6015625,
+      "private_working_set_at_seconds": 5.5050394
+    },
+    {
+      "phase": "before",
+      "theme": "light",
+      "size": "1100x760",
+      "binary_sha256": "96e6da1fbe8d9fb34cb40f4794045e7f311c93021e0dc0f9df376b149a5c0094",
+      "report_sha256": "94997fb99357ff84e3b7f147bfa943e2484ac5e11feb44c0f62e2cd8cccf7696",
+      "median_private_mib": 174.5390625,
+      "median_resident_mib": 174.29296875,
+      "median_rust_heap_mib": 69.95479106903076,
+      "peak_rust_heap_mib": 75.52880096435547,
+      "private_working_set_mib": 123.08984375,
+      "private_working_set_at_seconds": 5.5134003
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "size": "1100x760",
+      "binary_sha256": "f25070e9feab740ee7eb60b5a9e669f4bf20fbb9840433b5f14ed3b0d89f2ec1",
+      "report_sha256": "f6ec26abc767a570299e46445b91ca1a0c1e7aa61fd96ec6e7c4cfdd2bd555c3",
+      "median_private_mib": 116.44921875,
+      "median_resident_mib": 116.94921875,
+      "median_rust_heap_mib": 11.783236503601074,
+      "peak_rust_heap_mib": 17.52189540863037,
+      "private_working_set_mib": 65.0625,
+      "private_working_set_at_seconds": 5.4878627
+    },
+    {
+      "phase": "before",
+      "theme": "light",
+      "size": "760x760",
+      "binary_sha256": "96e6da1fbe8d9fb34cb40f4794045e7f311c93021e0dc0f9df376b149a5c0094",
+      "report_sha256": "1b8677b275c74168913f6c63fb0cb19395edc8bfee93ceae4ba883669d10b624",
+      "median_private_mib": 175.33984375,
+      "median_resident_mib": 179.9140625,
+      "median_rust_heap_mib": 71.48365688323975,
+      "peak_rust_heap_mib": 74.91487407684326,
+      "private_working_set_mib": 125.21875,
+      "private_working_set_at_seconds": 5.5265276
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "size": "760x760",
+      "binary_sha256": "f25070e9feab740ee7eb60b5a9e669f4bf20fbb9840433b5f14ed3b0d89f2ec1",
+      "report_sha256": "652db94f9485286e95fdad58d7f20d830ebadf2d307b21c20f3a75c1934b63a3",
+      "median_private_mib": 115.67578125,
+      "median_resident_mib": 118.39453125,
+      "median_rust_heap_mib": 13.343766212463379,
+      "peak_rust_heap_mib": 19.383706092834473,
+      "private_working_set_mib": 66.53515625,
+      "private_working_set_at_seconds": 5.5230551
+    }
+  ],
+  "comparisons": [
+    {
+      "theme": "dark",
+      "size": "1100x760",
+      "changed_pixels": 0,
+      "bounding_box": null
+    },
+    {
+      "theme": "dark",
+      "size": "760x760",
+      "changed_pixels": 0,
+      "bounding_box": null
+    },
+    {
+      "theme": "light",
+      "size": "1100x760",
+      "changed_pixels": 0,
+      "bounding_box": null
+    },
+    {
+      "theme": "light",
+      "size": "760x760",
+      "changed_pixels": 0,
+      "bounding_box": null
+    }
+  ]
+}
