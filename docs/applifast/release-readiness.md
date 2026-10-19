@@ -34,6 +34,11 @@ for scope, evidence and the remaining integration gates.
 
 ## Next private trial: Dad's PC
 
+The maintainer reports sending the `63d85dd` installer for the first family
+trial. Installation, fresh Apple authorization and listening on that PC remain
+unverified until the tester reports back. This preview's bundled app token
+expires November 6, 2026; plan renewal before asking testers to keep using it.
+
 The next handoff is an invited Windows x64 preview. A tester needs an Apple
 Music subscription, network access and WebView2 Evergreen. The package supplies
 the app developer token; the tester authorizes their own Apple account. They
@@ -218,6 +223,13 @@ real-account and release checks; passing mocks alone does not close a row.
      oscilloscope, EQ and MilkDrop controls absent.
 
 8. **Reliability and gaming performance**
+   - The [minimal playback host investigation](minimal-playback-host.md) removes
+     a confirmed hidden duplicate library and diagnostic DOM work. A short
+     read-only sample of the installed `63d85dd` baseline reaches 713.992 MiB
+     aggregate private memory, with the native process contributing 419.301 MiB
+     at that peak. The page fix still needs live candidate playback and measured
+     savings; native allocations require investigation too. Neither this sample
+     nor the deterministic DOM regression passes the resource gate.
    - A second [uncontrolled integrated sample](integrated-performance.md#october-15-latest-installed-integration-preview)
      on the installed `64db4c3` preview reaches 503.637 MiB private memory,
      including 210.965 MiB native and 292.672 MiB across eight WebView2 processes
