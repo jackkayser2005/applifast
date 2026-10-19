@@ -1586,6 +1586,87 @@ mod tests {
     }
     #[cfg(windows)]
     #[test]
+    #[ignore = "Reads library and catalog metadata using local authorization, without audio or account writes"]
+    fn native_embedded_host_reads_library_and_catalog_without_playback() {
+        let (sender, events) = std::sync::mpsc::channel();
+        let host = crate::player::AppleHost::start(None, move |event| {
+            let _ = sender.send(event);
+        });
+        let result = || {
+            let await_event = |kind: &str, id: Option<u64>| -> Value {
+                let deadline = Instant::now() + std::time::Duration::from_secs(45);
+                loop {
+                    let event = events
+                        .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                        .unwrap_or_else(|_| panic!("Read-only host timed out awaiting {kind}"));
+                    if event["type"] == "pageLoaded" {
+                        eprintln!(
+                            "Read-only page: success={}, status={}, HTTP={}",
+                            event["success"], event["errorStatus"], event["httpStatus"]
+                        );
+                    }
+                    assert_ne!(
+                        event["type"], "error",
+                        "Read-only host failed awaiting {kind}; HTTP {}",
+                        event["httpStatus"]
+                    );
+                    if event["type"] == kind && id.is_none_or(|id| event["id"] == id) {
+                        return event;
+                    }
+                }
+            };
+            let ready = await_event("ready", None);
+            assert_eq!(ready["authorized"], true, "Local authorization is required");
+            let storefront = ready["storefront"].as_str().expect("a storefront");
+            assert!(
+                storefront.len() == 2 && storefront.bytes().all(|byte| byte.is_ascii_lowercase())
+            );
+
+            host.send(json!({"type":"library","id":9000,"next":null}).to_string());
+            let library = await_event("library", Some(9000));
+            assert!(
+                library["error"].is_null(),
+                "Read-only library request failed"
+            );
+            let songs: Vec<Song> = serde_json::from_value(library["items"].clone()).unwrap();
+            assert!(
+                !songs.is_empty(),
+                "This account check needs a populated library"
+            );
+            assert!(songs.iter().all(|song| {
+                song.item.kind == applifast_playback_probe::protocol::ItemKind::Library
+                    && !song.item.id.is_empty()
+            }));
+
+            let path = format!("/v1/catalog/{storefront}/search?term=Bonobo&types=songs&limit=10");
+            host.send(json!({"type":"request","id":9001,"path":path}).to_string());
+            let catalog = await_event("response", Some(9001));
+            assert!(
+                catalog["error"].is_null(),
+                "Read-only catalog request failed"
+            );
+            let rows = catalog["data"]["results"]["songs"]["data"]
+                .as_array()
+                .expect("catalog songs");
+            assert!(!rows.is_empty(), "Catalog search returned no songs");
+            assert!(rows.iter().all(|row| {
+                row["type"] == "songs" && row["id"].as_str().is_some_and(|id| !id.is_empty())
+            }));
+            eprintln!(
+                "Read-only embedded host: {} library songs, {} catalog songs; no audio or account writes",
+                songs.len(),
+                rows.len()
+            );
+        };
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(result));
+        host.shutdown();
+        if let Err(failure) = outcome {
+            std::panic::resume_unwind(failure);
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
     #[ignore = "Uses local authorization to re-add two already-confirmed favorites without playing audio"]
     fn native_host_readds_confirmed_catalog_and_library_favorites() {
         let (sender, events) = std::sync::mpsc::channel();

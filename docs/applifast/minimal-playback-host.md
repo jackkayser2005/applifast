@@ -64,10 +64,16 @@ alone reaches the 250 MiB aggregate target.
   25 tests, with its native dummy credential-store round trip ignored.
 - All seven hosted jobs pass on the preceding `63d85dd` source. They do not
   validate this follow-up. Its own hosted checks remain required.
-- The current private installer predates this page change. Real Apple sign-in,
-  restored authorization, library delivery, playback/seek/queue behavior and
-  memory measurement on the minimal document remain required before a new
-  qualified preview. The maintainer's running player was not interrupted.
+- An opt-in Windows read-only check now starts the actual embedded `AppleHost`
+  in a fresh owned profile while the installed player remains untouched. It
+  restores protected authorization and receives 100 typed library songs and
+  ten catalog search results in 3.640 seconds. Navigation reports HTTP 200;
+  the written page matches the minimal document's SHA256. It sends only two
+  metadata commands and shutdown, with no popup, audio, sign-out or account
+  mutation. This does not establish fresh sign-in or playback acceptance.
+- The current private installer predates this page change. Fresh Apple sign-in,
+  playback/seek/queue behavior and memory measurement on the minimal document
+  remain required before a new qualified preview.
 
 Repeat the existing two-minute warm-up and five-minute minimized playing/paused
 samples on the candidate, including all associated processes. Compare equivalent
@@ -83,3 +89,26 @@ and native command/event channels remain unchanged. It still loads Apple's
 official SDK from `js-cdn.music.apple.com`; no new endpoint, dependency,
 settings format, telemetry or audio persistence is added. The page does not
 change MusicKit's own queue or internal caches.
+
+## Read-only native evidence
+
+`apple::tests::native_embedded_host_reads_library_and_catalog_without_playback`
+is opt-in and requires existing protected local authorization and a populated
+library. It starts the same embedded host as the app, validates resource types
+and nonempty IDs, and shuts the host down even after a failed assertion. It
+prints navigation status and row counts, never account metadata or credentials.
+For concurrent use, launch the test process with a fresh, explicitly owned
+`LOCALAPPDATA` directory so it cannot compete for the normal browser profile.
+The ordinary test suite leaves this account check ignored.
+
+The successful check uses application base `dc9bedf` with the added test source
+SHA256 `19921fdb4524878fe72d9d726a896eb0f8def427df6447aa5b9527af8a20b796`.
+Its test executable has SHA256
+`6b678a11ffdd3f11f63345ff53f81657a8f6a4fa36e795053c3f5b9c1a87e244`,
+and the served page has SHA256
+`1f7bb863179520457d3ec4d8cda76a743e830fcc9a394467a6809af29dfed9aa`.
+The raw result has SHA256
+`21cb6e26bed33dbb7e1d13b95f570a68d7b691bd94fae1ba257cfaa383faca2b`
+and records source, hashes, duration and scope. The isolated profile was removed
+after its associated processes exited; the existing installed player remained
+running. Browser data is not an evidence artifact or distributable.
