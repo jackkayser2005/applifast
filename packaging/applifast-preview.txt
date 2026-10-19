@@ -21,6 +21,7 @@ an Apple Music subscription and an unexpired developer token. It is a developmen
 preview, not a public release. Command help and --version identify applifast;
 BUILD.txt records the executable's file version and source revision.
 The app uses separate Applifast settings and Windows Credential Manager entries.
+LICENSE includes the app's MIT credit and the bundled font and icon notices.
 
 Try restart restoration: play a song, add a few queue entries (including a
 repeat), seek, then Quit from the tray. Reopen: the loaded song library, exact
