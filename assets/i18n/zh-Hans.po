@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-19 11:50-0400\n"
+"POT-Creation-Date: 2026-10-19 18:23-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -1550,7 +1550,7 @@ msgstr ""
 "“关闭”会忽略环境变量。“系统”会使用环境变量，在 macOS 和 Windows 上还会使用操"
 "作系统代理。"
 
-#: src/ui/settings.rs:1358 src/ui/login.rs:257
+#: src/ui/settings.rs:1358 src/ui/login.rs:262
 msgid "Apply settings"
 msgstr "应用设置"
 
@@ -2621,7 +2621,13 @@ msgid "Proxy Settings"
 msgstr "代理设置"
 
 #. Translators: {version} is the app's version number, such as 1.2.0.
-#: src/ui/login.rs:196
+#: src/ui/login.rs:197
+#, rust-format
+msgid "Applifast {version} • not affiliated with Apple"
+msgstr "Applifast {version} • 与 Apple 无关"
+
+#. Translators: {version} is the app's version number, such as 1.2.0.
+#: src/ui/login.rs:200
 #, rust-format
 msgid "Applifast {version} • not affiliated with Spotify"
 msgstr "Applifast {version} • 与 Spotify 无关"
