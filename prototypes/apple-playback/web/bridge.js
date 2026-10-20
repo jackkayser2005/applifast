@@ -317,6 +317,9 @@
           return { kind: 'library', id: resource.id, title: a.name || '', artist: a.artistName || '',
             album: a.albumName || '', durationMs: number(a.durationInMillis), playParams: p,
             artwork: a.artwork?.url?.replace('{w}', '640').replace('{h}', '640') || null,
+            artworkSmall: a.artwork?.url?.includes('{w}') && a.artwork.url.includes('{h}')
+              ? { url: a.artwork.url.replace('{w}', '160').replace('{h}', '160'), width: 160, height: 160 }
+              : null,
             albumId: resource.relationships?.albums?.data?.[0]?.id ? `library.${resource.relationships.albums.data[0].id}` : null,
             artistId: resource.relationships?.artists?.data?.[0]?.id ? `library.${resource.relationships.artists.data[0].id}` : null,
             catalogId: p && p.catalogId || null,

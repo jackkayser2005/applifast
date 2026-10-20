@@ -1,0 +1,31 @@
+{
+  "SourceBase": "864c17e5092e73b4fd8bf8459b642ba074ead691",
+  "TestSourceSHA256": "18b68516da7a83d16dcb0f984fe486247b0c0c85eaece2ec342b9f7d52f3f0e6",
+  "ManifestSHA256": "bbf1ede6e850ebf676a54d4569c2d3a39acf1f5565656e7eb3bb906d982ca0b1",
+  "LockSHA256": "bec58341b0f568501d32503ace94cbb0f62b7ad6985c68b9599d60c6e26d3b2c",
+  "DependencyRevision": "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87",
+  "BinarySHA256": "fee731d1685447b80fcc89a5932e7cccaa0c45930a89fce6ba278e8269e3ed62",
+  "Exit": 0,
+  "TimedOut": false,
+  "Seconds": 3.064,
+  "EmbeddedPageMatches": true,
+  "EmbeddedBridgeMatches": true,
+  "ModelsSourceSHA256": "a40ab4e8e3aeedc6102e5e7ce2b9c527ec239bcc971e30fa3002464bca7cb738",
+  "BridgeSourceSHA256": "17fb66e6dd407410166ffd4435b7744d71ce2d53d4022e44421d0d8811514a82",
+  "HostPageSHA256": "1f7bb863179520457d3ec4d8cda76a743e830fcc9a394467a6809af29dfed9aa",
+  "Mode": "Read-only library, catalog and public catalog artwork dimensions; fresh owned profile; protected local authorization; no audio, sign-out, popup or account mutation commands",
+  "ArtworkResponses": [
+    {
+      "Width": 640,
+      "Height": 640,
+      "EncodedBytes": 118170
+    },
+    {
+      "Width": 160,
+      "Height": 160,
+      "EncodedBytes": 9845
+    }
+  ],
+  "LibrarySmallArtworkCount": 0,
+  "Scope": "Metadata route only: 100 library songs, zero small library variants, ten catalog songs; local fixed-artwork thumbnails remain open; no full-player resource acceptance"
+}
