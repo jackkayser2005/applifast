@@ -1404,6 +1404,162 @@ fn host_loop(
 mod tests {
     use super::*;
     #[test]
+    #[ignore = "Requires WebView2 and APPLIFAST_PROFILE_CLEAR_TEST_DIR pointing to an empty disposable directory"]
+    fn native_profile_cookie_clear_round_trip() -> Result<(), Box<dyn std::error::Error>> {
+        fn cookies(
+            manager: &ICoreWebView2CookieManager,
+            deadline: Instant,
+        ) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
+            let (tx, rx) = mpsc::channel();
+            let completed = GetCookiesCompletedHandler::create(Box::new(move |result, list| {
+                let _ = tx
+                    .send(result.and_then(|()| list.ok_or_else(windows::core::Error::from_thread)));
+                Ok(())
+            }));
+            unsafe {
+                manager.GetCookies(PCWSTR::null(), &completed)?;
+                let list = wait_for_setup(rx, deadline)??;
+                let mut count = 0;
+                list.Count(&mut count)?;
+                let mut rows = Vec::new();
+                for index in 0..count {
+                    let cookie = list.GetValueAtIndex(index)?;
+                    rows.push((
+                        com_string(|out| cookie.Name(out))?,
+                        com_string(|out| cookie.Value(out))?,
+                    ));
+                }
+                rows.sort();
+                Ok(rows)
+            }
+        }
+        fn clear(
+            profile: &ICoreWebView2Profile2,
+            all: bool,
+            deadline: Instant,
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            let (output, events) = mpsc::channel();
+            let (tx, rx) = mpsc::channel();
+            let completed = ClearBrowsingDataCompletedHandler::create(Box::new(move |result| {
+                let _ = tx.send(result.clone());
+                profile_clear_completed(result, &output)
+            }));
+            unsafe {
+                if all {
+                    profile.ClearBrowsingDataAll(&completed)?;
+                } else {
+                    profile.ClearBrowsingData(
+                        COREWEBVIEW2_BROWSING_DATA_KINDS_DISK_CACHE,
+                        &completed,
+                    )?;
+                }
+            }
+            wait_for_setup(rx, deadline)??;
+            assert!(matches!(events.try_recv(), Ok(Output::Diagnostic(value))
+                if value == json!({"type":"profileCleared","success":true})));
+            assert!(events.try_recv().is_err());
+            Ok(())
+        }
+        let path = PathBuf::from(
+            std::env::var_os("APPLIFAST_PROFILE_CLEAR_TEST_DIR")
+                .ok_or("Use test-profile-clear.ps1 to provide a fresh disposable directory.")?,
+        );
+        if !path.is_absolute() {
+            return Err(
+                "The profile-clear fixture requires an absolute disposable directory.".into(),
+            );
+        }
+        if path.read_dir()?.next().is_some() {
+            return Err("The profile-clear fixture requires an empty disposable directory.".into());
+        }
+        unsafe {
+            CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok()?;
+        }
+        let _apartment = NativeApartment;
+        let deadline = Instant::now() + NATIVE_SETUP_TIMEOUT;
+        let (tx, rx) = mpsc::channel();
+        let completed = CreateCoreWebView2EnvironmentCompletedHandler::create(Box::new(
+            move |result, environment| {
+                let _ = tx.send(
+                    result.and_then(|()| environment.ok_or_else(windows::core::Error::from_thread)),
+                );
+                Ok(())
+            },
+        ));
+        let folder = wide(&path.to_string_lossy());
+        unsafe {
+            CreateCoreWebView2EnvironmentWithOptions(
+                PCWSTR::null(),
+                PCWSTR(folder.as_ptr()),
+                None,
+                &completed,
+            )?;
+        }
+        let environment = wait_for_setup(rx, deadline)??;
+        let window = NativeWindow(Some(unsafe { create_window()? }));
+        let controller = controller(&environment, window.0.unwrap(), deadline)?;
+        let view = unsafe { controller.CoreWebView2()? };
+        let manager = unsafe { view.cast::<ICoreWebView2_2>()?.CookieManager()? };
+        let profile = unsafe {
+            view.cast::<ICoreWebView2_13>()?
+                .Profile()?
+                .cast::<ICoreWebView2Profile2>()?
+        };
+        assert!(cookies(&manager, deadline)?.is_empty());
+        for (name, domain, persistent) in [
+            ("fixture-session", "applifast.invalid", false),
+            ("fixture-persistent", "account-fixture.invalid", true),
+        ] {
+            let name = wide(name);
+            let domain = wide(domain);
+            unsafe {
+                let cookie = manager.CreateCookie(
+                    PCWSTR(name.as_ptr()),
+                    w!("synthetic-only"),
+                    PCWSTR(domain.as_ptr()),
+                    w!("/"),
+                )?;
+                cookie.SetIsSecure(true)?;
+                cookie.SetIsHttpOnly(true)?;
+                if persistent {
+                    cookie.SetExpires(4_102_444_800.0)?;
+                }
+                manager.AddOrUpdateCookie(&cookie)?;
+            }
+        }
+        let expected = vec![
+            ("fixture-persistent".into(), "synthetic-only".into()),
+            ("fixture-session".into(), "synthetic-only".into()),
+        ];
+        assert_eq!(cookies(&manager, deadline)?, expected);
+        clear(&profile, false, deadline)?;
+        assert_eq!(
+            cookies(&manager, deadline)?,
+            expected,
+            "Disk-cache clearing must not masquerade as account cleanup."
+        );
+        clear(&profile, true, deadline)?;
+        assert!(cookies(&manager, deadline)?.is_empty());
+        unsafe {
+            let fresh = manager.CreateCookie(
+                w!("fixture-after-clear"),
+                w!("synthetic-only"),
+                w!("applifast.invalid"),
+                w!("/"),
+            )?;
+            manager.AddOrUpdateCookie(&fresh)?;
+        }
+        assert_eq!(cookies(&manager, deadline)?.len(), 1);
+        clear(&profile, true, deadline)?;
+        assert!(cookies(&manager, deadline)?.is_empty());
+        let version = unsafe { com_string(|out| environment.BrowserVersionString(out))? };
+        println!(
+            "Native profile cookie check passed: seeded=2; cache-only=2; complete-clear=0; reused=1; repeated-clear=0; runtime={version}"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn profile_clear_failure_reaches_the_host_error_path_without_native_details() {
         let (output, events) = mpsc::channel();
         let native_error = windows::core::Error::new(

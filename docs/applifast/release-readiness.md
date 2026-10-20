@@ -172,6 +172,11 @@ real-account and release checks; passing mocks alone does not close a row.
      compilation/test results do not establish Apple playback support.
 
 2. **Sign-in and account lifecycle**
+   - The [native cookie fixture](profile-cookie-clearing.md) verifies synthetic
+     session/persistent cookies survive disk-cache-only cleanup and disappear
+     after complete profile cleanup, including reuse and a repeated clear.
+     It uses no Apple account and does not close application sign-out,
+     immediate reauthorization or account-cache clearing acceptance.
    - A failed native sign-out browser clear now reaches the fatal host-error
      path with restart guidance, rather than only a diagnostic. Synthetic failure
      and success callback regressions cover reporting; real profile clearing,
