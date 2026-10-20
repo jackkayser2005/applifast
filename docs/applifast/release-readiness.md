@@ -3,6 +3,12 @@
 The [prioritized roadmap](roadmap.md) orders P0 memory/reliability, P1 supported
 feature acceptance and P2 distribution. Every applicable gate below still applies.
 
+The [latest preview verification](preview-verification.md) records a short
+installed-preview memory diagnostic, 44 actual browser comparison states and
+passing hosted checks for PRs #71 through #73. Minimized resource acceptance,
+native interactive motion, other feature galleries and fresh-PC sign-in remain
+open. The diagnostic's visible-window memory totals are not a gaming-budget pass.
+
 Snapshot: October 19, 2026. This is the release checklist, not a release claim.
 The `a15ba42` baseline (PR #53) fixes pending-authorization cancellation
 on top of paused restoration, full-track regressions, the SDK startup deadline

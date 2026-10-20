@@ -65,6 +65,10 @@ differing pixels; each candidate capture was visually inspected. The sample
 does not exercise every script, mini-player font or interactive motion. Static
 HTML selector checks remain separate from actual browser rendering.
 
+The follow-on [browser verification](preview-verification.md) now checks all
+eight rendered states of this comparison. It preserves the separate native
+memory, actual playback and gaming acceptance limits below.
+
 The frozen baseline executable has SHA256
 `96e6da1fbe8d9fb34cb40f4794045e7f311c93021e0dc0f9df376b149a5c0094`;
 the pinned candidate has SHA256

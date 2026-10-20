@@ -21,7 +21,8 @@ All four candidate captures were visually inspected. Pixel comparisons find
 changes only in the footer, within vertical pixels 725 through 734. The
 [capture manifest](review-apple-footer/captures.json) records exact executable,
 source and PNG hashes. All eight theme/size/phase selector combinations pass
-the static HTML check. Actual HTML browser rendering remains unchecked.
+the static HTML check. Subsequent [browser verification](preview-verification.md)
+also passes all eight rendered states on source `50024ce`.
 
 Local Windows formatting, strict default/demo all-target Clippy, all-target
 tests (1,032/1,078 library tests, eight opt-in checks ignored per suite),
