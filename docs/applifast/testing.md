@@ -147,6 +147,11 @@ cache, WebView2 profile and Windows Credential Manager entries. Sign out in the
 app before uninstalling if you want its account authorization and snapshot cleared.
 Portable ZIPs keep their existing manual folder setup.
 
+If sign-out reports that Apple browser data could not be cleared, quit Applifast
+through its tray menu and reopen it before signing in again. The playback host
+stops on that failure; startup retries cleanup using the saved sign-out marker.
+This error does not confirm that browser cleanup finished.
+
 Song and collection menus show supported Apple actions. Known favorites show
 filled hearts in song rows and the player bar. Hollow hearts and song/selection
 menus offer Add to Favorites (up to 100 distinct non-favorite songs per action).
