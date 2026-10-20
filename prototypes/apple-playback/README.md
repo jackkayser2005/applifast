@@ -77,6 +77,7 @@ cargo +stable run --locked --manifest-path prototypes/apple-playback/Cargo.toml 
 Type `show` into the console to reveal the diagnostic window. Click **Sign in
 with Apple** and enter the subscriber's account only in Apple's authorization
 popup. There is no code to extract from an existing Apple Music browser session.
+
 The developer and returned user tokens go into Windows Credential Manager under
 `local.applifast.playback-probe`, separate from Spotifast.
 
@@ -244,6 +245,20 @@ starts. Cleanup closes that pipe and forcibly stops only this helper if it does
 not exit within five seconds.
 
 ## Focused checks
+
+The hidden embedded host requests WebView2's Low memory target while keeping
+its renderer active. Showing the diagnostic window restores Normal; hiding it
+restores Low. This is a best-effort hint, not a private-memory limit or measured
+saving. After building the probe, run:
+
+```powershell
+pwsh -File prototypes/apple-playback/test-memory-policy.ps1
+```
+
+This checks actual native visibility/target properties across cold and repeated
+show/hide cycles in a disposable profile, without Apple navigation, credentials
+or audio. Playback, responsiveness and the complete app's budget require their
+separate checks. See [qualification and limits](../../docs/applifast/hidden-host-qualification.md).
 
 ```powershell
 node prototypes/apple-playback/generate-token.cjs --self-test

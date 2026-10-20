@@ -241,6 +241,11 @@ real-account and release checks; passing mocks alone does not close a row.
      oscilloscope, EQ and MilkDrop controls absent.
 
 8. **Reliability and gaming performance**
+   - The [hidden-host policy qualification](hidden-host-qualification.md) checks
+     Low for the active hidden renderer and restores Normal for a visible
+     diagnostic window. Native property regressions, final-source account reads
+     and muted transport/large-queue/full-track checks pass. Whole-player savings
+     and broader playback acceptance remain separate gates.
    - The [font backport](font-memory.md) now has a maintainer-owned revision pin
      and matched native demo measurements: 57 to 60 MiB less private memory and
      57 to 62 MiB less resident memory across both themes and window sizes,

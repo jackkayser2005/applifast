@@ -882,14 +882,49 @@ fn set_view_visibility(
 ) -> windows::core::Result<()> {
     unsafe {
         controller.SetIsVisible(visible)?;
+        // The embedded renderer stays active while its native parent is hidden.
+        let mut parent = HWND::default();
+        controller.ParentWindow(&mut parent)?;
         webview
             .cast::<ICoreWebView2_19>()?
-            .SetMemoryUsageTargetLevel(if visible {
+            .SetMemoryUsageTargetLevel(if visible && IsWindowVisible(parent).as_bool() {
                 COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL
             } else {
                 COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW
             })
     }
+}
+
+fn check_memory_policy(
+    controller: &ICoreWebView2Controller,
+    webview: &ICoreWebView2,
+    hwnd: HWND,
+    renderer_visible: bool,
+    parent_visible: bool,
+    output: &mpsc::Sender<Output>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    unsafe {
+        let mut active = Default::default();
+        controller.IsVisible(&mut active)?;
+        let mut target = COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL;
+        webview
+            .cast::<ICoreWebView2_19>()?
+            .MemoryUsageTargetLevel(&mut target)?;
+        let shown = IsWindowVisible(hwnd).as_bool();
+        output.send(Output::Diagnostic(
+            json!({"type":"memoryPolicy", "rendererVisible":active.as_bool(),
+            "parentVisible":shown,"targetLevel":target.0}),
+        ))?;
+        let expected = if renderer_visible && parent_visible {
+            COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL
+        } else {
+            COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW
+        };
+        if active.as_bool() != renderer_visible || shown != parent_visible || target != expected {
+            return Err("Unexpected WebView2 memory target or visibility.".into());
+        }
+    }
+    Ok(())
 }
 
 fn restrict(webview: &ICoreWebView2, auth: bool) -> windows::core::Result<()> {
@@ -1211,6 +1246,9 @@ fn host_loop(
             &mut token,
         )?;
         if self_check {
+            set_view_visibility(&main_controller, &webview, true)?;
+            check_memory_policy(&main_controller, &webview, hwnd, true, false, &output)?;
+            set_view_visibility(&main_controller, &webview, embedded)?;
             let browser = com_string(|out| environment.BrowserVersionString(out))?;
             output.send(Output::Diagnostic(
                 json!({"type":"runtime","version":browser,"pid":std::process::id()}),
@@ -1273,8 +1311,18 @@ fn host_loop(
                     match command {
                         HostCommand::Shutdown => break 'pump,
                         HostCommand::Show(show) => {
-                            set_view_visibility(&main_controller, &webview, show)?;
                             let _ = ShowWindow(hwnd, if show { SW_SHOW } else { SW_HIDE });
+                            set_view_visibility(&main_controller, &webview, show)?;
+                            if self_check {
+                                check_memory_policy(
+                                    &main_controller,
+                                    &webview,
+                                    hwnd,
+                                    show,
+                                    show,
+                                    &output,
+                                )?;
+                            }
                         }
                         HostCommand::Dispatch(command) => {
                             if !page_ready.get() {
