@@ -477,21 +477,20 @@ pub(crate) fn run() -> eframe::Result<()> {
         spotifast::mac_links::install(guard.commands(), waker.clone());
     }
 
-    // A capture run is a throwaway process next to the real one: no tray
+    // A demo is a throwaway process next to the real one: no tray
     // icon of its own, and no second MPRIS service to fight over media keys.
     #[allow(unused_mut)]
     let mut options = app::AppOptions::default();
     #[cfg(feature = "demo")]
     if demo {
-        options.restore_sign_in = false;
-    }
-    #[cfg(feature = "demo")]
-    if cli.demo_shot.is_some() {
         options = app::AppOptions {
             media_controls: false,
             restore_sign_in: false,
             tray: false,
         };
+    }
+    #[cfg(feature = "demo")]
+    if cli.demo_shot.is_some() {
         spotifast::ui::motion::hold_still();
     }
     #[cfg(windows)]
