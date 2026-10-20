@@ -27,7 +27,10 @@ validated paths and reparse-point checks, including when the test fails.
 The Windows x64 check passes on Evergreen `155.0.4283.62` in 0.44 seconds. The
 [qualification data](profile-cookie-check.json) identifies the tested source and
 binary. Windows CI runs the same wrapper explicitly; ordinary host tests keep
-the runtime-dependent fixture ignored. No dependency or runtime behavior changes.
+the runtime-dependent fixture ignored. The cookie-fixture slice adds no dependency
+or runtime behavior. The wrapper also runs the subsequent [native ordering
+regression](profile-cleanup-ordering.md) in its own empty profile and isolated
+`LOCALAPPDATA`, bypassing the credential service.
 
 Microsoft documents the [cookie manager's profile scope](https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2cookiemanager)
 and [asynchronous profile cleanup](https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2profile2).
