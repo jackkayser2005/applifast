@@ -86,6 +86,8 @@ pub struct Song {
     pub catalog_id: Option<String>,
     #[serde(default)]
     pub artwork: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artwork_small: Option<crate::api::models::Image>,
     #[serde(default)]
     pub album_id: Option<String>,
     #[serde(default)]
@@ -139,6 +141,7 @@ impl Song {
                         width: Some(640),
                         height: Some(640),
                     })
+                    .chain(self.artwork_small.iter().cloned())
                     .collect(),
                 ..Default::default()
             }),
@@ -156,7 +159,11 @@ impl Song {
             album: self.album.clone(),
             duration_ms: self.duration_ms,
             art_url: self.artwork.clone(),
-            art_small_url: self.artwork.clone(),
+            art_small_url: self
+                .artwork_small
+                .as_ref()
+                .map(|image| image.url.clone())
+                .or_else(|| self.artwork.clone()),
             ..Default::default()
         }
     }
@@ -1086,6 +1093,7 @@ impl State {
                 artwork: saved.track.album.as_ref().and_then(|album| {
                     crate::api::models::pick_image(&album.images, 640).map(str::to_owned)
                 }),
+                artwork_small: None,
                 album_id: saved.track.album.as_ref().map(|album| album.id.clone()),
                 artist_id: saved
                     .track
@@ -1586,8 +1594,9 @@ mod tests {
     }
     #[cfg(windows)]
     #[test]
-    #[ignore = "Reads library and catalog metadata using local authorization, without audio or account writes"]
+    #[ignore = "Reads library/catalog artwork using local authorization and a thumbnail cache, without audio or account writes"]
     fn native_embedded_host_reads_library_and_catalog_without_playback() {
+        use std::io::Read as _;
         let (sender, events) = std::sync::mpsc::channel();
         let host = crate::player::AppleHost::start(None, move |event| {
             let _ = sender.send(event);
@@ -1652,9 +1661,100 @@ mod tests {
             assert!(rows.iter().all(|row| {
                 row["type"] == "songs" && row["id"].as_str().is_some_and(|id| !id.is_empty())
             }));
+            let catalog_song = models::song(&rows[0]).expect("A catalog artwork fixture");
+            let small = catalog_song
+                .artwork_small
+                .as_ref()
+                .expect("The catalog fixture needs size-specific artwork");
+            let proxy = crate::settings::Settings::default()
+                .proxy_config()
+                .expect("Default proxy configuration");
+            let library_cover = songs
+                .iter()
+                .find(|song| song.artwork.is_some() && song.artwork_small.is_some())
+                .expect("This account check needs library artwork");
+            // Exercise both the returned small image and local resizing of the
+            // exact original, even when Apple's response offers a CDN size.
+            let local_uri = crate::images::thumbnail_uri(library_cover.artwork.as_deref().unwrap())
+                .expect("A fixed HTTP library artwork fixture");
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            let cache = std::path::PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap())
+                .join("Applifast/playback-probe/artwork-check");
+            let art = crate::images::ArtLoader::new(
+                crate::http::build_client(&proxy).unwrap(),
+                runtime.handle().clone(),
+                cache,
+            );
+            for (label, uri) in [
+                (
+                    "metadata",
+                    library_cover.artwork_small.as_ref().unwrap().url.as_str(),
+                ),
+                ("local", local_uri.as_str()),
+            ] {
+                let bytes = runtime
+                    .block_on(art.fetch(uri))
+                    .unwrap_or_else(|_| panic!("Native library thumbnail failed"));
+                let decoded = image::load_from_memory(&bytes).expect("Decoded library thumbnail");
+                assert!(decoded.width() <= 160 && decoded.height() <= 160);
+                assert!(decoded.width() > 0 && decoded.height() > 0);
+                eprintln!(
+                    "Native {label} library artwork: {} by {}, {} encoded bytes",
+                    decoded.width(),
+                    decoded.height(),
+                    bytes.len()
+                );
+            }
+            drop(art);
+            runtime.shutdown_timeout(std::time::Duration::from_secs(10));
+            let client = crate::http::build_blocking(&proxy, std::time::Duration::from_secs(15))
+                .expect("Artwork HTTP client");
+            for (url, size) in [
+                (catalog_song.artwork.as_deref().unwrap(), 640),
+                (small.url.as_str(), 160),
+            ] {
+                let response = client
+                    .get(url)
+                    .send()
+                    .unwrap_or_else(|_| panic!("Native artwork request failed"));
+                assert!(
+                    response.status().is_success(),
+                    "Native artwork HTTP failure"
+                );
+                let mut bytes = Vec::new();
+                response
+                    .take(8 * 1024 * 1024 + 1)
+                    .read_to_end(&mut bytes)
+                    .expect("Read artwork bytes");
+                assert!(
+                    bytes.len() <= 8 * 1024 * 1024,
+                    "Artwork fixture is too large"
+                );
+                let dimensions = image::ImageReader::new(std::io::Cursor::new(&bytes))
+                    .with_guessed_format()
+                    .expect("Artwork format")
+                    .into_dimensions()
+                    .expect("Artwork dimensions");
+                assert_eq!(
+                    dimensions,
+                    (size, size),
+                    "Unexpected native artwork dimensions"
+                );
+                eprintln!(
+                    "Native artwork: {size} by {size}, {} encoded bytes",
+                    bytes.len()
+                );
+            }
             eprintln!(
-                "Read-only embedded host: {} library songs, {} catalog songs; no audio or account writes",
+                "Read-only embedded host: {} library songs ({} with small artwork), {} catalog songs; no audio or account writes",
                 songs.len(),
+                songs
+                    .iter()
+                    .filter(|song| song.artwork_small.is_some())
+                    .count(),
                 rows.len()
             );
         };

@@ -308,6 +308,15 @@ fn sanitized_event(value: &Value) -> Option<Value> {
                             safe[field] = data.clone();
                         }
                     }
+                    let small = &item["artworkSmall"];
+                    if let Some(url) = small["url"].as_str()
+                        && (url.starts_with("https://") || url.starts_with("http://"))
+                        && url.len() <= 8192
+                        && small["width"] == 160
+                        && small["height"] == 160
+                    {
+                        safe["artworkSmall"] = json!({"url":url,"width":160,"height":160});
+                    }
                     if let Some(params) = item.get("playParams") {
                         if params.is_null() {
                             safe["playParams"] = Value::Null;
@@ -1587,6 +1596,28 @@ mod tests {
             }
         }
     }
+    #[test]
+    fn library_thumbnails_cross_the_bridge_without_extra_fields() {
+        let original = "https://example.com/custom.jpg?version=1";
+        let thumbnail = format!("{original}#applifast-thumb-160");
+        let event = sanitized_event(&json!({"type":"library","session":1,"id":9,"items":[{
+            "kind":"library","id":"i.upload","artwork":original,"playParams":null,
+            "artworkSmall":{"url":thumbnail,"width":160,"height":160,"userToken":"SECRET"}
+        }]}))
+        .unwrap();
+        assert_eq!(event["items"][0]["artwork"], original);
+        assert_eq!(
+            event["items"][0]["artworkSmall"],
+            json!({"url":thumbnail,"width":160,"height":160})
+        );
+        assert!(event["items"][0]["playParams"].is_null());
+        assert!(!event.to_string().contains("SECRET"));
+        for url in ["file:///private.png", "javascript:secret"] {
+            let event = sanitized_event(&json!({"type":"library","session":1,"items":[{"artworkSmall":{"url":url,"width":160,"height":160}}]})).unwrap();
+            assert!(event["items"][0]["artworkSmall"].is_null());
+        }
+    }
+
     #[test]
     fn partial_favorite_confirmation_keeps_exact_resources_and_error_together() {
         let response = sanitized_event(&json!({"type":"response","session":4,"id":9,

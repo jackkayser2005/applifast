@@ -663,10 +663,14 @@ async function checkAuthorizationCancellation() {
   assert(!played); // Previous keeps paused playback paused.
 
   libraryReply = { data: { data: [
-    { id: 'i.upload', attributes: { name: 'Upload', inFavorites: true } },
-    { id: 'i.other', attributes: { name: 'Other', inFavorites: false } },
+    { id: 'i.upload', attributes: { name: 'Upload', inFavorites: true,
+      artwork: { url: 'https://example.com/art/{w}x{h}bb.jpg' } } },
+    { id: 'i.other', attributes: { name: 'Other', inFavorites: false,
+      artwork: { url: 'https://example.com/fixed/640x640bb.jpg' } } },
     { id: 'i.unknown', attributes: { name: 'Unknown' } },
-    { id: 'i.invalid', attributes: { name: 'Invalid', inFavorites: 'true' } }],
+    { id: 'i.invalid', attributes: { name: 'Invalid', inFavorites: 'true' } },
+    { id: 'i.fragment', attributes: { artwork: { url: 'https://example.com/art.jpg#custom' } } },
+    { id: 'i.svg', attributes: { artwork: { url: 'https://example.com/art.SVG?v=1' } } }],
     next: '/v1/me/library/songs?offset=100' } };
   await app.dispatch({ type: 'library', next: null });
   const firstLibraryURL = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
@@ -676,7 +680,16 @@ async function checkAuthorizationCancellation() {
   const page = messages.filter(event => event.type === 'library').at(-1);
   assert.equal(page.items[0].id, 'i.upload');
   assert.equal(page.items[0].playParams, null); // Unavailable metadata stays visible.
-  assert.deepEqual(page.items.map(item => item.inFavorites), [true, false, null, null]);
+  assert.equal(page.items[0].artwork, 'https://example.com/art/640x640bb.jpg');
+  assert.deepEqual({ ...page.items[0].artworkSmall },
+    { url: 'https://example.com/art/160x160bb.jpg', width: 160, height: 160 });
+  assert.equal(page.items[1].artwork, 'https://example.com/fixed/640x640bb.jpg');
+  assert.deepEqual({ ...page.items[1].artworkSmall },
+    { url: 'https://example.com/fixed/640x640bb.jpg#applifast-thumb-160', width: 160, height: 160 });
+  assert.equal(page.items[2].artworkSmall, null);
+  assert.equal(page.items[4].artworkSmall, null);
+  assert.equal(page.items[5].artworkSmall, null);
+  assert.deepEqual(page.items.map(item => item.inFavorites), [true, false, null, null, null, null]);
   await app.dispatch({type:'library',next:page.next});
   const nextLibraryURL = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
   assert.equal(nextLibraryURL.searchParams.get('offset'), '100');

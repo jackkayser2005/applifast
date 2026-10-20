@@ -1,0 +1,49 @@
+{
+  "SourceBase": "7137bb55b1c8551d9dda4df94ccc105a8fa39bcd",
+  "TestSourceSHA256": "66d7e21535a43aa2143a95910614fc38a08798ea1e803f810114f9c5bb020ae3",
+  "ManifestSHA256": "bbf1ede6e850ebf676a54d4569c2d3a39acf1f5565656e7eb3bb906d982ca0b1",
+  "LockSHA256": "bec58341b0f568501d32503ace94cbb0f62b7ad6985c68b9599d60c6e26d3b2c",
+  "DependencyRevision": "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87",
+  "BinarySHA256": "cfb3f6fb87ce045425ed7994f37515fc586d7f056506ae0cd669f941e67dfdae",
+  "Exit": 0,
+  "TimedOut": false,
+  "Seconds": 6.22,
+  "EmbeddedPageMatches": true,
+  "EmbeddedBridgeMatches": true,
+  "ModelsSourceSHA256": "5fb9068cb5c5defd6332bc16ce31ff051897906b92f18e0459505955e7a37275",
+  "ImagesSourceSHA256": "00c3e6a621d82b0fbdc212ad8ca2b17eadfcfaed5ddfeb54ff006c4c7f619655",
+  "BridgeSourceSHA256": "625fd438b62a54ab19e1f975e76999b4081a02112c21bf3a778645e9c49de164",
+  "HostPageSHA256": "1f7bb863179520457d3ec4d8cda76a743e830fcc9a394467a6809af29dfed9aa",
+  "Mode": "Read-only library, catalog and original library thumbnail plus public catalog artwork dimensions; fresh owned profile and image cache; protected local authorization; no audio, sign-out, popup or account mutation commands",
+  "WindowsBridgeSourceSHA256": "a83447452a173dbc618f48ba56a9273b629de6526c6b216aaf2dc1a9d19c62d2",
+  "LibrarySongCount": 100,
+  "LibrarySmallArtworkCount": 100,
+  "CatalogSongCount": 10,
+  "ArtworkResponses": [
+    {
+      "Path": "Library metadata thumbnail",
+      "Width": 160,
+      "Height": 160,
+      "EncodedBytes": 6147
+    },
+    {
+      "Path": "Local resize of the same original library cover",
+      "Width": 160,
+      "Height": 160,
+      "EncodedBytes": 24613
+    },
+    {
+      "Path": "Catalog original",
+      "Width": 640,
+      "Height": 640,
+      "EncodedBytes": 118170
+    },
+    {
+      "Path": "Catalog thumbnail",
+      "Width": 160,
+      "Height": 160,
+      "EncodedBytes": 9845
+    }
+  ],
+  "Scope": "Read-only native artwork verification. The local route was explicitly exercised on the same original library cover, independently of the thumbnail Apple returned. The account fixture does not establish an automatically selected fixed-URL cover. Whole-player memory, fresh-PC sign-in and audible playback acceptance remain separate."
+}

@@ -9,6 +9,12 @@ passing hosted checks for PRs #71 through #73. Minimized resource acceptance,
 native interactive motion, other feature galleries and fresh-PC sign-in remain
 open. The diagnostic's visible-window memory totals are not a gaming-budget pass.
 
+The [artwork memory follow-up](artwork-sizes.md) adds size-specific images,
+bounded local thumbnails of original library covers, and the missing Windows
+bridge field. Its cache and texture regressions cover the smaller image path.
+Whole-player private-memory savings and the original 250 MiB gate still need
+the minimized measurements below.
+
 Snapshot: October 19, 2026. This is the release checklist, not a release claim.
 The `a15ba42` baseline (PR #53) fixes pending-authorization cancellation
 on top of paused restoration, full-track regressions, the SDK startup deadline
