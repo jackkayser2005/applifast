@@ -1594,7 +1594,7 @@ mod tests {
     }
     #[cfg(windows)]
     #[test]
-    #[ignore = "Reads library/catalog metadata and artwork sizes using local authorization, without audio or account writes"]
+    #[ignore = "Reads library/catalog artwork using local authorization and a thumbnail cache, without audio or account writes"]
     fn native_embedded_host_reads_library_and_catalog_without_playback() {
         use std::io::Read as _;
         let (sender, events) = std::sync::mpsc::channel();
@@ -1669,6 +1669,47 @@ mod tests {
             let proxy = crate::settings::Settings::default()
                 .proxy_config()
                 .expect("Default proxy configuration");
+            let library_cover = songs
+                .iter()
+                .find(|song| song.artwork.is_some() && song.artwork_small.is_some())
+                .expect("This account check needs library artwork");
+            // Exercise both the returned small image and local resizing of the
+            // exact original, even when Apple's response offers a CDN size.
+            let local_uri = crate::images::thumbnail_uri(library_cover.artwork.as_deref().unwrap())
+                .expect("A fixed HTTP library artwork fixture");
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            let cache = std::path::PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap())
+                .join("Applifast/playback-probe/artwork-check");
+            let art = crate::images::ArtLoader::new(
+                crate::http::build_client(&proxy).unwrap(),
+                runtime.handle().clone(),
+                cache,
+            );
+            for (label, uri) in [
+                (
+                    "metadata",
+                    library_cover.artwork_small.as_ref().unwrap().url.as_str(),
+                ),
+                ("local", local_uri.as_str()),
+            ] {
+                let bytes = runtime
+                    .block_on(art.fetch(uri))
+                    .unwrap_or_else(|_| panic!("Native library thumbnail failed"));
+                let decoded = image::load_from_memory(&bytes).expect("Decoded library thumbnail");
+                assert!(decoded.width() <= 160 && decoded.height() <= 160);
+                assert!(decoded.width() > 0 && decoded.height() > 0);
+                eprintln!(
+                    "Native {label} library artwork: {} by {}, {} encoded bytes",
+                    decoded.width(),
+                    decoded.height(),
+                    bytes.len()
+                );
+            }
+            drop(art);
+            runtime.shutdown_timeout(std::time::Duration::from_secs(10));
             let client = crate::http::build_blocking(&proxy, std::time::Duration::from_secs(15))
                 .expect("Artwork HTTP client");
             for (url, size) in [

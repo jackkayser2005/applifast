@@ -113,7 +113,7 @@ fn images(resource: &Value) -> Vec<Image> {
     } else {
         &[640]
     };
-    sizes
+    let mut images: Vec<Image> = sizes
         .iter()
         .map(|&size| {
             let dimension = size.to_string();
@@ -123,7 +123,17 @@ fn images(resource: &Value) -> Vec<Image> {
                 height: Some(size),
             }
         })
-        .collect()
+        .collect();
+    if sizes.len() == 1
+        && let Some(url) = crate::images::thumbnail_uri(url)
+    {
+        images.push(Image {
+            url,
+            width: Some(160),
+            height: Some(160),
+        });
+    }
+    images
 }
 fn artists(resource: &Value) -> Vec<ArtistRef> {
     let artist_id = related_id(resource, "artists");
@@ -293,8 +303,13 @@ mod tests {
     fn fixed_artwork_urls_and_missing_images_keep_their_existing_behavior() {
         let fixed = "https://example.com/art/640x640bb.jpg?version=1";
         let images = images(&json!({"attributes":{"artwork":{"url":fixed}}}));
-        assert_eq!(images.len(), 1);
-        assert_eq!(pick_image(&images, 64), Some(fixed));
+        assert_eq!(images.len(), 2);
+        assert_eq!(images[0].url, fixed);
+        assert_eq!(pick_image(&images, 640), Some(fixed));
+        assert_eq!(
+            pick_image(&images, 64),
+            Some("https://example.com/art/640x640bb.jpg?version=1#applifast-thumb-160")
+        );
         assert!(super::images(&json!({"attributes":{}})).is_empty());
     }
 

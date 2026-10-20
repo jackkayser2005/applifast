@@ -15,8 +15,10 @@ the playback host. Apple authorization is the only visible browser popup.
 
 Apple image templates now offer smaller variants to existing row, sidebar and
 collection drawing. Large covers retain their 640-pixel URL. An optional small
-image persists with song metadata; old caches and fixed URLs keep their fallback
-until refresh. See [sizing, cache/network behavior and verification](artwork-sizes.md).
+image persists with song metadata. Fixed library covers use locally resized
+original artwork, with at most two resize jobs running off the UI thread.
+Old metadata caches retain their fallback until refresh.
+See [sizing, cache/network behavior and verification](artwork-sizes.md).
 
 Attaching a recreated main or mini-player window discards the old softened-cover
 and lyrics-backdrop textures, pending results and failed-image markers. New

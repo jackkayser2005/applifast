@@ -27,5 +27,5 @@
     }
   ],
   "LibrarySmallArtworkCount": 0,
-  "Scope": "Metadata route only: 100 library songs, zero small library variants, ten catalog songs; local fixed-artwork thumbnails remain open; no full-player resource acceptance"
+  "Scope": "Historical metadata route: 100 library songs, zero small variants reached Rust, ten catalog songs; a later regression identified artworkSmall being dropped by the Windows bridge allowlist, so this count does not establish provider artwork formats; no full-player resource acceptance"
 }
