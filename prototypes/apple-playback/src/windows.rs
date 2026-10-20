@@ -141,6 +141,21 @@ enum Output {
     Eof,
 }
 
+fn profile_clear_completed(
+    result: windows::core::Result<()>,
+    output: &mpsc::Sender<Output>,
+) -> windows::core::Result<()> {
+    let _ = output.send(Output::Diagnostic(
+        json!({"type":"profileCleared","success":result.is_ok()}),
+    ));
+    if result.is_err() {
+        let _ = output.send(Output::Error(
+            "Sign-out could not clear Apple browser data. Quit Applifast and reopen it before signing in again.",
+        ));
+    }
+    Ok(())
+}
+
 fn host_failure_message(code: Option<i32>) -> &'static str {
     if code == Some(windows::core::HRESULT::from_win32(ERROR_TIMEOUT.0).0) {
         "WebView2 setup timed out. Check the Evergreen runtime and retry the connection."
@@ -1348,14 +1363,14 @@ fn host_loop(
                                     .Profile()?
                                     .cast::<ICoreWebView2Profile2>()?;
                                 let diagnostics = output.clone();
-                                profile.ClearBrowsingDataAll(
+                                let started = profile.ClearBrowsingDataAll(
                                     &ClearBrowsingDataCompletedHandler::create(Box::new(
-                                        move |result| {
-                                            let _ = diagnostics.send(Output::Diagnostic(json!({"type":"profileCleared","success":result.is_ok()})));
-                                            result
-                                        },
+                                        move |result| profile_clear_completed(result, &diagnostics),
                                     )),
-                                )?;
+                                );
+                                if let Err(error) = started {
+                                    profile_clear_completed(Err(error), &output)?;
+                                }
                             }
                             let json = serde_json::to_string(&command)?;
                             let script = wide(&format!("window.applifast.dispatch({json})"));
@@ -1388,6 +1403,33 @@ fn host_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn profile_clear_failure_reaches_the_host_error_path_without_native_details() {
+        let (output, events) = mpsc::channel();
+        let native_error = windows::core::Error::new(
+            windows::core::HRESULT(0x80004005u32 as i32),
+            "private browser profile detail",
+        );
+        profile_clear_completed(Err(native_error), &output).unwrap();
+        assert!(matches!(events.try_recv(), Ok(Output::Diagnostic(value))
+            if value == json!({"type":"profileCleared","success":false})));
+        let error = match events.try_recv() {
+            Ok(Output::Error(message)) => message,
+            _ => panic!("A failed sign-out browser clear must reach the fatal host path."),
+        };
+        assert!(error.contains("Quit Applifast and reopen"));
+        assert!(!error.contains("private browser profile detail"));
+        assert!(events.try_recv().is_err());
+
+        profile_clear_completed(Ok(()), &output).unwrap();
+        assert!(matches!(events.try_recv(), Ok(Output::Diagnostic(value))
+            if value == json!({"type":"profileCleared","success":true})));
+        assert!(
+            events.try_recv().is_err(),
+            "Successful sign-out does not fail the host."
+        );
+    }
+
     #[test]
     fn native_setup_wait_expires_without_a_callback_and_rejects_late_completion() {
         let (callback, result) = mpsc::channel();

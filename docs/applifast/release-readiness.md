@@ -172,6 +172,10 @@ real-account and release checks; passing mocks alone does not close a row.
      compilation/test results do not establish Apple playback support.
 
 2. **Sign-in and account lifecycle**
+   - A failed native sign-out browser clear now reaches the fatal host-error
+     path with restart guidance, rather than only a diagnostic. Synthetic failure
+     and success callback regressions cover reporting; real profile clearing,
+     popup behavior and fresh-account authorization remain runtime gates.
    - Native setup now shares a 45-second callback deadline and releases its
      main controller/window and COM apartment on failure. Native timeout/message
      fixtures and two real Evergreen setup/reuse checks pass without Apple grants

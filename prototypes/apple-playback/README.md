@@ -187,6 +187,9 @@ Repeat modes are 0=off, 1=current occurrence, 2=queue. Sign-out invalidates old
 responses, deletes the protected user grant, closes popups and clears the
 dedicated browser profile. Check the `profileCleared` result. A durable
 sign-out marker prevents interrupted cleanup from restoring an old grant.
+If clearing cannot start or its completion reports failure, the host stops and
+reports restart guidance instead of leaving only a failed diagnostic. See
+[failure-reporting checks](../../docs/applifast/profile-clear-errors.md).
 Sign-out cancels a pending authorization without waiting for its old SDK promise.
 Closing the native popup uses that cancellation path too. Cancelled completions
 restore the accepted in-memory grant and cannot publish a stale authorization.
