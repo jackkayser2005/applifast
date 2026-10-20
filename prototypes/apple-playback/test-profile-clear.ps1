@@ -3,6 +3,7 @@ $ErrorActionPreference='Stop'
 if(-not $IsWindows){throw 'The native browser-profile check requires Windows.'}
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $previous=$env:APPLIFAST_PROFILE_CLEAR_TEST_DIR
+$previousLocal=$env:LOCALAPPDATA
 $profile=$null
 Push-Location $root
 try {
@@ -10,9 +11,14 @@ try {
     New-Item -ItemType Directory -Force -Path $cache | Out-Null
     $profile=Join-Path $cache ('native-profile-clear-'+[guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $profile | Out-Null
-    $env:APPLIFAST_PROFILE_CLEAR_TEST_DIR=$profile
-    & cargo test --locked --manifest-path prototypes/apple-playback/Cargo.toml windows::tests::native_profile_cookie_clear_round_trip -- --ignored --exact --nocapture
-    if($LASTEXITCODE -ne 0){throw 'Native browser-profile cleanup check failed.'}
+    foreach($test in @('native_profile_cookie_clear_round_trip','native_authorization_waits_for_profile_clear')){
+        $directory=Join-Path $profile $test
+        New-Item -ItemType Directory -Path $directory | Out-Null
+        $env:APPLIFAST_PROFILE_CLEAR_TEST_DIR=$directory
+        $env:LOCALAPPDATA=$directory
+        & cargo test --locked --manifest-path prototypes/apple-playback/Cargo.toml ('windows::tests::'+$test) -- --ignored --exact --nocapture
+        if($LASTEXITCODE -ne 0){throw 'Native browser-profile cleanup check failed.'}
+    }
 } finally {
     try {
         if($profile -and (Test-Path -LiteralPath $profile)){
@@ -27,6 +33,7 @@ try {
         }
     } finally {
         $env:APPLIFAST_PROFILE_CLEAR_TEST_DIR=$previous
+        $env:LOCALAPPDATA=$previousLocal
         Pop-Location
     }
 }

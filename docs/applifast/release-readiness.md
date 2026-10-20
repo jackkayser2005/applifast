@@ -172,6 +172,11 @@ real-account and release checks; passing mocks alone does not close a row.
      compilation/test results do not establish Apple playback support.
 
 2. **Sign-in and account lifecycle**
+   - The [native ordering regression](profile-cleanup-ordering.md) reproduces
+     new authorization being dispatched before asynchronous profile cleanup.
+     Two fixed cycles now complete cleanup first. Commands wait without blocking
+     the UI, while shutdown bypasses the wait. Actual Apple popup/sign-out and
+     expiry/revocation acceptance remain open.
    - The [native cookie fixture](profile-cookie-clearing.md) verifies synthetic
      session/persistent cookies survive disk-cache-only cleanup and disappear
      after complete profile cleanup, including reuse and a repeated clear.

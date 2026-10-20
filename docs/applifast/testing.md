@@ -151,6 +151,8 @@ If sign-out reports that Apple browser data could not be cleared, quit Applifast
 through its tray menu and reopen it before signing in again. The playback host
 stops on that failure; startup retries cleanup using the saved sign-out marker.
 This error does not confirm that browser cleanup finished.
+Signing in immediately after signing out waits for native browser cleanup before
+dispatching the new authorization. A cleanup timeout also asks you to quit/reopen.
 
 Song and collection menus show supported Apple actions. Known favorites show
 filled hearts in song rows and the player bar. Hollow hearts and song/selection

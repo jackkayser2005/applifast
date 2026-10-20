@@ -34,6 +34,8 @@ const AUTH_DISMISSED: u32 = WM_APP + 3;
 const VIEW_CHANGED: u32 = WM_APP + 4;
 const MAX_MESSAGE: usize = 1024 * 1024;
 const NATIVE_SETUP_TIMEOUT: Duration = Duration::from_secs(45);
+const PROFILE_CLEAR_TIMER: usize = 1;
+const PROFILE_CLEAR_TIMEOUT_MS: u32 = 45_000;
 
 fn wait_for_setup<T>(
     rx: mpsc::Receiver<T>,
@@ -1090,6 +1092,7 @@ fn host_loop(
         Rc::new(RefCell::new(Vec::new()));
     let generation = Rc::new(Cell::new(1u64));
     let page_ready = Rc::new(Cell::new(self_check));
+    let profile_clearing = Rc::new(Cell::new(false));
     let authorized_popup = Rc::new(Cell::new(false));
     let mut token = 0;
     let bootstrap =
@@ -1285,7 +1288,15 @@ fn host_loop(
             if result == 0 {
                 break;
             }
-            if message.message == VIEW_CHANGED && message.wParam.0 == hwnd.0 as usize {
+            if message.message == WM_TIMER
+                && message.hwnd == hwnd
+                && message.wParam.0 == PROFILE_CLEAR_TIMER
+                && profile_clearing.get()
+            {
+                let _ = KillTimer(Some(hwnd), PROFILE_CLEAR_TIMER);
+                let _ = output.send(Output::Error("Sign-out browser cleanup timed out. Quit Applifast and reopen it before signing in again."));
+                break 'pump;
+            } else if message.message == VIEW_CHANGED && message.wParam.0 == hwnd.0 as usize {
                 // The app's host has no visible window; keep its renderer active.
                 let visible =
                     embedded || (message.lParam.0 != 0 && IsWindowVisible(hwnd).as_bool());
@@ -1316,7 +1327,7 @@ fn host_loop(
                     set_view_visibility(&main_controller, &webview, embedded)?;
                 }
             } else if message.message == WAKE {
-                let mut commands = if page_ready.get() {
+                let mut commands = if page_ready.get() && !profile_clearing.get() {
                     std::mem::take(&mut pending)
                 } else {
                     Vec::new()
@@ -1340,9 +1351,9 @@ fn host_loop(
                             }
                         }
                         HostCommand::Dispatch(command) => {
-                            if !page_ready.get() {
+                            if !page_ready.get() || profile_clearing.get() {
                                 if pending.len() >= 100 {
-                                    let _ = output.send(Output::Error("MusicKit has not initialized; pending command limit reached."));
+                                    let _ = output.send(Output::Error("Apple playback host is not ready; pending command limit reached."));
                                     break 'pump;
                                 }
                                 pending.push(HostCommand::Dispatch(command));
@@ -1363,17 +1374,53 @@ fn host_loop(
                                     .Profile()?
                                     .cast::<ICoreWebView2Profile2>()?;
                                 let diagnostics = output.clone();
+                                let clearing = profile_clearing.clone();
+                                profile_clearing.set(true);
+                                if SetTimer(
+                                    Some(hwnd),
+                                    PROFILE_CLEAR_TIMER,
+                                    PROFILE_CLEAR_TIMEOUT_MS,
+                                    None,
+                                ) == 0
+                                {
+                                    profile_clear_completed(
+                                        Err(windows::core::Error::from_thread()),
+                                        &output,
+                                    )?;
+                                    break 'pump;
+                                }
                                 let started = profile.ClearBrowsingDataAll(
                                     &ClearBrowsingDataCompletedHandler::create(Box::new(
-                                        move |result| profile_clear_completed(result, &diagnostics),
+                                        move |result| {
+                                            let success = result.is_ok();
+                                            let _ = KillTimer(Some(hwnd), PROFILE_CLEAR_TIMER);
+                                            profile_clear_completed(result, &diagnostics)?;
+                                            if success {
+                                                clearing.set(false);
+                                                let _ = PostThreadMessageW(
+                                                    id,
+                                                    WAKE,
+                                                    WPARAM(0),
+                                                    LPARAM(0),
+                                                );
+                                            }
+                                            Ok(())
+                                        },
                                     )),
                                 );
                                 if let Err(error) = started {
+                                    let _ = KillTimer(Some(hwnd), PROFILE_CLEAR_TIMER);
                                     profile_clear_completed(Err(error), &output)?;
                                 }
                             }
                             let json = serde_json::to_string(&command)?;
                             let script = wide(&format!("window.applifast.dispatch({json})"));
+                            #[cfg(test)]
+                            if self_check && matches!(command, Command::Authorize) {
+                                let _ = output.send(Output::Diagnostic(
+                                    json!({"type":"authorizationDispatched"}),
+                                ));
+                            }
                             webview.ExecuteScript(
                                 PCWSTR(script.as_ptr()),
                                 &ExecuteScriptCompletedHandler::create(Box::new(|result, _| {
@@ -1403,6 +1450,95 @@ fn host_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn empty_test_profile() -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let path = PathBuf::from(
+            std::env::var_os("APPLIFAST_PROFILE_CLEAR_TEST_DIR")
+                .ok_or("Use test-profile-clear.ps1 to provide a fresh disposable directory.")?,
+        );
+        if !path.is_absolute() {
+            return Err(
+                "The profile-clear fixture requires an absolute disposable directory.".into(),
+            );
+        }
+        if path.read_dir()?.next().is_some() {
+            return Err("The profile-clear fixture requires an empty disposable directory.".into());
+        }
+        Ok(path)
+    }
+
+    #[test]
+    #[ignore = "Requires WebView2 and test-profile-clear.ps1's empty isolated LOCALAPPDATA"]
+    fn native_authorization_waits_for_profile_clear() -> Result<(), Box<dyn std::error::Error>> {
+        let profile = empty_test_profile()?;
+        if std::env::var_os("LOCALAPPDATA").map(PathBuf::from) != Some(profile) {
+            return Err("The ordering fixture requires isolated LOCALAPPDATA matching its empty test directory.".into());
+        }
+        let (commands, input) = mpsc::channel();
+        let (output, events) = mpsc::channel();
+        // Bypass serve: the inert self-check host never reads or deletes credentials.
+        let worker = thread::spawn(move || {
+            host_loop(input, output, String::new(), None, true, false, true)
+                .map_err(|error| error.to_string())
+        });
+        let deadline = Instant::now() + Duration::from_secs(50);
+        let mut owner = None;
+        let outcome = (|| -> Result<Vec<&'static str>, Box<dyn std::error::Error>> {
+            while owner.is_none() {
+                match events.recv_timeout(deadline.saturating_duration_since(Instant::now()))? {
+                    Output::Ready(id) => owner = Some(id),
+                    Output::Error(error) => return Err(error.into()),
+                    _ => {}
+                }
+            }
+            let mut trace = Vec::new();
+            for _ in 0..2 {
+                // One wake puts both commands in the same native drain batch.
+                commands.send(HostCommand::Dispatch(Command::SignOut))?;
+                commands.send(HostCommand::Dispatch(Command::Authorize))?;
+                unsafe {
+                    PostThreadMessageW(owner.unwrap(), WAKE, WPARAM(0), LPARAM(0))?;
+                }
+                for _ in 0..2 {
+                    loop {
+                        match events
+                            .recv_timeout(deadline.saturating_duration_since(Instant::now()))?
+                        {
+                            Output::Diagnostic(value) if value["type"] == "profileCleared" => {
+                                if value["success"] != true {
+                                    return Err("Native profile cleanup failed.".into());
+                                }
+                                trace.push("cleared");
+                                break;
+                            }
+                            Output::Diagnostic(value)
+                                if value["type"] == "authorizationDispatched" =>
+                            {
+                                trace.push("authorize");
+                                break;
+                            }
+                            Output::Error(error) => return Err(error.into()),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            Ok(trace)
+        })();
+        let _ = commands.send(HostCommand::Shutdown);
+        if let Some(owner) = owner {
+            unsafe {
+                let _ = PostThreadMessageW(owner, WAKE, WPARAM(0), LPARAM(0));
+            }
+        }
+        worker
+            .join()
+            .map_err(|_| "Native ordering fixture thread failed.")??;
+        let trace = outcome?;
+        println!("Native profile/authorization order: {trace:?}");
+        assert_eq!(trace, ["cleared", "authorize", "cleared", "authorize"]);
+        Ok(())
+    }
+
     #[test]
     #[ignore = "Requires WebView2 and APPLIFAST_PROFILE_CLEAR_TEST_DIR pointing to an empty disposable directory"]
     fn native_profile_cookie_clear_round_trip() -> Result<(), Box<dyn std::error::Error>> {
@@ -1460,18 +1596,7 @@ mod tests {
             assert!(events.try_recv().is_err());
             Ok(())
         }
-        let path = PathBuf::from(
-            std::env::var_os("APPLIFAST_PROFILE_CLEAR_TEST_DIR")
-                .ok_or("Use test-profile-clear.ps1 to provide a fresh disposable directory.")?,
-        );
-        if !path.is_absolute() {
-            return Err(
-                "The profile-clear fixture requires an absolute disposable directory.".into(),
-            );
-        }
-        if path.read_dir()?.next().is_some() {
-            return Err("The profile-clear fixture requires an empty disposable directory.".into());
-        }
+        let path = empty_test_profile()?;
         unsafe {
             CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok()?;
         }
