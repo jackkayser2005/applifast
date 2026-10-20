@@ -151,6 +151,8 @@ jobs:
           ./prototypes/apple-playback/test-measure.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./prototypes/apple-playback/test-memory-policy.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./prototypes/apple-playback/test-profile-clear.ps1
 
       - name: Applifast preview packaging and installer
         if: runner.os == 'Windows' && runner.arch == 'X64'

@@ -195,6 +195,16 @@ Closing the native popup uses that cancellation path too. Cancelled completions
 restore the accepted in-memory grant and cannot publish a stale authorization.
 The [regressions and runtime limits](../../docs/applifast/authorization-cancellation.md)
 keep actual popup cancellation and native profile-clearing acceptance open.
+The isolated cookie fixture below verifies WebView2 cookie removal separately;
+it does not send the application's Sign out command or qualify an Apple account.
+
+```powershell
+$env:CARGO_TARGET_DIR = 'target/apple-probe'
+pwsh -File prototypes/apple-playback/test-profile-clear.ps1
+```
+
+It creates and removes its own empty profile and reads no protected credentials.
+See [native cookie evidence and limits](../../docs/applifast/profile-cookie-clearing.md).
 The profile lives in `%LOCALAPPDATA%/Applifast/playback-probe`. The Evergreen
 runtime manages its own browser storage and updates. This probe creates no
 decrypted-media files or hosted backend and adds no application telemetry.
