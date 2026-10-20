@@ -349,6 +349,13 @@ that directory's `cache` and `state` folders, with settings read from `config`.
 Custom palettes and their cache are used only with an explicit `--demo-data`
 directory; the ordinary demo does not scan your real themes folder.
 
+All demo runs skip saved sign-in, system-tray registration and desktop media
+controls, so an interactive review does not compete with the normal player.
+Use `--demo-data` for an explicitly isolated review profile. Without
+`--demo-shot`, animations run normally; screenshot runs hold motion at its
+resting state for deterministic comparisons. Demo playback uses invented state
+and does not establish real-account playback or audio-reactive visualization.
+
 ## Home shelves
 
 Since 0.8.0, you can hide **Made for you** and **Recommended for you**
