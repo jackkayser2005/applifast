@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-21 13:00-0400\n"
+"POT-Creation-Date: 2026-10-21 13:32-0400\n"
 "PO-Revision-Date: 2026-10-02 20:30+0300\n"
 "Last-Translator: Barış Berke Çetin <brsberkectn@gmail.com>\n"
 "Language-Team: Turkish\n"
@@ -69,7 +69,7 @@ msgid "Playlist • {owner}"
 msgstr "Çalma Listesi • {owner}"
 
 #: src/ui/sidebar.rs:850 src/i18n.rs:255 src/i18n.rs:258 src/ui/keys.rs:311
-#: src/ui/keys.rs:369 src/ui/topbar.rs:256
+#: src/ui/keys.rs:369 src/ui/topbar.rs:291
 msgid "Home"
 msgstr "Ana Sayfa"
 
@@ -332,7 +332,7 @@ msgstr "Sırayı temizle"
 msgid "Playing from"
 msgstr "Şuradan çalınıyor"
 
-#: src/ui/queue.rs:289 src/ui/lyrics.rs:731 src/ui/topbar.rs:499
+#: src/ui/queue.rs:289 src/ui/lyrics.rs:731 src/ui/topbar.rs:559
 msgid "Now playing"
 msgstr "Şu an çalınıyor"
 
@@ -1122,12 +1122,12 @@ msgid "{track} Radio"
 msgstr "{track} Radyosu"
 
 #: src/ui/settings.rs:199 src/ui/dialogs.rs:153 src/ui/keys.rs:349
-#: src/ui/topbar.rs:470
+#: src/ui/topbar.rs:530
 msgid "Keyboard shortcuts"
 msgstr "Klavye kısayolları"
 
-#: src/ui/settings.rs:204 src/ui/keys.rs:339 src/ui/topbar.rs:462
-#: src/ui/topbar.rs:492
+#: src/ui/settings.rs:204 src/ui/keys.rs:339 src/ui/topbar.rs:522
+#: src/ui/topbar.rs:552
 msgid "Settings"
 msgstr "Ayarlar"
 
@@ -1143,7 +1143,7 @@ msgstr "Klasörü aç"
 msgid "Account"
 msgstr "Hesap"
 
-#: src/ui/settings.rs:252 src/ui/topbar.rs:480
+#: src/ui/settings.rs:252 src/ui/topbar.rs:540
 msgid "Sign out"
 msgstr "Oturumu kapat"
 
@@ -2875,72 +2875,72 @@ msgstr "{duration} kaldı"
 msgid "Played"
 msgstr "Oynatıldı"
 
-#: src/ui/topbar.rs:245
+#: src/ui/topbar.rs:280
 msgid "Show sidebar (Ctrl+B)"
 msgstr "Kenar çubuğunu göster (Ctrl+B)"
 
-#: src/ui/topbar.rs:246
+#: src/ui/topbar.rs:281
 msgid "Show sidebar (Cmd+B)"
 msgstr "Kenar çubuğunu göster (Cmd+B)"
 
-#: src/ui/topbar.rs:265
+#: src/ui/topbar.rs:301
 msgid "Back"
 msgstr "Geri"
 
-#: src/ui/topbar.rs:276
+#: src/ui/topbar.rs:312
 msgid "Forward"
 msgstr "İleri"
 
 #. Translators: {device} is the name of the device playing the music.
-#: src/ui/topbar.rs:290
+#: src/ui/topbar.rs:326
 #, rust-format
 msgid "Playing on {device}"
 msgstr "{device} üzerinde çalınıyor"
 
-#: src/ui/topbar.rs:292
+#: src/ui/topbar.rs:329
 msgid "Playing on another device"
 msgstr "Başka bir cihazda çalınıyor"
 
-#: src/ui/topbar.rs:301
+#: src/ui/topbar.rs:338
 msgid "Update ready"
 msgstr "Güncelleme hazır"
 
-#: src/ui/topbar.rs:304 src/ui/update.rs:74
+#: src/ui/topbar.rs:341 src/ui/update.rs:74
 msgid "Downloading update…"
 msgstr "Güncelleme indiriliyor…"
 
 #. Translators: {version} is a version number such as 1.2.0.
-#: src/ui/topbar.rs:308
+#: src/ui/topbar.rs:345
 #, rust-format
 msgid "Update to {version}"
 msgstr "{version} sürümüne güncelle"
 
-#: src/ui/topbar.rs:347
+#: src/ui/topbar.rs:394
 msgid "What do you want to play?"
 msgstr "Ne çalmak istersiniz?"
 
-#: src/ui/topbar.rs:502
+#: src/ui/topbar.rs:562
 msgid "MilkDrop visualiser (Ctrl+Shift+K)"
 msgstr "MilkDrop görselleştiricisi (Ctrl+Shift+K)"
 
-#: src/ui/topbar.rs:503
+#: src/ui/topbar.rs:563
 msgid "MilkDrop visualiser (Cmd+Shift+K)"
 msgstr "MilkDrop görselleştiricisi (Cmd+Shift+K)"
 
-#: src/ui/topbar.rs:538
+#: src/ui/topbar.rs:598
 msgid "Winamp mini player (Ctrl+M)"
 msgstr "Winamp mini çalar (Ctrl+M)"
 
-#: src/ui/topbar.rs:539
+#: src/ui/topbar.rs:599
 msgid "Winamp mini player (Cmd+Shift+M)"
 msgstr "Winamp mini çalar (Cmd+Shift+M)"
 
-#: src/ui/topbar.rs:550
+#: src/ui/topbar.rs:610
 msgid "Waiting for Spotify…"
 msgstr "Spotify bekleniyor…"
 
 #. Translators: {version} is a version number such as 1.2.0.
-#: src/ui/topbar.rs:589
+#: src/ui/topbar.rs:649
 #, rust-format
 msgid "Version {version} is available."
 msgstr "Sürüm {version} hazır."

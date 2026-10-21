@@ -51,15 +51,24 @@ fn lead_id() -> egui::Id {
     egui::Id::new("topbar-lead")
 }
 
-/// The narrowest the bar, and so the page under it, can be before its
-/// controls run into each other: the narrowest field, with the spinner and
-/// both badges as icons. Counting them even while they are away keeps the
-/// panels and the window from changing width as they come and go.
-pub fn least_width(ctx: &egui::Context) -> f32 {
+/// Reserve a compact two-row toolbar in Apple mode. The legacy single-row
+/// toolbar also leaves room for its spinner and collapsed device/update badges.
+pub fn least_width(ctx: &egui::Context, apple: bool) -> f32 {
     let lead = ctx
         .data(|data| data.get_temp(lead_id()))
         .unwrap_or(LEAD_GUESS);
-    least_width_after(lead)
+    if apple {
+        // Apple can put its account and transport shortcuts below search.
+        (lead + SEARCH_MIN + super::widgets::PAGE_PADDING)
+            .max(RIGHT_CONTROLS_WIDTH + SPINNER_SIZE + ITEM_SPACING)
+            .max(
+                crate::window::MAIN_MIN_SIZE[0]
+                    - super::SIDEBAR_MIN_WIDTH
+                    - theme::SIDE_PANEL_MIN_WIDTH,
+            )
+    } else {
+        least_width_after(lead)
+    }
 }
 
 fn least_width_after(lead: f32) -> f32 {
@@ -209,6 +218,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     let locale = app.locale;
     let width = ui.available_width();
+    let lead = ui
+        .ctx()
+        .data(|data| data.get_temp(lead_id()))
+        .unwrap_or(LEAD_GUESS);
+    let compact = app.apple.is_some() && width < least_width_after(lead);
     let window_controls = super::window_controls_reservation(
         ui.ctx(),
         app.show_queue_panel,
@@ -218,7 +232,13 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     // Where the titlebar used to be: the bar grows upwards into that space and
     // its empty parts drag the window.
     let inset = theme::titlebar_inset(ui.ctx());
-    let content_height = theme::TOP_BAR_HEIGHT + inset;
+    let nav_height = theme::TOP_BAR_HEIGHT + inset;
+    let content_height = nav_height
+        + if compact {
+            AVATAR_SIZE + ITEM_SPACING
+        } else {
+            0.0
+        };
     if crate::window::custom_titlebar() {
         super::titlebar_drag(
             ui,
@@ -231,146 +251,186 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     ui.add_space(window_controls.topbar_top);
     ui.allocate_ui_with_layout(
         vec2(width, content_height),
-        Layout::left_to_right(Align::Center),
+        if compact {
+            Layout::top_down(Align::Min)
+        } else {
+            Layout::left_to_right(Align::Center)
+        },
         |ui| {
-            ui.add_space(super::widgets::PAGE_PADDING);
-            ui.spacing_mut().item_spacing.x = ITEM_SPACING;
-            if !app.settings.sidebar_visible {
-                if nav_button(
-                    ui,
-                    &palette,
-                    Icon::PanelLeft,
-                    true,
-                    super::keys::platform_shortcut(
-                        &gettext(locale, "Show sidebar (Ctrl+B)"),
-                        &gettext(locale, "Show sidebar (Cmd+B)"),
-                    ),
+            if compact {
+                ui.spacing_mut().item_spacing.y = 0.0;
+            }
+            let nav_rect = egui::Rect::from_min_size(ui.cursor().min, vec2(width, nav_height));
+            let (fit, device_galley, update, update_galley, busy) = ui
+                .scope_builder(
+                    egui::UiBuilder::new()
+                        .max_rect(nav_rect)
+                        .layout(Layout::left_to_right(Align::Center)),
+                    |ui| {
+                        ui.set_min_height(nav_height);
+                        ui.add_space(super::widgets::PAGE_PADDING);
+                        ui.spacing_mut().item_spacing.x = ITEM_SPACING;
+                        if !app.settings.sidebar_visible {
+                            if nav_button(
+                                ui,
+                                &palette,
+                                Icon::PanelLeft,
+                                true,
+                                super::keys::platform_shortcut(
+                                    &gettext(locale, "Show sidebar (Ctrl+B)"),
+                                    &gettext(locale, "Show sidebar (Cmd+B)"),
+                                ),
+                            )
+                            .clicked()
+                            {
+                                app.actions.push(Action::ToggleSidebar);
+                            }
+                            ui.add_space(2.0);
+                        }
+                        if !app.settings.sidebar_visible
+                            && nav_button(ui, &palette, Icon::House, true, &gettext(locale, "Home"))
+                                .clicked()
+                        {
+                            app.actions.push(Action::Open(Page::Home));
+                        }
+                        if nav_button(
+                            ui,
+                            &palette,
+                            Icon::ChevronLeft,
+                            app.can_go_back(),
+                            &gettext(locale, "Back"),
+                        )
+                        .clicked()
+                        {
+                            app.actions.push(Action::Back);
+                        }
+                        if nav_button(
+                            ui,
+                            &palette,
+                            Icon::ChevronRight,
+                            app.can_go_forward(),
+                            &gettext(locale, "Forward"),
+                        )
+                        .clicked()
+                        {
+                            app.actions.push(Action::Forward);
+                        }
+                        ui.add_space(8.0);
+
+                        // The badges sit at the right end but grow with their text, so
+                        // measure them here, before the search field takes its share.
+                        let device_galley = app.now_playing().filter(|now| !now.local).map(|now| {
+                            let label = match now.device_name {
+                                Some(device) => {
+                                    // Translators: {device} is the name of the device playing the music.
+                                    gettext(locale, "Playing on {device}")
+                                        .replace("{device}", &device)
+                                }
+                                None => gettext(locale, "Playing on another device").into_owned(),
+                            };
+                            ui.painter()
+                                .layout_no_wrap(label, theme::medium(12.5), palette.text)
+                        });
+                        let update = app.update.clone();
+                        let update_galley = update.as_ref().map(|update| {
+                            let label = match &app.update_download {
+                                crate::updates::DownloadState::Ready(_) => {
+                                    gettext(locale, "Update ready").into_owned()
+                                }
+                                crate::updates::DownloadState::Downloading { .. } => {
+                                    gettext(locale, "Downloading update…").into_owned()
+                                }
+                                _ => {
+                                    // Translators: {version} is a version number such as 1.2.0.
+                                    gettext(locale, "Update to {version}")
+                                        .replace("{version}", &update.version)
+                                }
+                            };
+                            ui.painter()
+                                .layout_no_wrap(label, theme::medium(12.5), palette.accent)
+                        });
+                        // Ask once, so the bar reserves room for exactly the spinner it
+                        // then draws.
+                        let busy = app
+                            .backend
+                            .activity()
+                            .busy(std::time::Duration::from_millis(1000));
+                        let badges = |labels: bool| {
+                            badge_width(device_galley.as_ref(), DEVICE_BADGE_PADDING, labels)
+                                + badge_width(update_galley.as_ref(), UPDATE_BADGE_PADDING, labels)
+                        };
+                        let controls = RIGHT_CONTROLS_WIDTH
+                            + if busy {
+                                SPINNER_SIZE + ITEM_SPACING
+                            } else {
+                                0.0
+                            };
+
+                        let search_room =
+                            (ui.available_width() - window_controls.topbar_width).max(0.0);
+                        // What sits before the field: the page padding, the navigation
+                        // buttons, and any window buttons. The panels beside the page
+                        // keep room for it (`least_width`).
+                        let lead = width - ui.available_width() + window_controls.topbar_width;
+                        ui.ctx().data_mut(|data| data.insert_temp(lead_id(), lead));
+                        let fit = if compact {
+                            TopbarFit {
+                                search: (search_room - super::widgets::PAGE_PADDING)
+                                    .clamp(SEARCH_MIN, SEARCH_MAX),
+                                labels: width >= controls + badges(true),
+                            }
+                        } else {
+                            topbar_fit(search_room, controls, badges(true), badges(false))
+                        };
+                        let search_width = fit.search;
+                        let id = egui::Id::new("global-search");
+                        let before = app.search.query.clone();
+                        let response = super::widgets::search_field(
+                            ui,
+                            &palette,
+                            app.locale,
+                            id,
+                            &mut app.search.query,
+                            &gettext(locale, "What do you want to play?"),
+                            search_width,
+                        );
+                        if app.search.focus_requested {
+                            app.search.focus_requested = false;
+                            response.request_focus();
+                        }
+                        // Clear empties the field and hands it focus in the same frame.
+                        // Neither should leave the page: only typing a query does.
+                        let cleared = app.search.query.is_empty() && !before.is_empty();
+                        if response.gained_focus()
+                            && !cleared
+                            && !matches!(app.page(), Page::Search)
+                        {
+                            app.actions.push(Action::Open(Page::Search));
+                        }
+                        if app.search.query != before {
+                            app.search.typed_at = Some(std::time::Instant::now());
+                            if !cleared && !matches!(app.page(), Page::Search) {
+                                app.actions.push(Action::Open(Page::Search));
+                            }
+                        }
+                        if response.lost_focus()
+                            && ui.input(|input| input.key_pressed(egui::Key::Enter))
+                        {
+                            let query = app.search.query.clone();
+                            app.actions.push(Action::Search(query));
+                        }
+                        if response.has_focus()
+                            && ui.input(|input| input.key_pressed(egui::Key::Escape))
+                        {
+                            response.surrender_focus();
+                        }
+                        (fit, device_galley, update, update_galley, busy)
+                    },
                 )
-                .clicked()
-                {
-                    app.actions.push(Action::ToggleSidebar);
-                }
-                ui.add_space(2.0);
+                .inner;
+            if compact {
+                ui.add_space(ITEM_SPACING);
             }
-            if !app.settings.sidebar_visible
-                && nav_button(ui, &palette, Icon::House, true, &gettext(locale, "Home")).clicked()
-            {
-                app.actions.push(Action::Open(Page::Home));
-            }
-            if nav_button(
-                ui,
-                &palette,
-                Icon::ChevronLeft,
-                app.can_go_back(),
-                &gettext(locale, "Back"),
-            )
-            .clicked()
-            {
-                app.actions.push(Action::Back);
-            }
-            if nav_button(
-                ui,
-                &palette,
-                Icon::ChevronRight,
-                app.can_go_forward(),
-                &gettext(locale, "Forward"),
-            )
-            .clicked()
-            {
-                app.actions.push(Action::Forward);
-            }
-            ui.add_space(8.0);
-
-            // The badges sit at the right end but grow with their text, so
-            // measure them here, before the search field takes its share.
-            let device_galley = app.now_playing().filter(|now| !now.local).map(|now| {
-                let label = match now.device_name {
-                    Some(device) => {
-                        // Translators: {device} is the name of the device playing the music.
-                        gettext(locale, "Playing on {device}").replace("{device}", &device)
-                    }
-                    None => gettext(locale, "Playing on another device").into_owned(),
-                };
-                ui.painter()
-                    .layout_no_wrap(label, theme::medium(12.5), palette.text)
-            });
-            let update = app.update.clone();
-            let update_galley = update.as_ref().map(|update| {
-                let label = match &app.update_download {
-                    crate::updates::DownloadState::Ready(_) => {
-                        gettext(locale, "Update ready").into_owned()
-                    }
-                    crate::updates::DownloadState::Downloading { .. } => {
-                        gettext(locale, "Downloading update…").into_owned()
-                    }
-                    _ => {
-                        // Translators: {version} is a version number such as 1.2.0.
-                        gettext(locale, "Update to {version}").replace("{version}", &update.version)
-                    }
-                };
-                ui.painter()
-                    .layout_no_wrap(label, theme::medium(12.5), palette.accent)
-            });
-            // Ask once, so the bar reserves room for exactly the spinner it
-            // then draws.
-            let busy = app
-                .backend
-                .activity()
-                .busy(std::time::Duration::from_millis(1000));
-            let badges = |labels: bool| {
-                badge_width(device_galley.as_ref(), DEVICE_BADGE_PADDING, labels)
-                    + badge_width(update_galley.as_ref(), UPDATE_BADGE_PADDING, labels)
-            };
-            let controls = RIGHT_CONTROLS_WIDTH
-                + if busy {
-                    SPINNER_SIZE + ITEM_SPACING
-                } else {
-                    0.0
-                };
-
-            let search_room = (ui.available_width() - window_controls.topbar_width).max(0.0);
-            // What sits before the field: the page padding, the navigation
-            // buttons, and any window buttons. The panels beside the page
-            // keep room for it (`least_width`).
-            let lead = width - ui.available_width() + window_controls.topbar_width;
-            ui.ctx().data_mut(|data| data.insert_temp(lead_id(), lead));
-            let fit = topbar_fit(search_room, controls, badges(true), badges(false));
-            let search_width = fit.search;
-            let id = egui::Id::new("global-search");
-            let before = app.search.query.clone();
-            let response = super::widgets::search_field(
-                ui,
-                &palette,
-                app.locale,
-                id,
-                &mut app.search.query,
-                &gettext(locale, "What do you want to play?"),
-                search_width,
-            );
-            if app.search.focus_requested {
-                app.search.focus_requested = false;
-                response.request_focus();
-            }
-            // Clear empties the field and hands it focus in the same frame.
-            // Neither should leave the page: only typing a query does.
-            let cleared = app.search.query.is_empty() && !before.is_empty();
-            if response.gained_focus() && !cleared && !matches!(app.page(), Page::Search) {
-                app.actions.push(Action::Open(Page::Search));
-            }
-            if app.search.query != before {
-                app.search.typed_at = Some(std::time::Instant::now());
-                if !cleared && !matches!(app.page(), Page::Search) {
-                    app.actions.push(Action::Open(Page::Search));
-                }
-            }
-            if response.lost_focus() && ui.input(|input| input.key_pressed(egui::Key::Enter)) {
-                let query = app.search.query.clone();
-                app.actions.push(Action::Search(query));
-            }
-            if response.has_focus() && ui.input(|input| input.key_pressed(egui::Key::Escape)) {
-                response.surrender_focus();
-            }
-
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 ui.add_space(window_controls.topbar_width);
                 ui.add_space(super::widgets::PAGE_PADDING);

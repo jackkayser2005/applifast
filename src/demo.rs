@@ -11559,6 +11559,111 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_toolbar_controls_fit_beside_narrow_queue_and_lyrics() {
+        use egui::accesskit::Role;
+        for light in [false, true] {
+            let (ctx, mut app) = accessible_app(&format!("apple-narrow-toolbar-{light}"));
+            app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+            app.local = app.apple.as_ref().unwrap().local.clone();
+            app.remote = None;
+            app.open(Page::LikedSongs);
+            app.settings.theme = if light {
+                crate::settings::ThemeChoice::Light
+            } else {
+                crate::settings::ThemeChoice::Dark
+            };
+            app.actions.push(Action::SettingsChanged);
+            for sidebar in [true, false] {
+                app.settings.sidebar_visible = sidebar;
+                for panel in [Some("queue"), Some("lyrics"), None] {
+                    app.show_queue_panel = panel == Some("queue");
+                    app.show_lyrics_panel = panel == Some("lyrics");
+                    for width in [760.0, 1100.0, 760.0] {
+                        let mut tree = None;
+                        for _ in 0..3 {
+                            let mut output = ctx.run_ui(
+                                egui::RawInput {
+                                    screen_rect: Some(egui::Rect::from_min_size(
+                                        egui::Pos2::ZERO,
+                                        egui::vec2(width, 760.0),
+                                    )),
+                                    ..Default::default()
+                                },
+                                |ui| app.frame_ui(ui),
+                            );
+                            output.textures_delta.clear();
+                            tree = output.platform_output.accesskit_update;
+                        }
+                        let tree = tree.unwrap();
+                        let search = ctx.read_response(egui::Id::new("global-search")).unwrap();
+                        let pill = egui::Rect::from_min_max(
+                            search.rect.min - egui::vec2(34.0, 1.0),
+                            search.rect.max + egui::vec2(30.0, 1.0),
+                        );
+                        let pill = egui::Rect::from_center_size(
+                            pill.center(),
+                            egui::vec2(pill.width(), 34.0),
+                        );
+                        let left = if sidebar {
+                            egui::containers::panel::PanelState::load(
+                                &ctx,
+                                egui::Id::new("sidebar"),
+                            )
+                            .unwrap()
+                            .outer_rect
+                            .right()
+                        } else {
+                            0.0
+                        };
+                        let right = panel.map_or(width, |name| {
+                            egui::containers::panel::PanelState::load(
+                                &ctx,
+                                egui::Id::new(format!("{name}-panel")),
+                            )
+                            .unwrap()
+                            .outer_rect
+                            .left()
+                        });
+                        assert!(
+                            right - left >= 270.0,
+                            "The page must retain its narrow-window room."
+                        );
+                        assert!(pill.left() >= left && pill.right() <= right);
+                        for label in ["Settings", "Now playing", "Winamp mini player"] {
+                            let bounds = tree
+                                .nodes
+                                .iter()
+                                .find_map(|(_, node)| {
+                                    (node.role() == Role::Button
+                                        && node.label().is_some_and(|name| name.starts_with(label)))
+                                    .then(|| node.bounds())
+                                    .flatten()
+                                    .filter(|bounds| bounds.y0 < 150.0)
+                                })
+                                .unwrap_or_else(|| panic!("Missing toolbar action {label}"));
+                            let rect = egui::Rect::from_min_max(
+                                egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                                egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                            );
+                            assert!(
+                                rect.left() >= left && rect.right() <= right,
+                                "{label} leaves the page at {width}, sidebar={sidebar}, panel={panel:?}"
+                            );
+                            let overlap = rect.intersect(pill);
+                            assert!(
+                                overlap.width() <= 0.0 || overlap.height() <= 0.0,
+                                "{label} {rect:?} overlaps search {pill:?} at {width}, sidebar={sidebar}, panel={panel:?}"
+                            );
+                        }
+                    }
+                }
+            }
+            app.backend.shutdown();
+        }
+    }
+
     /// #644: Go to song radio from a list names the radio after the song
     /// even when the song was never played or seen on a radio, instead of
     /// opening a page titled just "Radio" with no cover.

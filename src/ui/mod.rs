@@ -119,7 +119,7 @@ fn keep_room_for_panels(app: &App, ctx: &Context) {
         return;
     }
     let width = main_min_width(
-        topbar::least_width(ctx),
+        topbar::least_width(ctx, app.apple.is_some()),
         app.settings.sidebar_visible,
         app.show_queue_panel || app.show_lyrics_panel,
     )

@@ -57,6 +57,9 @@ does not repeat playlist or favorite changes whose outcome is uncertain.
 Native WebView2 setup callbacks share a 45-second deadline and offer the existing
 Retry connection action if they stall. See [scope and runtime checks](docs/applifast/native-setup-deadline.md).
 
+With Queue or Lyrics open in a narrow window, Apple's toolbar puts its existing
+shortcuts on a second row so they remain clear of Search. Wider panes keep one row.
+
 Developers can run from this checkout:
 
 ```powershell
