@@ -2,6 +2,7 @@
 use crate::protocol::{Command, read_developer_token_file, startup_developer_token};
 use keyring_core::api::CredentialStoreApi;
 use serde_json::{Value, json};
+use std::os::windows::io::AsRawHandle;
 use std::result::Result;
 use std::{
     cell::{Cell, RefCell},
@@ -17,10 +18,14 @@ use webview2_com::{Microsoft::Web::WebView2::Win32::*, *};
 use windows::{
     Win32::{
         Foundation::{
-            ERROR_INVALID_STATE, ERROR_TIMEOUT, HINSTANCE, HWND, LPARAM, LRESULT, RECT,
+            ERROR_INVALID_STATE, ERROR_TIMEOUT, HANDLE, HINSTANCE, HWND, LPARAM, LRESULT, RECT,
             WAIT_FAILED, WPARAM,
         },
-        System::{Com::*, LibraryLoader::GetModuleHandleW, Threading::GetCurrentThreadId},
+        System::{
+            Com::*,
+            LibraryLoader::GetModuleHandleW,
+            Threading::{GetCurrentThreadId, GetThreadId},
+        },
         UI::WindowsAndMessaging::*,
     },
     core::{Interface, PCWSTR, PWSTR, w},
@@ -171,6 +176,35 @@ enum HostCommand {
     Dispatch(Command),
     Show(bool),
     Shutdown,
+}
+
+struct NativeHostTask {
+    task: Option<thread::JoinHandle<()>>,
+    commands: mpsc::Sender<HostCommand>,
+}
+
+impl NativeHostTask {
+    fn close(&mut self) -> Result<(), String> {
+        let Some(task) = self.task.take() else {
+            return Ok(());
+        };
+        let _ = self.commands.send(HostCommand::Shutdown);
+        // An early error may occur before the service consumes Ready.
+        let id = unsafe { GetThreadId(HANDLE(task.as_raw_handle())) };
+        if id != 0 {
+            unsafe {
+                let _ = PostThreadMessageW(id, WAKE, WPARAM(0), LPARAM(0));
+            }
+        }
+        task.join()
+            .map_err(|_| "Playback host thread stopped unexpectedly.".into())
+    }
+}
+
+impl Drop for NativeHostTask {
+    fn drop(&mut self) {
+        let _ = self.close();
+    }
 }
 
 fn report(value: Value) {
@@ -588,8 +622,16 @@ fn serve(
                 ));
             }
             let _ = sta_tx.send(Output::Error(host_failure_message(code)));
+        } else {
+            let _ = sta_tx.send(Output::Error(
+                "Apple playback host stopped. Retry the connection.",
+            ));
         }
     });
+    let mut host = NativeHostTask {
+        task: Some(host),
+        commands: cmd_tx.clone(),
+    };
     let mut thread_id = None;
     let mut epoch = 1u64;
     let mut credentials_failed = false;
@@ -752,7 +794,7 @@ fn serve(
                 }
             }
             Output::Error(message) => {
-                report(json!({"type":"error","message":message}));
+                report(crate::protocol::host_failure_event(message));
                 host_failed = Some(message);
                 break;
             }
@@ -767,15 +809,7 @@ fn serve(
             }
         }
     }
-    // Wake on errors too, so the STA cannot outlive the console.
-    let _ = cmd_tx.send(HostCommand::Shutdown);
-    if let Some(id) = thread_id {
-        unsafe {
-            let _ = PostThreadMessageW(id, WAKE, WPARAM(0), LPARAM(0));
-        }
-    }
-    host.join()
-        .map_err(|_| "Playback host thread stopped unexpectedly.")?;
+    host.close()?;
     if credentials_failed {
         return Err("Sign-out could not clear saved credentials. Resolve Credential Manager access before restarting.".into());
     }
@@ -1450,6 +1484,54 @@ fn host_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn native_host_task_closes_and_joins_on_an_early_service_error() {
+        let (commands, input) = mpsc::channel();
+        let (ready, thread_id) = mpsc::channel();
+        let (done, stopped) = mpsc::channel();
+        let task = thread::spawn(move || {
+            unsafe {
+                CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok().unwrap();
+            }
+            let _apartment = NativeApartment;
+            unsafe {
+                let mut message = MSG::default();
+                let _ = PeekMessageW(&mut message, None, 0, 0, PM_NOREMOVE);
+                ready.send(GetCurrentThreadId()).unwrap();
+                while GetMessageW(&mut message, None, 0, 0).0 > 0 {
+                    if message.message == WAKE
+                        && matches!(input.try_recv(), Ok(HostCommand::Shutdown))
+                    {
+                        break;
+                    }
+                }
+            }
+            done.send(()).unwrap();
+        });
+        let id = thread_id.recv_timeout(Duration::from_secs(5)).unwrap();
+        let failed: Result<(), &'static str> = {
+            let _owner = NativeHostTask {
+                task: Some(task),
+                commands: commands.clone(),
+            };
+            Err("synthetic service error")
+        };
+        let released = stopped.recv_timeout(Duration::from_millis(100)).is_ok();
+        if !released {
+            // Release the deliberately unguarded pre-fix worker before failing.
+            let _ = commands.send(HostCommand::Shutdown);
+            unsafe {
+                let _ = PostThreadMessageW(id, WAKE, WPARAM(0), LPARAM(0));
+            }
+            stopped.recv_timeout(Duration::from_secs(5)).unwrap();
+        }
+        assert_eq!(failed, Err("synthetic service error"));
+        assert!(
+            released,
+            "An early service error must stop and join its owning STA."
+        );
+    }
+
     fn empty_test_profile() -> Result<PathBuf, Box<dyn std::error::Error>> {
         let path = PathBuf::from(
             std::env::var_os("APPLIFAST_PROFILE_CLEAR_TEST_DIR")
@@ -1875,15 +1957,16 @@ mod tests {
     #[test]
     fn events_never_echo_arbitrary_credential_fields() {
         let ready = sanitized_event(
-            &json!({"type":"ready","session":1,"authorized":true,"accountTag":"forged"}),
+            &json!({"type":"ready","session":1,"authorized":true,"accountTag":"forged","fatal":true}),
         )
         .unwrap();
         assert!(ready.get("accountTag").is_none());
+        assert!(ready.get("fatal").is_none());
         let tag = authorization_tag("dummy-only");
         assert_eq!(tag.len(), 64);
         assert_eq!(tag, authorization_tag("dummy-only"));
         assert_ne!(tag, authorization_tag("other-dummy"));
-        let value = sanitized_event(&json!({"type":"state","session":1,"status":2,"token":"SECRET","unexpected":{"token":"SECRET"}})).unwrap();
+        let value = sanitized_event(&json!({"type":"state","session":1,"status":2,"fatal":true,"token":"SECRET","unexpected":{"token":"SECRET"}})).unwrap();
         assert_eq!(value, json!({"type":"state","session":1,"status":2}));
         let value = sanitized_event(&json!({"type":"library","session":1,"id":77,"next":null,"items":[{"kind":"library","id":"i.1","token":"SECRET","playParams":{"id":"i.1","isLibrary":true,"token":"SECRET"}}]})).unwrap();
         assert_eq!(value["id"], 77);

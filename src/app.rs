@@ -1949,6 +1949,37 @@ impl App {
                     }) {
                         continue;
                     }
+                    let verified = value["type"] == "authorized"
+                        || (value["type"] == "ready" && value["authorized"] == true);
+                    let previous = verified
+                        .then(|| {
+                            self.apple
+                                .as_mut()
+                                .and_then(|apple| apple.recovery_account_tag.take())
+                        })
+                        .flatten();
+                    if previous.is_some_and(|tag| {
+                        Some(tag.as_str())
+                            != value["accountTag"]
+                                .as_str()
+                                .filter(|tag| crate::apple::cache::valid_tag(tag))
+                    }) {
+                        self.clear_apple_account_views();
+                        self.backend.send(Command::ClearAppleCache);
+                    }
+                    if value["type"] == "error" && value["fatal"] == true {
+                        if let Some(snapshot) = self
+                            .apple
+                            .as_mut()
+                            .and_then(|apple| apple.cache_snapshot(true))
+                        {
+                            self.backend
+                                .send(Command::SaveAppleCache(Box::new(snapshot)));
+                        }
+                        self.reset_data();
+                        self.dialog = None;
+                        self.track_cache.clear();
+                    }
                     if value["type"] == "response" {
                         self.apple_response(&value);
                         self.apple_finish_pending_play();
@@ -8906,18 +8937,7 @@ impl App {
                 self.pending_link = None;
                 self.backend.send(Command::ClearAppleCache);
             }
-            self.reset_data();
-            self.dialog = None;
-            self.track_cache.clear();
-            self.manual_queue.clear();
-            self.recent_contexts.clear();
-            self.resume_queue.clear();
-            self.resume_track = None;
-            self.resume_context = None;
-            self.intent_track = None;
-            self.assumed_context = None;
-            self.remote = None;
-            self.session_dirty = true;
+            self.clear_apple_account_views();
         }
         let Some(apple) = &mut self.apple else {
             return false;

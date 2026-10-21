@@ -172,6 +172,10 @@ real-account and release checks; passing mocks alone does not close a row.
      compilation/test results do not establish Apple playback support.
 
 2. **Sign-in and account lifecycle**
+   - [Host recovery regressions](host-retry.md) cover fatal errors after sign-in,
+     an accessible Retry connection, stale events, account-bound session
+     restoration and early-error native-thread cleanup. These checks do not
+     close the actual account, popup or fresh-PC acceptance gates below.
    - The [native ordering regression](profile-cleanup-ordering.md) reproduces
      new authorization being dispatched before asynchronous profile cleanup.
      Two fixed cycles now complete cleanup first. Commands wait without blocking

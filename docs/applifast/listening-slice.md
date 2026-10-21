@@ -150,6 +150,15 @@ token-import exclusion, generation filtering and sanitized HRESULT diagnosis.
 These deterministic checks do not prove real-account reconnection after the
 older preview releases its browser profile; that acceptance check remains open.
 
+Fatal native host errors now invalidate readiness immediately, including after
+successful sign-in. The existing Retry connection action replaces the stopped
+host. The latest account-bound snapshot keeps duplicate occurrences, manual
+queue order and position, and restores paused for the same account. Transient
+loading and write state clears; uncertain writes are not replayed. Old events
+cannot revive the failed host, and a different account clears retained contexts.
+An owning native-thread guard releases the STA on early service errors before
+the replacement opens the same profile. See [recovery checks and limits](host-retry.md).
+
 Local Windows verification passed: formatting, strict default/demo all-target
 Clippy, 1,011 default and 1,045 demo library tests (five opt-in checks ignored in
 each), binary/integration suites, default doctests, strict demo Rustdoc, build,

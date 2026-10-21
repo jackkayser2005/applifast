@@ -23,6 +23,21 @@ fn page<T>(items: Vec<T>, data: &Value, offset: u32) -> ApiPage<T> {
 }
 
 impl App {
+    pub(super) fn clear_apple_account_views(&mut self) {
+        self.reset_data();
+        self.dialog = None;
+        self.track_cache.clear();
+        self.manual_queue.clear();
+        self.recent_contexts.clear();
+        self.resume_queue.clear();
+        self.resume_track = None;
+        self.resume_context = None;
+        self.intent_track = None;
+        self.assumed_context = None;
+        self.remote = None;
+        self.session_dirty = true;
+    }
+
     pub(super) fn apple_favorite_songs(&mut self, uris: &[String]) {
         match self.apple.as_mut().unwrap().favorite_songs(uris) {
             Ok(Some(command)) => {
@@ -1879,6 +1894,235 @@ fn merge<T: Default>(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn fatal_host_reconnect_drops_views_when_authorization_changes_account() {
+        let mut app = super::super::tests::test_app("apple-fatal-host-account");
+        app.backend.set_offline(true);
+        let mut apple = crate::apple::State::default();
+        apple.ready = true;
+        apple.authorized = true;
+        apple.account_tag = Some("a".repeat(64));
+        let generation = apple.generation;
+        app.apple = Some(apple);
+        let old_playlist = models::playlist(&json!({
+            "id":"p.old-private","type":"library-playlists","attributes":{"name":"Old account fixture","canEdit":true}
+        }));
+        let old_id = old_playlist.id.clone();
+        app.assumed_context = Some(AssumedContext {
+            uri: "apple:collection:old-account".into(),
+            shuffle: None,
+            at: Instant::now(),
+        });
+        app.library.playlists = Loadable::Loaded(vec![old_playlist]);
+        assert!(
+            app.library
+                .playlists
+                .get()
+                .unwrap()
+                .iter()
+                .any(|row| row.id == old_id)
+        );
+        app.handle_backend_events(vec![Event::Apple {
+            generation,
+            value: applifast_playback_probe::protocol::host_failure_event("Synthetic host stopped"),
+        }]);
+        assert!(app.assumed_context.is_some());
+        app.apply(Action::SignIn, &egui::Context::default());
+        let generation = app.apple.as_ref().unwrap().generation;
+        app.handle_backend_events(vec![Event::Apple {
+            generation,
+            value: json!({"type":"ready","session":1,"authorized":false}),
+        }]);
+        assert!(!app.account_ready());
+        app.handle_backend_events(vec![Event::Apple {
+            generation,
+            value: json!({"type":"authorized","session":1,"accountTag":"b".repeat(64),"storefront":"us"}),
+        }]);
+        app.backend.shutdown();
+        assert!(app.account_ready());
+        assert!(app.assumed_context.is_none());
+        assert!(
+            !app.library
+                .playlists
+                .get()
+                .is_some_and(|rows| rows.iter().any(|row| row.id == old_id)),
+            "A reconnected account must not inherit the previous account's cached views."
+        );
+    }
+
+    #[test]
+    fn fatal_host_error_preserves_session_and_retry_replaces_the_dead_host() {
+        let mut app = super::super::tests::test_app("apple-fatal-host-retry");
+        app.backend.set_offline(true);
+        let tag = "a".repeat(64);
+        let song = models::song(
+            &json!({"id":"i.repeat","type":"library-songs","attributes":{
+            "name":"Synthetic retry track","durationInMillis":180000,
+            "playParams":{"id":"i.repeat","kind":"song","isLibrary":true,"catalogId":"123"}}}),
+        )
+        .unwrap();
+        let uri = song.uri();
+        let mut apple = crate::apple::State::default();
+        apple.ready = true;
+        apple.authorized = true;
+        apple.account_tag = Some(tag.clone());
+        apple.storefront = "us".into();
+        apple.restore_cache(None);
+        apple.songs.push(song);
+        apple.play_uris(&[uri.clone(), uri.clone()], 0).unwrap();
+        assert_eq!(
+            apple.add_uris(std::slice::from_ref(&uri), 0, Duration::ZERO, false),
+            Some(1)
+        );
+        apple.local.position_ms = 12_345;
+        apple.local.position_at = None;
+        apple.local.playback = crate::player::Playback::Paused;
+        apple.local.connected = true;
+        let expected = apple.cache_snapshot(true).unwrap();
+        let generation = apple.generation;
+        app.apple = Some(apple);
+        app.sync_apple_library();
+        app.sync_apple_queue();
+        let context = "apple:collection:songs";
+        app.assumed_context = Some(AssumedContext {
+            uri: context.into(),
+            shuffle: None,
+            at: Instant::now(),
+        });
+        app.handle_backend_events(vec![Event::Apple {
+            generation,
+            value: json!({"type":"error","message":"Synthetic operation failure"}),
+        }]);
+        assert!(
+            app.account_ready() && app.apple.as_ref().unwrap().ready,
+            "An ordinary operation error must not replace the host."
+        );
+
+        // Allow only the local snapshot write; no startup/transport action runs.
+        app.backend.set_offline(false);
+        app.playlist_busy = true;
+        app.apple.as_mut().unwrap().token_request = Some(77);
+        app.handle_backend_events(vec![Event::Apple {
+            generation,
+            value: applifast_playback_probe::protocol::host_failure_event("Synthetic host stopped"),
+        }]);
+        app.backend.set_offline(true);
+        app.backend.shutdown();
+        assert!(!app.account_ready());
+        assert!(!app.playlist_busy);
+        assert_eq!(app.assumed_context.as_ref().unwrap().uri, context);
+        let apple = app.apple.as_ref().unwrap();
+        assert!(!apple.ready && !apple.loading && !apple.local.connected);
+        assert!(apple.token_request.is_none());
+        assert_eq!(apple.generation, generation + 1);
+        assert_eq!(
+            apple.queue.len(),
+            3,
+            "A host failure must not consume occurrences."
+        );
+        let saved = crate::apple::cache::Snapshot::load(
+            &app.dirs.state.join("apple-session.json"),
+            &tag,
+            "us",
+        )
+        .expect("Save the latest session before invalidating authorization.");
+        assert_eq!(
+            serde_json::to_value(&saved).unwrap(),
+            serde_json::to_value(expected).unwrap()
+        );
+
+        app.handle_backend_events(vec![Event::Apple {
+            generation,
+            value: json!({"type":"ready","session":1,"authorized":true,"accountTag":tag,"storefront":"us"}),
+        }]);
+        assert!(
+            !app.account_ready(),
+            "A late ready event cannot revive the stopped host."
+        );
+        assert!(!app.apple.as_ref().unwrap().loading);
+
+        let ctx = egui::Context::default();
+        if cfg!(windows) {
+            use egui::accesskit::{Action as AccessibleAction, ActionRequest, Role, TreeId};
+            app.settings.check_for_updates = false;
+            ctx.enable_accesskit();
+            app.attach(&ctx);
+            let mut draw = |events| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(760.0, 760.0),
+                        )),
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| app.frame_ui(ui),
+                );
+                output.textures_delta.clear();
+                app.apply_actions(&ctx);
+                output.platform_output.accesskit_update.unwrap()
+            };
+            draw(Vec::new());
+            let tree = draw(Vec::new());
+            let button = tree
+                .nodes
+                .iter()
+                .find(|(_, node)| {
+                    node.role() == Role::Button && node.label() == Some("Retry connection")
+                })
+                .expect("A stopped host must expose the existing Retry connection button.")
+                .0;
+            draw(vec![egui::Event::AccessKitActionRequest(ActionRequest {
+                target_tree: TreeId::ROOT,
+                target_node: button,
+                action: AccessibleAction::Click,
+                data: None,
+            })]);
+        } else {
+            app.apply(Action::SignIn, &ctx);
+        }
+        let apple = app.apple.as_ref().unwrap();
+        assert_eq!(
+            apple.generation,
+            generation + 2,
+            "Retry must start a replacement host."
+        );
+        assert!(apple.loading && !apple.ready && apple.error.is_none());
+        app.apply(Action::SignIn, &ctx);
+        assert_eq!(app.apple.as_ref().unwrap().generation, generation + 2);
+        app.handle_backend_events(vec![Event::Apple {
+            generation,
+            value: applifast_playback_probe::protocol::host_failure_event("Old host stopped late"),
+        }]);
+        assert!(app.apple.as_ref().unwrap().loading);
+        assert!(app.apple.as_ref().unwrap().error.is_none());
+        app.handle_backend_events(vec![Event::Apple {
+            generation: generation + 2,
+            value: json!({"type":"ready","session":1,"authorized":true,"accountTag":tag,"storefront":"us"}),
+        }]);
+        app.handle_backend_events(vec![Event::AppleCache {
+            generation: generation + 2,
+            session: 1,
+            snapshot: Some(Box::new(saved)),
+        }]);
+        let apple = app.apple.as_ref().unwrap();
+        assert!(app.account_ready());
+        assert_eq!(
+            apple
+                .queue
+                .iter()
+                .map(crate::apple::Song::uri)
+                .collect::<Vec<_>>(),
+            [uri.clone(), uri.clone(), uri]
+        );
+        assert_eq!(apple.order.upcoming, [2, 1]);
+        assert_eq!(apple.order.manual_count, 1);
+        assert_eq!(apple.local.position_ms, 12_345);
+        assert_eq!(apple.local.playback, crate::player::Playback::Paused);
+        assert_eq!(app.assumed_context.as_ref().unwrap().uri, context);
+    }
 
     #[test]
     fn desktop_favorites_apply_immediately_and_reject_old_sessions_without_touching_queue() {

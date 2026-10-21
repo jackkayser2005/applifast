@@ -213,6 +213,7 @@ pub struct State {
     pending_playback: Option<Playback>,
     request_generation: u64,
     pub account_tag: Option<String>,
+    pub(crate) recovery_account_tag: Option<String>,
     pub cache_checked: bool,
     cache_dirty: bool,
     cache_position_ms: u32,
@@ -263,6 +264,7 @@ impl Default for State {
             pending_playback: None,
             request_generation: 0,
             account_tag: None,
+            recovery_account_tag: None,
             cache_checked: false,
             cache_dirty: false,
             cache_position_ms: 0,
@@ -276,7 +278,9 @@ impl State {
     pub fn reset_host(&mut self) {
         self.generation += 1;
         self.session = 1;
+        let recovery = self.recovery_account_tag.take();
         self.clear_account();
+        self.recovery_account_tag = recovery;
         self.ready = false;
         self.loading = true;
     }
@@ -314,6 +318,7 @@ impl State {
         self.request_generation = 0;
         self.library_error = None;
         self.account_tag = None;
+        self.recovery_account_tag = None;
         self.cache_checked = false;
         self.cache_dirty = false;
         self.refresh_songs = None;
@@ -939,14 +944,27 @@ impl State {
                 }
             }
             Some("error") => {
-                if event
-                    .get("requestGeneration")
-                    .and_then(Value::as_u64)
-                    .is_some_and(|value| value != self.request_generation)
+                let fatal = event["fatal"] == true;
+                if !fatal
+                    && event
+                        .get("requestGeneration")
+                        .and_then(Value::as_u64)
+                        .is_some_and(|value| value != self.request_generation)
                 {
                     return None;
                 }
-                if event.get("requestGeneration").is_none() {
+                if fatal {
+                    self.recovery_account_tag = self
+                        .account_tag
+                        .clone()
+                        .or(self.recovery_account_tag.take());
+                    self.generation += 1;
+                    self.ready = false;
+                    self.authorized = false;
+                    self.local.connected = false;
+                    self.token_request = None;
+                }
+                if fatal || event.get("requestGeneration").is_none() {
                     self.loading = false;
                     self.refresh_songs = None;
                     self.library_read_id = None;
