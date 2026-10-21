@@ -56,7 +56,7 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
         "queue-panel",
         theme::SIDE_PANEL_MIN_WIDTH..=560.0,
         app.settings.queue_width,
-        ui.available_width() - super::topbar::least_width(ui.ctx()),
+        ui.available_width() - super::topbar::least_width(ui.ctx(), app.apple.is_some()),
     );
     let panel = egui::Panel::right("queue-panel")
         .resizable(true)

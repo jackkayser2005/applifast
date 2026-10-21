@@ -11612,7 +11612,7 @@ mod tests {
         for _ in 0..3 {
             commands.extend(draw(&ctx, &mut app, 1000.0));
         }
-        let least = crate::ui::topbar::least_width(&ctx);
+        let least = crate::ui::topbar::least_width(&ctx, app.apple.is_some());
         let sidebar = panel(&ctx, "sidebar");
         let queue = panel(&ctx, "queue-panel");
         assert!(

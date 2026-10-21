@@ -84,7 +84,10 @@ same shared sample fixture, with documented service identity, favorite and
 supported-column differences. All captures were inspected, with full narrow
 Settings and queue views inspected separately. The narrow queue leaves the
 central pane crowded and its toolbar overlaps. That responsive issue remains
-open; this evidence does not establish a clean narrow-queue experience.
+open; this evidence does not establish a clean narrow-queue experience. The
+[responsive toolbar follow-up](narrow-toolbar.md) addresses the Search/control
+overlap with a second row in narrow Apple panes. Collection/table crowding and
+approval of that changed toolbar arrangement remain separate open gates.
 
 The filled-heart regression uses actual row/player clicks and painted image
 geometry. It reproduces the fixed 16-pixel filled row while the pop should be

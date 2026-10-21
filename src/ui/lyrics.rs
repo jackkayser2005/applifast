@@ -40,7 +40,7 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
         "lyrics-panel",
         theme::SIDE_PANEL_MIN_WIDTH..=640.0,
         app.settings.lyrics_width,
-        ui.available_width() - super::topbar::least_width(ui.ctx()),
+        ui.available_width() - super::topbar::least_width(ui.ctx(), app.apple.is_some()),
     );
     let panel = egui::Panel::right("lyrics-panel")
         .resizable(true)

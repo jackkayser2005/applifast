@@ -497,7 +497,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         "sidebar",
         super::SIDEBAR_MIN_WIDTH..=600.0,
         app.settings.sidebar_width,
-        ui.available_width() - super::topbar::least_width(ui.ctx()) - beside,
+        ui.available_width() - super::topbar::least_width(ui.ctx(), app.apple.is_some()) - beside,
     );
     let panel = egui::Panel::left("sidebar")
         .resizable(true)
