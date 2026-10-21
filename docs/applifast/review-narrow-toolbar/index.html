@@ -6,7 +6,7 @@
 <style>
 body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}button,select{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}button[aria-pressed="true"]{outline:2px solid #ff7a80}a{color:#ff7a80}
 </style>
-<h1>Keep Apple toolbar controls clear of Search</h1>
+<h1>PR #82: Keep Apple toolbar controls clear of Search</h1>
 <p>Baseline: clean <code>82c35396614ede17da275415474fcf9c79207e09</code>.
 Candidate: <code>fix/narrow-apple-toolbar</code>, the source accompanying this comparison.</p>
 <p>Visible change: a narrow Apple center pane puts the existing Settings, Now playing,
@@ -30,7 +30,7 @@ layout work. Stills do not prove animation timing, account playback or performan
 pairs are pixel-identical. Narrow changes stay in the center pane. The selector
 script was checked against a DOM stub; the browser connection was unavailable,
 so this does not claim rendered-page or live-interaction verification.</p>
-<p>Scope ledger: the approved Apple interface and requested PR #13 integration are
+<p><a href="../visual-approvals.md">Scope ledger</a>: the approved Apple interface and requested PR #13 integration are
 the baseline. This follow-up changes responsive toolbar arrangement and the Apple
 minimum-width reservation. Visual approval of this specific change remains pending
 before integration. No settings format, network destination or dependency changes.</p>
