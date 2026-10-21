@@ -9,6 +9,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// Rust owns the full local queue; the compact host command carries one item.
 pub const MAX_LOCAL_QUEUE_ITEMS: usize = 100_000;
 
+/// A trusted Rust host exit, distinct from an SDK/API operation failure.
+pub fn host_failure_event(message: &str) -> Value {
+    serde_json::json!({"type":"error","fatal":true,"message":message})
+}
+
 /// Fixed recovery guidance, without Apple's response body or credential details.
 pub fn api_failure_message(status: Option<u64>, fallback: &str) -> &str {
     match status {

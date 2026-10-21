@@ -324,14 +324,16 @@ impl AppleHost {
             if let Err(message) =
                 applifast_playback_probe::windows::attach(token_file, receiver, emit.clone())
             {
-                emit(serde_json::json!({"type":"error","message":message}));
+                emit(applifast_playback_probe::protocol::host_failure_event(
+                    &message,
+                ));
             }
             #[cfg(not(windows))]
             {
                 drop((token_file, receiver));
-                emit(
-                    serde_json::json!({"type":"error","message":"Apple playback is supported on Windows only."}),
-                );
+                emit(applifast_playback_probe::protocol::host_failure_event(
+                    "Apple playback is supported on Windows only.",
+                ));
             }
         });
         Self { input, task }
