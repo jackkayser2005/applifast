@@ -21,7 +21,9 @@ jobs:
   quality:
     name: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # A cold fork build reached this old 20-minute limit during default Clippy.
+    # Keep all checks and allow the remaining all-feature and Rustdoc work too.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
