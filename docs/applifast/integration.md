@@ -7,14 +7,14 @@ claim. The authoritative remaining gates are in [release readiness](release-read
 ## Source and scope
 
 The refreshed `origin/main` baseline is `995c768dcba4da7f93302bf2107af6b7ec3df02b`.
-The assembled application source is `833edfacb9543f1ecab5dc16373165bbba7c64b4`,
-with 98 linear commits after that baseline and no merge commits. Individual
+The assembled application source is `6357c6779327abf6a118506abba13bbc762ec937`,
+with 131 linear commits after that baseline and no merge commits. Individual
 feature PRs stay available for focused review. This branch targets `main` without
 moving another feature branch's base or rewriting published history.
 
 The scope includes the Apple listening work from PR #6, design/polish from
 PRs #1 through #12, adapted motion from PR #13 and the subsequent Apple feature,
-reliability, evidence and packaging slices through PR #62. The current native
+reliability, evidence and packaging slices through PR #86. The current native
 listening architecture remains Rust/egui plus an independent MusicKit JS/WebView2
 STA host. Spotify-specific implementation remains retained upstream code;
 Apple mode exposes the supported Apple controls. Linux/macOS playback stays
@@ -30,6 +30,15 @@ The assembly audit additionally repairs one PR #13 interaction: optimistic Apple
 favorites switched to a read-only filled image that bypassed the existing pop
 scale. Player and row filled images now consume that same scale, within their
 existing cells. Their read-only behavior and write handling are preserved.
+
+The October 22 refresh fast-forwards the previous integration head `64db4c3`
+without rewriting history. It brings in the minimal hidden host, maintainer-owned
+font-memory backport, size-specific artwork and cache limits, profile clearing
+and setup/retry fixes, large listening contexts, protected fork publishing,
+approved responsive layouts (#82/#83), native indicator frames (#84), favorite
+shortcut feedback (#85), and the guarded account playlist check (#86).
+See the [prioritized roadmap](roadmap.md) and linked evidence for each scope.
+These source changes do not by themselves establish the whole-player budget.
 
 MIT licensing and upstream credit remain. No signing key, listener token,
 browser profile or account cache belongs in a distributable. The package's
@@ -103,7 +112,7 @@ geometry. It reproduces the fixed 16-pixel filled row while the pop should be
 active, then passes with the existing scale applied. Both palette variants and
 760/1100 widths cover interruption by Reduce motion, normal size after re-enabling
 motion, and filled hearts retaining no click action. It uses sample data with no
-live account writes. The current local app checks pass 1,026 default and 1,072
+live account writes. At that earlier assembly, local app checks passed 1,026 default and 1,072
 demo library tests, with six opt-in checks ignored per suite, plus the existing
 strict Clippy, formatting, all-target/binary/integration, doc, gettext and Node
 checks. Translation reference updates preserve all message semantics.
@@ -117,10 +126,23 @@ Evergreen starts and immediate reuse pass without Apple grants or audio. The
 optimized installer/ZIP pass the checks recorded in PR #62. These results apply
 to that exact source and do not establish the eventual integration/release commit.
 
+The refreshed application at `6357c67` passes Windows formatting, strict
+default/demo all-target Clippy, default/demo all-target tests (1,041/1,089 library
+passes, nine opt-in checks ignored per ordinary suite), doctests, strict demo
+Rustdoc, demo build, gettext and Node bridge/token checks. The separately
+authorized [native playlist check](local-account-checks.md) creates and appends
+two exact library identities successfully. Saved-account reads and idempotent
+existing-favorite checks pass too. New favorites, fresh sign-in, normal desktop
+write interaction and recovery remain separate gates. Required hosted jobs must
+pass on the refreshed integration head, rather than relying on parent PR results.
+
 - [x] Complete matching overall light/dark and normal/narrow main captures,
   with fixed-size mini captures and their limits stated.
-- [ ] Finish missing interaction/motion evidence, narrow-queue responsiveness,
-  browser rendering and visual approval. Static selector checks are separate.
+- [x] Complete narrow toolbar/collection responsiveness, matching native and
+  browser comparisons, and explicit visual approval for #82/#83.
+- [ ] Finish remaining live interaction/motion evidence and any outstanding
+  visual scope. Static selector checks and scripted native indicator frames
+  cover their stated subsets only.
 - [ ] Pass every required hosted check on the integration head, including the
   full feature set, platform jobs, documentation site and Nix.
 - [ ] Integrate through the maintainer-approved linear workflow and verify the
