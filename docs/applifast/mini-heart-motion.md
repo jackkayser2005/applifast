@@ -29,7 +29,9 @@ All eight Before/After pairs have identical decoded pixels at rest. Chrome
 155.0.8059.85 also loads all sixteen viewer selections with the expected image
 dimensions and no script/resource errors in the serialized check, which waits
 for each selected image to decode. Its normal/narrow viewer captures were
-inspected. See [native provenance](review-mini-heart-motion/evidence.json) and
+inspected. All 31 index targets return HTTP 200, and PR #88's selection,
+Previous/Next controls and direct link pass in the browser.
+See [native provenance](review-mini-heart-motion/evidence.json) and
 [browser results](review-mini-heart-motion/browser-check.json).
 
 Windows formatting, strict default/demo all-target Clippy, default/demo all-target

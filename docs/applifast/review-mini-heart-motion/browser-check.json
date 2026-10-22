@@ -147,5 +147,168 @@
     }
   ],
   "errors": [],
-  "scope": "Actual rendered comparison controls and native-image loading, not live application motion or account behavior"
+  "scope": "Actual rendered comparison controls and native-image loading, not live application motion or account behavior",
+  "index": {
+    "links": [
+      {
+        "name": "Windows Apple integration: overall main comparison",
+        "path": "review-integration/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #14: motion, cache and polish",
+        "path": "review-polish/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #15: create and save playlists",
+        "path": "review-playlists/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #16: append songs, albums and queue",
+        "path": "review-playlist-additions/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #17: favorites read/filter slice",
+        "path": "review-favorites/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #18: Home feeds and album added dates",
+        "path": "review-home/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #19: Apple lyrics and full-screen words",
+        "path": "review-lyrics/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #20: Favorites page and sidebar shelf",
+        "path": "review-favorites-shelf/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #21: Apple search pages and supported filters",
+        "path": "review-search/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #26: Settings shortcuts and quick Apple navigation",
+        "path": "review-shortcuts/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #30: supported Apple controls and outgoing links",
+        "path": "review-supported-controls/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #31: read-only hearts for known Apple favorites",
+        "path": "review-favorite-hearts/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #32: app token delivery and simpler tester sign-in",
+        "path": "review-bundled-token/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #27: token import and private tester setup",
+        "path": "review-token-onboarding/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #28: product identity and independent window storage",
+        "path": "review-product-identity/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #29: shared Apple Music links and exact-song navigation",
+        "path": "review-links/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #44: optimistic Apple Favorites controls",
+        "path": "review-favorite-controls/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #45: mini-player Favorites",
+        "path": "review-mini-favorites/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #46: Favorites shortcut",
+        "path": "review-favorite-shortcut/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #54: Reduce motion controls",
+        "path": "review-reduced-motion-controls/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #55: exact queue occurrence removal",
+        "path": "review-queue-removal/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #56: Play next",
+        "path": "review-play-next/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #57: cached Songs and API recovery",
+        "path": "review-api-recovery/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #59: window artwork lifetime",
+        "path": "review-window-artwork/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #60: playlist pin menu",
+        "path": "review-playlist-pins/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #71: file-backed fallback fonts, unchanged appearance",
+        "path": "review-font-memory/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #73: Apple sign-in affiliation wording",
+        "path": "review-apple-footer/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #82: narrow Apple toolbar",
+        "path": "review-narrow-toolbar/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #83: readable Apple collections beside side panels",
+        "path": "review-narrow-collections/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #84: native playing-indicator frame evidence",
+        "path": "review-native-motion/index.html",
+        "status": 200
+      },
+      {
+        "name": "PR #88: mini-player favorite feedback",
+        "path": "review-mini-heart-motion/index.html",
+        "status": 200
+      }
+    ],
+    "selectedPR": 88,
+    "previousNext": true,
+    "directLink": true,
+    "title": "Applifast mini-player heart motion comparison"
+  }
 }
