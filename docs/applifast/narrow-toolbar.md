@@ -14,9 +14,10 @@ temporarily as before. The minimum-width calculation keeps the existing page
 space beside both panels instead of shrinking it to just the toolbar's controls.
 
 The [native comparison](review-narrow-toolbar/index.html) has matching light/dark
-and 760×760/1100×760 captures. The collection header and song table remain cramped
-in the narrow center pane. That separate layout issue remains open. This is a
-visible responsive-layout change and needs approval of this scope before merge.
+and 760×760/1100×760 captures. The collection header/table crowding has a separate
+[follow-up](narrow-collections.md). The maintainer approved both responsive scopes
+on October 22, 2026: "Approve both layouts" (#82 and #83). Implementation and
+release acceptance remain separate from that visual approval.
 
 A new regression draws the real interface, finds the existing controls through
 their accessibility nodes, and checks their painted bounds against the Search

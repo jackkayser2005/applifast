@@ -1770,9 +1770,9 @@ mod tests {
         };
         for light in [false, true] {
             for width in [760.0, 1100.0] {
-                for from_player in [false, true] {
+                for source in ["row", "player", "shortcut"] {
                     let (ctx, mut app) =
-                        accessible_app(&format!("apple-heart-pop-{light}-{width}-{from_player}"));
+                        accessible_app(&format!("apple-heart-pop-{light}-{width}-{source}"));
                     if light {
                         app.palette = crate::theme::Palette::light();
                     }
@@ -1815,31 +1815,39 @@ mod tests {
                     };
                     frame(&mut app, 0.0, vec![]);
                     let (tree, _) = frame(&mut app, 0.0, vec![]);
-                    let button = tree
-                        .nodes
-                        .iter()
-                        .filter(|(_, node)| {
-                            node.label() == Some("Add to Favorites") && node.role() == Role::Button
-                        })
-                        .filter(|(_, node)| {
-                            node.bounds().is_some_and(|rect| {
-                                if from_player {
-                                    rect.y0 > 700.0 && rect.x0 < width as f64 / 2.0
-                                } else {
-                                    rect.y0 < 700.0 && rect.x0 > width as f64 / 2.0
-                                }
+                    let event = if source == "shortcut" {
+                        egui::Event::Key {
+                            key: egui::Key::B,
+                            physical_key: None,
+                            pressed: true,
+                            repeat: false,
+                            modifiers: egui::Modifiers::NONE,
+                        }
+                    } else {
+                        let button = tree
+                            .nodes
+                            .iter()
+                            .filter(|(_, node)| {
+                                node.label() == Some("Add to Favorites")
+                                    && node.role() == Role::Button
                             })
-                        })
-                        .min_by(|(_, a), (_, b)| {
-                            a.bounds().unwrap().y0.total_cmp(&b.bounds().unwrap().y0)
-                        })
-                        .expect("first song or player favorite control")
-                        .0;
-                    frame(
-                        &mut app,
-                        0.01,
-                        vec![accessible_action(button, AccessibleAction::Click, None)],
-                    );
+                            .filter(|(_, node)| {
+                                node.bounds().is_some_and(|rect| {
+                                    if source == "player" {
+                                        rect.y0 > 700.0 && rect.x0 < width as f64 / 2.0
+                                    } else {
+                                        rect.y0 < 700.0 && rect.x0 > width as f64 / 2.0
+                                    }
+                                })
+                            })
+                            .min_by(|(_, a), (_, b)| {
+                                a.bounds().unwrap().y0.total_cmp(&b.bounds().unwrap().y0)
+                            })
+                            .expect("first song or player favorite control")
+                            .0;
+                        accessible_action(button, AccessibleAction::Click, None)
+                    };
+                    frame(&mut app, 0.01, vec![event]);
                     let (tree, painted) = frame(&mut app, 0.08, vec![]);
                     check_hearts(&tree, &painted, true);
                     app.settings.reduce_motion = true;

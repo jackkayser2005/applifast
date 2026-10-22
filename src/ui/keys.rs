@@ -167,6 +167,7 @@ pub fn handle(app: &mut App, ctx: &egui::Context) {
         if app.apple.is_none() {
             actions.push(Action::ToggleSaved(now.uri));
         } else if app.is_saved(&now.uri) != Some(true) {
+            super::motion::pop_heart(ctx, &now.uri);
             actions.push(Action::SetSavedMany {
                 uris: vec![now.uri],
                 saved: true,
