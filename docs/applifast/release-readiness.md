@@ -3,6 +3,12 @@
 The [prioritized roadmap](roadmap.md) orders P0 memory/reliability, P1 supported
 feature acceptance and P2 distribution. Every applicable gate below still applies.
 
+October 22 update: the [local account check](local-account-checks.md) created
+one explicitly authorized QA playlist, appended an existing library song and
+confirmed both exact library identities in order. Saved-account reads and
+idempotent checks against existing favorites also passed. This does not close
+fresh-PC sign-in, desktop write interaction, new-favorite or resource gates.
+
 The [latest preview verification](preview-verification.md) records a short
 installed-preview memory diagnostic, 44 actual browser comparison states and
 passing hosted checks for PRs #71 through #73. Minimized resource acceptance,
