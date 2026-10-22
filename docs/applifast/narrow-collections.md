@@ -12,7 +12,8 @@ sorting remain available, including duration sorting while its values are hidden
 The compact header and standard rows show full titles on hover. Songs and Favorites use the existing
 translated Library caption instead of calling themselves playlists.
 
-This changes responsive appearance and needs approval before merge. The
+The maintainer approved this responsive appearance on October 22, 2026:
+"Approve both layouts" (#82 and #83). Implementation/release gates remain separate. The
 [comparison](review-narrow-collections/index.html) provides matched native Windows
 loaded/menu captures in both themes at 760×760 and 1100×760. The wider layout
 retains its arrangement; its Library caption also changes.

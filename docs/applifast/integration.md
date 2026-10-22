@@ -88,15 +88,15 @@ captures match 1100×760/760×760. The built-in mini fixture fixes 2× scale, pr
 550×232 at both requests; it does not prove multiple mini scales. Metadata is the
 same shared sample fixture, with documented service identity, favorite and
 supported-column differences. All captures were inspected, with full narrow
-Settings and queue views inspected separately. The narrow queue leaves the
-central pane crowded and its toolbar overlaps. That responsive issue remains
-open; this evidence does not establish a clean narrow-queue experience. The
+Settings and queue views inspected separately. Those original narrow captures
+showed a crowded central pane and an overlapping toolbar. The
 [responsive toolbar follow-up](narrow-toolbar.md) addresses the Search/control
-overlap with a second row in narrow Apple panes. Collection/table crowding and
-approval of that changed toolbar arrangement remain separate open gates. A
+overlap with a second row in narrow Apple panes. A
 [collection follow-up](narrow-collections.md) addresses the cramped header,
 filter/actions and row names. Its own comparison separates the new responsive
-scope from the preceding toolbar change; visual approval and live use stay open.
+scope from the preceding toolbar change. The maintainer approved both #82 and #83
+on October 22, 2026: "Approve both layouts". Their geometry/click regressions and
+native/browser comparisons pass; real interactive use remains a separate gate.
 
 The filled-heart regression uses actual row/player clicks and painted image
 geometry. It reproduces the fixed 16-pixel filled row while the pop should be

@@ -34,8 +34,9 @@ and verifies index Next/Previous/direct links. Live native interaction remains
 separate from that rendered-page verification.</p>
 <p><a href="../visual-approvals.md">Scope ledger</a>: the approved Apple interface and requested PR #13 integration are
 the baseline. This follow-up changes responsive toolbar arrangement and the Apple
-minimum-width reservation. Visual approval of this specific change remains pending
-before integration. No settings format, network destination or dependency changes.</p>
+minimum-width reservation. The maintainer approved this visual scope on October
+22, 2026: "Approve both layouts" (#82 and #83). Implementation and release checks
+remain separate. No settings format, network destination or dependency changes.</p>
 <script>
 const byId=id=>document.getElementById(id);let phase='after';
 function draw(){const theme=byId('theme').value,size=byId('size').value;byId('loaded').textContent='Loading capture…';byId('capture').src=phase+'-'+theme+'-'+size+'.png';byId('selection').textContent=phase+' / '+theme+' / '+size;for(const p of ['before','after'])byId(p).setAttribute('aria-pressed',String(p===phase));}
