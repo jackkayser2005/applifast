@@ -70,6 +70,12 @@ struct Cli {
     #[arg(long, value_name = "MS", default_value_t = 6000)]
     demo_shot_delay: u64,
 
+    /// Capture this many live frames, 50 ms apart after each readback, instead
+    /// of one frozen still. Writes numbered PNGs and a JSON request-time log.
+    #[cfg(feature = "demo")]
+    #[arg(long, requires = "demo_shot", default_value_t = 1, value_parser = clap::value_parser!(u16).range(1..=120))]
+    demo_shot_frames: u16,
+
     /// Inner window size for `--demo-shot`, as `WIDTHxHEIGHT`.
     #[cfg(feature = "demo")]
     #[arg(long, value_name = "WIDTHxHEIGHT", value_parser = parse_demo_size)]
@@ -490,7 +496,7 @@ pub(crate) fn run() -> eframe::Result<()> {
         };
     }
     #[cfg(feature = "demo")]
-    if cli.demo_shot.is_some() {
+    if cli.demo_shot.is_some() && cli.demo_shot_frames == 1 {
         spotifast::ui::motion::hold_still();
     }
     #[cfg(windows)]
@@ -586,7 +592,9 @@ pub(crate) fn run() -> eframe::Result<()> {
     let shot = cli.demo_shot.clone().map(|path| Shot {
         path,
         due: std::time::Instant::now() + std::time::Duration::from_millis(cli.demo_shot_delay),
-        asked: false,
+        asked: None,
+        frames: cli.demo_shot_frames,
+        captured: Vec::new(),
     });
     #[cfg(feature = "demo")]
     let demo_drag = cli
@@ -1124,6 +1132,134 @@ mod native_window_tests {
         assert_eq!(frames.last().unwrap()[0], egui::Event::PointerMoved(to));
     }
 
+    #[cfg(feature = "demo")]
+    #[test]
+    fn live_demo_capture_is_bounded_and_requires_an_output_path() {
+        assert_eq!(
+            Cli::try_parse_from(["applifast"]).unwrap().demo_shot_frames,
+            1
+        );
+        for count in ["0", "121", "many"] {
+            assert!(
+                Cli::try_parse_from([
+                    "applifast",
+                    "--demo-shot",
+                    "capture.png",
+                    "--demo-shot-frames",
+                    count,
+                ])
+                .is_err()
+            );
+        }
+        assert!(Cli::try_parse_from(["applifast", "--demo-shot-frames", "2"]).is_err());
+        let cli = Cli::try_parse_from([
+            "applifast",
+            "--demo-shot",
+            "capture.png",
+            "--demo-shot-frames",
+            "120",
+        ])
+        .unwrap();
+        assert_eq!(cli.demo_shot_frames, 120);
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn demo_sequence_only_saves_its_own_readbacks_and_logs_actual_requests() {
+        let folder = std::env::temp_dir().join(format!("applifast-shot-{}", std::process::id()));
+        std::fs::create_dir(&folder).unwrap();
+        let request = ShotRequest {
+            index: 0,
+            time: 1.25,
+        };
+        let mut shot = Shot {
+            path: folder.join("motion.png"),
+            due: std::time::Instant::now(),
+            asked: Some(request),
+            frames: 2,
+            captured: Vec::new(),
+        };
+        let image = std::sync::Arc::new(egui::ColorImage::filled([2, 2], egui::Color32::RED));
+        let event = |viewport_id, user_data| egui::Event::Screenshot {
+            viewport_id,
+            user_data,
+            image: image.clone(),
+        };
+        assert!(
+            shot.readback(&event(egui::ViewportId::ROOT, egui::UserData::default()))
+                .is_none()
+        );
+        assert!(
+            shot.readback(&event(
+                egui::ViewportId::from_hash_of("other"),
+                egui::UserData::new(request)
+            ))
+            .is_none()
+        );
+        let stale = ShotRequest {
+            time: 1.0,
+            ..request
+        };
+        assert!(
+            shot.readback(&event(egui::ViewportId::ROOT, egui::UserData::new(stale)))
+                .is_none()
+        );
+        let matched = event(egui::ViewportId::ROOT, egui::UserData::new(request));
+        assert!(std::sync::Arc::ptr_eq(
+            &shot.readback(&matched).unwrap(),
+            &image
+        ));
+        assert!(!shot.save(&image).unwrap());
+        assert!(shot.asked.is_none());
+        assert!(
+            shot.readback(&matched).is_none(),
+            "a completed frame cannot be reused"
+        );
+        assert!(folder.join("motion-000.png").is_file());
+        assert!(
+            !folder.join("motion.json").exists(),
+            "incomplete sequence has no manifest"
+        );
+        shot.asked = Some(ShotRequest {
+            index: 1,
+            time: 1.37,
+        });
+        assert!(shot.save(&image).unwrap());
+        let manifest: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(folder.join("motion.json")).unwrap()).unwrap();
+        assert_eq!(manifest.as_array().unwrap().len(), 2);
+        assert_eq!(manifest[0]["file"], "motion-000.png");
+        assert_eq!(manifest[1]["requested_at_seconds"], 1.37);
+        assert_eq!(manifest[1]["width"], 2);
+        assert_eq!(
+            image::open(folder.join("motion-001.png")).unwrap().width(),
+            2
+        );
+        shot.frames = 1;
+        shot.path = folder.join("still.png");
+        shot.captured.clear();
+        shot.asked = Some(request);
+        assert!(shot.save(&image).unwrap());
+        assert!(
+            !folder.join("still.json").exists(),
+            "single-shot output stays compatible"
+        );
+        shot.path = folder.join("missing/output.png");
+        shot.captured.clear();
+        shot.asked = Some(request);
+        assert!(shot.save(&image).is_err());
+        assert!(shot.captured.is_empty());
+        for name in [
+            "motion-000.png",
+            "motion-001.png",
+            "motion.json",
+            "still.png",
+        ] {
+            std::fs::remove_file(folder.join(name)).unwrap();
+        }
+        std::fs::remove_dir(folder).unwrap();
+    }
+
     #[test]
     fn demo_size_parses_width_by_height() {
         assert_eq!(parse_demo_size("760x800").unwrap(), [760.0, 800.0]);
@@ -1241,7 +1377,86 @@ impl DemoDrag {
 struct Shot {
     path: std::path::PathBuf,
     due: std::time::Instant,
-    asked: bool,
+    asked: Option<ShotRequest>,
+    frames: u16,
+    captured: Vec<ShotFrame>,
+}
+
+#[cfg(feature = "demo")]
+#[derive(Clone, Copy, PartialEq)]
+struct ShotRequest {
+    index: usize,
+    time: f64,
+}
+
+#[cfg(feature = "demo")]
+#[derive(Clone, serde::Serialize)]
+struct ShotFrame {
+    file: std::path::PathBuf,
+    requested_at_seconds: f64,
+    width: u32,
+    height: u32,
+}
+
+#[cfg(feature = "demo")]
+impl Shot {
+    fn frame_path(&self) -> std::path::PathBuf {
+        if self.frames == 1 {
+            return self.path.clone();
+        }
+        let mut name = self.path.file_stem().unwrap_or_default().to_os_string();
+        name.push(format!("-{:03}.png", self.captured.len()));
+        self.path.with_file_name(name)
+    }
+
+    fn readback(&self, event: &egui::Event) -> Option<std::sync::Arc<egui::ColorImage>> {
+        let egui::Event::Screenshot {
+            viewport_id,
+            user_data,
+            image,
+        } = event
+        else {
+            return None;
+        };
+        let request = user_data.data.as_ref()?.downcast_ref::<ShotRequest>()?;
+        (*viewport_id == egui::ViewportId::ROOT && Some(*request) == self.asked)
+            .then(|| image.clone())
+    }
+
+    fn save(&mut self, image: &egui::ColorImage) -> anyhow::Result<bool> {
+        let path = self.frame_path();
+        let [width, height] = [image.size[0] as u32, image.size[1] as u32];
+        let pixels: Vec<u8> = image
+            .pixels
+            .iter()
+            .flat_map(|pixel| pixel.to_srgba_unmultiplied())
+            .collect();
+        let buffer = image::RgbaImage::from_raw(width, height, pixels)
+            .ok_or_else(|| anyhow::anyhow!("frame buffer did not match {width}x{height}"))?;
+        buffer.save(&path)?;
+        log::info!("wrote {}x{} to {}", width, height, path.display());
+        let request = self
+            .asked
+            .take()
+            .expect("only a requested readback is saved");
+        self.captured.push(ShotFrame {
+            file: path.file_name().unwrap_or_default().into(),
+            requested_at_seconds: request.time,
+            width,
+            height,
+        });
+        if self.captured.len() < usize::from(self.frames) {
+            self.due = std::time::Instant::now() + std::time::Duration::from_millis(50);
+            return Ok(false);
+        }
+        if self.frames > 1 {
+            std::fs::write(
+                self.path.with_extension("json"),
+                serde_json::to_vec_pretty(&self.captured)?,
+            )?;
+        }
+        Ok(true)
+    }
 }
 
 #[cfg(feature = "demo")]
@@ -1255,33 +1470,26 @@ impl Shell {
         // asked for: art still has to load and the request has to be issued.
         ctx.request_repaint();
 
-        if !shot.asked && std::time::Instant::now() >= shot.due {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
-            shot.asked = true;
+        if shot.asked.is_none() && std::time::Instant::now() >= shot.due {
+            let request = ShotRequest {
+                index: shot.captured.len(),
+                time: ctx.input(|input| input.time),
+            };
+            ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::new(
+                request,
+            )));
+            shot.asked = Some(request);
         }
 
-        let image = ctx.input(|input| {
-            input.events.iter().find_map(|event| match event {
-                egui::Event::Screenshot { image, .. } => Some(image.clone()),
-                _ => None,
-            })
-        });
+        let image = ctx.input(|input| input.events.iter().find_map(|event| shot.readback(event)));
         let Some(image) = image else {
             return;
         };
 
-        let [width, height] = [image.size[0] as u32, image.size[1] as u32];
-        let pixels: Vec<u8> = image
-            .pixels
-            .iter()
-            .flat_map(|pixel| pixel.to_srgba_unmultiplied())
-            .collect();
-        match image::RgbaImage::from_raw(width, height, pixels) {
-            Some(buffer) => match buffer.save(&shot.path) {
-                Ok(()) => log::info!("wrote {}x{} to {}", width, height, shot.path.display()),
-                Err(error) => log::error!("could not write {}: {error}", shot.path.display()),
-            },
-            None => log::error!("the frame buffer did not match {width}x{height}"),
+        match shot.save(&image) {
+            Ok(false) => return,
+            Ok(true) => {}
+            Err(error) => log::error!("could not write {}: {error}", shot.path.display()),
         }
         self.shot = None;
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);

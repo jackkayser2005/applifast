@@ -252,6 +252,10 @@ real-account and release checks; passing mocks alone does not close a row.
    - [ ] Run PR #13's cover hover, playing indicators, seek hover, crossfade,
      heart pop, queue arrivals, art-colored header, page fade, Now Playing and
      lyric-follow behavior. Inspect motion at normal/narrow sizes and both themes.
+   - [x] Capture native playing-indicator motion and its Reduce motion state in
+     both themes/sizes: [64 native frames](native-motion-frames.md), with pixel
+     checks on the indicator itself. This subset does not complete the preceding
+     full interaction/transition gate or establish audio analysis.
    - [ ] Verify available LRCLIB lyrics, missing/instrumental/error states,
      scrolling and timed-line seeking. Document that these are not Apple lyrics.
    - [ ] Check decorative Ambient Pulse in main/mini-player at play, pause,
