@@ -87,7 +87,10 @@ central pane crowded and its toolbar overlaps. That responsive issue remains
 open; this evidence does not establish a clean narrow-queue experience. The
 [responsive toolbar follow-up](narrow-toolbar.md) addresses the Search/control
 overlap with a second row in narrow Apple panes. Collection/table crowding and
-approval of that changed toolbar arrangement remain separate open gates.
+approval of that changed toolbar arrangement remain separate open gates. A
+[collection follow-up](narrow-collections.md) addresses the cramped header,
+filter/actions and row names. Its own comparison separates the new responsive
+scope from the preceding toolbar change; visual approval and live use stay open.
 
 The filled-heart regression uses actual row/player clicks and painted image
 geometry. It reproduces the fixed 16-pixel filled row while the pop should be
