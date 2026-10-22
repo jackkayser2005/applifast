@@ -65,6 +65,12 @@ cannot prove live transition timing, lyric-follow behavior, audible controls or
 gaming performance. Those interactive checks stay open. Ambient Pulse is also
 decorative; Apple mode does not expose the retained PCM spectrum/EQ/MilkDrop controls.
 
+The [native frame follow-up](native-motion-frames.md) now captures the real playing
+indicator over time: eight distinct states with motion enabled, and identical
+indicator pixels in eight Reduce motion frames, across both themes and sizes.
+This qualifies that specific native render path, without claiming the other
+transitions, lyrics, controls, account behavior or resource budget are accepted.
+
 ## Review and integration gates
 
 The maintainer requested importing the design PRs and PR #13 and approved the

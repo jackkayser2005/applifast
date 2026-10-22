@@ -74,6 +74,10 @@ For sample data without authorization or playback:
 cargo run --locked --features demo -- --demo
 ```
 
+Developers can also capture bounded native animation sequences with
+[`--demo-shot-frames`](docs/applifast/native-motion-frames.md). Ordinary demo
+screenshots remain frozen; this development tool does not connect an account.
+
 Apple song rows, the player bar, mini-player and selection menus offer Add to Favorites.
 The mini-player replaces the inactive Apple EQ button with a heart; its
 right-click menu also offers the action when rolled up.

@@ -1,0 +1,91 @@
+{
+  "browser": "155.0.8059.85",
+  "cases": [
+    {
+      "name": "moving-dark-1100x760",
+      "states": 2,
+      "distinctBrowserIndicatorSamples": 6,
+      "context": {
+        "src": "moving-dark-1100x760-context.png",
+        "width": 1100,
+        "height": 760
+      }
+    },
+    {
+      "name": "moving-dark-760x760",
+      "states": 2,
+      "distinctBrowserIndicatorSamples": 6,
+      "context": {
+        "src": "moving-dark-760x760-context.png",
+        "width": 760,
+        "height": 760
+      }
+    },
+    {
+      "name": "moving-light-1100x760",
+      "states": 2,
+      "distinctBrowserIndicatorSamples": 6,
+      "context": {
+        "src": "moving-light-1100x760-context.png",
+        "width": 1100,
+        "height": 760
+      }
+    },
+    {
+      "name": "moving-light-760x760",
+      "states": 2,
+      "distinctBrowserIndicatorSamples": 6,
+      "context": {
+        "src": "moving-light-760x760-context.png",
+        "width": 760,
+        "height": 760
+      }
+    },
+    {
+      "name": "reduced-dark-1100x760",
+      "states": 2,
+      "distinctBrowserIndicatorSamples": 1,
+      "context": {
+        "src": "reduced-dark-1100x760-context.png",
+        "width": 1100,
+        "height": 760
+      }
+    },
+    {
+      "name": "reduced-dark-760x760",
+      "states": 2,
+      "distinctBrowserIndicatorSamples": 1,
+      "context": {
+        "src": "reduced-dark-760x760-context.png",
+        "width": 760,
+        "height": 760
+      }
+    },
+    {
+      "name": "reduced-light-1100x760",
+      "states": 2,
+      "distinctBrowserIndicatorSamples": 1,
+      "context": {
+        "src": "reduced-light-1100x760-context.png",
+        "width": 1100,
+        "height": 760
+      }
+    },
+    {
+      "name": "reduced-light-760x760",
+      "states": 2,
+      "distinctBrowserIndicatorSamples": 1,
+      "context": {
+        "src": "reduced-light-760x760-context.png",
+        "width": 760,
+        "height": 760
+      }
+    }
+  ],
+  "verifiedStates": 16,
+  "errors": [],
+  "failures": [],
+  "scope": "Actual rendered clip changes in isolated Chrome plus paused/selector state, not native controls/account/performance acceptance",
+  "indexNextPrevious": true,
+  "directTarget": "review-native-motion/index.html"
+}
