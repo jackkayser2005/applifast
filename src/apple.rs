@@ -2658,3 +2658,6 @@ mod tests {
         assert!(state.songs.is_empty());
     }
 }
+
+#[cfg(all(test, windows))]
+mod account_qa;
