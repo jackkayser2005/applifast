@@ -83,6 +83,8 @@ The mini-player replaces the inactive Apple EQ button with a heart; its
 right-click menu also offers the action when rolled up.
 Press **B** in either window to add the playing song. Already filled hearts
 stay unchanged; typing and open dialogs suspend this shortcut.
+In the main window, the shortcut uses the same heart feedback as clicking the
+favorite control, including Reduce motion. See the [shortcut regression](docs/applifast/shortcut-heart-motion.md).
 Hearts update immediately; exact Apple confirmation retains successful songs
 and rolls unconfirmed members back with a refresh-before-retry message. Removal
 still requires Apple Music. This draft integration needs live-account testing.

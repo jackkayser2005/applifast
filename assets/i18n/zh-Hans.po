@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-21 20:25-0400\n"
+"POT-Creation-Date: 2026-10-22 12:49-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -68,17 +68,17 @@ msgstr "文件夹"
 msgid "Playlist • {owner}"
 msgstr "歌单 • {owner}"
 
-#: src/ui/sidebar.rs:850 src/i18n.rs:255 src/i18n.rs:258 src/ui/keys.rs:311
-#: src/ui/keys.rs:369 src/ui/topbar.rs:291
+#: src/ui/sidebar.rs:850 src/i18n.rs:255 src/i18n.rs:258 src/ui/keys.rs:312
+#: src/ui/keys.rs:370 src/ui/topbar.rs:291
 msgid "Home"
 msgstr "首页"
 
-#: src/ui/sidebar.rs:861 src/app.rs:6376 src/ui/keys.rs:302
+#: src/ui/sidebar.rs:861 src/app.rs:6376 src/ui/keys.rs:303
 msgid "Search"
 msgstr "搜索"
 
 #: src/ui/sidebar.rs:873 src/ui/player_bar.rs:679 src/ui/widgets.rs:1856
-#: src/ui/settings.rs:1211 src/ui/collection.rs:1975 src/ui/keys.rs:371
+#: src/ui/settings.rs:1211 src/ui/collection.rs:1975 src/ui/keys.rs:372
 #: src/ui/winamp/mod.rs:696
 msgid "Favorites"
 msgstr "收藏"
@@ -115,12 +115,12 @@ msgstr "音乐库"
 msgid "Playlists"
 msgstr "歌单"
 
-#: src/ui/sidebar.rs:995 src/model.rs:651 src/model.rs:765 src/ui/keys.rs:372
+#: src/ui/sidebar.rs:995 src/model.rs:651 src/model.rs:765 src/ui/keys.rs:373
 #: src/ui/library.rs:17 src/ui/search.rs:606
 msgid "Albums"
 msgstr "专辑"
 
-#: src/ui/sidebar.rs:996 src/model.rs:650 src/ui/keys.rs:373
+#: src/ui/sidebar.rs:996 src/model.rs:650 src/ui/keys.rs:374
 #: src/ui/library.rs:22 src/ui/search.rs:539
 msgid "Artists"
 msgstr "艺人"
@@ -233,7 +233,7 @@ msgid "Pick a song, album, or playlist"
 msgstr "选择歌曲、专辑或歌单"
 
 #: src/ui/player_bar.rs:643 src/ui/widgets.rs:611 src/ui/widgets.rs:901
-#: src/ui/widgets.rs:1885 src/ui/keys.rs:249 src/ui/winamp/mod.rs:698
+#: src/ui/widgets.rs:1885 src/ui/keys.rs:250 src/ui/winamp/mod.rs:698
 msgid "Add to Favorites"
 msgstr "添加到收藏"
 
@@ -425,7 +425,7 @@ msgstr "下一首播放"
 msgid "Add to queue"
 msgstr "添加到播放队列"
 
-#: src/ui/widgets.rs:635 src/ui/widgets.rs:973 src/ui/keys.rs:277
+#: src/ui/widgets.rs:635 src/ui/widgets.rs:973 src/ui/keys.rs:278
 msgid "Remove from this playlist"
 msgstr "从此歌单中移除"
 
@@ -691,7 +691,7 @@ msgid "Spotify audio disconnected. Reconnecting local playback"
 msgstr "Spotify 音频已断开，正在重新连接本地播放"
 
 #: src/app.rs:2588 src/app.rs:17413 src/ui/collection.rs:1979
-#: src/ui/keys.rs:318
+#: src/ui/keys.rs:319
 msgid "Liked Songs"
 msgstr "已点赞的歌曲"
 
@@ -1090,12 +1090,12 @@ msgstr "无法上传封面：{error}。请重试。"
 msgid "{track} Radio"
 msgstr "{track} 电台"
 
-#: src/ui/settings.rs:199 src/ui/dialogs.rs:153 src/ui/keys.rs:349
+#: src/ui/settings.rs:199 src/ui/dialogs.rs:153 src/ui/keys.rs:350
 #: src/ui/topbar.rs:530
 msgid "Keyboard shortcuts"
 msgstr "键盘快捷键"
 
-#: src/ui/settings.rs:204 src/ui/keys.rs:339 src/ui/topbar.rs:522
+#: src/ui/settings.rs:204 src/ui/keys.rs:340 src/ui/topbar.rs:522
 #: src/ui/topbar.rs:552
 msgid "Settings"
 msgstr "设置"
@@ -1574,7 +1574,7 @@ msgstr "窗口置顶"
 msgid "Show Winamp in taskbar"
 msgstr "在任务栏中显示 Winamp"
 
-#: src/ui/settings.rs:1387 src/ui/keys.rs:332
+#: src/ui/settings.rs:1387 src/ui/keys.rs:333
 msgid "Mini player"
 msgstr "迷你播放器"
 
@@ -1903,8 +1903,8 @@ msgctxt "filter"
 msgid "All"
 msgstr "全部"
 
-#: src/model.rs:649 src/ui/collection.rs:1977 src/ui/keys.rs:316
-#: src/ui/keys.rs:370 src/ui/search.rs:451
+#: src/model.rs:649 src/ui/collection.rs:1977 src/ui/keys.rs:317
+#: src/ui/keys.rs:371 src/ui/search.rs:451
 msgid "Songs"
 msgstr "歌曲"
 
@@ -2043,7 +2043,7 @@ msgstr "保存为歌单"
 msgid "Refreshing…"
 msgstr "正在刷新…"
 
-#: src/ui/collection.rs:416 src/ui/devices.rs:206 src/ui/keys.rs:376
+#: src/ui/collection.rs:416 src/ui/devices.rs:206 src/ui/keys.rs:377
 msgid "Refresh"
 msgstr "刷新"
 
@@ -2402,157 +2402,157 @@ msgstr "你的热门艺人"
 msgid "Show more top songs"
 msgstr "显示更多热门歌曲"
 
-#: src/ui/keys.rs:230
+#: src/ui/keys.rs:231
 msgctxt "key"
 msgid "Space"
 msgstr "空格"
 
-#: src/ui/keys.rs:231
+#: src/ui/keys.rs:232
 msgid "Play or pause"
 msgstr "播放或暂停"
 
-#: src/ui/keys.rs:235
+#: src/ui/keys.rs:236
 msgid "Previous or next"
 msgstr "上一首或下一首"
 
-#: src/ui/keys.rs:239
+#: src/ui/keys.rs:240
 msgid "Seek 10 seconds"
 msgstr "快进或快退 10 秒"
 
-#: src/ui/keys.rs:243
+#: src/ui/keys.rs:244
 msgid "Volume up or down"
 msgstr "调高或调低音量"
 
-#: src/ui/keys.rs:245
+#: src/ui/keys.rs:246
 msgid "Mute or unmute"
 msgstr "静音或取消静音"
 
-#: src/ui/keys.rs:251
+#: src/ui/keys.rs:252
 msgid "Like or unlike the playing song"
 msgstr "点赞或取消点赞正在播放的歌曲"
 
-#: src/ui/keys.rs:254
+#: src/ui/keys.rs:255
 msgid "Toggle shuffle"
 msgstr "开关随机播放"
 
-#: src/ui/keys.rs:255
+#: src/ui/keys.rs:256
 msgid "Cycle repeat"
 msgstr "切换循环模式"
 
-#: src/ui/keys.rs:256 src/ui/keys.rs:359
+#: src/ui/keys.rs:257 src/ui/keys.rs:360
 msgid "Show the queue"
 msgstr "显示播放队列"
 
-#: src/ui/keys.rs:260 src/ui/keys.rs:379
+#: src/ui/keys.rs:261 src/ui/keys.rs:380
 msgid "Show Now Playing"
 msgstr "显示正在播放"
 
-#: src/ui/keys.rs:262
+#: src/ui/keys.rs:263
 msgid "Show the lyrics"
 msgstr "显示歌词"
 
-#: src/ui/keys.rs:268
+#: src/ui/keys.rs:269
 msgid "Now Playing: leave full screen"
 msgstr "正在播放：退出全屏"
 
-#: src/ui/keys.rs:270
+#: src/ui/keys.rs:271
 msgid "Lyrics: leave full screen"
 msgstr "歌词：退出全屏"
 
-#: src/ui/keys.rs:275
+#: src/ui/keys.rs:276
 msgid "Song list: extend or shrink the selection"
 msgstr "歌曲列表：扩大或缩小选择范围"
 
-#: src/ui/keys.rs:280
+#: src/ui/keys.rs:281
 msgid "Song list: select all"
 msgstr "歌曲列表：全选"
 
-#: src/ui/keys.rs:284
+#: src/ui/keys.rs:285
 msgid "Song list: copy the selected songs' links"
 msgstr "歌曲列表：复制所选歌曲的链接"
 
-#: src/ui/keys.rs:288
+#: src/ui/keys.rs:289
 msgid "Playlist: cut the selected songs"
 msgstr "歌单：剪切所选歌曲"
 
-#: src/ui/keys.rs:292
+#: src/ui/keys.rs:293
 msgid "Playlist: add the pasted song links"
 msgstr "歌单：添加粘贴的歌曲链接"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
-#: src/ui/keys.rs:297
+#: src/ui/keys.rs:298
 msgid "Cmd+F  or  /"
 msgstr "Cmd+F  或  /"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
-#: src/ui/keys.rs:300
+#: src/ui/keys.rs:301
 msgid "Ctrl+F  or  /"
 msgstr "Ctrl+F  或  /"
 
-#: src/ui/keys.rs:306
+#: src/ui/keys.rs:307
 msgid "Show or hide the sidebar"
 msgstr "显示或隐藏侧边栏"
 
-#: src/ui/keys.rs:308
+#: src/ui/keys.rs:309
 msgid "Back or forward"
 msgstr "后退或前进"
 
-#: src/ui/keys.rs:323
+#: src/ui/keys.rs:324
 msgid "Go to the playing artist"
 msgstr "前往正在播放的艺人"
 
-#: src/ui/keys.rs:327
+#: src/ui/keys.rs:328
 msgid "Go to the playing album"
 msgstr "前往正在播放的专辑"
 
-#: src/ui/keys.rs:334
+#: src/ui/keys.rs:335
 msgid "Winamp mini player"
 msgstr "Winamp 迷你播放器"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
-#: src/ui/keys.rs:344
+#: src/ui/keys.rs:345
 msgid "Cmd+/ or ?"
 msgstr "Cmd+/ 或 ?"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
-#: src/ui/keys.rs:347
+#: src/ui/keys.rs:348
 msgid "Ctrl+/ or ?"
 msgstr "Ctrl+/ 或 ?"
 
-#: src/ui/keys.rs:353
+#: src/ui/keys.rs:354
 msgid "Close the window"
 msgstr "关闭窗口"
 
-#: src/ui/keys.rs:355 src/ui/winamp/mod.rs:754
+#: src/ui/keys.rs:356 src/ui/winamp/mod.rs:754
 msgid "Quit"
 msgstr "退出"
 
-#: src/ui/keys.rs:384
+#: src/ui/keys.rs:385
 msgid "MilkDrop, under the mini player"
 msgstr "MilkDrop，位于迷你播放器下方"
 
 #. Translators: Keep the key name F. Translate "or" and "double-click".
-#: src/ui/keys.rs:388
+#: src/ui/keys.rs:389
 msgid "F  or  double-click"
 msgstr "F  或  双击"
 
-#: src/ui/keys.rs:389
+#: src/ui/keys.rs:390
 msgid "MilkDrop: fill the screen"
 msgstr "MilkDrop：全屏"
 
-#: src/ui/keys.rs:391
+#: src/ui/keys.rs:392
 msgid "MilkDrop: next preset"
 msgstr "MilkDrop：下一个预设"
 
-#: src/ui/keys.rs:394
+#: src/ui/keys.rs:395
 msgid "MilkDrop: previous preset"
 msgstr "MilkDrop：上一个预设"
 
-#: src/ui/keys.rs:396
+#: src/ui/keys.rs:397
 msgid "MilkDrop: keep this preset"
 msgstr "MilkDrop：保持当前预设"
 
-#: src/ui/keys.rs:399
+#: src/ui/keys.rs:400
 msgid "MilkDrop: leave full screen, or close"
 msgstr "MilkDrop：退出全屏或关闭"
 

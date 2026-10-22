@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-10-21 20:25-0400\n"
+"POT-Creation-Date: 2026-10-22 12:49-0400\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Dutch\n"
@@ -68,17 +68,17 @@ msgstr "Map"
 msgid "Playlist • {owner}"
 msgstr "Playlist • {owner}"
 
-#: src/ui/sidebar.rs:850 src/i18n.rs:255 src/i18n.rs:258 src/ui/keys.rs:311
-#: src/ui/keys.rs:369 src/ui/topbar.rs:291
+#: src/ui/sidebar.rs:850 src/i18n.rs:255 src/i18n.rs:258 src/ui/keys.rs:312
+#: src/ui/keys.rs:370 src/ui/topbar.rs:291
 msgid "Home"
 msgstr "Home"
 
-#: src/ui/sidebar.rs:861 src/app.rs:6376 src/ui/keys.rs:302
+#: src/ui/sidebar.rs:861 src/app.rs:6376 src/ui/keys.rs:303
 msgid "Search"
 msgstr "Zoeken"
 
 #: src/ui/sidebar.rs:873 src/ui/player_bar.rs:679 src/ui/widgets.rs:1856
-#: src/ui/settings.rs:1211 src/ui/collection.rs:1975 src/ui/keys.rs:371
+#: src/ui/settings.rs:1211 src/ui/collection.rs:1975 src/ui/keys.rs:372
 #: src/ui/winamp/mod.rs:696
 msgid "Favorites"
 msgstr "Favorieten"
@@ -115,12 +115,12 @@ msgstr "Bibliotheek"
 msgid "Playlists"
 msgstr "Playlists"
 
-#: src/ui/sidebar.rs:995 src/model.rs:651 src/model.rs:765 src/ui/keys.rs:372
+#: src/ui/sidebar.rs:995 src/model.rs:651 src/model.rs:765 src/ui/keys.rs:373
 #: src/ui/library.rs:17 src/ui/search.rs:606
 msgid "Albums"
 msgstr "Albums"
 
-#: src/ui/sidebar.rs:996 src/model.rs:650 src/ui/keys.rs:373
+#: src/ui/sidebar.rs:996 src/model.rs:650 src/ui/keys.rs:374
 #: src/ui/library.rs:22 src/ui/search.rs:539
 msgid "Artists"
 msgstr "Artiesten"
@@ -237,7 +237,7 @@ msgid "Pick a song, album, or playlist"
 msgstr "Kies een nummer, album of playlist"
 
 #: src/ui/player_bar.rs:643 src/ui/widgets.rs:611 src/ui/widgets.rs:901
-#: src/ui/widgets.rs:1885 src/ui/keys.rs:249 src/ui/winamp/mod.rs:698
+#: src/ui/widgets.rs:1885 src/ui/keys.rs:250 src/ui/winamp/mod.rs:698
 msgid "Add to Favorites"
 msgstr "Toevoegen aan favorieten"
 
@@ -429,7 +429,7 @@ msgstr "Hierna afspelen"
 msgid "Add to queue"
 msgstr "Toevoegen aan wachtrij"
 
-#: src/ui/widgets.rs:635 src/ui/widgets.rs:973 src/ui/keys.rs:277
+#: src/ui/widgets.rs:635 src/ui/widgets.rs:973 src/ui/keys.rs:278
 msgid "Remove from this playlist"
 msgstr "Verwijderen uit deze playlist"
 
@@ -702,7 +702,7 @@ msgid "Spotify audio disconnected. Reconnecting local playback"
 msgstr "Spotify-audio verbroken. Lokaal afspelen maakt opnieuw verbinding"
 
 #: src/app.rs:2588 src/app.rs:17413 src/ui/collection.rs:1979
-#: src/ui/keys.rs:318
+#: src/ui/keys.rs:319
 msgid "Liked Songs"
 msgstr "Gelikete nummers"
 
@@ -1122,12 +1122,12 @@ msgstr "Kan de cover niet uploaden: {error}. Probeer het opnieuw."
 msgid "{track} Radio"
 msgstr "Radio op basis van {track}"
 
-#: src/ui/settings.rs:199 src/ui/dialogs.rs:153 src/ui/keys.rs:349
+#: src/ui/settings.rs:199 src/ui/dialogs.rs:153 src/ui/keys.rs:350
 #: src/ui/topbar.rs:530
 msgid "Keyboard shortcuts"
 msgstr "Sneltoetsen"
 
-#: src/ui/settings.rs:204 src/ui/keys.rs:339 src/ui/topbar.rs:522
+#: src/ui/settings.rs:204 src/ui/keys.rs:340 src/ui/topbar.rs:522
 #: src/ui/topbar.rs:552
 msgid "Settings"
 msgstr "Instellingen"
@@ -1629,7 +1629,7 @@ msgstr "Altijd bovenop"
 msgid "Show Winamp in taskbar"
 msgstr "Winamp in taakbalk tonen"
 
-#: src/ui/settings.rs:1387 src/ui/keys.rs:332
+#: src/ui/settings.rs:1387 src/ui/keys.rs:333
 msgid "Mini player"
 msgstr "Minispeler"
 
@@ -1979,8 +1979,8 @@ msgctxt "filter"
 msgid "All"
 msgstr "Alles"
 
-#: src/model.rs:649 src/ui/collection.rs:1977 src/ui/keys.rs:316
-#: src/ui/keys.rs:370 src/ui/search.rs:451
+#: src/model.rs:649 src/ui/collection.rs:1977 src/ui/keys.rs:317
+#: src/ui/keys.rs:371 src/ui/search.rs:451
 msgid "Songs"
 msgstr "Nummers"
 
@@ -2129,7 +2129,7 @@ msgstr "Opslaan als playlist"
 msgid "Refreshing…"
 msgstr "Vernieuwen…"
 
-#: src/ui/collection.rs:416 src/ui/devices.rs:206 src/ui/keys.rs:376
+#: src/ui/collection.rs:416 src/ui/devices.rs:206 src/ui/keys.rs:377
 msgid "Refresh"
 msgstr "Vernieuwen"
 
@@ -2504,157 +2504,157 @@ msgstr "Je topartiesten"
 msgid "Show more top songs"
 msgstr "Meer topnummers tonen"
 
-#: src/ui/keys.rs:230
+#: src/ui/keys.rs:231
 msgctxt "key"
 msgid "Space"
 msgstr "Spatie"
 
-#: src/ui/keys.rs:231
+#: src/ui/keys.rs:232
 msgid "Play or pause"
 msgstr "Afspelen of pauzeren"
 
-#: src/ui/keys.rs:235
+#: src/ui/keys.rs:236
 msgid "Previous or next"
 msgstr "Vorige of volgende"
 
-#: src/ui/keys.rs:239
+#: src/ui/keys.rs:240
 msgid "Seek 10 seconds"
 msgstr "10 seconden spoelen"
 
-#: src/ui/keys.rs:243
+#: src/ui/keys.rs:244
 msgid "Volume up or down"
 msgstr "Volume hoger of lager"
 
-#: src/ui/keys.rs:245
+#: src/ui/keys.rs:246
 msgid "Mute or unmute"
 msgstr "Dempen of dempen opheffen"
 
-#: src/ui/keys.rs:251
+#: src/ui/keys.rs:252
 msgid "Like or unlike the playing song"
 msgstr "Het huidige nummer liken of niet meer liken"
 
-#: src/ui/keys.rs:254
+#: src/ui/keys.rs:255
 msgid "Toggle shuffle"
 msgstr "Willekeurige volgorde aan/uit"
 
-#: src/ui/keys.rs:255
+#: src/ui/keys.rs:256
 msgid "Cycle repeat"
 msgstr "Herhaalmodus wisselen"
 
-#: src/ui/keys.rs:256 src/ui/keys.rs:359
+#: src/ui/keys.rs:257 src/ui/keys.rs:360
 msgid "Show the queue"
 msgstr "Wachtrij tonen"
 
-#: src/ui/keys.rs:260 src/ui/keys.rs:379
+#: src/ui/keys.rs:261 src/ui/keys.rs:380
 msgid "Show Now Playing"
 msgstr "Nu afspelen tonen"
 
-#: src/ui/keys.rs:262
+#: src/ui/keys.rs:263
 msgid "Show the lyrics"
 msgstr "Songtekst tonen"
 
-#: src/ui/keys.rs:268
+#: src/ui/keys.rs:269
 msgid "Now Playing: leave full screen"
 msgstr "Nu afspelen: volledig scherm verlaten"
 
-#: src/ui/keys.rs:270
+#: src/ui/keys.rs:271
 msgid "Lyrics: leave full screen"
 msgstr "Songtekst: volledig scherm verlaten"
 
-#: src/ui/keys.rs:275
+#: src/ui/keys.rs:276
 msgid "Song list: extend or shrink the selection"
 msgstr "Nummerlijst: selectie uitbreiden of verkleinen"
 
-#: src/ui/keys.rs:280
+#: src/ui/keys.rs:281
 msgid "Song list: select all"
 msgstr "Nummerlijst: alles selecteren"
 
-#: src/ui/keys.rs:284
+#: src/ui/keys.rs:285
 msgid "Song list: copy the selected songs' links"
 msgstr "Nummerlijst: links van geselecteerde nummers kopiëren"
 
-#: src/ui/keys.rs:288
+#: src/ui/keys.rs:289
 msgid "Playlist: cut the selected songs"
 msgstr "Playlist: geselecteerde nummers knippen"
 
-#: src/ui/keys.rs:292
+#: src/ui/keys.rs:293
 msgid "Playlist: add the pasted song links"
 msgstr "Playlist: geplakte nummerlinks toevoegen"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
-#: src/ui/keys.rs:297
+#: src/ui/keys.rs:298
 msgid "Cmd+F  or  /"
 msgstr "Cmd+F  of  /"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
-#: src/ui/keys.rs:300
+#: src/ui/keys.rs:301
 msgid "Ctrl+F  or  /"
 msgstr "Ctrl+F  of  /"
 
-#: src/ui/keys.rs:306
+#: src/ui/keys.rs:307
 msgid "Show or hide the sidebar"
 msgstr "Zijbalk tonen of verbergen"
 
-#: src/ui/keys.rs:308
+#: src/ui/keys.rs:309
 msgid "Back or forward"
 msgstr "Terug of vooruit"
 
-#: src/ui/keys.rs:323
+#: src/ui/keys.rs:324
 msgid "Go to the playing artist"
 msgstr "Ga naar de huidige artiest"
 
-#: src/ui/keys.rs:327
+#: src/ui/keys.rs:328
 msgid "Go to the playing album"
 msgstr "Ga naar het huidige album"
 
-#: src/ui/keys.rs:334
+#: src/ui/keys.rs:335
 msgid "Winamp mini player"
 msgstr "Winamp-minispeler"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
-#: src/ui/keys.rs:344
+#: src/ui/keys.rs:345
 msgid "Cmd+/ or ?"
 msgstr "Cmd+/ of ?"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
-#: src/ui/keys.rs:347
+#: src/ui/keys.rs:348
 msgid "Ctrl+/ or ?"
 msgstr "Ctrl+/ of ?"
 
-#: src/ui/keys.rs:353
+#: src/ui/keys.rs:354
 msgid "Close the window"
 msgstr "Venster sluiten"
 
-#: src/ui/keys.rs:355 src/ui/winamp/mod.rs:754
+#: src/ui/keys.rs:356 src/ui/winamp/mod.rs:754
 msgid "Quit"
 msgstr "Afsluiten"
 
-#: src/ui/keys.rs:384
+#: src/ui/keys.rs:385
 msgid "MilkDrop, under the mini player"
 msgstr "MilkDrop, onder de minispeler"
 
 #. Translators: Keep the key name F. Translate "or" and "double-click".
-#: src/ui/keys.rs:388
+#: src/ui/keys.rs:389
 msgid "F  or  double-click"
 msgstr "F  of  dubbelklikken"
 
-#: src/ui/keys.rs:389
+#: src/ui/keys.rs:390
 msgid "MilkDrop: fill the screen"
 msgstr "MilkDrop: volledig scherm"
 
-#: src/ui/keys.rs:391
+#: src/ui/keys.rs:392
 msgid "MilkDrop: next preset"
 msgstr "MilkDrop: volgende preset"
 
-#: src/ui/keys.rs:394
+#: src/ui/keys.rs:395
 msgid "MilkDrop: previous preset"
 msgstr "MilkDrop: vorige preset"
 
-#: src/ui/keys.rs:396
+#: src/ui/keys.rs:397
 msgid "MilkDrop: keep this preset"
 msgstr "MilkDrop: deze preset houden"
 
-#: src/ui/keys.rs:399
+#: src/ui/keys.rs:400
 msgid "MilkDrop: leave full screen, or close"
 msgstr "MilkDrop: volledig scherm verlaten of sluiten"
 
