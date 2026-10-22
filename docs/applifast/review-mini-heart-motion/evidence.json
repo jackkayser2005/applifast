@@ -1,0 +1,88 @@
+{
+  "base": "89eba05ffe619f4c3d5e05519c2e9afb744eb1c2",
+  "before": {
+    "Base": "89eba05ffe619f4c3d5e05519c2e9afb744eb1c2",
+    "BinarySHA256": "8f15a90f10e23e8ff05cceedc81674451bb28af5fb02b9ef68715cd8aab53956",
+    "WinampSourceSHA256": "1b16b561280bf99fb3bf250958bf74d025e18117ac75c0e4a424521f9e2bacf2",
+    "Qualification": "Demo binary built at 6357c67; current application source is identical, with only docs and CI changes above that source"
+  },
+  "candidateBranch": "fix/mini-favorite-heart-motion",
+  "candidateWinampSHA256": "5b0c23f76fa1132bea964a87d2d0d63ec958ead98764c81a4e8da3fefb9f91db",
+  "candidateDemoSHA256": "5fd63d72e1d6901e55ea8d99edb803cfd76b8e895828a4dfec3787796bf161a2",
+  "candidateBinarySHA256": "effc0d83b1fd3064c94dfa532a2694e31296aba787f1194576b116b9b0e89a02",
+  "cases": [
+    {
+      "theme": "dark",
+      "size": "550x232",
+      "view": "ready",
+      "beforeSHA256": "1597ddd9644e9a29d68d7aabce7f12b4f4dd20bd6b7cf86e8a370bad00110054",
+      "afterSHA256": "1597ddd9644e9a29d68d7aabce7f12b4f4dd20bd6b7cf86e8a370bad00110054",
+      "differentPixels": 0,
+      "differenceBounds": null
+    },
+    {
+      "theme": "dark",
+      "size": "550x232",
+      "view": "pending",
+      "beforeSHA256": "1966578344d1a392cf4a049d2e0ebc6ba5e990b269a012796fb7f10e92c566f0",
+      "afterSHA256": "1966578344d1a392cf4a049d2e0ebc6ba5e990b269a012796fb7f10e92c566f0",
+      "differentPixels": 0,
+      "differenceBounds": null
+    },
+    {
+      "theme": "dark",
+      "size": "275x116",
+      "view": "ready",
+      "beforeSHA256": "99eefd5c8b532ad643a7c8823a37172fa82e2e7f47251baf846a835956b70d0a",
+      "afterSHA256": "99eefd5c8b532ad643a7c8823a37172fa82e2e7f47251baf846a835956b70d0a",
+      "differentPixels": 0,
+      "differenceBounds": null
+    },
+    {
+      "theme": "dark",
+      "size": "275x116",
+      "view": "pending",
+      "beforeSHA256": "ef449e5cce26199d977f2c019e921bff27534f7b308c571b81feb0f5ade66dd3",
+      "afterSHA256": "ef449e5cce26199d977f2c019e921bff27534f7b308c571b81feb0f5ade66dd3",
+      "differentPixels": 0,
+      "differenceBounds": null
+    },
+    {
+      "theme": "light",
+      "size": "550x232",
+      "view": "ready",
+      "beforeSHA256": "1597ddd9644e9a29d68d7aabce7f12b4f4dd20bd6b7cf86e8a370bad00110054",
+      "afterSHA256": "1597ddd9644e9a29d68d7aabce7f12b4f4dd20bd6b7cf86e8a370bad00110054",
+      "differentPixels": 0,
+      "differenceBounds": null
+    },
+    {
+      "theme": "light",
+      "size": "550x232",
+      "view": "pending",
+      "beforeSHA256": "1966578344d1a392cf4a049d2e0ebc6ba5e990b269a012796fb7f10e92c566f0",
+      "afterSHA256": "1966578344d1a392cf4a049d2e0ebc6ba5e990b269a012796fb7f10e92c566f0",
+      "differentPixels": 0,
+      "differenceBounds": null
+    },
+    {
+      "theme": "light",
+      "size": "275x116",
+      "view": "ready",
+      "beforeSHA256": "99eefd5c8b532ad643a7c8823a37172fa82e2e7f47251baf846a835956b70d0a",
+      "afterSHA256": "99eefd5c8b532ad643a7c8823a37172fa82e2e7f47251baf846a835956b70d0a",
+      "differentPixels": 0,
+      "differenceBounds": null
+    },
+    {
+      "theme": "light",
+      "size": "275x116",
+      "view": "pending",
+      "beforeSHA256": "ef449e5cce26199d977f2c019e921bff27534f7b308c571b81feb0f5ade66dd3",
+      "afterSHA256": "ef449e5cce26199d977f2c019e921bff27534f7b308c571b81feb0f5ade66dd3",
+      "differentPixels": 0,
+      "differenceBounds": null
+    }
+  ],
+  "scope": "Frozen native resting states; not real-time animation or native input acceptance"
+}

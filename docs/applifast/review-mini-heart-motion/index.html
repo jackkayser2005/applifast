@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Applifast mini-player heart motion comparison</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666;image-rendering:pixelated}a{color:#ff7a80}</style>
+<h1>Mini-player favorite feedback</h1>
+<p>The mini-player's button and menu now start the shared heart pop. The button, menu and B shortcut show the same feedback in the existing cell. The painted icon is bounded by the cell's height, and its resting size, accessibility, read-only pending state and rollback remain unchanged. Reduce motion snaps to the resting size and cancels an interrupted pop.</p>
+<p>Matching native Windows images use the same Apple sample data, pointer, built-in skin, theme, scale and Reduce motion. Before application code is identical to <code>89eba05</code>; the baseline demo binary was built at <code>6357c67</code>. After comes from <code>fix/mini-favorite-heart-motion</code>. Normal is 2x (550 × 232), narrow is 1x (275 × 116). Classic skins supply their own colors independently of the app theme.</p>
+<label>State <select id="view"><option value="ready">Ready</option><option value="pending">Pending favorite</option></select></label>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Size <select id="size"><option value="550x232">Normal, 2x</option><option value="275x116">Narrow, 1x</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Native Windows mini-player favorite comparison">
+<p>These frozen resting captures check appearance and geometry. They do not show the pop or prove native keyboard input or real-time transition timing. The separate timed egui regression checks painted size, all four scales, button/menu/B input, Reduce motion and rollback with no account writes. Actual native interaction and live Apple confirmation remain acceptance gates.</p>
+<p><a href="../mini-heart-motion.md">Evidence and limits</a> · <a href="../reviews.html">Comparison index</a></p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['view','theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

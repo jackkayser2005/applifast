@@ -698,6 +698,7 @@ fn options_menu(app: &mut App, ui: &mut Ui, unit: f32) {
             .button(gettext(locale, "Add to Favorites").as_ref())
             .clicked()
         {
+            super::motion::pop_heart(ui.ctx(), &now.uri);
             app.actions.push(Action::ToggleSaved(now.uri));
         }
     }
@@ -1551,11 +1552,13 @@ fn windows_buttons(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
                     crate::theme::Icon::Heart
                 },
                 response.rect,
-                9.0 * view.unit,
+                (9.0 * view.unit * super::motion::heart_scale(view.ui.ctx(), &now.uri))
+                    .min(response.rect.height()),
                 Color32::from_rgb(color[0], color[1], color[2]),
             );
             crate::theme::focus_ring(view.ui, &response);
             if response.on_hover_text(label.as_ref()).clicked() && !saved {
+                super::motion::pop_heart(view.ui.ctx(), &now.uri);
                 app.actions.push(Action::ToggleSaved(now.uri.clone()));
             }
         }

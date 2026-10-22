@@ -249,6 +249,10 @@ real-account and release checks; passing mocks alone does not close a row.
      their support is verified. Creation and appending do not prove those capabilities.
 
 7. **Settings, motion and lyrics**
+   - The [mini-player heart follow-up](mini-heart-motion.md) connects its
+     button/menu and painted icon to the shared pop. A timed painted-interface
+     regression covers all four scales, button/menu/B, Reduce motion and rollback.
+     Resting native comparisons do not establish live transition timing.
    - The [hidden preset scan fix](settings-preset-scan.md) keeps Apple Settings
      from enumerating unsupported MilkDrop folders. It preserves the visible
      controls and retained Spotify preset behavior; resource acceptance remains
