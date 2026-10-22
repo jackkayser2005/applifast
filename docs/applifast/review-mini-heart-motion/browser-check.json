@@ -1,0 +1,151 @@
+{
+  "browser": "155.0.8059.85",
+  "cases": [
+    {
+      "phase": "before",
+      "view": "ready",
+      "theme": "dark",
+      "size": "550x232",
+      "file": "before-ready-dark-550x232.png",
+      "width": 550,
+      "height": 232
+    },
+    {
+      "phase": "after",
+      "view": "ready",
+      "theme": "dark",
+      "size": "550x232",
+      "file": "after-ready-dark-550x232.png",
+      "width": 550,
+      "height": 232
+    },
+    {
+      "phase": "before",
+      "view": "pending",
+      "theme": "dark",
+      "size": "550x232",
+      "file": "before-pending-dark-550x232.png",
+      "width": 550,
+      "height": 232
+    },
+    {
+      "phase": "after",
+      "view": "pending",
+      "theme": "dark",
+      "size": "550x232",
+      "file": "after-pending-dark-550x232.png",
+      "width": 550,
+      "height": 232
+    },
+    {
+      "phase": "before",
+      "view": "ready",
+      "theme": "light",
+      "size": "550x232",
+      "file": "before-ready-light-550x232.png",
+      "width": 550,
+      "height": 232
+    },
+    {
+      "phase": "after",
+      "view": "ready",
+      "theme": "light",
+      "size": "550x232",
+      "file": "after-ready-light-550x232.png",
+      "width": 550,
+      "height": 232
+    },
+    {
+      "phase": "before",
+      "view": "pending",
+      "theme": "light",
+      "size": "550x232",
+      "file": "before-pending-light-550x232.png",
+      "width": 550,
+      "height": 232
+    },
+    {
+      "phase": "after",
+      "view": "pending",
+      "theme": "light",
+      "size": "550x232",
+      "file": "after-pending-light-550x232.png",
+      "width": 550,
+      "height": 232
+    },
+    {
+      "phase": "before",
+      "view": "ready",
+      "theme": "dark",
+      "size": "275x116",
+      "file": "before-ready-dark-275x116.png",
+      "width": 275,
+      "height": 116
+    },
+    {
+      "phase": "after",
+      "view": "ready",
+      "theme": "dark",
+      "size": "275x116",
+      "file": "after-ready-dark-275x116.png",
+      "width": 275,
+      "height": 116
+    },
+    {
+      "phase": "before",
+      "view": "pending",
+      "theme": "dark",
+      "size": "275x116",
+      "file": "before-pending-dark-275x116.png",
+      "width": 275,
+      "height": 116
+    },
+    {
+      "phase": "after",
+      "view": "pending",
+      "theme": "dark",
+      "size": "275x116",
+      "file": "after-pending-dark-275x116.png",
+      "width": 275,
+      "height": 116
+    },
+    {
+      "phase": "before",
+      "view": "ready",
+      "theme": "light",
+      "size": "275x116",
+      "file": "before-ready-light-275x116.png",
+      "width": 275,
+      "height": 116
+    },
+    {
+      "phase": "after",
+      "view": "ready",
+      "theme": "light",
+      "size": "275x116",
+      "file": "after-ready-light-275x116.png",
+      "width": 275,
+      "height": 116
+    },
+    {
+      "phase": "before",
+      "view": "pending",
+      "theme": "light",
+      "size": "275x116",
+      "file": "before-pending-light-275x116.png",
+      "width": 275,
+      "height": 116
+    },
+    {
+      "phase": "after",
+      "view": "pending",
+      "theme": "light",
+      "size": "275x116",
+      "file": "after-pending-light-275x116.png",
+      "width": 275,
+      "height": 116
+    }
+  ],
+  "errors": [],
+  "scope": "Actual rendered comparison controls and native-image loading, not live application motion or account behavior"
+}

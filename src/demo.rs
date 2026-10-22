@@ -1926,6 +1926,141 @@ mod tests {
 
     #[cfg(feature = "demo")]
     #[test]
+    fn apple_mini_favorite_motion_preserves_the_skin_cell_and_reduced_motion() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        fn images(shape: &egui::Shape, found: &mut Vec<egui::Rect>) {
+            match shape {
+                egui::Shape::Mesh(_) => found.push(shape.visual_bounding_rect()),
+                egui::Shape::Rect(rect) if rect.brush.is_some() => found.push(rect.rect),
+                egui::Shape::Vec(shapes) => {
+                    for shape in shapes {
+                        images(shape, found);
+                    }
+                }
+                _ => {}
+            }
+        }
+        for light in [false, true] {
+            for scale in 1..=4 {
+                for source in ["button", "shortcut", "menu"] {
+                    for reduced in [false, true] {
+                        let (ctx, mut app) = accessible_app(&format!(
+                            "mini-heart-motion-{light}-{scale}-{source}-{reduced}"
+                        ));
+                        app.backend.set_offline(true);
+                        if light {
+                            app.palette = crate::theme::Palette::light();
+                        }
+                        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+                        apple.songs[0].in_favorites = None;
+                        app.local = apple.local.clone();
+                        app.apple = Some(apple);
+                        app.remote = None;
+                        app.settings.winamp_window = true;
+                        app.settings.skin_scale = Some(scale);
+                        app.settings.reduce_motion = reduced;
+                        let uri = app.now_playing().unwrap().uri;
+                        let frame = |app: &mut App, time: f64, events: Vec<egui::Event>| {
+                            let mut output = ctx.run_ui(
+                                egui::RawInput {
+                                    time: Some(time),
+                                    screen_rect: Some(egui::Rect::from_min_size(
+                                        egui::Pos2::ZERO,
+                                        egui::vec2(1280.0, 800.0),
+                                    )),
+                                    events,
+                                    ..Default::default()
+                                },
+                                |ui| app.frame_ui(ui),
+                            );
+                            output.textures_delta.clear();
+                            let mut painted = Vec::new();
+                            for shape in &output.shapes {
+                                images(&shape.shape, &mut painted);
+                            }
+                            (output.platform_output.accesskit_update.unwrap(), painted)
+                        };
+                        frame(&mut app, 0.0, vec![]);
+                        let (tree, _) = frame(&mut app, 0.0, vec![]);
+                        let button = accessible_node(&tree, "Add to Favorites", Role::Button);
+                        let bounds = tree
+                            .nodes
+                            .iter()
+                            .find(|(id, _)| *id == button)
+                            .unwrap()
+                            .1
+                            .bounds()
+                            .unwrap();
+                        let area = egui::Rect::from_min_max(
+                            egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                            egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                        );
+                        let event = match source {
+                            "shortcut" => keyboard(egui::Key::B, egui::Modifiers::NONE),
+                            "menu" => {
+                                app.winamp.demo_options_open = true;
+                                frame(&mut app, 0.001, vec![]);
+                                let (menu, _) = frame(&mut app, 0.002, vec![]);
+                                let button = menu
+                                    .nodes
+                                    .iter()
+                                    .find(|(_, node)| {
+                                        node.label() == Some("Add to Favorites")
+                                            && node.role() == Role::Button
+                                            && node.bounds() != Some(bounds)
+                                    })
+                                    .expect("the options menu's favorite action")
+                                    .0;
+                                accessible_action(button, AccessibleAction::Click, None)
+                            }
+                            _ => accessible_action(button, AccessibleAction::Click, None),
+                        };
+                        frame(&mut app, 0.01, vec![event]);
+                        assert_eq!(app.is_saved(&uri), Some(true), "{source}");
+                        app.winamp.demo_options_open = false;
+                        let check = |tree: &egui::accesskit::TreeUpdate,
+                                     painted: &[egui::Rect],
+                                     enlarged: bool| {
+                            let image = accessible_node(tree, "Favorites", Role::Image);
+                            let image = &tree.nodes.iter().find(|(id, _)| *id == image).unwrap().1;
+                            assert_eq!(image.bounds(), Some(bounds), "fixed skin cell");
+                            assert!(!image.supports_action(AccessibleAction::Click));
+                            let icon = painted
+                                .iter()
+                                .find(|rect| area.contains_rect(**rect))
+                                .expect("painted heart inside its fixed skin cell");
+                            let base = 9.0 * scale as f32 / ctx.pixels_per_point();
+                            if enlarged {
+                                assert!(icon.width() > base * 1.2, "{source}: {icon:?}");
+                            } else {
+                                assert!((icon.width() - base).abs() < 0.01, "{source}: {icon:?}");
+                            }
+                        };
+                        let (tree, painted) = frame(&mut app, 0.08, vec![]);
+                        check(&tree, &painted, !reduced);
+                        app.settings.reduce_motion = true;
+                        let (tree, painted) = frame(&mut app, 0.09, vec![]);
+                        check(&tree, &painted, false);
+                        app.settings.reduce_motion = false;
+                        let (tree, painted) = frame(&mut app, 0.1, vec![]);
+                        check(&tree, &painted, false);
+                        let (tree, painted) = frame(&mut app, 0.3, vec![]);
+                        check(&tree, &painted, false);
+                        app.apple_response(&serde_json::json!({
+                            "type":"response","session":1,"id":1,"error":"unconfirmed"
+                        }));
+                        assert_eq!(app.is_saved(&uri), None);
+                        let (tree, _) = frame(&mut app, 0.4, vec![]);
+                        accessible_node(&tree, "Add to Favorites", Role::Button);
+                        app.backend.shutdown();
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
     fn apple_queue_removal_rejects_stale_actions_and_restores_exact_occurrences() {
         let (ctx, mut app) = accessible_app("apple-queue-removal");
         app.backend.set_offline(true);
