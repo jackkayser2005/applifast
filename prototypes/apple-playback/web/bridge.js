@@ -47,6 +47,18 @@
   }, generation);
   const number = value => Number.isFinite(value) ? value : 0;
   async function requestMusic(path, parameters = {}, options = {}) {
+    // Apple's next cursors can omit limit. Keep library pages at the app's
+    // existing size, without changing explicit limits, ID batches or writes.
+    const [bare, query = ''] = path.split('?');
+    if ((options.method || 'GET') === 'GET' &&
+        /^\/v1\/me\/library\/(songs|albums|artists|playlists)$/.test(bare) &&
+        !Object.hasOwn(parameters, 'ids') && !Object.hasOwn(parameters, 'limit')) {
+      const paging = new URLSearchParams(query);
+      if (!paging.has('limit') && !paging.has('ids')) {
+        paging.set('limit', '100');
+        path = `${bare}?${paging}`;
+      }
+    }
     const controller = new AbortController();
     apiControllers.add(controller);
     let abort;

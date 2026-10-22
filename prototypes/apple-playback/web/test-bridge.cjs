@@ -693,15 +693,27 @@ async function checkAuthorizationCancellation() {
   await app.dispatch({type:'library',next:page.next});
   const nextLibraryURL = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
   assert.equal(nextLibraryURL.searchParams.get('offset'), '100');
+  assert.equal(nextLibraryURL.searchParams.get('limit'), '100', 'A continuation must keep the library page size');
   assert.equal(nextLibraryURL.searchParams.get('include'), 'albums,artists');
   assert.deepEqual(nextLibraryURL.searchParams.getAll('extend'), ['inFavorites']);
+  for (const [at, collection] of ['songs', 'albums', 'artists', 'playlists'].entries()) {
+    await app.dispatch({ type: 'request', id: 310 + at, path: `/v1/me/library/${collection}?offset=100` });
+    const url = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
+    assert.equal(url.pathname, `/v1/me/library/${collection}`);
+    assert.equal(url.searchParams.get('offset'), '100');
+    assert.equal(url.searchParams.get('limit'), '100');
+    await app.dispatch({ type: 'request', id: 320 + at, path: `/v1/me/library/${collection}?offset=100&limit=10` });
+    assert.equal(new URL(requests.at(-1)[0], 'https://api.music.apple.com').searchParams.get('limit'), '10', 'Explicit smaller pages stay explicit');
+  }
   await app.dispatch({type:'request',id:201,path:'/v1/me/library/songs/i.upload?extend=inFavorites'});
   const detailURL = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
   assert.deepEqual(detailURL.searchParams.getAll('extend'), ['inFavorites']);
+  assert(!detailURL.searchParams.has('limit'), 'A detail read is not a paginated collection');
   await app.dispatch({type:'request',id:202,path:'/v1/catalog/us/search?term=test&types=songs'});
   const searchURL = new URL(requests.at(-1)[0], 'https://api.music.apple.com');
   assert.equal(searchURL.searchParams.get('term'), 'test');
   assert.equal(searchURL.searchParams.get('types'), 'songs');
+  assert(!searchURL.searchParams.has('limit'), 'Search keeps its own page sizing');
   libraryReply = {data: {data: [
     {id: 'i.upload', type: 'library-songs', attributes: {inFavorites: true, playParams: uploaded.playParams}},
     {id: '123', type: 'songs', attributes: {inFavorites: false, playParams: {id: '123', kind: 'song'}}},

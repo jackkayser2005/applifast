@@ -4,6 +4,11 @@ Windows check: October 22, 2026. These results cover the native playback host
 with saved protected authorization. They do not establish fresh Apple sign-in,
 desktop control interaction, a different PC or release readiness.
 
+The [complete library paging check](library-page-size.md) now verifies saved-account
+songs, albums, artists and playlists, plus the production songs coordinator's
+full accumulation. Its evidence and the repaired missing page limit are recorded
+separately; search, fresh authorization and desktop acceptance remain open.
+
 ## Playlist creation and append
 
 The maintainer explicitly authorized one **Applifast QA** playlist. The opt-in

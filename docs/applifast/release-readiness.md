@@ -210,6 +210,12 @@ real-account and release checks; passing mocks alone does not close a row.
      tokens are implemented; long-term release delivery remains a milestone.
 
 3. **Library and catalog**
+   - The [native paging check](library-page-size.md) completes 3,698 songs,
+     2,851 albums, 1,786 artists and 94 playlists. The production Library/state
+     path matches all song IDs and playback parameters, retaining 125 entries
+     without playback parameters. The paging fix reduces the observed songs
+     requests from 145 pages to 37. This does not close catalog/library search,
+     UI pagination, refresh/restart or upload provenance/playback acceptance.
    - [ ] Exercise pagination of songs, albums, artists, playlists and both
      searches against a representative large library.
    - [ ] Verify catalog, matched and genuinely cloud-only songs separately.

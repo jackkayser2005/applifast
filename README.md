@@ -124,6 +124,10 @@ rate limits and service failures ask you to wait. Stalled reads release after
 stale data. See [API recovery](docs/applifast/api-recovery.md) and
 [cancellation checks](docs/applifast/read-cancellation.md).
 
+Top-level Apple library continuations retain the app's 100-item page size when
+Apple omits it from the cursor, reducing requests during larger refreshes.
+Explicit page limits are preserved. See the [native paging checks](docs/applifast/library-page-size.md).
+
 Right-click an upcoming Apple queue row to **Remove from queue**. In the
 mini-player playlist, select rows and use **REM > Remove selected**. This removes
 only those queued copies, leaves the playing song alone and survives restart.
