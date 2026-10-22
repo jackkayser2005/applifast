@@ -67,13 +67,16 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
         .thumbnail
         .and_then(|uri| app.softened_covers.texture(ui.ctx(), &art, uri));
     ui.add_space(12.0);
-    let cover_size = if ui.available_width() > 720.0 {
+    let narrow = app.apple.is_some() && ui.available_width() < widgets::COMPACT_COLLECTION_WIDTH;
+    let cover_size = if narrow {
+        64.0
+    } else if ui.available_width() > 720.0 {
         212.0
     } else {
         160.0
     };
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 24.0;
+        ui.spacing_mut().item_spacing.x = if narrow { 16.0 } else { 24.0 };
         let (rect, _) = ui.allocate_exact_size(Vec2::splat(cover_size), Sense::hover());
         let radius = if hero.round {
             cover_size / 2.0
@@ -104,21 +107,30 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
             let width = ui.available_width();
             ui.set_width(width);
             ui.spacing_mut().item_spacing.y = 6.0;
-            ui.add_space(cover_size * 0.08);
+            if !narrow {
+                ui.add_space(cover_size * 0.08);
+            }
             theme::text(
                 ui,
                 hero.kind.as_ref(),
                 theme::semibold(12.5),
                 palette.secondary,
             );
-            let size = hero_title_size(cover_size, |size| {
-                ui.painter()
-                    .layout_no_wrap(hero.title.to_string(), theme::bold(size), palette.text)
-                    .size()
-                    .x
-                    <= width
-            });
-            theme::text(ui, hero.title, theme::bold(size), palette.text);
+            let size = if narrow {
+                24.0
+            } else {
+                hero_title_size(cover_size, |size| {
+                    ui.painter()
+                        .layout_no_wrap(hero.title.to_string(), theme::bold(size), palette.text)
+                        .size()
+                        .x
+                        <= width
+                })
+            };
+            let title = theme::text(ui, hero.title, theme::bold(size), palette.text);
+            if narrow {
+                title.on_hover_text(hero.title);
+            }
             if let Some(description) = &hero.description
                 && !description.is_empty()
             {
@@ -190,12 +202,35 @@ pub fn actions_row(
 ) {
     let palette = app.palette;
     let locale = app.locale;
+    let apple = app.apple.is_some();
+    let narrow = apple && ui.available_width() < widgets::COMPACT_COLLECTION_WIDTH;
+    let is_filtered = filter
+        .as_ref()
+        .is_some_and(|filter| !filter.trim().is_empty());
+    let has_filter = filter.is_some();
+    let mut filter = filter;
+    let mut draw_filter = |ui: &mut egui::Ui| {
+        if let Some(filter) = filter.as_deref_mut() {
+            widgets::search_field(
+                ui,
+                &palette,
+                locale,
+                egui::Id::new(("collection-filter", actions.name)),
+                filter,
+                &gettext(locale, "Filter"),
+                if apple {
+                    ui.available_width().min(220.0)
+                } else {
+                    220.0
+                },
+            );
+        }
+    };
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 18.0;
         if let Some(uri) = &actions.play_uri {
             let now_playing_here = app.playing_context_uri().as_deref() == Some(uri.as_str())
                 && app.believed_playing();
-            let is_filtered = filter.as_ref().is_some_and(|f| !f.trim().is_empty());
             // A radio is mixed afresh each time Spotify is asked, so it
             // always plays the songs on screen.
             let play_view = actions.view.is_some()
@@ -220,7 +255,7 @@ pub fn actions_row(
             );
             // Room left once the icon buttons and the filter have theirs.
             let room =
-                ui.available_width() - 3.0 * 56.0 - if filter.is_some() { 238.0 } else { 0.0 };
+                ui.available_width() - 3.0 * 56.0 - if has_filter && !narrow { 238.0 } else { 0.0 };
             let width = if room >= width * 2.0 + 10.0 {
                 width
             } else {
@@ -389,20 +424,14 @@ pub fn actions_row(
                 }
             });
         }
-        if let Some(filter) = filter {
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                widgets::search_field(
-                    ui,
-                    &palette,
-                    locale,
-                    egui::Id::new(("collection-filter", actions.name)),
-                    filter,
-                    &gettext(locale, "Filter"),
-                    220.0,
-                );
-            });
+        if !narrow && has_filter {
+            ui.with_layout(Layout::right_to_left(Align::Center), &mut draw_filter);
         }
     });
+    if narrow && has_filter {
+        ui.add_space(8.0);
+        draw_filter(ui);
+    }
     ui.add_space(14.0);
 }
 
@@ -624,6 +653,7 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
             ui,
             &palette,
             app.locale,
+            app.apple.is_some(),
             table.show_album,
             table.show_added,
             table.show_added_by,
@@ -1954,7 +1984,11 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
         Hero {
             images: HeroImages::default(),
             liked: true,
-            kind: gettext(locale, "Playlist"),
+            kind: if app.apple.is_some() {
+                gettext(locale, "Library")
+            } else {
+                gettext(locale, "Playlist")
+            },
             title: &liked_title,
             description: favorites_only.then(|| {
                 gettext(

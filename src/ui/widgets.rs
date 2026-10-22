@@ -15,6 +15,8 @@ use crate::util;
 pub const CARD_WIDTH: f32 = 172.0;
 pub const CARD_GAP: f32 = 14.0;
 pub const PAGE_PADDING: f32 = 24.0;
+/// Leave room for names and controls beside both side panels.
+pub(super) const COMPACT_COLLECTION_WIDTH: f32 = 360.0;
 /// How far a hovered card's cover rises.
 const CARD_LIFT: f32 = 4.0;
 
@@ -1468,7 +1470,15 @@ fn track_row_contents(
     }
     // The row highlight also shows keyboard focus. Do not add an outline
     // when a mouse click gives the row focus for arrow-key navigation.
-    let cols = columns(width, &row);
+    let narrow = app.apple.is_some() && !row.compact && width < COMPACT_COLLECTION_WIDTH;
+    let mut cols = columns(width, &row);
+    if narrow {
+        cols.number = 28.0;
+        cols.cover = 0.0;
+        cols.heart = 28.0;
+        cols.duration = 0.0;
+        cols.more = 32.0;
+    }
     let painter = ui.painter().clone();
     let mut x = rect.left() + 8.0;
 
@@ -1685,7 +1695,10 @@ fn track_row_contents(
         child.add_space(vertical_pad);
         child.horizontal(|ui| {
             ui.set_max_width(title_rect.width());
-            theme::text(ui, row.item.name(), theme::medium(14.5), title_color);
+            let name = theme::text(ui, row.item.name(), theme::medium(14.5), title_color);
+            if narrow {
+                name.on_hover_text(row.item.name());
+            }
         });
         child.horizontal(|ui| {
             ui.set_max_width(title_rect.width());
@@ -1898,14 +1911,17 @@ fn track_row_contents(
     }
 
     // Duration.
-    let duration_rect = Rect::from_min_size(pos2(x, rect.top()), vec2(cols.duration, row_height));
-    painter.text(
-        pos2(duration_rect.right() - 6.0, duration_rect.center().y),
-        egui::Align2::RIGHT_CENTER,
-        util::format_duration_ms(row.item.duration_ms()),
-        theme::regular(13.0),
-        palette.secondary,
-    );
+    if cols.duration > 0.0 {
+        let duration_rect =
+            Rect::from_min_size(pos2(x, rect.top()), vec2(cols.duration, row_height));
+        painter.text(
+            pos2(duration_rect.right() - 6.0, duration_rect.center().y),
+            egui::Align2::RIGHT_CENTER,
+            util::format_duration_ms(row.item.duration_ms()),
+            theme::regular(13.0),
+            palette.secondary,
+        );
+    }
     x += cols.duration;
 
     // More.
@@ -1993,7 +2009,8 @@ fn track_row_contents(
     let popup = if row.index == 0
         && (app.demo_queue_menu && matches!(row.context, RowContext::Queue)
             || matches!(app.demo_play_next_menu, Some("song" | "selection"))
-                && !matches!(row.context, RowContext::Queue))
+                && !matches!(row.context, RowContext::Queue)
+                && !row.compact)
     {
         popup.open(true).at_position(response.rect.left_bottom())
     } else {
@@ -2164,6 +2181,7 @@ pub fn table_header(
     ui: &mut Ui,
     palette: &Palette,
     locale: Locale,
+    apple: bool,
     show_album: bool,
     show_added: bool,
     show_added_by: bool,
@@ -2172,6 +2190,8 @@ pub fn table_header(
 ) -> Option<crate::model::SortColumn> {
     use crate::model::SortColumn;
     let width = ui.available_width();
+    let narrow = apple && width < COMPACT_COLLECTION_WIDTH;
+    let number_width = if narrow { 28.0 } else { 44.0 };
     let (rect, _) = ui.allocate_exact_size(vec2(width, 34.0), Sense::hover());
     let font = theme::regular(12.0);
     let color = palette.secondary;
@@ -2234,7 +2254,10 @@ pub fn table_header(
     let mut number_clicked = false;
     let mut x = rect.left() + 8.0;
     {
-        let number = Rect::from_center_size(pos2(x + 22.0, rect.center().y), vec2(30.0, 22.0));
+        let number = Rect::from_center_size(
+            pos2(x + number_width / 2.0, rect.center().y),
+            vec2(number_width.min(30.0), 22.0),
+        );
         // With no sort chosen the list already plays its own order, and
         // the # says so: lit, arrow pointing down the list.
         let natural = sort.is_none();
@@ -2266,7 +2289,10 @@ pub fn table_header(
             .map(|sort| sort.ascending)
             .or(natural.then_some(true))
         {
-            let center = pos2(number.center().x + 12.0, rect.center().y);
+            let center = pos2(
+                number.center().x + if narrow { 8.0 } else { 12.0 },
+                rect.center().y,
+            );
             let (wing, tip) = if ascending { (2.8, -3.2) } else { (-2.8, 3.2) };
             ui.painter().add(egui::Shape::convex_polygon(
                 vec![
@@ -2285,8 +2311,8 @@ pub fn table_header(
             number_clicked = true;
         }
     }
-    x += 44.0;
-    if show_cover {
+    x += number_width;
+    if show_cover && !narrow {
         x += 52.0;
     }
     heading(
@@ -2309,7 +2335,11 @@ pub fn table_header(
     } else {
         0.0
     };
-    let right_fixed = 36.0 + 56.0 + 36.0 + 8.0;
+    let right_fixed = if narrow {
+        28.0 + 32.0 + 8.0
+    } else {
+        36.0 + 56.0 + 36.0 + 8.0
+    };
     let mut cx = rect.right() - right_fixed - added_width - added_by_width - album_width;
     if album_width > 0.0 {
         heading(
@@ -2341,7 +2371,15 @@ pub fn table_header(
         clicked = Some(SortColumn::Index);
     }
     let clock = Rect::from_center_size(
-        pos2(rect.right() - 36.0 - 56.0 / 2.0 - 6.0, rect.center().y),
+        pos2(
+            rect.right()
+                - if narrow {
+                    24.0
+                } else {
+                    36.0 + 56.0 / 2.0 + 6.0
+                },
+            rect.center().y,
+        ),
         Vec2::splat(15.0),
     );
     let duration_active = sort.is_some_and(|sort| sort.column == SortColumn::Duration);

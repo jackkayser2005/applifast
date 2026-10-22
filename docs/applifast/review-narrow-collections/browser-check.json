@@ -1,0 +1,13 @@
+{
+  "Browser": "155.0.8059.85",
+  "CollectionStates": 16,
+  "ToolbarStates": 8,
+  "IndexNextPrevious": true,
+  "DirectTargets": [
+    "review-narrow-collections/index.html",
+    "review-narrow-toolbar/index.html"
+  ],
+  "ScriptErrors": 0,
+  "CollectionResourceFailures": 0,
+  "Scope": "Isolated Chrome, public loopback documentation only; decoded images, exact dimensions, phase and loaded status; native live motion/account/performance not established"
+}

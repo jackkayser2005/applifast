@@ -59,6 +59,8 @@ Retry connection action if they stall. See [scope and runtime checks](docs/appli
 
 With Queue or Lyrics open in a narrow window, Apple's toolbar puts its existing
 shortcuts on a second row so they remain clear of Search. Wider panes keep one row.
+Narrow collection panes also use smaller headers and keep song names, play
+buttons and the filter readable. Favorites, row menus and sorting stay available.
 
 Developers can run from this checkout:
 

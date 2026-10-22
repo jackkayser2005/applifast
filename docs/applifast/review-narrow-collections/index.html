@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Applifast compact collection comparison</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}button[aria-pressed="true"]{outline:2px solid #ff7a80}a{color:#ff7a80}</style>
+<h1>PR #83: Readable Apple collections beside Queue and Lyrics</h1>
+<p>Baseline production UI: <code>6fd6864a4f90a6ff1c8a5742ba25af615e24a667</code>.
+Both builds use the same demo-only correction that opens the library's song menu
+without also opening the compact current-song menu. The candidate is
+<code>fix/narrow-apple-collections</code>, the source accompanying this comparison.</p>
+<p>Visible changes: Apple collection panes below 360 points use a 64-point cover
+and smaller heading, put Filter below the action buttons, and give table space
+to song names, artists, favorites and More. Row artwork and duration values return
+when the pane widens. Playlist-order, title and duration sorting remain available.
+Songs and Favorites now identify their source as Library instead of Playlist at
+all widths. Wider collection layouts otherwise retain their existing arrangement.</p>
+<p>Actual native Windows sample-data captures, matched theme, size, page, state,
+zoom and neutral pointer. Queue stays open in these captures. The real-interface
+regression repeats loaded view and pointer interactions with both Queue and Lyrics.
+Motion is frozen for comparison; these stills do not prove animation timing,
+audible playback, account writes or gaming performance.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<label>State <select id="view"><option value="loaded">Loaded collection</option><option value="menu">Song context menu</option></select></label>
+<button id="before" aria-pressed="false">Before</button><button id="after" aria-pressed="true">After</button>
+<p id="selection" aria-live="polite"></p><img id="capture" alt="Matching native Windows compact collection comparison"><p id="loaded" aria-live="polite"></p>
+<p>Verification covers actual painted glyphs and control backgrounds, double-click
+playback intent, a row menu's queue action, duration sorting and a single demo menu.
+Source/binary hashes distinguish the baseline with its shared fixture correction
+from the candidate. All sixteen selector combinations were exercised in an isolated
+Chrome 155 session, with decoded image dimensions, phase/status checks and no
+script or resource errors. The preceding toolbar's eight states and the index's
+Next/Previous/direct links also pass. See <a href="browser-check.json">browser evidence</a>.
+Live motion and actual account interaction remain separate checks.</p>
+<p>Scope approval for this responsive collection layout remains pending before
+merge. No backend, queue ordering, credential, settings format, dependency or
+network-destination change is involved. The preceding toolbar review is
+<a href="../review-narrow-toolbar/index.html">PR #82</a>.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+byId('size').value;byId('loaded').textContent='Loading capture…';byId('capture').src=phase+'-'+suffix+'.png';byId('selection').textContent=phase+' / '+suffix;for(const p of ['before','after'])byId(p).setAttribute('aria-pressed',String(p===phase));}
+byId('capture').onload=()=>{const img=byId('capture');byId('loaded').textContent='Native capture loaded: '+img.naturalWidth+' × '+img.naturalHeight;};
+byId('capture').onerror=()=>{byId('loaded').textContent='Capture unavailable';};
+for(const id of ['theme','size','view'])byId(id).onchange=draw;
+for(const p of ['before','after'])byId(p).onclick=()=>{phase=p;draw();};draw();
+</script></html>

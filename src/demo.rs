@@ -11664,6 +11664,272 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_narrow_collections_keep_names_and_actions_visible() {
+        use egui::accesskit::Role;
+        fn painted_box(
+            shape: &egui::epaint::Shape,
+            clip: egui::Rect,
+            pane: egui::Rect,
+            height: f32,
+            min_y: f32,
+        ) -> Option<egui::Rect> {
+            match shape {
+                egui::epaint::Shape::Rect(shape)
+                    if (shape.rect.height() - height).abs() < 0.5
+                        && shape.rect.top() >= min_y
+                        && clip.contains_rect(shape.rect)
+                        && pane.contains_rect(shape.rect) =>
+                {
+                    Some(shape.rect)
+                }
+                egui::epaint::Shape::Vec(shapes) => shapes
+                    .iter()
+                    .find_map(|shape| painted_box(shape, clip, pane, height, min_y)),
+                _ => None,
+            }
+        }
+        fn label(
+            shape: &egui::epaint::Shape,
+            clip: egui::Rect,
+            pane: egui::Rect,
+            wanted: &str,
+        ) -> Option<egui::Rect> {
+            match shape {
+                egui::epaint::Shape::Text(text) if text.galley.job.text == wanted => {
+                    let drawn: String = text
+                        .galley
+                        .rows
+                        .iter()
+                        .flat_map(|row| row.row.glyphs.iter().map(|glyph| glyph.chr))
+                        .collect();
+                    let bounds = text.visual_bounding_rect();
+                    (drawn == wanted && clip.contains_rect(bounds) && pane.contains_rect(bounds))
+                        .then_some(bounds)
+                }
+                egui::epaint::Shape::Vec(shapes) => shapes
+                    .iter()
+                    .find_map(|shape| label(shape, clip, pane, wanted)),
+                _ => None,
+            }
+        }
+        for light in [false, true] {
+            for panel in ["queue", "lyrics"] {
+                for width in [760.0, 1100.0] {
+                    let (ctx, mut app) = accessible_app(&format!(
+                        "apple-narrow-collections-{light}-{panel}-{width}"
+                    ));
+                    let apple = crate::apple::State::demo(&app.library.liked.items);
+                    let wanted_uri = apple.songs[1].uri();
+                    app.library.liked.items = apple
+                        .songs
+                        .iter()
+                        .map(|song| SavedTrack {
+                            track: song.track(),
+                            added_at: None,
+                        })
+                        .collect();
+                    app.library.liked.revision += 1;
+                    app.local = apple.local.clone();
+                    app.remote = None;
+                    app.apple = Some(apple);
+                    app.open(Page::LikedSongs);
+                    app.settings.reduce_motion = true;
+                    app.settings.theme = if light {
+                        crate::settings::ThemeChoice::Light
+                    } else {
+                        crate::settings::ThemeChoice::Dark
+                    };
+                    app.actions.push(Action::SettingsChanged);
+                    app.show_queue_panel = panel == "queue";
+                    app.show_lyrics_panel = panel == "lyrics";
+                    app.table_sorts.remove(&Page::LikedSongs);
+                    let draw = |app: &mut App, events| {
+                        let mut output = ctx.run_ui(
+                            egui::RawInput {
+                                screen_rect: Some(egui::Rect::from_min_size(
+                                    egui::Pos2::ZERO,
+                                    egui::vec2(width, 760.0),
+                                )),
+                                events,
+                                ..Default::default()
+                            },
+                            |ui| app.frame_ui(ui),
+                        );
+                        output.textures_delta.clear();
+                        output
+                    };
+                    draw(&mut app, vec![]);
+                    draw(&mut app, vec![]);
+                    let output = draw(&mut app, vec![]);
+                    let pane = egui::Rect::from_min_max(
+                        egui::pos2(
+                            egui::containers::panel::PanelState::load(
+                                &ctx,
+                                egui::Id::new("sidebar"),
+                            )
+                            .unwrap()
+                            .outer_rect
+                            .right(),
+                            0.0,
+                        ),
+                        egui::pos2(
+                            egui::containers::panel::PanelState::load(
+                                &ctx,
+                                egui::Id::new(format!("{panel}-panel")),
+                            )
+                            .unwrap()
+                            .outer_rect
+                            .left(),
+                            egui::containers::panel::PanelState::load(
+                                &ctx,
+                                egui::Id::new("player-bar"),
+                            )
+                            .unwrap()
+                            .outer_rect
+                            .top(),
+                        ),
+                    );
+                    let painted = |wanted| {
+                        output
+                            .shapes
+                            .iter()
+                            .find_map(|shape| label(&shape.shape, shape.clip_rect, pane, wanted))
+                            .unwrap_or_else(|| {
+                                panic!("{wanted} is clipped at {width} with {panel}")
+                            })
+                    };
+                    let header = painted("Songs");
+                    painted("Rosewood");
+                    let tides = painted("Tides");
+                    let painted_box = |height| {
+                        output
+                            .shapes
+                            .iter()
+                            .find_map(|shape| {
+                                painted_box(
+                                    &shape.shape,
+                                    shape.clip_rect,
+                                    pane,
+                                    height,
+                                    header.bottom(),
+                                )
+                            })
+                            .expect("Visible collection control")
+                    };
+                    let filter = painted_box(34.0);
+                    let play = painted_box(36.0);
+                    let overlap = play.intersect(filter);
+                    assert!(
+                        overlap.width() <= 0.0 || overlap.height() <= 0.0,
+                        "Filter {filter:?} covers Play {play:?} at {width}, {panel}, light={light}"
+                    );
+                    let click = |app: &mut App, position: egui::Pos2| {
+                        draw(
+                            app,
+                            vec![
+                                egui::Event::PointerMoved(position),
+                                egui::Event::PointerButton {
+                                    pos: position,
+                                    button: egui::PointerButton::Primary,
+                                    pressed: true,
+                                    modifiers: Default::default(),
+                                },
+                            ],
+                        );
+                        draw(
+                            app,
+                            vec![egui::Event::PointerButton {
+                                pos: position,
+                                button: egui::PointerButton::Primary,
+                                pressed: false,
+                                modifiers: Default::default(),
+                            }],
+                        );
+                    };
+                    click(&mut app, tides.center());
+                    click(&mut app, tides.center());
+                    assert_eq!(
+                        app.current_track_uri().as_deref(),
+                        Some(wanted_uri.as_str())
+                    );
+                    let hovered = draw(&mut app, vec![egui::Event::PointerMoved(tides.center())]);
+                    let more = hovered
+                        .platform_output
+                        .accesskit_update
+                        .as_ref()
+                        .unwrap()
+                        .nodes
+                        .iter()
+                        .find_map(|(_, node)| {
+                            (node.role() == Role::Button && node.label() == Some("More"))
+                                .then(|| node.bounds())
+                                .flatten()
+                                .filter(|bounds| {
+                                    bounds.y0 <= f64::from(tides.center().y)
+                                        && bounds.y1 >= f64::from(tides.center().y)
+                                })
+                        })
+                        .expect("Row More action remains available");
+                    let position = egui::pos2(
+                        ((more.x0 + more.x1) / 2.0) as f32,
+                        ((more.y0 + more.y1) / 2.0) as f32,
+                    );
+                    assert!(pane.contains(position));
+                    click(&mut app, position);
+                    let menu = draw(&mut app, vec![]);
+                    let queue = menu_text(&menu)
+                        .into_iter()
+                        .find(|(text, _)| text == "Add to queue")
+                        .expect("Row queue command")
+                        .1;
+                    let before = app.apple.as_ref().unwrap().order.manual_count;
+                    click(&mut app, queue.center());
+                    assert_eq!(app.apple.as_ref().unwrap().order.manual_count, before + 1);
+                    let sorted = draw(&mut app, vec![]);
+                    let duration = sorted
+                        .platform_output
+                        .accesskit_update
+                        .as_ref()
+                        .unwrap()
+                        .nodes
+                        .iter()
+                        .find_map(|(_, node)| {
+                            (node.role() == Role::Button
+                                && node.label() == Some("Sort by duration"))
+                            .then(|| node.bounds())
+                            .flatten()
+                        })
+                        .expect("Duration sorting remains available");
+                    click(
+                        &mut app,
+                        egui::pos2(
+                            ((duration.x0 + duration.x1) / 2.0) as f32,
+                            ((duration.y0 + duration.y1) / 2.0) as f32,
+                        ),
+                    );
+                    assert_eq!(
+                        app.table_sorts.get(&Page::LikedSongs).unwrap().column,
+                        crate::model::SortColumn::Duration
+                    );
+                    app.demo_play_next_menu = Some("song");
+                    draw(&mut app, vec![]);
+                    let forced = draw(&mut app, vec![]);
+                    assert_eq!(
+                        menu_text(&forced)
+                            .iter()
+                            .filter(|(text, _)| text == "Add to queue")
+                            .count(),
+                        1,
+                        "The collection capture must open one menu, excluding the compact current-song row."
+                    );
+                    app.backend.shutdown();
+                }
+            }
+        }
+    }
+
     /// #644: Go to song radio from a list names the radio after the song
     /// even when the song was never played or seen on a radio, instead of
     /// opening a page titled just "Radio" with no cover.
