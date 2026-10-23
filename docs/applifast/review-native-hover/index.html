@@ -7,7 +7,7 @@ button,select,input{font:inherit;margin:5px;padding:7px}input[type=range]{width:
 img{display:block;max-width:100%;height:auto;border:1px solid #666}#detail{image-rendering:pixelated}
 button[aria-pressed=true]{outline:2px solid #ff7a80}
 </style>
-<h1>Native cover and seek hover evidence</h1>
+<h1><a href="https://github.com/jackkayser2005/applifast/pull/92">PR #92</a>: Native cover and seek hover evidence</h1>
 <p>128 actual Windows egui readbacks from source <code>69b5b61</code>, using the existing card/seek hover fixtures delayed until capture index one. The demo is paused, offline and uses no artwork URLs. A temporary patch records that index; it changes no animation duration or native capture cadence. All production sources were restored after the capture build.</p>
 <p>Moving cases contain four distinct card and seek states, with intermediate edge/color pixels. Reduce motion has exactly two states: before hover and its immediate final state. The cover rises four native pixels; solid seek-track interior grows two rows, and the knob appears above the track. All last five frames are stable. Every pixel outside the two detail crops stays unchanged.</p>
 <label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>

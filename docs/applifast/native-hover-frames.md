@@ -10,6 +10,9 @@ until capture index one, pauses the demo and removes artwork URLs. The stock
 50 ms post-readback delay and all production animation durations stay unchanged.
 The fixture patch, exact source/binary hashes and all full-frame hashes are
 retained. Production source bytes are restored after building the capture tool.
+The retained zero-context fixture patch is validated against all four captured
+source hashes. Apply it to `69b5b61` with `git apply --unidiff-zero` in a disposable
+checkout; restore the source before producing an ordinary executable.
 There is no account, audio, tray ownership or normal-player mutation.
 
 Each moving case contains four distinct card/seek crops, with intermediate

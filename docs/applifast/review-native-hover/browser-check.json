@@ -215,5 +215,9 @@
       "component": "seek",
       "renderedUniqueBeforeMiddleAfterStates": 2
     }
-  ]
+  ],
+  "reviewIndex": {
+    "indexLoadsSelectedReview": true,
+    "pr": 92
+  }
 }
