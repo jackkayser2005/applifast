@@ -55,9 +55,10 @@ Spotifast update checks. It does not fetch MilkDrop preset packs.
 
 ## This documentation
 
-The inherited website build and deployment are disabled for this fork.
-No new Applifast public website or analytics service is activated by these
-documentation changes. Upstream Spotifast's site has its own policies.
+Automatic website publication is disabled for this fork. CI builds private
+documentation previews for review. The fork's documentation does not load the
+inherited upstream analytics script. No new public website or analytics service
+is activated by these changes. Upstream Spotifast's site has its own policies.
 
 ## Questions
 

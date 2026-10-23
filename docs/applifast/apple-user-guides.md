@@ -20,6 +20,10 @@ domain, production deployment, updater, tag or public download is activated.
 The inherited site URL remains a publication-setup gate; this PR does not claim
 ownership of the upstream domain.
 
+Rendered review also found the production-only upstream analytics include. The
+fork removes it. CI preview builds remain enabled; automatic site publication
+remains disabled. App network behavior is unchanged.
+
 CI retains the actual Jekyll base/candidate output for seven days in a
 `docs-preview-<sha>` artifact. This supports HTML/browser inspection without
 publishing either site. It uses the existing upload action and read-only workflow
