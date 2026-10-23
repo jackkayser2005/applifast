@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,">
+<title>PR #91: cover artwork error recovery</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1050px;line-height:1.5}a{color:#ff7a80}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}button[aria-pressed=true]{outline:2px solid #ff7a80}</style>
+<h1>PR #91: artwork error recovery</h1>
+<p><a href="https://github.com/jackkayser2005/applifast/pull/91">PR #91</a> replaces the previous song's cover with the existing music-note placeholder when the next image fails. Pending loads keep the old cover until they settle. Reduce motion switches immediately. No layout or control changes.</p>
+<p>Actual Windows native egui demo readbacks: baseline <code>8da79db</code>, candidate <code>879d523</code>. Both use the same temporary fixture: an old synthetic SVG seeded as the shown cover, a corrupt new PNG decoded by egui, and other demo artwork disabled. Fixture patches, source/binary hashes and all PNG hashes are in <a href="evidence.json">the evidence manifest</a>. Capture fixtures were removed from the production sources.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<label>Motion setting <select id="motion"><option value="enabled">Enabled</option><option value="reduced">Reduce motion</option></select></label>
+<button id="before" aria-pressed="false">Before</button><button id="after" aria-pressed="true">After</button>
+<p id="label" aria-live="polite"></p><img id="capture" alt="Matching native player-bar failed-artwork comparison">
+<p>All sixteen captures were inspected. Every before/after pair differs only in the same 56 × 56 cover square at (20, 688) through (76, 744); the rest of each full-window image is pixel-identical. These are frozen end states, not proof of live transition timing, natural network failure or Apple-account listening. The paint regression separately verifies old-texture release, immediate Reduce motion behavior and successful image retry.</p>
+<p>This bug correction uses the existing fade and placeholder. It introduces no redesign, new dependency, account write, storage format or network destination. Hosted final-head checks, a qualified download and the remaining motion/release gates stay separate.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('motion').value+'-'+byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;byId('before').setAttribute('aria-pressed',String(phase==='before'));byId('after').setAttribute('aria-pressed',String(phase==='after'));}
+for(const id of ['theme','size','motion'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

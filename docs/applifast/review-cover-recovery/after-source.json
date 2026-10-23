@@ -1,0 +1,10 @@
+{
+  "phase": "after",
+  "base": "8da79db02b980f7f12f57c99382ede50eaef87b9",
+  "candidate": "879d523724456f5f4df5c4ed68a6281cc19013fa",
+  "playerSourceSHA256": "41b38cfc543238d46bc9a0bc5507a518f6611b567cc6c516ded6556a1e4497e0",
+  "demoSourceSHA256": "eeff4f05da0e1d6996d871bf0b2cd87a141c0d2814244f752ce4e19ac0b4dffe",
+  "fixtureOnly": true,
+  "otherArtworkDisabled": true,
+  "accountAndPlaybackDisabledByDemo": true
+}
