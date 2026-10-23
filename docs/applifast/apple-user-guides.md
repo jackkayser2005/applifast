@@ -27,8 +27,23 @@ remains disabled. App network behavior is unchanged.
 CI retains the actual Jekyll base/candidate output for seven days in a
 `docs-preview-<sha>` artifact. This supports HTML/browser inspection without
 publishing either site. It uses the existing upload action and read-only workflow
-permissions. Local Ruby/Jekyll is unavailable, and Docker is not running; the
-actual site build and rendered visual review must be verified through CI.
+permissions. Local Ruby/Jekyll is unavailable, and Docker is not running. The
+actual candidate and base site builds pass on `55c0450` in
+[CI run 39998380866](https://github.com/jackkayser2005/applifast/actions/runs/39998380866).
+The [HTML comparison](review-user-guides/index.html) contains 56 actual rendered
+Windows Chrome captures: six pages and open navigation menus, both themes and
+normal/narrow widths. Their files, dimensions and hashes are recorded. Page
+captures assert matching theme, local image loading and no horizontal overflow.
+The three explicit HTML routes return HTTP 200; the tester-guide link opens its
+destination. An initial click check inspected the URL before navigation finished;
+waiting for the destination fixes that QA timing error without a site change.
+
+All external browser requests were blocked before the matching captures,
+including inherited baseline analytics, remote fonts, counts and promotional
+images. The first unblocked batch was rejected by automatic approval review;
+the blocked-request alternative passed. These limits are in the comparison.
+Large videos were omitted from the local review copy. This is rendered website
+evidence, not native-app or live external-service acceptance.
 
 ## Current installed application evidence
 
@@ -67,7 +82,8 @@ test profiles are disposable; the earlier one-time playlist-write guard remains.
 
 The application source is unchanged from `8da79db`. That feature and the prior
 integration head each pass all seven hosted jobs. This documentation/workflow
-follow-up still requires its own site/workflow checks and rendered review.
+follow-up passes the actual base/candidate site build; the remaining required
+hosted jobs on its final head and maintainer review remain separate.
 
 ## Still open
 
