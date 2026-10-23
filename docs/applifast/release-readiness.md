@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /applifast/release-readiness.html
 title: Windows Beta Readiness
 description: Implemented behavior, acceptance evidence and the remaining Windows release checks.
 ---

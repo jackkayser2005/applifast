@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /applifast/testing.html
 title: Windows Private Tester Guide
 description: Install and test the Apple Music preview without copying credentials or browser profiles.
 ---

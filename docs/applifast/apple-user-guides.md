@@ -34,6 +34,9 @@ The paused/minimized run measures 531.008 MiB peak private memory and 0.0439%
 average total CPU. The observed paused CPU target passes; memory fails the
 original 250 MiB target. The earlier mixed-state sample is retained with its QA
 wrapper limitation. Task Manager's native memory row is not the aggregate total.
+A separate post-sample counter snapshot shows 42.598 MiB aggregate private
+working set, plus shared resident pages. This does not replace the five-minute
+private-byte measurement or establish sustained working-set usage.
 
 The separate [listening evidence](preview-listening-check.json) confirms:
 

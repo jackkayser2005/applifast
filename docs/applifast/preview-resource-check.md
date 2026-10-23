@@ -31,6 +31,15 @@ The normal executable's description is **Apple Music for Windows**, matching
 the label in Task Manager. A Task Manager memory row and aggregate private bytes
 are different metrics. The screenshot is not a complete private-memory total.
 
+A separate [post-sample working-set snapshot](preview-working-set-check.json)
+uses Windows process performance counters and verifies the same nine process
+identities. Private working set is 5.438 MiB native and 37.160 MiB across WebView2,
+or 42.598 MiB combined. Total working set, including shared pages, sums to
+358.047 MiB; that sum can count shared pages in several processes. Private bytes
+at that instant sum to 530.782 MiB. These are three different counters, not
+conflicting estimates of one quantity. The working-set snapshot is not a second
+five-minute benchmark, a unique-physical-memory total or a before/after saving.
+
 The observed paused CPU result is below the original 0.2% target. State and
 minimization were checked at 15-second intervals, not continuously through the
 SDK. **The 250 MiB aggregate private-memory gate fails.** Neither sample proves

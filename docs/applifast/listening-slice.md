@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /applifast/listening-slice.html
 title: Windows Apple Music Implementation
 description: Playback architecture, supported capabilities and dated implementation evidence.
 ---

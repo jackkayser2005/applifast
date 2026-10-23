@@ -1,0 +1,22 @@
+{
+  "Source": "8da79db",
+  "SnapshotUtc": "2026-10-23T17:33:37.1197707Z",
+  "Groups": [
+    {
+      "Group": "native",
+      "Processes": 1,
+      "PrivateWorkingSetMiB": 5.438,
+      "TotalWorkingSetMiB": 83.617,
+      "PrivateBytesMiB": 278.055
+    },
+    {
+      "Group": "WebView2",
+      "Processes": 8,
+      "PrivateWorkingSetMiB": 37.16,
+      "TotalWorkingSetMiB": 274.43,
+      "PrivateBytesMiB": 252.727
+    }
+  ],
+  "Scope": "One post-sample counter snapshot, not a new duration/performance acceptance pass",
+  "ProcessIdentitiesVerified": true
+}
