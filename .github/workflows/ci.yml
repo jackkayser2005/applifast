@@ -249,7 +249,7 @@ jobs:
         run: |
           git fetch --depth=1 origin "$BASE_SHA"
           mkdir -p "$RUNNER_TEMP/spotifast-docs-base"
-          git archive "$BASE_SHA" docs | tar -x -C "$RUNNER_TEMP/spotifast-docs-base"
+          git -C "$GITHUB_WORKSPACE" archive "$BASE_SHA" docs | tar -x -C "$RUNNER_TEMP/spotifast-docs-base"
           bundle exec jekyll build --source "$RUNNER_TEMP/spotifast-docs-base/docs" --destination "$RUNNER_TEMP/spotifast-site-before"
 
       - name: Retain documentation preview for review
