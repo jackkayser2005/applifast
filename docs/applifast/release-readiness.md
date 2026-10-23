@@ -1,4 +1,9 @@
-# Applifast Windows beta readiness
+---
+layout: default
+permalink: /applifast/release-readiness.html
+title: Windows Beta Readiness
+description: Implemented behavior, acceptance evidence and the remaining Windows release checks.
+---
 
 The [prioritized roadmap](roadmap.md) orders P0 memory/reliability, P1 supported
 feature acceptance and P2 distribution. Every applicable gate below still applies.
@@ -279,6 +284,13 @@ real-account and release checks; passing mocks alone does not close a row.
      oscilloscope, EQ and MilkDrop controls absent.
 
 8. **Reliability and gaming performance**
+   - The [current installed-preview resource check](preview-resource-check.md)
+     completes a two-minute warm-up and five-minute paused/minimized sample on
+     `8da79db`: 531.008 MiB peak aggregate private memory and 0.0439% average
+     total CPU. The observed paused CPU target passes; the 250 MiB memory target
+     fails. An earlier run loses state qualification after a QA-wrapper error
+     and does not establish controlled playing performance. No gaming-soak or
+     matched savings claim follows from these samples.
    - The [hidden-host policy qualification](hidden-host-qualification.md) checks
      Low for the active hidden renderer and restores Normal for a visible
      diagnostic window. Native property regressions, final-source account reads
@@ -320,6 +332,11 @@ real-account and release checks; passing mocks alone does not close a row.
      memory growth, media controls and click-to-play responsiveness.
 
 9. **Automated and visual verification**
+   - The [current preview recheck](apple-user-guides.md) passes 73 ordinary Apple
+     behavior checks, native synthetic profile/credential checks, saved-account
+     transport in 52.095 seconds and two complete muted tracks in 188.332 seconds
+     on application source `8da79db`. Fresh authorization, real interruption and
+     audible desktop acceptance remain separate from these scoped results.
    - The [large-context queue path](large-listening-contexts.md) removes the
      1,000-occurrence selection failure without sending the entire context to
      JavaScript. Its focused muted native check passes in an isolated profile;

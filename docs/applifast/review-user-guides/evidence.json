@@ -1,0 +1,387 @@
+{
+  "pr": 90,
+  "baseline": "8da79db02b980f7f12f57c99382ede50eaef87b9",
+  "candidate": "55c04502657b0a6ec9f15bfedce87a6e6b559abf",
+  "platform": "Windows, separate disposable Chrome CLI session",
+  "render": {
+    "artifactId": 12521381089,
+    "run": 39998380866,
+    "source": "55c04502657b0a6ec9f15bfedce87a6e6b559abf",
+    "sha256": "4044ab8645c09255c6c3153a7c249f2a16f54fdad58baa176436bffb8cf2e1f9",
+    "extractedFiles": 490,
+    "fixedRoutes": 3,
+    "analyticsAbsentFromSixGuides": true,
+    "largeMediaExcluded": true
+  },
+  "captureCount": 56,
+  "localImagesLoaded": true,
+  "horizontalOverflowAbsentOnSixPages": true,
+  "themeAssertionsPassedOnSixPages": true,
+  "allExternalRequestsBlockedDuringComparison": true,
+  "externalFontsCountsAnalyticsAndPromotionalImagesUnverified": true,
+  "largeMediaPlaybackUnverified": true,
+  "links": {
+    "routes": [
+      {
+        "path": "/applifast/testing.html",
+        "status": 200,
+        "title": "Windows Private Tester Guide | Applifast"
+      },
+      {
+        "path": "/applifast/listening-slice.html",
+        "status": 200,
+        "title": "Windows Apple Music Implementation | Applifast"
+      },
+      {
+        "path": "/applifast/release-readiness.html",
+        "status": 200,
+        "title": "Windows Beta Readiness | Applifast"
+      }
+    ],
+    "testerGuideClickPassed": true,
+    "externalRequestsBlocked": true
+  },
+  "captures": [
+    {
+      "filename": "after-download-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "2413d984202af47ef82446d6ed89263ec2e015478662f4ea30fa564ea4fb73d9"
+    },
+    {
+      "filename": "after-download-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "e4558abbcd2cbf41181b4e4b105324b13ee4478e22064efa48f355a617988181"
+    },
+    {
+      "filename": "after-download-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "82bd706c13d448fa50dbf51e06525443cb0a22529e8927869eb998de31c3b7be"
+    },
+    {
+      "filename": "after-download-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "a3baec90b9c9c7733d3dc91f02a86b6e8f0273e1e0c75252274885bdfc4aaed3"
+    },
+    {
+      "filename": "after-everyday-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "0b7761970f8093c1517c870ccbfd0aac8dfe9bd115fa6d5f0f9dce3552f6c2cf"
+    },
+    {
+      "filename": "after-everyday-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "423ac97375300317c908c174b5ab9a47f987a211c8791042355e6a668f5391ef"
+    },
+    {
+      "filename": "after-everyday-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "bef701e7df8db62ed27444308396337cdbc8a895f824d0ac1fcff9c561a7408a"
+    },
+    {
+      "filename": "after-everyday-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "8944d015a1bbdc61fbfe8e69bdadd7df03d173f1259854401fdb076bb1e389c6"
+    },
+    {
+      "filename": "after-home-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "8ce1eac633c05ab99691fb1aa25e843801915dc89456592a37c43b3debd1eb4e"
+    },
+    {
+      "filename": "after-home-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "78681dca0acceacb49b2fa516d37dd475e5d86ff338d2c269499096a42eea4bb"
+    },
+    {
+      "filename": "after-home-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "cae0d121bd47b6d425340377e11dee0896935960f11ebeacc848c0521848e696"
+    },
+    {
+      "filename": "after-home-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "1329322fe1083266273fee307705ad495facb769f651f91faa4e6f09f6adbc1e"
+    },
+    {
+      "filename": "after-mini-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "447f6e769533af17f468b7c39ea4c4b5f4a92938adf9035a850843ec53ff460b"
+    },
+    {
+      "filename": "after-mini-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "d5a4282ea602a97bf403d96aa1531e529130e558b74f9cbc9f470e5371bd6d39"
+    },
+    {
+      "filename": "after-mini-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "bec2667269142aecd6ba40a6d005d6fd53c5e71e4c8790e26f559622cdf036c1"
+    },
+    {
+      "filename": "after-mini-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "4a4dc5cf3cf0c2b25e7a64361e803128b18d6fefb8bd33c3f72ef60c7b17207e"
+    },
+    {
+      "filename": "after-navigation-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "4a4f8de6513af7cc8abd2c39a2ecf803d67c89f872ce0d71bfede6311fd5219c"
+    },
+    {
+      "filename": "after-navigation-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "e4e5166840c1bdc58758556fd04c5b77ed7b174d43a159b8ce97074d8a3156f4"
+    },
+    {
+      "filename": "after-navigation-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "f95d138ffb6e4c737c0c65e549ef6b676fcc69a114b59cac95442a06fb9a81dc"
+    },
+    {
+      "filename": "after-navigation-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "52a0aba722c04219e472a8f8466de9a8b2f2202ab1756c0139bbaf6707adabad"
+    },
+    {
+      "filename": "after-privacy-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "d0362fea9577d20d27ee81cd0208556abc24a81ea429540a2b07047613266e8c"
+    },
+    {
+      "filename": "after-privacy-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "66fa4266db396f88434604a63b7bb2797641ed95ae66227e3b9f4613b454ab1f"
+    },
+    {
+      "filename": "after-privacy-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "4f459d003d40688fdd3eb9b408d478e8ae25e88e905efab162199d4245267dc9"
+    },
+    {
+      "filename": "after-privacy-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "51dbc4b22651874720f48fb0c59982bbda5aac739662e7cbd7f061fd0472fb3a"
+    },
+    {
+      "filename": "after-setup-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "31fc9dc0a5224fbc4f72d41a8589c8d13d50d1f765be7768d49137ff047b719e"
+    },
+    {
+      "filename": "after-setup-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "0067aa5f8a095390d6059dbb42c1f7780feae252ebe2ee3e957145fa7f2e05e6"
+    },
+    {
+      "filename": "after-setup-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "cd213d30d8c01d0ced85b385a0925f059c624a795f42f25fd892f65fe5e14787"
+    },
+    {
+      "filename": "after-setup-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "992518895a5704e4376ed3d79fc571234458601eb2216ef6e2cf6a24362f15da"
+    },
+    {
+      "filename": "before-download-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "289cbbb19119bd760950a91ef81122aceaa173fbc597c58e05d741620c725c3f"
+    },
+    {
+      "filename": "before-download-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "5b0da84519704fd3db0ff62db3c64a31fb5196d9085a3a3222ac254ad8f2f680"
+    },
+    {
+      "filename": "before-download-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "c30bbf8bf1edd9e9cc2b4cd8eed37786c4b80f7e810aebaebab151beca503d0a"
+    },
+    {
+      "filename": "before-download-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "93e42950f380fc6613e10ef4e490428f81796843573e3ccd4668df1d66287cef"
+    },
+    {
+      "filename": "before-everyday-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "5106284096f8bd8336ea50991c804bb3c19baf6282a58897cce9de51938816a1"
+    },
+    {
+      "filename": "before-everyday-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "94feb940ef4e6a93fb4e15b3a9983605626008652d6e30948c6f843094f8dc9e"
+    },
+    {
+      "filename": "before-everyday-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "1620d19e8576060b614cb383c345b534274589b54c4b3c8f068102dc765cf916"
+    },
+    {
+      "filename": "before-everyday-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "5f434613a85c70facf887a187018e307a9854ce89c67dee628fcd1ebe5c97999"
+    },
+    {
+      "filename": "before-home-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "e34ef9b8cae7288ff4f4940abaaa1548f33103647125b5e1bbb917db3daf84d4"
+    },
+    {
+      "filename": "before-home-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "3b7a8f74f700906f6a7fc5c6e9263ac8203a7fbd1e1293353d49c274b0cc1660"
+    },
+    {
+      "filename": "before-home-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "f49371d99e740869190d71d71073abd9a481ec1606c011644f89050720680ac4"
+    },
+    {
+      "filename": "before-home-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "ecc3738abdc1a52259c1fbee423cad3cc9d40a9fe6b362962b3600c0b1173cf8"
+    },
+    {
+      "filename": "before-mini-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "47004c4d1e2d1de684e796ea3fdf9ee457a7e3cd63e152cfa425fd940031e491"
+    },
+    {
+      "filename": "before-mini-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "3bae69f09a436280094f9ab69b2d02fb3cee37eb0e55e84c841706dc1a3daba2"
+    },
+    {
+      "filename": "before-mini-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "0fff5ecd0a067d1b9f8b5675c46a906f02064f2c582ec8b89847210b3cac89c3"
+    },
+    {
+      "filename": "before-mini-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "e920632db99eaf37184f8d801eb885b4d153b2fcb4b69921aec73fbda0e638f8"
+    },
+    {
+      "filename": "before-navigation-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "c0415c611494e3e6995e66a00c1b8312ee54ac27b9e259e4a6673f17c69fe63b"
+    },
+    {
+      "filename": "before-navigation-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "955b6ab7b24022efc92daf01713d04ff191e0ce26bd15e651ee349ca3a43da52"
+    },
+    {
+      "filename": "before-navigation-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "b93e3a689b352dd50df90f6478462929468115839a7397e9a76297df935c0c69"
+    },
+    {
+      "filename": "before-navigation-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "2b631f0e660aa77eff16e856cc7b16d092b35431a3d03f64f82174a72bc9a434"
+    },
+    {
+      "filename": "before-privacy-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "c6888d3fbb9ee1d423a921c6e740a9f91d7cbf78c8d5d33417216a626ddda182"
+    },
+    {
+      "filename": "before-privacy-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "aa582339a2645e5e3568eb6162fadacf1025596b7ba844abee9992ce1e9d57b4"
+    },
+    {
+      "filename": "before-privacy-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "d55bf8caee19be391a72b00494382b2ccf5e7a4a22c3ef7724c59185ca68d889"
+    },
+    {
+      "filename": "before-privacy-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "384d4d02ab1416ea9e06ee210de8624b927a68a554372a4b89a4c84790bd7c2c"
+    },
+    {
+      "filename": "before-setup-dark-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "6418eeb7dadf32820ef2980715eafc0f805829a41d91db0d9ed17fb6555c9b96"
+    },
+    {
+      "filename": "before-setup-dark-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "a1a0c40a2c12c5574d952a4b04f4aa94bd3e1cd43983e84f719e81ba4a697b6a"
+    },
+    {
+      "filename": "before-setup-light-narrow.png",
+      "width": 760,
+      "height": 760,
+      "sha256": "4f2270acb4fbbf1fc889633818a8b9c7c99959b46e813157e6c62a739a1ceb78"
+    },
+    {
+      "filename": "before-setup-light-normal.png",
+      "width": 1400,
+      "height": 900,
+      "sha256": "3c04e35cd7996d8c6ea01558130ab0ffe7c5547901c5654fac0a8d95d3e31123"
+    }
+  ],
+  "selectorVerification": {
+    "checked": 56,
+    "failures": [],
+    "previousNextPassed": true
+  }
+}

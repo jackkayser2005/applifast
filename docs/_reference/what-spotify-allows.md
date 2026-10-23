@@ -4,7 +4,12 @@ description: What Spotify's Web API and librespot provide, and what neither supp
 nav_order: 3
 ---
 
-Applifast uses Spotify's
+This is a retained upstream Spotify capability reference for contributors.
+It does not describe Windows Apple Music support. See
+[the Apple overview](/what-is-spotifast/) and
+[current implementation](/applifast/listening-slice.html).
+
+The retained Spotify implementation uses Spotify's
 [Web API](https://developer.spotify.com/documentation/web-api) for account and
 catalogue data. It uses [librespot](https://github.com/librespot-org/librespot)
 for a few extra details and for audio playback.

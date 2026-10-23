@@ -1,8 +1,15 @@
 ---
-title: MilkDrop
-description: Run the MilkDrop visualiser, install presets, and use its controls.
+title: Legacy MilkDrop Reference
+description: Retained upstream Spotify visualizer documentation. MilkDrop is unavailable in Apple mode.
 nav_order: 5
 ---
+
+**MilkDrop is not available in the Windows Apple Music preview.** Apple mode
+uses a decorative Ambient Pulse display, without PCM access, EQ or spectrum
+analysis. See [the mini-player guide](/winamp/).
+
+The remaining instructions preserve the upstream Spotify implementation for
+contributors. They do not describe Apple playback capabilities.
 
 MilkDrop shows colourful animations that react to your music. Open it from
 the top-bar visualiser button, Ctrl+Shift+K, Settings, or the mini player's

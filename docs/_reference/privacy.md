@@ -1,64 +1,66 @@
 ---
 title: Privacy
-description: What Applifast stores on your computer, what it sends and to whom, and what it never collects.
+description: What the Windows Apple Music preview stores, which services it contacts and what it never collects.
 nav_order: 4
 ---
 
-Applifast is a desktop app that runs entirely on your computer. It has no
-account of its own, no server, no telemetry, no analytics, and no advertising.
-Its author receives nothing about you or how you use it.
-
-This page covers the Applifast app, version 0.8.0 and later. Earlier versions
-kept sign-ins in files instead of the system credential store; update to a
-current release.
+Applifast has no account of its own, hosted backend, app telemetry, analytics
+or advertising. Music playback still contacts Apple's services under your
+authorized account.
 
 ## What stays on your computer
 
-- **Spotify sign-ins.** The grants Spotify issues when you sign in, and the
-  reusable playback credential, are kept in the system credential store:
-  Credential Manager on Windows, Keychain on macOS, and Secret Service on
-  Linux. Your Spotify password never passes through Applifast; you sign in
-  on Spotify's own pages. A proxy password, if you set one, uses the same
-  store.
-- **Settings and history.** Settings, window positions, recent plays, the
-  last session, skins, themes and MilkDrop presets live in the config
-  directory.
-- **Caches.** Downloaded audio, artwork, lyrics and library metadata live in
-  the cache directory and can be deleted at any time.
-- **Log.** `spotifast.log` records errors and diagnostics. It stays on your
-  computer and never contains credentials; share it only if you choose to
-  attach it to a bug report.
+- **Authorization.** App and user tokens use Windows Credential Manager under
+  the separate Applifast playback service. A private WebView2 profile also keeps
+  browser session data. Do not share that profile, protected-store exports or
+  authorization responses.
+- **Settings.** Theme, window preferences, local playlist pins and the
+  Favorites shelf selection remain on this PC.
+- **Library and queue.** A non-secret account-bound snapshot retains song
+  metadata, original playback identifiers, queue occurrences and position.
+  Restart restores paused. Metadata can reveal listening preferences even though
+  it contains no authorization token.
+- **Caches.** Artwork and LRCLIB lyrics use local caches. The app does not save
+  decrypted audio or provide offline Apple Music downloads. WebView2 and
+  MusicKit maintain their own browser/runtime-managed data.
+- **Logs.** Logs remain local; they are not uploaded automatically. Credentials
+  and authorization responses must not be logged. Review a diagnostic before
+  sharing it, since normal metadata or local paths may still be personal.
 
-[Settings & Files](/settings-and-files/) lists every location and what is safe
-to delete. **Sign out** in Settings removes the stored credentials.
+[Settings & Files](/settings-and-files/) lists the Windows paths.
+Use **Sign out** in Settings to clear saved user authorization and request
+browser-session/account-cache clearing. A reported clearing failure needs
+attention before reauthorization. Uninstalling program files alone does not
+sign out or erase user data.
 
 ## What is sent, and to whom
 
-Applifast connects only to the services below.
+- **Apple.** MusicKit's SDK, authorization, library/catalog requests, Favorites,
+  supported playlist writes, artwork and playback use Apple's services and
+  content-delivery hosts. The library's original artwork URL is preserved.
+  Apple's own service terms and privacy policy apply.
+- **Microsoft.** The app uses the installed Evergreen WebView2 Runtime.
+  Runtime installation, servicing and its browser behavior are Microsoft's
+  components; no App telemetry claim here overrides their policies.
+- **LRCLIB.** Opening lyrics can send the song's artist, title, album and
+  duration to [lrclib.net](https://lrclib.net). No Apple authorization token or
+  account identifier is sent for that lookup.
+- **Links you choose.** External links open in your normal browser. Their
+  websites receive the usual browser traffic.
 
-- **Spotify.** Sign-in, your library, search, playlists, playback and Spotify
-  Connect all go to Spotify, under your account. Spotify's own
-  [privacy policy](https://www.spotify.com/legal/privacy-policy/) applies to
-  that data.
-- **LRCLIB.** When the lyrics panel is open and Spotify has no lyrics for the
-  song, Applifast sends its artist, title, album and length to
-  [lrclib.net](https://lrclib.net). Nothing identifying you is included.
-- **GitHub.** Once a day, Applifast asks GitHub for the latest release. You
-  can turn automatic checks off in Settings. Downloading an update, and the
-  first opening of MilkDrop, also fetch files from GitHub. No Spotify data is
-  sent.
-- **Your local network.** Applifast looks for Spotify Connect speakers over
-  mDNS and talks to the ones you choose.
+The playback page is mapped locally to `https://applifast.invalid`.
+That name is a local WebView2 origin, not an Applifast-hosted server.
+Apple mode does not perform the retained Spotify Connect discovery or upstream
+Spotifast update checks. It does not fetch MilkDrop preset packs.
 
-Links you open from the app, such as the Winamp Skin Museum or this website,
-open in your browser.
+## This documentation
 
-## This website
-
-spotifast.rocks counts page visits with [Plausible](https://plausible.io/data-policy),
-which uses no cookies and collects no personal data. The app itself contains
-no analytics.
+Automatic website publication is disabled for this fork. CI builds private
+documentation previews for review. The fork's documentation does not load the
+inherited upstream analytics script. No new public website or analytics service
+is activated by these changes. Upstream Spotifast's site has its own policies.
 
 ## Questions
 
-Ask on [GitHub](https://github.com/crmne/spotifast/issues).
+Use [the fork's issue tracker](https://github.com/jackkayser2005/applifast/issues).
+Never attach signing keys, developer tokens, listener tokens or browser profiles.

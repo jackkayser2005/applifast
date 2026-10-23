@@ -239,3 +239,25 @@ jobs:
           JEKYLL_ENV: production
         run: |
           bundle exec jekyll build --destination "$RUNNER_TEMP/spotifast-site"
+
+      - name: Build matching base documentation for review
+        if: github.event_name == 'pull_request'
+        working-directory: docs
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          JEKYLL_ENV: production
+        run: |
+          git fetch --depth=1 origin "$BASE_SHA"
+          mkdir -p "$RUNNER_TEMP/spotifast-docs-base"
+          git -C "$GITHUB_WORKSPACE" archive "$BASE_SHA" docs | tar -x -C "$RUNNER_TEMP/spotifast-docs-base"
+          bundle exec jekyll build --source "$RUNNER_TEMP/spotifast-docs-base/docs" --destination "$RUNNER_TEMP/spotifast-site-before"
+
+      - name: Retain documentation preview for review
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-preview-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/spotifast-site/
+            ${{ runner.temp }}/spotifast-site-before/
+          if-no-files-found: error
+          retention-days: 7

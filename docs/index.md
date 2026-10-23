@@ -1,154 +1,93 @@
 ---
 layout: home
 title: Applifast
-description: A fast, lightweight Spotify app for Linux, macOS, and Windows.
+description: Apple Music for Windows with a native interface, a local queue and a compact mini player.
 permalink: /
 hero:
   name: Applifast
-  text: Spotify, native and fast
-  tagline: A lightweight Spotify app for Linux, macOS, and Windows. Listen on your computer, browse your music, and control your other devices.
+  text: Apple Music on Windows
+  tagline: Browse your library, arrange your queue and listen from a native Rust interface, the tray or a compact mini player.
   actions:
     - theme: brand
-      text: Download
+      text: Windows preview
       link: /download/
     - theme: alt
       text: What is Applifast?
       link: /what-is-spotifast/
     - theme: alt
       text: GitHub
-      link: https://github.com/crmne/spotifast
+      link: https://github.com/jackkayser2005/applifast
   image:
-    src: /screenshot.png
-    alt: "Applifast Home with the playlist library, recommendations, queue, and player visible"
-    width: 2018
-    height: 1198
-
+    src: /applifast/review-narrow-collections/after-loaded-dark-1100x760.png
+    alt: Applifast Apple library with deterministic sample data
+    width: 1100
+    height: 760
 features:
   - icon: ⚡
-    title: Lightweight
-    details: Opens in well under a second and typically uses just 100–250 MB of memory.
-  - icon: 🔊
-    title: Spotify Connect
-    details: Listen on your computer with smooth transitions between songs, or control music on a speaker, phone, or TV. Playback needs Spotify Premium.
+    title: Built for desktop listening
+    details: Rust and egui handle the interface. An independent MusicKit and WebView2 host handles Apple playback. Resource measurements remain part of preview testing.
   - icon: 📚
-    title: Library and search
-    details: Browse playlists, Liked Songs, albums, artists, and podcasts. Search the catalogue and edit playlists you own.
+    title: Your Apple library
+    details: Browse synced songs, albums, artists and playlists, with catalog and library search. Original library identities stay distinct from catalog matches.
+  - icon: ⏭️
+    title: Choose what plays next
+    details: Play next, add to queue, reorder upcoming occurrences and restore the saved session paused after restart.
+  - icon: ❤️
+    title: Favorites and playlists
+    details: Add Favorites, choose a compact sidebar shelf, create playlists, append songs and keep local playlist pins.
   - icon: 🎨
-    title: Themes
-    details: Choose light, dark, or your own colours. On Omarchy, Applifast can follow your desktop theme as it changes, while the music keeps playing.
+    title: Themes and motion
+    details: Choose light, dark or custom colors and Reduce motion. Ambient Pulse is decorative, not an audio spectrum.
   - icon: 📻
-    title: Winamp mini player
-    details: Bring back the classic Winamp look, with skins, a playlist, sound controls, and animations that move to your music.
+    title: Compact mini player
+    details: Keep playback and an upcoming queue close at hand. Classic Winamp skins change the appearance while both windows share one player.
     link: /winamp/
-    link_text: See it in action
-  - icon: 🌀
-    title: MilkDrop
-    details: Watch colourful animations react to your music in their own window or full screen. Choose from more than 10,000 designs.
-    link: /milkdrop/
-    link_text: Open the guide
+    link_text: Mini-player guide
   - icon: ⌨️
     title: Desktop controls
-    details: Use keyboard shortcuts and your keyboard's media keys. Keep the music playing after you close the window.
+    details: Use shortcuts and media keys, close to the tray and reopen while the same playback host keeps running.
   - icon: 🔓
     title: Open source
-    details: Free to use, study, and improve. Explore the code, report a problem, or help build the next version.
-    link: https://github.com/crmne/spotifast
+    details: An MIT-licensed fork of Spotifast by Carmine Paolino, retaining upstream credit. No Applifast hosted backend or app telemetry.
+    link: https://github.com/jackkayser2005/applifast
     link_text: Read the source
 ---
 
-<video class="hero-film image-src" controls muted loop playsinline preload="metadata" poster="/assets/images/launch-film-poster.jpg" aria-label="Applifast in a minute: a film of the app, made with its built-in demo content" hidden>
-  <source src="/assets/videos/launch-film.mp4" type="video/mp4">
-</video>
+## Try the Windows preview
 
-<script>
-  // The theme's hero takes a picture; the film takes its place where
-  // scripts run, and the screenshot stays where they do not.
-  (function () {
-    var film = document.querySelector(".hero-film");
-    var slot = document.querySelector(".VPHero .image-container");
-    if (!film || !slot) return;
-    slot.replaceChildren(film);
-    film.hidden = false;
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      film.play().catch(function () {});
-    }
-  })();
-</script>
+This is an invited **Windows x64 development preview**, not a published beta.
+You need an Apple Music subscription, internet access and Evergreen WebView2.
+The package supplies the app developer token; sign in with your own Apple
+account. No developer membership or command-line setup is needed for testers.
 
-<style>
-  .hero-film {
-    display: block;
-    background: #0b0e0c;
-  }
-</style>
+[Getting Started](/getting-started/) explains installation and Apple authorization.
+[Download](/download/) describes the current private distribution and checksums.
 
-## It turns into Winamp
+## Keep listening your way
 
-Load a classic `.wsz` skin from the
-[Winamp Skin Museum](https://skins.webamp.org). The mini player includes
-animated sound displays, an equalizer to adjust your sound, and a playlist.
-Roll it up into a thin bar or enlarge it while keeping the classic pixels
-sharp. [See the mini player in detail](/winamp/).
+The main window, mini player and tray share playback and a local queue.
+Choose a coming song, keep duplicate occurrences, pin library playlists and
+show a few loaded Favorites in the sidebar. Full-screen Now Playing can show
+LRCLIB lyrics when available. [Everyday Use](/using-spotifast/) covers the controls.
 
-<div class="winamp-showcase">
-  <img src="/assets/images/winamp.png" alt="The mini player wearing the built-in skin" width="550" height="812">
-</div>
+Apple mode does not expose Spotify Connect or PCM spectrum, oscilloscope,
+equalizer and MilkDrop features. Unavailable uploads remain visible instead
+of being replaced with catalog recordings. Linux and macOS Apple playback
+are unsupported.
 
-## MilkDrop with more than 10,000 presets
+## Follow the work
 
-On first use, Applifast automatically downloads the original MilkDrop 2
-presets and projectM's Cream of the Crop collection. These visual designs
-react to music playing on your computer, in a resizable window or full screen.
-[See the controls and preset details](/milkdrop/).
+Private preview checks and remaining public-beta gates are recorded in the
+[release checklist](/applifast/release-readiness.html).
+See [Privacy](/privacy/) for storage and service traffic.
 
-<video class="milkdrop-showcase" autoplay loop muted playsinline preload="metadata" poster="/assets/images/milkdrop-poster.jpg" aria-label="MilkDrop presets reacting to music in Applifast">
-  <source src="/assets/images/milkdrop.mp4" type="video/mp4">
-</video>
-
-## WhatsApp, just as fast
-
-**Want WhatsApp just as fast and native?** [ZapFast](https://zapfast.rocks) is
-Applifast's sibling: the same native interface, for WhatsApp. Both are built on [fastframe](https://github.com/crmne/fastframe), the shared
-foundation for native Rust apps built with egui.
+Applifast builds on [Spotifast](https://github.com/crmne/spotifast),
+[egui](https://github.com/emilk/egui) and
+[fastframe](https://github.com/crmne/fastframe).
+It is independent of Apple.
 
 <style>
-  /* The hero image slot is sized for a square logo; the screenshot needs the
-     room. Page-scoped overrides, so the theme stays untouched. */
-  .VPHero .image-container {
-    width: 100% !important;
-    height: auto !important;
-    transform: none !important;
-  }
-  .VPHero .image-src {
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    transform: none !important;
-    width: 100% !important;
-    height: auto !important;
-    max-width: 100% !important;
-    max-height: none !important;
-    padding: 0 !important;
-    border-radius: 12px;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
-  }
-  .winamp-showcase {
-    text-align: center;
-  }
-  .winamp-showcase img,
-  .milkdrop-showcase {
-    max-width: 100%;
-    height: auto;
-    border-radius: 12px;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35);
-  }
-  .milkdrop-showcase {
-    display: block;
-    width: 100%;
-  }
-  @media (max-width: 959px) {
-    .VPHero .image {
-      margin: 0 0 24px !important;
-    }
-  }
+  .VPHero .image-container { width: 100% !important; height: auto !important; transform: none !important; }
+  .VPHero .image-src { position: relative !important; top: auto !important; left: auto !important; transform: none !important; width: 100% !important; height: auto !important; max-width: 100% !important; max-height: none !important; padding: 0 !important; border-radius: 12px; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45); }
+  @media (max-width: 959px) { .VPHero .image { margin: 0 0 24px !important; } }
 </style>

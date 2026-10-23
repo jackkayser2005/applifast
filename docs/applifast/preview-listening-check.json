@@ -1,0 +1,44 @@
+{
+  "ApplicationSourceBase": "8da79db02b980f7f12f57c99382ede50eaef87b9",
+  "Transport": {
+    "SourceBase": "8da79db02b980f7f12f57c99382ede50eaef87b9",
+    "BinarySHA256": "97152294cda6800c667c86969a37799762ef2c24ca1c6008d6aa5ac950a6cc8d",
+    "TestSourceSHA256": "5dd1fb5e33e41ede382f8d57bb176f55d5f2d74ac55e63f6309ecdea2d665d41",
+    "WindowsHostSHA256": "681833f6e5af6f700a57bfbe580408b213a96217c4a740678d92674fe990200c",
+    "Exit": 0,
+    "Seconds": 52.095,
+    "Cancellation": null,
+    "NormalPlayerStillPaused": true,
+    "Scope": "Muted separate native host in a new owned profile. Reads, play/seek/pause/resume, duplicate queue edits and paused restore. No playlist/Favorites/sign-out commands; stop if normal player resumes."
+  },
+  "FullTracks": {
+    "SourceBase": "8da79db02b980f7f12f57c99382ede50eaef87b9",
+    "BinarySHA256": "97152294cda6800c667c86969a37799762ef2c24ca1c6008d6aa5ac950a6cc8d",
+    "TestSourceSHA256": "5dd1fb5e33e41ede382f8d57bb176f55d5f2d74ac55e63f6309ecdea2d665d41",
+    "WindowsHostSHA256": "681833f6e5af6f700a57bfbe580408b213a96217c4a740678d92674fe990200c",
+    "Exit": 0,
+    "Seconds": 188.332,
+    "Cancellation": null,
+    "NormalPlayerStillPaused": true,
+    "Scope": "Two complete muted catalog/catalog-linked-library tracks, natural completion without seeking, then manual-before-context duplicate occurrence advancement. Fresh owned profile; no account writes; stop if normal player resumes."
+  },
+  "FullTrackDurationsSeconds": [
+    90.013,
+    90.013
+  ],
+  "ObservedMaximumPositionsSeconds": [
+    90.0,
+    90.0
+  ],
+  "ObservedPlayingElapsedSeconds": [
+    90.15,
+    90.15
+  ],
+  "DefaultAppleTestsPassed": 73,
+  "DefaultAppleOptInTestsIgnored": 9,
+  "NativeProfileCookieClearingPassed": true,
+  "NativeAuthorizationCleanupOrderingPassed": true,
+  "NativeDummyCredentialRoundTripPassed": true,
+  "BridgeSelfChecksPassed": true,
+  "Limit": "Muted saved-account checks; no audible desktop, fresh-account sign-in, genuine cloud-only upload, real revocation, live network-loss, output-device switch or one-hour gaming acceptance."
+}

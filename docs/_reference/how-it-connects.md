@@ -1,8 +1,41 @@
 ---
 title: How It Connects
-description: Independent Spotify grants, what is stored, and how API traffic is routed.
+description: Apple authorization, independent playback, storage and request routing, with retained Spotify implementation notes.
 nav_order: 1
 ---
+
+## Apple Music on Windows
+
+The interface runs in Rust/egui. An independent MusicKit JS playback page lives
+in an Evergreen WebView2 host on its own STA thread and message pump.
+Commands and sanitized events travel through the asynchronous backend. Closing
+an interface window does not destroy that host.
+
+The package supplies an app developer token. MusicKit's visible authorization
+popup obtains user authorization for each listener's own account. App and user
+tokens are stored in Windows Credential Manager, with an independent browser
+profile for Apple session data. The app needs no hosted token server.
+An expired app token still requires a replacement from the maintainer.
+
+Library and catalog reads, Favorites and supported playlist writes use Apple
+Music API paths. Original library IDs and playback parameters stay distinct
+from catalog matches. Reads have local deadlines and stale-response protection.
+Uncertain writes are not automatically repeated.
+
+Metadata and the local queue are account-bound and atomically saved.
+Sign out invalidates pending account work, clears local account state, removes
+saved user authorization and requests profile clearing. Cleanup errors are shown.
+Actual expiry/revocation and fresh-account acceptance remain release checks.
+
+[Getting Started](/getting-started/) covers installation and authorization.
+[Settings & Files](/settings-and-files/) and [Privacy](/privacy/) describe
+storage and service traffic. [Implementation evidence](/applifast/listening-slice.html)
+records current capabilities and the limits of earlier checks.
+
+## Retained Spotify implementation
+
+The remaining grant, Connect and routing details describe upstream code.
+They do not apply to Apple-mode authorization or playback.
 
 ## Independent grants, once each
 

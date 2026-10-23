@@ -4,6 +4,39 @@ description: Configuration, credential and cache locations, and what is safe to 
 nav_order: 0
 ---
 
+## Windows Apple Music preview
+
+These are the current Apple-mode locations. Quit through the tray before
+removing or moving local files.
+
+| What | Windows location | Effect of removal |
+| --- | --- | --- |
+| Program and companion app token | `%LOCALAPPDATA%\Programs\Applifast\` | Reinstall; uninstall does not clear account data |
+| Settings, themes and skins | `%APPDATA%\paolino\applifast\config\` | Preferences, local pins and appearance reset |
+| Library and queue snapshot | `%LOCALAPPDATA%\paolino\applifast\data\apple-session.json` | Cached rows and saved queue/session are lost |
+| Logs and window state | `%LOCALAPPDATA%\paolino\applifast\data\` | Review logs before sharing; window state resets if removed |
+| Artwork and lyrics caches | `%LOCALAPPDATA%\paolino\applifast\cache\` | Images and lyrics load again; this does not sign out |
+| Playback browser profile | `%LOCALAPPDATA%\Applifast\playback-probe\` | Use Sign out, not manual deletion while running |
+| Apple app/user tokens | Windows Credential Manager, service `local.applifast.playback-probe` | Manage through Settings > Account |
+
+The account snapshot contains metadata and playback identifiers, not tokens or
+audio. It restores only for the matching account and storefront, and starts
+paused. No decrypted-media cache is provided.
+
+Uninstall preserves settings, account data, browser profile and credentials.
+Use **Sign out** before uninstalling to remove user authorization. If deletion
+fails, keep the sign-out markers and resolve the reported storage error.
+
+Theme, language, tray behavior, queue restoration, mini-player preferences,
+Favorites shelf size and Reduce motion are available in Apple mode.
+Unsupported PCM/EQ/MilkDrop controls are absent or inactive.
+See [Everyday Use](/using-spotifast/) and [Privacy](/privacy/).
+
+## Retained Spotify reference
+
+The remaining settings and paths describe upstream Spotify code and old
+versions. They are retained for contributors, not Apple-mode setup.
+
 ## Where things live
 
 Linux media controls use `playerctl --player=spotifast`.
