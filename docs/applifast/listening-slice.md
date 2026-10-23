@@ -1,4 +1,8 @@
-# First Windows listening slice
+---
+layout: default
+title: Windows Apple Music Implementation
+description: Playback architecture, supported capabilities and dated implementation evidence.
+---
 
 For the current private-trial and public-beta gates, use the
 [release checklist](release-readiness.md). This page records the implementation
@@ -649,12 +653,13 @@ shows upcoming occurrences, including repeated songs. Manual queue additions,
 album additions, insertion, reordering, removal and clear use the local Apple
 occurrence queue. Library/queue restoration retains the current occurrence,
 position, manual additions, context, Previous history, shuffle and repeat.
-It restores paused. Favorite writes remain follow-up integration work. Playlist creation and appending
-are implemented below, with real-account write acceptance pending.
+It restores paused. Favorites writes and playlist creation/appending are
+implemented. New-favorite and desktop write acceptance remain pending; the
+separate guarded account check confirms one playlist's creation and append.
 The existing mini player uses the same playback actions, but its window lifecycle
 still needs real runtime acceptance. Cloud-only upload playback
 remains unverified; no upload is silently replaced with a catalog match.
-The player bar omits Spotify Connect and favorite write controls until supported.
+The player bar omits Spotify Connect and exposes supported Apple Favorites.
 MilkDrop, spectrum, oscilloscope, EQ, mono and channel balance are not supported
 because this engine does not expose PCM. Their settings and mini-player actions
 are unavailable in Apple mode. Skin artwork can still contain a fixed EQ button;

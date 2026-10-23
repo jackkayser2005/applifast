@@ -9,6 +9,10 @@ under **Playing next**, are the songs you queued yourself. Below them,
 under **Next up**, are the songs that come next in whatever playlist or
 album is playing. Your songs always play first.
 
+Apple mode follows the same ordering and occurrence rules below. References to
+Spotify-reported contexts, podcasts and radio describe retained upstream behavior;
+Apple mode uses its own library/catalog context and does not expose those services.
+
 Above both, **Playing from** names where the playing song came from: the
 playlist, album, artist, or podcast, which opens when clicked, Liked
 Songs, or a radio named after the song, playlist, album, or artist it is

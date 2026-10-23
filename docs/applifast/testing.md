@@ -1,4 +1,8 @@
-# Windows private tester guide
+---
+layout: default
+title: Windows Private Tester Guide
+description: Install and test the Apple Music preview without copying credentials or browser profiles.
+---
 
 This is a development preview for invited Windows x64 testers. Public release
 distribution and clean-machine acceptance are still pending. Current command

@@ -1,8 +1,14 @@
 ---
-title: Make It Even Faster
-description: "Reduce loading delays with your own Spotify connection."
+title: Legacy Spotify Setup
+description: Retained upstream personal-Spotify-app setup, not needed for Apple Music.
 nav_order: 6
 ---
+
+**This setup is not used by the Apple Music preview.** The preview supplies its
+MusicKit app token; each listener authorizes their own Apple account.
+See [Getting Started](/getting-started/).
+
+The remaining instructions preserve upstream Spotify behavior for contributors.
 
 ## API rate limits
 

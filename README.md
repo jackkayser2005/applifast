@@ -8,6 +8,12 @@ tray or mini player while other apps are running.
 feature-parity release. Linux and macOS playback are unsupported. The original
 Spotifast downloads install a different product.
 
+The existing documentation now starts with Apple-specific [Getting Started](docs/_guide/getting-started.md),
+[Everyday Use](docs/_guide/using-spotifast.md), [Downloads](docs/_guide/download.md),
+[Settings & Files](docs/_reference/settings-and-files.md) and [Privacy](docs/_reference/privacy.md).
+Legacy Spotify implementation notes remain labeled separately. These changes
+do not publish a website, activate an updater or create a public release.
+
 See the [Windows beta checklist](docs/applifast/release-readiness.md) for the
 next private trial, current evidence and remaining public-release gates.
 The [local account checks](docs/applifast/local-account-checks.md) confirm an

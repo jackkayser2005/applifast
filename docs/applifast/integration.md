@@ -7,14 +7,14 @@ claim. The authoritative remaining gates are in [release readiness](release-read
 ## Source and scope
 
 The refreshed `origin/main` baseline is `995c768dcba4da7f93302bf2107af6b7ec3df02b`.
-The assembled application source is `6357c6779327abf6a118506abba13bbc762ec937`,
-with 131 linear commits after that baseline and no merge commits. Individual
+The assembled application source is `8da79db02b980f7f12f57c99382ede50eaef87b9`,
+with 136 linear commits after that baseline and no merge commits. Individual
 feature PRs stay available for focused review. This branch targets `main` without
 moving another feature branch's base or rewriting published history.
 
 The scope includes the Apple listening work from PR #6, design/polish from
 PRs #1 through #12, adapted motion from PR #13 and the subsequent Apple feature,
-reliability, evidence and packaging slices through PR #86. The current native
+reliability, evidence and packaging slices through PR #89. The current native
 listening architecture remains Rust/egui plus an independent MusicKit JS/WebView2
 STA host. Spotify-specific implementation remains retained upstream code;
 Apple mode exposes the supported Apple controls. Linux/macOS playback stays
@@ -39,6 +39,15 @@ approved responsive layouts (#82/#83), native indicator frames (#84), favorite
 shortcut feedback (#85), and the guarded account playlist check (#86).
 See the [prioritized roadmap](roadmap.md) and linked evidence for each scope.
 These source changes do not by themselves establish the whole-player budget.
+
+The follow-ups add the unchanged strict quality job's cold-build timeout fix,
+mini-player heart feedback (#88), and consistent library continuation page sizes
+(#89). All seven hosted jobs pass on application source `8da79db` in
+[run 39838320991](https://github.com/jackkayser2005/applifast/actions/runs/39838320991).
+The separate refreshed integration-context run must still finish on that head.
+The [current preview recheck](apple-user-guides.md) records native transport,
+full-track and paused resource results. CPU passes its observed paused target;
+the 250 MiB aggregate private-memory gate remains failed.
 
 MIT licensing and upstream credit remain. No signing key, listener token,
 browser profile or account cache belongs in a distributable. The package's
