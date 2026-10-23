@@ -57,6 +57,9 @@ the sandbox. Compiler cache hard-link warnings fell back to copying; no code lin
 was disabled. Hosted platform/all-feature/site/Nix checks remain separate.
 
 This closes only native playing-indicator motion and its Reduce motion state.
+The separate [hover sequence](native-hover-frames.md) adds native cover-lift and
+seek-hover evidence. The [full ledger](motion-acceptance.md) retains all eleven
+requirements and each remaining acceptance check.
 It does not establish all eleven PR #13 interactions, live Apple playback or
 controls, lyrics follow behavior, other-platform runtime behavior, the deferred
 resource sample or the gaming soak. Those [release gates](release-readiness.md)

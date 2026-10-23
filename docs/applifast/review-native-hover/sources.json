@@ -1,0 +1,26 @@
+{
+  "base": "69b5b61d5d7ef819fe01a7484597359352348232",
+  "fixture": "Delay existing demo forced hover until native capture index one; paused sample state and no image URLs. No timing or interpolation change.",
+  "files": [
+    {
+      "file": "src/entrypoint.rs",
+      "originalSHA256": "3846023ce621cedce7e42134299c0d250c7757c3ae716d3b138a6d47ff2e40e7",
+      "captureSHA256": "f00fbf4cff340ce3fdc318408a8040c9cd8c536c88fa24ddd1ef66888e3f9670"
+    },
+    {
+      "file": "src/ui/motion.rs",
+      "originalSHA256": "6977a92b96be4b62e2be41bfebe6b77fb58eb840bd90d1f62f240ea677ba05fa",
+      "captureSHA256": "49a04f0aa0ebf09ff3bfbc30908db51bc6dde737f5a8928db9af16267d1cb98d"
+    },
+    {
+      "file": "src/demo.rs",
+      "originalSHA256": "5fd63d72e1d6901e55ea8d99edb803cfd76b8e895828a4dfec3787796bf161a2",
+      "captureSHA256": "eeff4f05da0e1d6996d871bf0b2cd87a141c0d2814244f752ce4e19ac0b4dffe"
+    },
+    {
+      "file": "src/apple.rs",
+      "originalSHA256": "5dd1fb5e33e41ede382f8d57bb176f55d5f2d74ac55e63f6309ecdea2d665d41",
+      "captureSHA256": "10fdd6344aaa5d5b7f7d1ff9ac03e35760b007d45ea5a231c6d7b567d072e928"
+    }
+  ]
+}

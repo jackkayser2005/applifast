@@ -1,0 +1,219 @@
+{
+  "staticSelections": 48,
+  "replays": 16,
+  "errors": [],
+  "allPauseResumeAndEndChecksPassed": true,
+  "externalRequestsBlocked": true,
+  "results": [
+    {
+      "name": "moving-dark-1100x760",
+      "component": "card",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1753
+    },
+    {
+      "name": "moving-dark-1100x760",
+      "component": "seek",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1765
+    },
+    {
+      "name": "moving-dark-760x760",
+      "component": "card",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1484
+    },
+    {
+      "name": "moving-dark-760x760",
+      "component": "seek",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1480
+    },
+    {
+      "name": "moving-light-1100x760",
+      "component": "card",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1752
+    },
+    {
+      "name": "moving-light-1100x760",
+      "component": "seek",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1775
+    },
+    {
+      "name": "moving-light-760x760",
+      "component": "card",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1482
+    },
+    {
+      "name": "moving-light-760x760",
+      "component": "seek",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1483
+    },
+    {
+      "name": "reduced-dark-1100x760",
+      "component": "card",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1767
+    },
+    {
+      "name": "reduced-dark-1100x760",
+      "component": "seek",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1766
+    },
+    {
+      "name": "reduced-dark-760x760",
+      "component": "card",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1472
+    },
+    {
+      "name": "reduced-dark-760x760",
+      "component": "seek",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1481
+    },
+    {
+      "name": "reduced-light-1100x760",
+      "component": "card",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1779
+    },
+    {
+      "name": "reduced-light-1100x760",
+      "component": "seek",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1774
+    },
+    {
+      "name": "reduced-light-760x760",
+      "component": "card",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1471
+    },
+    {
+      "name": "reduced-light-760x760",
+      "component": "seek",
+      "staticSelections": 3,
+      "pauseResumePassed": true,
+      "automaticEndPassed": true,
+      "resumedMilliseconds": 1481
+    }
+  ],
+  "renderedPixelChecks": [
+    {
+      "case": "moving-dark-1100x760",
+      "component": "card",
+      "renderedUniqueBeforeMiddleAfterStates": 3
+    },
+    {
+      "case": "moving-dark-1100x760",
+      "component": "seek",
+      "renderedUniqueBeforeMiddleAfterStates": 3
+    },
+    {
+      "case": "moving-dark-760x760",
+      "component": "card",
+      "renderedUniqueBeforeMiddleAfterStates": 3
+    },
+    {
+      "case": "moving-dark-760x760",
+      "component": "seek",
+      "renderedUniqueBeforeMiddleAfterStates": 3
+    },
+    {
+      "case": "moving-light-1100x760",
+      "component": "card",
+      "renderedUniqueBeforeMiddleAfterStates": 3
+    },
+    {
+      "case": "moving-light-1100x760",
+      "component": "seek",
+      "renderedUniqueBeforeMiddleAfterStates": 3
+    },
+    {
+      "case": "moving-light-760x760",
+      "component": "card",
+      "renderedUniqueBeforeMiddleAfterStates": 3
+    },
+    {
+      "case": "moving-light-760x760",
+      "component": "seek",
+      "renderedUniqueBeforeMiddleAfterStates": 3
+    },
+    {
+      "case": "reduced-dark-1100x760",
+      "component": "card",
+      "renderedUniqueBeforeMiddleAfterStates": 2
+    },
+    {
+      "case": "reduced-dark-1100x760",
+      "component": "seek",
+      "renderedUniqueBeforeMiddleAfterStates": 2
+    },
+    {
+      "case": "reduced-dark-760x760",
+      "component": "card",
+      "renderedUniqueBeforeMiddleAfterStates": 2
+    },
+    {
+      "case": "reduced-dark-760x760",
+      "component": "seek",
+      "renderedUniqueBeforeMiddleAfterStates": 2
+    },
+    {
+      "case": "reduced-light-1100x760",
+      "component": "card",
+      "renderedUniqueBeforeMiddleAfterStates": 2
+    },
+    {
+      "case": "reduced-light-1100x760",
+      "component": "seek",
+      "renderedUniqueBeforeMiddleAfterStates": 2
+    },
+    {
+      "case": "reduced-light-760x760",
+      "component": "card",
+      "renderedUniqueBeforeMiddleAfterStates": 2
+    },
+    {
+      "case": "reduced-light-760x760",
+      "component": "seek",
+      "renderedUniqueBeforeMiddleAfterStates": 2
+    }
+  ]
+}
