@@ -27,6 +27,14 @@ cannot populate it. Artwork can reload from the existing disk cache. The
 playback host, library, queue, lyrics content and settings remain independent
 of these window-owned caches. See [verification and limits](window-artwork.md).
 
+## Failed artwork recovery
+
+The player-bar cover retains the previous image while the next one is pending,
+then fades to its image or error placeholder. Reduce motion switches immediately.
+A failed load cannot leave another song's cover displayed indefinitely, and a
+later successful image load remains visible. No playback or queue state changes.
+See [cover recovery evidence](cover-recovery.md).
+
 ## Local playlist pins
 
 The More menu on a loaded Apple library playlist now offers **Pin to top** or

@@ -404,14 +404,14 @@ struct CoverFade {
     shown: Option<String>,
     /// The last song's cover, kept only until the new one has faded in.
     previous: Option<String>,
-    /// The new cover is still loading; the fade starts once it is ready.
+    /// The new cover is loading; fade to its image or placeholder once settled.
     waiting: bool,
 }
 
 impl CoverFade {
     /// Follow the playing cover to `url`. Returns whether the fade to it
-    /// starts now, its image being `ready`.
-    fn advance(&mut self, url: Option<&str>, ready: impl FnOnce(&str) -> bool) -> bool {
+    /// starts now, its image load having `settled`.
+    fn advance(&mut self, url: Option<&str>, settled: impl FnOnce(&str) -> bool) -> bool {
         if self.shown.as_deref() != url {
             // While the last change still loads, its predecessor is what shows.
             let shown = self.shown.take();
@@ -421,7 +421,7 @@ impl CoverFade {
             self.shown = url.map(str::to_string);
             self.waiting = self.previous.is_some();
         }
-        if self.waiting && url.is_none_or(ready) {
+        if self.waiting && url.is_none_or(settled) {
             self.waiting = false;
             return true;
         }
@@ -430,8 +430,8 @@ impl CoverFade {
 }
 
 /// The playing cover, fading in over the last song's when the song
-/// changes. The old cover holds until the new one has loaded, so the
-/// placeholder never flashes between them.
+/// changes. The old cover holds while the new one loads, so the placeholder
+/// never flashes between them. A failed load fades to the placeholder.
 fn crossfaded_cover(
     ui: &mut egui::Ui,
     palette: &theme::Palette,
@@ -444,13 +444,13 @@ fn crossfaded_cover(
     let mut fade = ctx
         .data(|data| data.get_temp::<CoverFade>(id))
         .unwrap_or_default();
-    let ready = |url: &str| {
-        matches!(
+    let settled = |url: &str| {
+        !matches!(
             egui::Image::new(url).load_for_size(ctx, rect.size()),
-            Ok(egui::load::TexturePoll::Ready { .. })
+            Ok(egui::load::TexturePoll::Pending { .. })
         )
     };
-    if fade.advance(url, ready) {
+    if fade.advance(url, settled) {
         super::motion::start(ctx, id);
     }
     let paint = |ui: &egui::Ui, url: Option<&str>| {
@@ -1220,6 +1220,104 @@ mod player_bar_tint_tests {
         assert!(fade.advance(Some("c"), |_| true));
         assert!(!fade.advance(Some("c"), |_| true), "starts once");
         assert_eq!(fade.shown.as_deref(), Some("c"));
+    }
+
+    #[test]
+    fn failed_cover_loading_releases_the_previous_song_artwork() {
+        for palette in [Palette::dark(), Palette::light()] {
+            for reduced in [false, true] {
+                let ctx = egui::Context::default();
+                theme::install(&ctx);
+                super::super::motion::set_reduced(&ctx, reduced);
+                let mut png = std::io::Cursor::new(Vec::new());
+                image::RgbImage::from_pixel(8, 8, image::Rgb([220, 40, 60]))
+                    .write_to(&mut png, image::ImageFormat::Png)
+                    .unwrap();
+                let previous = "bytes://previous-song.png";
+                let failed = "bytes://failed-song.png";
+                let bytes = png.into_inner();
+                ctx.include_bytes(previous, bytes.clone());
+                ctx.include_bytes(failed, b"invalid PNG".to_vec());
+                let load = |url| {
+                    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+                    loop {
+                        let result =
+                            ctx.try_load_texture(url, Default::default(), Default::default());
+                        if !matches!(result, Ok(egui::load::TexturePoll::Pending { .. })) {
+                            break result;
+                        }
+                        assert!(std::time::Instant::now() < deadline, "image loader stalled");
+                        std::thread::sleep(std::time::Duration::from_millis(1));
+                    }
+                };
+                let old_texture = match load(previous).unwrap() {
+                    egui::load::TexturePoll::Ready { texture } => texture.id,
+                    _ => panic!("the in-memory cover must load"),
+                };
+                assert!(load(failed).is_err());
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .build()
+                    .unwrap();
+                let directory = std::env::temp_dir().join(format!(
+                    "applifast-cover-failure-{}-{}-{reduced}",
+                    std::process::id(),
+                    palette.dark
+                ));
+                let art = crate::images::ArtLoader::new(
+                    crate::http::Http::unavailable("No network in artwork regression".into()),
+                    runtime.handle().clone(),
+                    directory.clone(),
+                );
+                let paint = |time, url, expected_texture| {
+                    let mut output = ctx.run_ui(
+                        egui::RawInput {
+                            time: Some(time),
+                            screen_rect: Some(Rect::from_min_size(
+                                egui::Pos2::ZERO,
+                                Vec2::splat(100.0),
+                            )),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            crossfaded_cover(
+                                ui,
+                                &palette,
+                                Some(url),
+                                Rect::from_min_size(pos2(8.0, 8.0), Vec2::splat(56.0)),
+                                &art,
+                            )
+                        },
+                    );
+                    output.textures_delta.clear();
+                    ctx.tessellate(output.shapes, output.pixels_per_point).iter().any(|shape| {
+                        matches!(&shape.primitive, egui::epaint::Primitive::Mesh(mesh) if mesh.texture_id == expected_texture)
+                    })
+                };
+                assert!(
+                    paint(0.0, previous, old_texture),
+                    "the old cover was painted"
+                );
+                assert_eq!(paint(1.0, failed, old_texture), !reduced);
+                assert!(
+                    !paint(1.5, failed, old_texture),
+                    "a failed new cover must not keep painting the previous song"
+                );
+                let fade = ctx
+                    .data(|data| data.get_temp::<CoverFade>(egui::Id::new(COVER_FADE_ID)))
+                    .unwrap();
+                assert!(!fade.waiting && fade.previous.is_none());
+                ctx.forget_image(failed);
+                ctx.include_bytes(failed, bytes);
+                let egui::load::TexturePoll::Ready { texture } = load(failed).unwrap() else {
+                    panic!("the retried cover must load");
+                };
+                assert!(
+                    paint(2.0, failed, texture.id),
+                    "the recovered cover is painted"
+                );
+                std::fs::remove_dir_all(directory).unwrap();
+            }
+        }
     }
 
     /// However light or dark the cover, the visualizer's colours stay in the

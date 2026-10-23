@@ -22,6 +22,10 @@ Artwork refreshes when switching between the main and mini player or reopening
 from the tray. See the [window artwork checks](docs/applifast/window-artwork.md)
 for the stale-texture fix and remaining desktop acceptance.
 
+If the next song's artwork fails, its placeholder replaces the old cover.
+Reduce motion switches immediately, and a later successful image load still
+shows the recovered cover. See [cover recovery](docs/applifast/cover-recovery.md).
+
 Apple artwork offers smaller images for thumbnails while keeping large covers.
 Fixed library covers get locally resized thumbnails from their original artwork.
 Old metadata caches remain readable. See [artwork sizing](docs/applifast/artwork-sizes.md)
