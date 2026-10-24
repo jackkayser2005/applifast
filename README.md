@@ -34,6 +34,7 @@ shows the recovered cover. See [cover recovery](docs/applifast/cover-recovery.md
 
 Reduce motion keeps the classic mini-player's paused time visible, without its
 usual blink. Turning the setting off restores the classic paused-clock behavior.
+See the [clock checks](docs/applifast/paused-clock-motion.md).
 
 Apple artwork offers smaller images for thumbnails while keeping large covers.
 Fixed library covers get locally resized thumbnails from their original artwork.
