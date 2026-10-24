@@ -689,6 +689,8 @@ Reduce motion also snaps settings switches, player-bar artwork-color changes
 and collection/sidebar drag feedback to their final positions. These controls
 use the shared motion helpers, including when the setting changes during a
 transition. See the [motion follow-up checks](reduce-motion-controls.md).
+The classic mini-player's paused clock also stays visible with Reduce motion;
+its usual blink returns when the setting is turned off.
 
 ### Apple lyrics
 

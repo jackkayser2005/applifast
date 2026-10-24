@@ -1926,6 +1926,75 @@ mod tests {
 
     #[cfg(feature = "demo")]
     #[test]
+    fn apple_mini_paused_clock_stays_visible_with_reduce_motion() {
+        for scale in [1, 2] {
+            let (ctx, mut app) = accessible_app(&format!("mini-paused-clock-{scale}"));
+            app.backend.set_offline(true);
+            let mut apple = crate::apple::State::demo(&app.library.liked.items);
+            apple.local.playback = crate::player::Playback::Paused;
+            app.local = apple.local.clone();
+            app.apple = Some(apple);
+            app.remote = None;
+            app.settings.winamp_window = true;
+            app.settings.skin_scale = Some(scale);
+            let frame = |app: &mut App, time: f64| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(time),
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(1100.0, 760.0),
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| app.frame_ui(ui),
+                );
+                output.textures_delta.clear();
+                let unit = scale as f32 / ctx.pixels_per_point();
+                let clock = egui::Rect::from_min_max(
+                    egui::pos2(36.0, 26.0) * unit,
+                    egui::pos2(99.0, 39.0) * unit,
+                );
+                let sprites: Vec<_> = output
+                    .shapes
+                    .iter()
+                    .filter_map(|shape| {
+                        if let egui::Shape::Mesh(mesh) = &shape.shape
+                            && clock.contains_rect(shape.shape.visual_bounding_rect())
+                        {
+                            Some(
+                                mesh.vertices
+                                    .iter()
+                                    .map(|vertex| (vertex.pos, vertex.uv))
+                                    .collect::<Vec<_>>(),
+                            )
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                assert_eq!(
+                    sprites.len(),
+                    5,
+                    "four clock digits and the sign are painted"
+                );
+                sprites
+            };
+            frame(&mut app, 0.0);
+            let visible = frame(&mut app, 0.1);
+            let blank = frame(&mut app, 0.6);
+            assert_ne!(visible, blank, "ordinary paused time still blinks");
+            app.settings.reduce_motion = true;
+            assert_eq!(visible, frame(&mut app, 1.1));
+            assert_eq!(visible, frame(&mut app, 1.6));
+            app.settings.reduce_motion = false;
+            assert_eq!(blank, frame(&mut app, 2.6));
+            app.backend.shutdown();
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
     fn apple_mini_favorite_motion_preserves_the_skin_cell_and_reduced_motion() {
         use egui::accesskit::{Action as AccessibleAction, Role};
         fn images(shape: &egui::Shape, found: &mut Vec<egui::Rect>) {
