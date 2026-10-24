@@ -43,7 +43,15 @@ external requests blocked and no page script errors. Ordinary-motion stills
 can show different blink phases because their request times differ. Replay
 confirms the original blink is retained.
 
-These checks make no account write, audio command or resource claim. Natural
-Settings use, window recreation, real listening and the broader
-[release checklist](release-readiness.md) remain open. The previous private
-installer does not contain this fix until a new verified package is built.
+The optimized `59062de` private installer and ZIP include this fix. Their
+checksum, six-file payload, clean-source manifest, PE/default-help and isolated
+dummy-token install/upgrade/uninstall checks pass. A credential-pattern audit
+of 96 fetched published branch tips, 6,902 raw history blobs and this private ZIP
+finds no matching secret paths or key/developer-JWT patterns outside the declared
+app-token companion. Opaque/encoded payloads, image text and remote unreachable
+history are outside that audit. The original preview source branch is retained.
+
+The app and installer remain unsigned development previews. These checks make
+no account write, audio command or resource claim. Natural Settings use, window
+recreation, real listening on the exact executable and the broader
+[release checklist](release-readiness.md) remain open.

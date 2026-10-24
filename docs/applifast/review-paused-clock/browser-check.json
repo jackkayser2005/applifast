@@ -97,5 +97,13 @@
     "indexLoadsSelectedReview": true,
     "previousNext": true,
     "pr": 94
+  },
+  "integrationReviewIndex": {
+    "indexLoadsBothReviews": true,
+    "previousNext": true,
+    "transitionPR": 93,
+    "clockPR": 95,
+    "externalRequestsBlocked": true,
+    "errors": []
   }
 }
