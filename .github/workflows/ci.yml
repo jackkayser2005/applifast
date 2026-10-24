@@ -21,7 +21,9 @@ jobs:
   quality:
     name: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # A cold fork build reached this old 20-minute limit during default Clippy.
+    # Keep all checks and allow the remaining all-feature and Rustdoc work too.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -43,6 +45,8 @@ jobs:
           cache-generation: quality-v1
       - name: Formatting
         run: cargo fmt --all --check
+      - name: Fork publishing boundary regressions
+        run: ruby packaging/test-fork-workflows.rb
       - name: Flatpak release metadata regression tests
         run: python3 packaging/flatpak/test-metainfo.py
       - name: Linux launcher packaging regressions
@@ -127,15 +131,41 @@ jobs:
           $headers = & dumpbin /headers target\debug\spotifast.exe | Out-String
           if ($headers -notmatch $machine) { throw "spotifast.exe is not built for $env:RUNNER_ARCH`:`n$headers" }
 
-      - name: Windows installer syntax and renamed inputs
+      - name: Apple playback host checks
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $version = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages[0].version
+          $env:CARGO_TARGET_DIR = 'target/apple-probe'
+          cargo fmt --manifest-path prototypes/apple-playback/Cargo.toml -- --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          mbx clippy --locked --manifest-path prototypes/apple-playback/Cargo.toml --all-targets -- -D warnings
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          mbx test --locked --manifest-path prototypes/apple-playback/Cargo.toml --all-targets
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          mbx test --locked --manifest-path prototypes/apple-playback/Cargo.toml windows::tests::native_store_round_trip -- --ignored --exact
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          mbx build --locked --manifest-path prototypes/apple-playback/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node prototypes/apple-playback/web/test-bridge.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node prototypes/apple-playback/generate-token.cjs --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./prototypes/apple-playback/test-measure.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./prototypes/apple-playback/test-memory-policy.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./prototypes/apple-playback/test-profile-clear.ps1
+
+      - name: Applifast preview packaging and installer
+        if: runner.os == 'Windows' && runner.arch == 'X64'
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
           $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
           if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
-          $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'aarch64' } else { 'x86_64' }
-          & $iscc "/DVersion=$version" "/DArch=$arch" "/DBinary=$PWD\target\debug\spotifast.exe" "/DOutputDir=$env:RUNNER_TEMP\spotifast-installer-check" packaging\windows\spotifast.iss
+          ./packaging/windows/test-preview.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./packaging/windows/test-installer.ps1 -SetupCompiler $iscc
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: macOS bundle identity and helper startup
@@ -209,3 +239,25 @@ jobs:
           JEKYLL_ENV: production
         run: |
           bundle exec jekyll build --destination "$RUNNER_TEMP/spotifast-site"
+
+      - name: Build matching base documentation for review
+        if: github.event_name == 'pull_request'
+        working-directory: docs
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          JEKYLL_ENV: production
+        run: |
+          git fetch --depth=1 origin "$BASE_SHA"
+          mkdir -p "$RUNNER_TEMP/spotifast-docs-base"
+          git -C "$GITHUB_WORKSPACE" archive "$BASE_SHA" docs | tar -x -C "$RUNNER_TEMP/spotifast-docs-base"
+          bundle exec jekyll build --source "$RUNNER_TEMP/spotifast-docs-base/docs" --destination "$RUNNER_TEMP/spotifast-site-before"
+
+      - name: Retain documentation preview for review
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-preview-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/spotifast-site/
+            ${{ runner.temp }}/spotifast-site-before/
+          if-no-files-found: error
+          retention-days: 7

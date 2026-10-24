@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Applifast native playing-indicator frames</title>
+<style>
+body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}a{color:#ff7a80}img{display:block;border:1px solid #666}#indicator{width:160px;height:152px;image-rendering:pixelated}#context{max-width:100%;height:auto}
+</style>
+<h1>PR #84: Native playing-indicator motion evidence</h1>
+<p>The native demo renderer captured eight successive frames per case in both
+themes and sizes. Playing indicators have eight distinct pixel states in every
+case. With Reduce motion enabled, their pixels stay identical in all eight.
+This is decorative motion, not an audio spectrum.</p>
+<p>Normal application drawing is unchanged. The demo-only capture tool is based on
+<code>1078f85bd652f3f51eedc38c16ef362cb997191a</code>, with its exact entrypoint and
+binary hashes in the <a href="evidence.json">frame evidence</a>. Unlike ordinary
+demo stills, these runs keep animation enabled. Native request timestamps include
+readback and file-writing overhead; they are not frame-rate or resource results.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<label>Motion policy <select id="mode"><option value="moving">Motion enabled</option><option value="reduced">Reduce motion</option></select></label>
+<button id="toggle" aria-pressed="false">Play captured frames</button>
+<p id="selection" aria-live="polite"></p>
+<p>Indicator detail, enlarged 8× from actual native pixels. Play uses lossless
+WebP with the rounded native request intervals and no interpolated frames.
+Identical adjacent frames may be combined. Pause shows the first captured frame.</p>
+<img id="indicator" alt="Enlarged native playing-indicator capture">
+<p id="loaded" aria-live="polite"></p>
+<p>First full native frame for context. This context image is a still; only the
+indicator detail above plays the captured sequence.</p>
+<img id="context" alt="First full native demo frame for the selected case">
+<p>The <a href="browser-check.json">isolated Chrome check</a> passes all sixteen
+viewer states and verifies actual changing/still indicator pixels over time,
+with no script or resource errors during the check.</p>
+<p>This verifies the playing indicator and its Reduce motion state. It does not
+complete cover hover/crossfade, seek hover, heart pop, queue arrival, page fade,
+fullscreen controls or timed-lyrics acceptance. There is no account access,
+audible playback, media-key/tray ownership or normal-player resource measurement.
+The <a href="../release-readiness.md">release checklist</a> keeps those gates open.</p>
+<script>
+const byId=id=>document.getElementById(id);let playing=false;
+function draw(){const name=byId('mode').value+'-'+byId('theme').value+'-'+byId('size').value;byId('selection').textContent=name+' / '+(playing?'captured sequence':'first frame');byId('loaded').textContent='Loading indicator…';byId('indicator').src=name+(playing?'.webp':'-still.png');byId('context').src=name+'-context.png';byId('toggle').textContent=playing?'Pause captured frames':'Play captured frames';byId('toggle').setAttribute('aria-pressed',String(playing));}
+byId('indicator').onload=()=>byId('loaded').textContent='Indicator loaded: 20 × 19 native pixels';
+byId('indicator').onerror=()=>byId('loaded').textContent='Indicator unavailable';
+byId('context').onerror=()=>byId('loaded').textContent='Context unavailable';
+for(const id of ['theme','size','mode'])byId(id).onchange=draw;
+byId('toggle').onclick=()=>{playing=!playing;draw();};draw();
+</script></html>

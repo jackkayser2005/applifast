@@ -1,0 +1,131 @@
+{
+  "SourceBase": "7d8c82f9e40395f323ff14f6342b26a7ebb27116",
+  "Before": {
+    "BinarySHA256": "6f0c14592f0b5546831c104f9c9e364f5d445f9d484a4b84464964a3372cb536",
+    "FixtureSHA256": "039f8da279d57fd8a783198bd3ea403336e5a5452c205498ae0cf2c924718b29",
+    "BridgeSHA256": "625fd438b62a54ab19e1f975e76999b4081a02112c21bf3a778645e9c49de164",
+    "TimedOut": true,
+    "DriverSeconds": 300.72,
+    "CompletedCollections": [
+      {
+        "collection": "songs",
+        "identitiesAndParametersPreserved": true,
+        "pages": 145,
+        "rows": 3698,
+        "songsWithoutCatalogId": 130,
+        "songsWithoutPlayParams": 125
+      },
+      {
+        "collection": "albums",
+        "identitiesAndParametersPreserved": true,
+        "pages": 112,
+        "rows": 2851,
+        "songsWithoutCatalogId": 0,
+        "songsWithoutPlayParams": 0
+      }
+    ]
+  },
+  "After": {
+    "BinarySHA256": "6d054a4f6dfed48d7160d4fb36ccb91b10a3d646d88122f74c136bef6c8ffaca",
+    "FixtureSHA256": "ace620913d74eebf89c00358e47a5f7667036a68a99d2614ac97dacf41727444",
+    "BridgeSHA256": "c4bba22c9cf9ed62f681eee156a27b8b5b91bc1eb47b1ed03f90481f9736d52f",
+    "ModelsSHA256": "b0a94d70c1b406149d8ec09330ae5e6b5198c6eb009903e1d7ae0ccd17cc2ed7",
+    "HostSHA256": "681833f6e5af6f700a57bfbe580408b213a96217c4a740678d92674fe990200c",
+    "EmbeddedPageMatches": true,
+    "EmbeddedBridgeMatches": true,
+    "Exit": 0,
+    "TimedOut": false,
+    "DriverSeconds": 182.138,
+    "CollectionsAndPageShapes": [
+      {
+        "collection": "songs",
+        "incomingCursorHadLimit": true,
+        "page": 1,
+        "phase": "page-shape",
+        "rows": 100
+      },
+      {
+        "collection": "songs",
+        "incomingCursorHadLimit": false,
+        "page": 2,
+        "phase": "page-shape",
+        "rows": 100
+      },
+      {
+        "collection": "songs",
+        "identitiesAndParametersPreserved": true,
+        "pages": 37,
+        "rows": 3698,
+        "songsWithoutCatalogId": 130,
+        "songsWithoutPlayParams": 125
+      },
+      {
+        "collection": "albums",
+        "incomingCursorHadLimit": true,
+        "page": 1,
+        "phase": "page-shape",
+        "rows": 100
+      },
+      {
+        "collection": "albums",
+        "incomingCursorHadLimit": false,
+        "page": 2,
+        "phase": "page-shape",
+        "rows": 100
+      },
+      {
+        "collection": "albums",
+        "identitiesAndParametersPreserved": true,
+        "pages": 29,
+        "rows": 2851,
+        "songsWithoutCatalogId": 0,
+        "songsWithoutPlayParams": 0
+      },
+      {
+        "collection": "artists",
+        "incomingCursorHadLimit": true,
+        "page": 1,
+        "phase": "page-shape",
+        "rows": 100
+      },
+      {
+        "collection": "artists",
+        "incomingCursorHadLimit": false,
+        "page": 2,
+        "phase": "page-shape",
+        "rows": 100
+      },
+      {
+        "collection": "artists",
+        "identitiesAndParametersPreserved": true,
+        "pages": 18,
+        "rows": 1786,
+        "songsWithoutCatalogId": 0,
+        "songsWithoutPlayParams": 0
+      },
+      {
+        "collection": "playlists",
+        "incomingCursorHadLimit": true,
+        "page": 1,
+        "phase": "page-shape",
+        "rows": 94
+      },
+      {
+        "collection": "playlists",
+        "identitiesAndParametersPreserved": true,
+        "pages": 1,
+        "rows": 94,
+        "songsWithoutCatalogId": 0,
+        "songsWithoutPlayParams": 0
+      },
+      {
+        "collection": "production-songs",
+        "identitiesAndParametersPreserved": true,
+        "pages": 37,
+        "queueUntouched": true,
+        "rows": 3698
+      }
+    ]
+  },
+  "Scope": "Saved-account native reads, model identities and production Library/state accumulation. No playback, account write, popup or sign-out. Not fresh sign-in, UI controls, audio latency or resource acceptance."
+}

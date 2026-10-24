@@ -14,6 +14,12 @@ its full application ID and sets the window class to match.
 `python3 packaging/test-launchers.py` exercises the actual AUR and Flatpak
 installation commands with a release payload, using Ruby to read YAML.
 
+The icon is drawn once, in code, by `util::app_icon_rgba`, which also draws
+the window, tray and in-app logo. `cargo run --example app_icon` writes
+`packaging/windows/spotifast.ico` and `packaging/macos/icon-1024.png` from it.
+`packaging/icons/spotifast.svg` and `docs/assets/images/logo.svg` draw the
+same geometry as vectors, so a change to the mark updates all four together.
+
 Linux packages also install the optional Omarchy template and hook under
 `share/spotifast/omarchy` in their installation prefix. The normal application
 launch registers missing per-user files and prepares the current palette on an

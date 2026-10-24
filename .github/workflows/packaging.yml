@@ -47,8 +47,13 @@ jobs:
       # Packaging changes exercise real release binaries on both architectures.
       # Update this fixture deliberately; releases use their own tag instead.
       version: ${{ inputs.version || 'v0.11.2' }}
-      publish: ${{ inputs.publish == true && inputs.version != '' }}
-    secrets: inherit
+      # Retain upstream fixtures, but never publish legacy recipes from this fork.
+      publish: ${{ github.repository == 'crmne/spotifast' && inputs.publish == true && inputs.version != '' }}
+    secrets:
+      AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+      AUR_KNOWN_HOSTS: ${{ secrets.AUR_KNOWN_HOSTS }}
+      HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+      HOMEBREW_TAP_SSH_KEY: ${{ secrets.HOMEBREW_TAP_SSH_KEY }}
 
   homebrew:
     name: Homebrew install (macOS)
@@ -112,6 +117,7 @@ jobs:
           set -- dist/native-packages/packages/"$TARGET"/appimage/spotifast-*-"$ARCH".AppImage
           test "$#" -eq 1
           chmod +x "$1"
+          # This job exercises the pinned upstream fixture, not a fork binary.
           "$1" --appimage-extract-and-run --version | grep -Ex 'spotifast [0-9]+\.[0-9]+\.[0-9]+.*'
 
   installation:

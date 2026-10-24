@@ -1,8 +1,8 @@
-current: v0.12.0
+current: preview
 items:
-  - id: v0.12.0
-    title: v0.12.0
+  - id: preview
+    title: Windows preview
     url: /download/
   - title: Changelog
-    url: https://github.com/crmne/spotifast/releases
+    url: https://github.com/jackkayser2005/applifast/releases
     external: true

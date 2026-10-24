@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast narrow toolbar comparison</title>
+<style>
+body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}button,select{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}button[aria-pressed="true"]{outline:2px solid #ff7a80}a{color:#ff7a80}
+</style>
+<h1>PR #82: Keep Apple toolbar controls clear of Search</h1>
+<p>Baseline: clean <code>82c35396614ede17da275415474fcf9c79207e09</code>.
+Candidate: <code>fix/narrow-apple-toolbar</code>, the source accompanying this comparison.</p>
+<p>Visible change: a narrow Apple center pane puts the existing Settings, Now playing,
+mini-player and account controls on a second toolbar row. Navigation and Search stay
+on the first row. Wider panes keep the single row. Queue and Lyrics keep their full
+height, chosen panel widths return when space permits, and the library retains its
+previous minimum space at the 760-point window minimum.</p>
+<p>Matching Windows native sample-data captures, Queue open, neutral pointer,
+same zoom and frozen motion. These are actual application captures, not HTML
+mockups. The center collection's metadata and table remain cramped at 760 points;
+this change fixes the toolbar overlap and does not claim to finish that separate
+layout work. Stills do not prove animation timing, account playback or performance.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<button id="before" aria-pressed="false">Before</button>
+<button id="after" aria-pressed="true">After</button>
+<p id="selection" aria-live="polite"></p>
+<img id="capture" alt="Native Windows Apple toolbar comparison">
+<p id="loaded" aria-live="polite"></p>
+<p>Verification: eight selector paths and PNG dimensions pass. Both normal-size
+pairs are pixel-identical. Narrow changes stay in the center pane. The selector
+script initially passed a DOM-stub check. A later isolated Chrome 155 check
+also exercises all eight real page states, decodes each image, checks dimensions,
+and verifies index Next/Previous/direct links. Live native interaction remains
+separate from that rendered-page verification.</p>
+<p><a href="../visual-approvals.md">Scope ledger</a>: the approved Apple interface and requested PR #13 integration are
+the baseline. This follow-up changes responsive toolbar arrangement and the Apple
+minimum-width reservation. The maintainer approved this visual scope on October
+22, 2026: "Approve both layouts" (#82 and #83). Implementation and release checks
+remain separate. No settings format, network destination or dependency changes.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const theme=byId('theme').value,size=byId('size').value;byId('loaded').textContent='Loading capture…';byId('capture').src=phase+'-'+theme+'-'+size+'.png';byId('selection').textContent=phase+' / '+theme+' / '+size;for(const p of ['before','after'])byId(p).setAttribute('aria-pressed',String(p===phase));}
+byId('capture').onload=()=>{const img=byId('capture');byId('loaded').textContent='Native capture loaded: '+img.naturalWidth+' × '+img.naturalHeight;};
+byId('capture').onerror=()=>{byId('loaded').textContent='Capture unavailable';};
+for(const id of ['theme','size'])byId(id).onchange=draw;
+for(const p of ['before','after'])byId(p).onclick=()=>{phase=p;draw();};draw();
+</script>
+</html>

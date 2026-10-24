@@ -196,13 +196,20 @@ fn section(
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     let locale = app.locale;
+    let keyboard_shortcuts = gettext(locale, "Keyboard shortcuts");
     ui.add_space(8.0);
-    theme::text(
-        ui,
-        gettext(locale, "Settings"),
-        theme::bold(28.0),
-        palette.text,
-    );
+    ui.horizontal_wrapped(|ui| {
+        theme::text(
+            ui,
+            gettext(locale, "Settings"),
+            theme::bold(28.0),
+            palette.text,
+        );
+        if theme::soft_button(ui, &palette, Some(Icon::Info), &keyboard_shortcuts, false).clicked()
+        {
+            app.actions.push(Action::ShowDialog(Dialog::Shortcuts));
+        }
+    });
     ui.add_space(4.0);
     let mut filter = ui
         .data(|data| data.get_temp::<String>(egui::Id::new(SETTINGS_FILTER_ID)))
@@ -228,7 +235,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         .data(|data| data.get_temp::<bool>(proxy_dirty_id))
         .unwrap_or(false);
     let mut changed = false;
-    let mut any_visible = false;
+    let mut any_visible = row_matches(&needle, &keyboard_shortcuts, "");
     let open_folder = gettext(locale, "Open folder");
 
     let wanted = app
@@ -282,7 +289,32 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         .when(!in_use && wanted.is_none() && app.web_app.is_some()),
         RowText::new(sign_out.clone(), account.clone()),
     ];
-    if section_matches(&needle, &account, &account_rows) {
+    let apple_account = gettext(locale, "Apple Music account");
+    let developer_token = gettext(locale, "Import developer token");
+    if app.apple.is_some()
+        && row_matches(
+            &needle,
+            &apple_account,
+            &format!("{sign_out} {developer_token}"),
+        )
+    {
+        any_visible = true;
+        section(ui, &palette, &apple_account, |ui| {
+            theme::subtle(
+                ui,
+                &palette,
+                &gettext(
+                    locale,
+                    "Apple authorization is saved in Windows Credential Manager.",
+                ),
+            );
+            super::apple::token_import(app, ui);
+            if theme::soft_button(ui, &palette, Some(Icon::LogOut), &sign_out, false).clicked() {
+                app.actions.push(Action::SignOut);
+            }
+        });
+    }
+    if app.apple.is_none() && section_matches(&needle, &account, &account_rows) {
         any_visible = true;
         section(ui, &palette, &account, |ui| {
             if row_matches(&needle, &format!("{sign_out} {account}"), "") {
@@ -447,7 +479,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let apply_playback = gettext(locale, "Apply and restart playback");
     let apply_playback_note = gettext(locale, "Restart local playback to apply these settings.");
     let download_updates = gettext(locale, "Download updates automatically");
-    let playback_rows = [
+    let mut playback_rows = [
         RowText::new(
             // Translators: {status} is a playback state such as Ready or Not set up.
             gettext(locale, "Status: {status}").replace("{status}", &status),
@@ -478,11 +510,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             super::keys::platform_shortcut(
                 &gettext(
                     locale,
-                    "Spotifast hides to the system tray. Quit from the tray menu or with Ctrl+Q.",
+                    "Applifast hides to the system tray. Quit from the tray menu or with Ctrl+Q.",
                 ),
                 &gettext(
                     locale,
-                    "Spotifast hides to the system tray. Quit from the tray menu or with Cmd+Q.",
+                    "Applifast hides to the system tray. Quit from the tray menu or with Cmd+Q.",
                 ),
             )
             .to_owned(),
@@ -529,6 +561,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         )
         .when(cfg!(target_os = "macos")),
     ];
+    if app.apple.is_some() {
+        for (index, row) in playback_rows.iter_mut().enumerate() {
+            row.available &= index == 6;
+        }
+    }
     if section_matches(&needle, &playback, &playback_rows) {
         any_visible = true;
         section(ui, &palette, &playback, |ui| {
@@ -776,9 +813,10 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 });
             });
             ui.add_space(4.0);
-            if playback_dirty
-                || playback_rows[11].matches(&needle, &playback)
-                || playback_rows[12].matches(&needle, &playback)
+            if app.apple.is_none()
+                && (playback_dirty
+                    || playback_rows[11].matches(&needle, &playback)
+                    || playback_rows[12].matches(&needle, &playback))
             {
                 ui.horizontal(|ui| {
                     if playback_dirty {
@@ -805,6 +843,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let middle_click = gettext(locale, "Middle-click autoscroll");
     let custom_titlebar = gettext(locale, "Custom title bar");
     let player_bar_vis = gettext(locale, "Player bar visualizer");
+    let reduce_motion = gettext(locale, "Reduce motion");
     let appearance_rows = [
         RowText::new(theme_title.clone(), {
             let detail = theme::catalog_detail(
@@ -871,7 +910,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             custom_titlebar.clone(),
             gettext(
                 locale,
-                "Draw Spotifast's own title bar and window buttons instead of the standard Windows ones.",
+                "Draw Applifast's own title bar and window buttons instead of the standard Windows ones.",
             ),
         )
         .when(app.windows_controls_visible()),
@@ -881,7 +920,22 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 locale,
                 "Show the song moving behind the player bar's controls while it plays here.",
             ),
+        ).when(app.apple.is_none()),
+        RowText::new(
+            reduce_motion.clone(),
+            gettext(
+                locale,
+                "Show changes at once, without fades, pops or moving bars.",
+            ),
         ),
+        RowText::new(
+            gettext(locale, "Ambient Pulse"),
+            gettext(locale, "Decorative animation from playback progress and album colors, shared by both players. This is not an audio spectrum."),
+        ).when(app.apple.is_some()),
+        RowText::new(
+            gettext(locale, "Favorites in sidebar"),
+            gettext(locale, "Show up to ten loaded favorite songs. Zero hides the shelf."),
+        ).when(app.apple.is_some()),
     ];
     if section_matches(&needle, &appearance, &appearance_rows) {
         any_visible = true;
@@ -1109,6 +1163,64 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 &palette,
                 &needle,
                 &appearance,
+                &appearance_rows[9],
+                |ui| {
+                    if widgets::switch(
+                        ui,
+                        &palette,
+                        &reduce_motion,
+                        &mut app.settings.reduce_motion,
+                    )
+                    .changed()
+                    {
+                        changed = true;
+                    }
+                },
+            );
+            filtered_row(
+                ui,
+                &palette,
+                &needle,
+                &appearance,
+                &appearance_rows[10],
+                |ui| {
+                    let mut enabled = app.settings.ambient_pulse;
+                    if widgets::switch(
+                        ui,
+                        &palette,
+                        &gettext(locale, "Ambient Pulse"),
+                        &mut enabled,
+                    )
+                    .changed()
+                    {
+                        app.actions.push(Action::SetAmbientPulse(enabled));
+                    }
+                },
+            );
+            filtered_row(
+                ui,
+                &palette,
+                &needle,
+                &appearance,
+                &appearance_rows[11],
+                |ui| {
+                    let mut count = app.settings.favorite_shelf_count;
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut count, 0..=10)
+                                .text(gettext(locale, "Favorites").into_owned()),
+                        )
+                        .changed()
+                    {
+                        app.actions.push(Action::SetFavoriteShelfCount(count));
+                    }
+                },
+            );
+            filtered_row(
+                ui,
+                &palette,
+                &needle,
+                &appearance,
                 &appearance_rows[5],
                 |ui| {
                     ui.horizontal(|ui| {
@@ -1181,7 +1293,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             "Off, System, HTTP or SOCKS5 proxy for network requests.",
         ),
     )];
-    if section_matches(&needle, &proxy, &proxy_rows) {
+    if app.apple.is_none() && section_matches(&needle, &proxy, &proxy_rows) {
         any_visible = true;
         ui.push_id("proxy-settings", |ui| {
     section(ui, &palette, &proxy, |ui| {
@@ -1368,7 +1480,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 // the mini player opens.
                 const RANDOM: usize = usize::MAX;
                 let random = gettext(locale, "Random");
-                let mut options: Vec<(usize, &str)> = vec![(RANDOM, &random), (0, "Spotifast")];
+                let mut options: Vec<(usize, &str)> = vec![(RANDOM, &random), (0, "Applifast")];
                 options.extend(
                     choices
                         .iter()
@@ -1402,7 +1514,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                     let label = options
                         .iter()
                         .find(|(value, _)| *value == showing)
-                        .map_or("Spotifast", |(_, label)| label);
+                        .map_or("Applifast", |(_, label)| label);
                     theme::subtle(
                         ui,
                         &palette,
@@ -1457,7 +1569,9 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     }
 
     let presets_folder = app.dirs.milkdrop_dir();
-    app.winamp.presets.refresh(&presets_folder);
+    if app.apple.is_none() {
+        app.winamp.presets.refresh(&presets_folder);
+    }
     let count = app.winamp.presets.count();
     let screen_hz = app.settings.milkdrop_screen_hz;
     let milkdrop_window = gettext(locale, "MilkDrop window");
@@ -1483,20 +1597,20 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 0 => gettext(
                     locale,
                     // Translators: {folder} is the path of the MilkDrop presets folder.
-                    "None yet in {folder}. Add .milk files here. Spotifast downloads presets when MilkDrop first opens with an empty folder.",
+                    "None yet in {folder}. Add .milk files here. Applifast downloads presets when MilkDrop first opens with an empty folder.",
                 )
                 .replace("{folder}", &folder),
                 1 => gettext(
                     locale,
                     // Translators: {folder} is the path of the MilkDrop presets folder.
-                    "One preset in {folder}. Add .milk files here. Spotifast downloads presets when MilkDrop first opens with an empty folder.",
+                    "One preset in {folder}. Add .milk files here. Applifast downloads presets when MilkDrop first opens with an empty folder.",
                 )
                 .replace("{folder}", &folder),
                 n => ngettext(
                     locale,
                     // Translators: {count} is the number of presets, {folder} the path of the MilkDrop presets folder.
-                    "{count} preset in {folder}. Add .milk files here. Spotifast downloads presets when MilkDrop first opens with an empty folder.",
-                    "{count} presets in {folder}. Add .milk files here. Spotifast downloads presets when MilkDrop first opens with an empty folder.",
+                    "{count} preset in {folder}. Add .milk files here. Applifast downloads presets when MilkDrop first opens with an empty folder.",
+                    "{count} presets in {folder}. Add .milk files here. Applifast downloads presets when MilkDrop first opens with an empty folder.",
                     u32::try_from(n).unwrap_or(u32::MAX),
                 )
                 .replace("{count}", &n.to_string())
@@ -1547,7 +1661,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 .join(" "),
         ),
     ];
-    if section_matches(&needle, "MilkDrop", &milkdrop_rows) {
+    if app.apple.is_none() && section_matches(&needle, "MilkDrop", &milkdrop_rows) {
         any_visible = true;
         section(ui, &palette, "MilkDrop", |ui| {
             filtered_row(ui, &palette, &needle, "MilkDrop", &milkdrop_rows[0], |ui| {
@@ -1721,7 +1835,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 .join(" "),
         ),
     ];
-    if section_matches(&needle, &equalizer, &equalizer_rows) {
+    if app.apple.is_none() && section_matches(&needle, &equalizer, &equalizer_rows) {
         any_visible = true;
         section(ui, &palette, &equalizer, |ui| {
             filtered_row(
@@ -1794,7 +1908,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 "{folder}",
                 &app.dirs.audio_cache_dir().display().to_string(),
             ),
-        ),
+        )
+        .when(app.apple.is_none()),
         RowText::new(
             gettext(locale, "Play history"),
             gettext(
@@ -1847,22 +1962,28 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     }
 
     let about = gettext(locale, "About");
-    let built_with = gettext(
-        locale,
-        "Built with Rust, egui, and librespot. Not affiliated with Spotify.",
-    );
+    let built_with = if app.apple.is_some() {
+        gettext(
+            locale,
+            "Built with Rust, egui, and MusicKit. Not affiliated with Apple.",
+        )
+    } else {
+        gettext(
+            locale,
+            "Built with Rust, egui, and librespot. Not affiliated with Spotify.",
+        )
+    };
     let check_for_updates = gettext(locale, "Check for updates");
     let checking = gettext(locale, "Checking…");
-    let keyboard_shortcuts = gettext(locale, "Keyboard shortcuts");
     let source_code = gettext(locale, "Source code");
     let about_rows = [
         RowText::new(
-            format!("Spotifast {}", env!("CARGO_PKG_VERSION")),
+            format!("Applifast {}", env!("CARGO_PKG_VERSION")),
             built_with.clone(),
         ),
         RowText::new(
             format!("{check_for_updates} {checking}"),
-            format!("{keyboard_shortcuts} {source_code}"),
+            source_code.clone(),
         ),
     ];
     if section_matches(&needle, &about, &about_rows) {
@@ -1874,7 +1995,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 ui.vertical(|ui| {
                     theme::text(
                         ui,
-                        format!("Spotifast {}", env!("CARGO_PKG_VERSION")),
+                        format!("Applifast {}", env!("CARGO_PKG_VERSION")),
                         theme::semibold(15.0),
                         palette.text,
                     );
@@ -1894,22 +2015,22 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 } else {
                     &check_for_updates
                 };
-                if theme::soft_button(ui, &palette, Some(Icon::Refresh), check_label, false)
-                    .clicked()
+                if app.apple.is_none()
+                    && theme::soft_button(ui, &palette, Some(Icon::Refresh), check_label, false)
+                        .clicked()
                     && !app.update_checking
                 {
                     app.actions.push(Action::CheckForUpdates);
-                }
-                if theme::soft_button(ui, &palette, Some(Icon::Info), &keyboard_shortcuts, false)
-                    .clicked()
-                {
-                    app.actions.push(Action::ShowDialog(Dialog::Shortcuts));
                 }
                 if theme::soft_button(ui, &palette, Some(Icon::ExternalLink), &source_code, false)
                     .clicked()
                 {
                     ui.ctx()
-                        .open_url(egui::OpenUrl::new_tab(env!("CARGO_PKG_REPOSITORY")));
+                        .open_url(egui::OpenUrl::new_tab(if app.apple.is_some() {
+                            "https://github.com/jackkayser2005/applifast"
+                        } else {
+                            env!("CARGO_PKG_REPOSITORY")
+                        }));
                 }
             });
             ui.add_space(14.0);

@@ -262,6 +262,10 @@ pub struct Settings {
     pub home: HomeSettings,
     /// Tint the interface with the colour of the playing album's art.
     pub accent_from_art: bool,
+    /// Show every interface animation at its end at once.
+    pub reduce_motion: bool,
+    /// Decorative Apple playback animation, independent of audio samples and volume.
+    pub ambient_pulse: bool,
     /// A spectrum or waveform of the playing song behind the player bar.
     pub player_bar_vis: PlayerBarVis,
     /// Last local volume, 0..=65535.
@@ -272,6 +276,8 @@ pub struct Settings {
     pub art_expanded: bool,
     /// Use compact single-line rows without cover art in the sidebar.
     pub sidebar_compact: bool,
+    /// Loaded Apple favorites in the sidebar. Zero hides the shelf; at most ten.
+    pub favorite_shelf_count: u8,
     /// Show the Library as responsive cover cards instead of rows.
     pub sidebar_grid: bool,
     pub sidebar_width: f32,
@@ -431,11 +437,14 @@ impl Default for Settings {
             system_theme_cache: None,
             home: HomeSettings::default(),
             accent_from_art: true,
+            reduce_motion: false,
+            ambient_pulse: false,
             player_bar_vis: PlayerBarVis::Off,
             volume: (u16::MAX as u32 * 70 / 100) as u16,
             sidebar_visible: true,
             art_expanded: false,
             sidebar_compact: false,
+            favorite_shelf_count: 5,
             sidebar_grid: false,
             sidebar_width: 250.0,
             lyrics_width: 360.0,
@@ -450,7 +459,7 @@ impl Default for Settings {
             playback_authorized: false,
             keep_playing_in_background: true,
             mac_notch_widget: false,
-            check_for_updates: true,
+            check_for_updates: false,
             download_updates_automatically: false,
             pinned_contexts: Vec::new(),
             liked_songs_pinned: true,
@@ -576,6 +585,7 @@ impl Settings {
                     Self::default()
                 });
                 settings.migrate_proxy(text);
+                settings.favorite_shelf_count = settings.favorite_shelf_count.min(10);
                 settings.proxy_password_legacy = !settings.proxy_password.is_empty();
                 settings
             }
@@ -1206,6 +1216,51 @@ mod tests {
     }
 
     #[test]
+    fn reduce_motion_is_opt_in_and_round_trips() {
+        let settings: Settings = serde_json::from_str(r#"{"zoom": 1.2}"#).unwrap();
+        assert!(!settings.reduce_motion);
+        let settings = Settings {
+            reduce_motion: true,
+            ..Settings::default()
+        };
+        let json = serde_json::to_string(&settings).unwrap();
+        let restored: Settings = serde_json::from_str(&json).unwrap();
+        assert!(restored.reduce_motion);
+    }
+
+    #[test]
+    fn ambient_pulse_is_opt_in_and_preserves_older_settings() {
+        let settings: Settings =
+            serde_json::from_str(r#"{"volume":0,"reduce_motion":true}"#).unwrap();
+        assert!(!settings.ambient_pulse);
+        let settings = Settings {
+            ambient_pulse: true,
+            ..settings
+        };
+        let restored: Settings =
+            serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+        assert!(restored.ambient_pulse);
+        assert!(restored.reduce_motion);
+        assert_eq!(restored.volume, 0);
+    }
+
+    #[test]
+    fn favorite_shelf_count_defaults_and_round_trips_without_changing_other_preferences() {
+        let older: Settings = serde_json::from_str(r#"{"volume":37}"#).unwrap();
+        assert_eq!(older.favorite_shelf_count, 5);
+        for count in [0, 1, 10] {
+            let settings = Settings {
+                favorite_shelf_count: count,
+                ..older.clone()
+            };
+            let restored: Settings =
+                serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+            assert_eq!(restored.favorite_shelf_count, count);
+            assert_eq!(restored.volume, 37);
+        }
+    }
+
+    #[test]
     fn older_settings_keep_the_chosen_skin() {
         let settings: Settings = serde_json::from_str(r#"{"skin":"A.wsz"}"#).unwrap();
         assert!(!settings.random_skin);
@@ -1621,8 +1676,18 @@ mod session_tests {
         };
 
         state("home").save(&path);
+        #[cfg(windows)]
+        let previous_reader = std::fs::File::open(&path).unwrap();
         state("liked").save(&path);
 
+        #[cfg(windows)]
+        assert_eq!(
+            serde_json::from_reader::<_, SessionState>(previous_reader)
+                .unwrap()
+                .last_page
+                .as_deref(),
+            Some("home")
+        );
         assert_eq!(
             SessionState::load(&path).last_page.as_deref(),
             Some("liked")

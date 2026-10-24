@@ -1,0 +1,28 @@
+{
+  "SourceBase": "3a50aaf43d019c038d8ea23a7e213c35b430be06",
+  "WindowsSourceSHA256": "73e09bcfdc649edea7cbe1f89f25750586e836c8dbb89ee9d41de5ec3e0e8da9",
+  "TestBinarySHA256": "3d178dfb0f9e089119d1f75e58a84f7539ea48ba4df25b3b247859427e19769f",
+  "Test": "windows::tests::native_profile_cookie_clear_round_trip",
+  "Runtime": "155.0.4283.62",
+  "Platform": "Windows x64",
+  "CookieCounts": [
+    0,
+    2,
+    2,
+    0,
+    1,
+    0
+  ],
+  "Result": "Pass",
+  "TestDurationSeconds": 0.44,
+  "CredentialManagerRead": false,
+  "AppleNavigation": false,
+  "AccountMutation": false,
+  "ApplicationSignOutTested": false,
+  "Scope": "Synthetic cookies in a fresh disposable profile, with completion waits. Does not qualify Apple account sign-out, immediate reauthorization, local storage or account-cache clearing.",
+  "ProfilePathGuards": [
+    "Missing rejected",
+    "Relative rejected",
+    "Populated rejected without changing its marker"
+  ]
+}

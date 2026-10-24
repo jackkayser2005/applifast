@@ -1,0 +1,80 @@
+Applifast Windows development preview
+
+1. Quit the older build using its tray menu. Closing its window leaves it running.
+2. Run the preview installer and open Applifast from Start, or extract the whole
+   portable ZIP and run Applifast.exe. Keep the portable files together.
+   The installer uses your account without administrator rights. Preview
+   executables are unsigned. It does not download WebView2 or register links.
+3. The installer puts developer-token.txt beside Applifast.exe automatically;
+   keep them together when using the ZIP. The app loads its token
+   automatically, then offers Sign in with Apple. Enter credentials only in
+   Apple's popup. Saved listener authorization is reused until you sign out.
+   No tester Developer Program membership or commands are required.
+   If the playback host fails, quit other builds and click Retry connection.
+   It reuses saved setup. Missing or expired app tokens still need replacement.
+4. If the app token expires, get a fresh preview from the maintainer and extract
+   all its files. BUILD.txt records its expiry. Advanced token import remains in
+   Settings and on setup errors. Never package or distribute the .p8 signing key.
+
+This preview requires Windows x64, the installed Evergreen WebView2 runtime,
+an Apple Music subscription and an unexpired developer token. It is a development
+preview, not a public release. Command help and --version identify applifast;
+BUILD.txt records the executable's file version and source revision.
+The app uses separate Applifast settings and Windows Credential Manager entries.
+LICENSE includes the app's MIT credit and the bundled font and icon notices.
+
+Try restart restoration: play a song, add a few queue entries (including a
+repeat), seek, then Quit from the tray. Reopen: the loaded song library, exact
+queue, current song, position, shuffle and repeat should return, paused.
+The library refreshes in the background. Sign-out removes the account snapshot.
+Audio is streamed. Collection detail pages still load when opened.
+
+Ctrl+M toggles the mini player. L or Ctrl+Shift+K opens Now Playing; Esc returns.
+Enable Ambient Pulse in Appearance. It is decorative, not an audio analyser.
+Reduce motion stops its animation. Ambient Pulse is off by default.
+
+For builds compiled with the optional demo feature only, preview the design
+without signing in or changing your library from PowerShell:
+  .\Applifast.exe --demo --demo-page liked --demo-show queue,ambient-pulse
+
+Try playlist creation with the library + button or Save as a playlist in the
+queue. Queue saving preserves repeats. Creation writes to your Apple library;
+if an error is ambiguous, check the library before retrying to avoid a duplicate.
+Apple may take a few seconds to show the new playlist and its songs.
+Demo-only states: --demo-show playlist-saving, playlist-created or playlist-error.
+
+Add songs through Add to playlist in their menu or by dropping them on a writable
+sidebar playlist. An album's menu offers Add to playlist, including New playlist;
+every album track page loads first. Right-click the queue's Save as a playlist
+button to add its current and upcoming songs to an existing playlist.
+Only Apple playlists marked writable are offered. Repeated songs are preserved,
+with Add anyway confirmation for songs already in the destination.
+Demo-only states: --demo-show playlist-appending, playlist-appended,
+playlist-append-error or playlist-duplicates.
+
+Songs offers Show only favorites for loaded songs Apple marks as favorites.
+Missing flags stay unknown. Favorite metadata stays in the existing restart cache;
+refresh Songs for changes made in Apple Music. Hollow hearts and song/selection
+menus offer Add to Favorites, for up to 100 distinct non-favorite songs per action.
+Hearts fill immediately; exact confirmation retains successful members and rolls
+unconfirmed members back. Refresh before retrying, because Apple may have applied
+an interrupted write. Pending hearts are not saved as confirmed favorites.
+Filled hearts are read-only; removing favorites requires Apple Music.
+The mini-player's inactive Apple EQ slot now shows the current song's heart.
+Its title-bar right-click menu offers Add to Favorites, including when rolled up.
+B adds the playing song from either window. It does nothing for an existing or
+pending favorite, while typing, or while a dialog is open.
+Appearance controls how many favorites appear in the sidebar; Show all favorites
+opens their page. Real-account favorite additions still need acceptance.
+Demo: --demo-show favorites-page. Fresh-Windows-account sign-in, full library
+refresh and restart restoration still need acceptance.
+Real-account creation, appending, permissions and uploaded members need acceptance.
+Cloud-only uploads are never replaced with catalog songs; their playback is
+not guaranteed. Runtime restart/window checks and the gaming soak are pending.
+See TESTING.md for setup and validation links, and BUILD.txt for source revision.
+Uninstalling the installed preview removes program files and shortcuts, preserving
+settings, the library/queue snapshot and protected authorization. Sign out first
+if you want account authorization and its snapshot cleared. Quit before updating.
+
+Applifast is an MIT-licensed fork of Spotifast by Carmine Paolino.
+The accompanying LICENSE preserves upstream credit.

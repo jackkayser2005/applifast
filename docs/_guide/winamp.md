@@ -1,85 +1,60 @@
 ---
-title: The Winamp Mini Player
-description: Use classic Winamp 2 skins with an analyser, equalizer, and playlist.
+title: The Mini Player
+description: Keep Apple Music playback and its upcoming queue in a compact window with classic skins.
 nav_order: 4
 ---
 
-Open the mini player with Ctrl+M (Cmd+Shift+M on macOS), the shrink button, or
-**Switch to it** in Settings. It supports classic Winamp 2 `.wsz` skins. Find
-skins at the [Winamp Skin Museum](https://skins.webamp.org).
+Open the mini player with **Ctrl+M**, the shrink control or
+**Switch to it** in Settings. Use the shortcut or the return control to reopen
+the main window. Both windows use the same playback engine and local queue.
 
-Only one player window is open at a time. Click the skin logo or Eject, or use
-the shortcut again, to return to the main window.
+![The Apple-mode mini player with sample data](/applifast/review-mini-heart-motion/after-ready-dark-550x232.png)
 
-![The mini player wearing the built-in skin](/assets/images/winamp.png)
+## Playback and upcoming songs
 
-## Skins and window size
+The mini player shares play/pause, seek, volume, previous/next, shuffle and
+repeat with the main window. Its heart and **B** shortcut add eligible songs
+to Apple Favorites, using the same pending/error handling.
 
-Drop a `.wsz` file on either window to install and use it. Settings lists the
-installed skins and can open the skins folder.
+**PL** opens the upcoming playlist below the player. It includes the playing
+song and coming occurrences. Double-click an upcoming song to choose it;
+repeated songs remain separate. Use **REM > Remove selected** for selected
+upcoming occurrences; the playing row is protected. Remove all clears manual
+additions, not the entire remaining context.
 
-Choose **Random**, first in that list, to get a different skin each time you
-switch to the mini player, never the same one twice in a row. Settings says
-which skin it picked, and choosing a skin yourself turns Random off.
+The Add menu opens Apple Music search or Favorites. Drag the lower-right
+corner to resize the playlist. Closing this panel does not clear the queue.
 
-You can also use an unpacked skin folder. Spotifast finds skin files inside
-its subfolders, up to eight folders deep, so you do not need to move them all
-into one folder.
+## Skins and size
 
-Right-click the title bar, or click **O**, to choose a size from 1x to 4x.
-Each size keeps the classic pixels sharp. The same menu can keep the player
-above other windows. **D** toggles double size and **A** toggles always-on-top.
-Spotifast remembers the window position where your desktop allows it.
+Classic Winamp 2 `.wsz` skins can change the appearance. Drop a skin on a
+window to install it, or choose an installed skin in Settings.
+The [Winamp Skin Museum](https://skins.webamp.org) is an external site.
 
-Skins can have transparent areas and shapes other than rectangles. Modern
-Winamp 3 and 5 skin formats are not supported; choose classic Winamp 2 skins.
+The title-bar menu offers scales from 1x to 4x and always-on-top.
+**D** toggles double size and **A** toggles always-on-top.
+Shade controls roll panels into thin bars. Settings retain the mini player's
+own size and position separately from the main window.
 
-## Main controls
+Winamp 3 and 5 skin formats are not supported. A skin changes appearance;
+it does not add playback capabilities.
 
-Most controls match Winamp. As in Winamp, Play on a song that is already
-playing starts it again from the beginning; Pause pauses. These work
-differently:
+## Decorative display
 
-- **Stop** pauses and rewinds.
-- **I** opens the playing album in the main window.
-- Repeat is either on or off.
-- The X button and both logos return to the main window.
+Apple-mode Ambient Pulse uses playback state, progress and album-art colors.
+It is independent of the volume control. Reduce motion stills it.
+This is not an audio spectrum or oscilloscope.
 
-Click the time to switch between elapsed and remaining time. The balance and
-MONO/STEREO controls affect playback on this computer. Quit from the
-right-click menu or with Ctrl+Q.
+MusicKit does not expose PCM to this engine. Equalizer, mono, balance,
+oscilloscope, spectrum and MilkDrop controls are therefore inactive or absent.
+Artwork printed on a classic skin does not make those functions available.
 
-The shade button, or a double-click on the title bar, rolls the player up. The
-playlist and equalizer have their own shade buttons.
+## Tray and restart
 
-Switching to the main window and back keeps the shade modes and restores the
-mini player's own position. It does not inherit the main window's fullscreen
-or maximized state. On Linux desktops using Wayland, the desktop chooses where
-windows appear and may ignore the saved position.
+Closing to the tray can keep music playing. Reopen from the tray icon and
+use **Quit** to exit completely. The saved account-bound queue restores paused
+after restart. See [Everyday Use](/using-spotifast/) for queue ordering and pins.
 
-The left display shows bars that react to the sound (a spectrum analyser).
-Click it to switch to a moving sound wave (an oscilloscope), then off.
-You can also use the **V** menu. Changes to the equalizer affect the picture;
-turning down the volume does not, even at zero. The display reacts only to
-music playing on this computer.
-
-## Playlist
-
-**PL** opens the playlist below the player. It shows the playing song followed
-by the queue. Double-click a song to play it, Ctrl-click to select several, and
-drag the lower-right corner to resize the window. Use X or **PL** to close it.
-
-- **ADD** opens search or Liked Songs.
-- **SEL** selects rows.
-- **MISC** opens song, artist, and album pages.
-- **LIST OPTS** starts one of your playlists or saves the queue as a new one.
-- **REM → Remove all** clears your queued songs when this computer is playing.
-
-Spotify does not let third-party apps remove one song from the queue. Notices
-from the main window scroll through the mini player's text display.
-
-## Equalizer
-
-**EQ** opens the ten-band equalizer. It affects playback on this computer, not
-other Spotify Connect devices. The preamp ranges from -12 to 12 dB. **AUTO**
-resets all bands. The same controls and presets are in Settings.
+Window recreation during audible playback remains in the
+[preview checklist](/applifast/testing.html), separately from deterministic
+layout and interaction checks.

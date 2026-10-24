@@ -1,0 +1,186 @@
+{
+  "SourceBase": "ab755f8f68ddf74bcc52fa18b17c6bb08c4227a8",
+  "WindowsSourceSHA256": "3537880bfdf78a10abdfe996c3aa60471813568a9228b09e4579d7529e13058b",
+  "PolicyRegressionBefore": {
+    "Attempt": 1,
+    "Exit": 1,
+    "Seconds": 0.549,
+    "Policy": {
+      "parentVisible": false,
+      "rendererVisible": true,
+      "targetLevel": 0,
+      "type": "memoryPolicy"
+    },
+    "Runtime": [],
+    "BinarySHA256": "ebde7104ccf509518dd81270acfcd66e98ad9ce6c520b8950334a99b8d7d15be",
+    "WindowsSourceSHA256": "e00c44b6ed8b433caf5009bc43ec17936846dd9d64df65a247d4d6c4b503dbb9",
+    "Scope": "Real WebView2 setup/property check; no Apple navigation, credentials, audio or account writes"
+  },
+  "ShowOrderRegressionBefore": {
+    "Exit": 1,
+    "Seconds": 0.355,
+    "Policies": [
+      {
+        "parentVisible": false,
+        "rendererVisible": true,
+        "targetLevel": 1,
+        "type": "memoryPolicy"
+      },
+      {
+        "parentVisible": true,
+        "rendererVisible": true,
+        "targetLevel": 1,
+        "type": "memoryPolicy"
+      }
+    ],
+    "Runtime": [
+      {
+        "pid": 38852,
+        "type": "runtime",
+        "version": "155.0.4283.62"
+      }
+    ],
+    "BinarySHA256": "9c78d3dbf8b879f85c150f85b4de5cc00dd0f0ecb3b737b0f8d2ba049192627e",
+    "WindowsSourceSHA256": "804727fce1fd15d51518d1243a3a6ab30c75b507ba33493d3ae16c46b62b6017",
+    "Scope": "Native hidden-active and repeated diagnostic show/hide property checks; no Apple navigation, credentials or audio"
+  },
+  "PolicyAfter": [
+    {
+      "Attempt": 1,
+      "Exit": 0,
+      "Seconds": 0.335,
+      "Policy": {
+        "parentVisible": false,
+        "rendererVisible": true,
+        "targetLevel": 1,
+        "type": "memoryPolicy"
+      },
+      "Runtime": [
+        {
+          "pid": 12076,
+          "type": "runtime",
+          "version": "155.0.4283.62"
+        }
+      ],
+      "BinarySHA256": "760e4f2dded3539ab96da23e422935a1e4a80bd8a0aa7a8b1a883ea03ad37a49",
+      "WindowsSourceSHA256": "3537880bfdf78a10abdfe996c3aa60471813568a9228b09e4579d7529e13058b",
+      "Scope": "Real WebView2 setup/property check; no Apple navigation, credentials, audio or account writes"
+    },
+    {
+      "Attempt": 2,
+      "Exit": 0,
+      "Seconds": 0.3,
+      "Policy": {
+        "parentVisible": false,
+        "rendererVisible": true,
+        "targetLevel": 1,
+        "type": "memoryPolicy"
+      },
+      "Runtime": [
+        {
+          "pid": 35268,
+          "type": "runtime",
+          "version": "155.0.4283.62"
+        }
+      ],
+      "BinarySHA256": "760e4f2dded3539ab96da23e422935a1e4a80bd8a0aa7a8b1a883ea03ad37a49",
+      "WindowsSourceSHA256": "3537880bfdf78a10abdfe996c3aa60471813568a9228b09e4579d7529e13058b",
+      "Scope": "Real WebView2 setup/property check; no Apple navigation, credentials, audio or account writes"
+    }
+  ],
+  "VisibilityCycleAfter": {
+    "Exit": 0,
+    "Seconds": 0.373,
+    "Policies": [
+      {
+        "parentVisible": false,
+        "rendererVisible": true,
+        "targetLevel": 1,
+        "type": "memoryPolicy"
+      },
+      {
+        "parentVisible": true,
+        "rendererVisible": true,
+        "targetLevel": 0,
+        "type": "memoryPolicy"
+      },
+      {
+        "parentVisible": false,
+        "rendererVisible": false,
+        "targetLevel": 1,
+        "type": "memoryPolicy"
+      },
+      {
+        "parentVisible": true,
+        "rendererVisible": true,
+        "targetLevel": 0,
+        "type": "memoryPolicy"
+      },
+      {
+        "parentVisible": false,
+        "rendererVisible": false,
+        "targetLevel": 1,
+        "type": "memoryPolicy"
+      }
+    ],
+    "Runtime": [
+      {
+        "pid": 31992,
+        "type": "runtime",
+        "version": "155.0.4283.62"
+      }
+    ],
+    "BinarySHA256": "760e4f2dded3539ab96da23e422935a1e4a80bd8a0aa7a8b1a883ea03ad37a49",
+    "WindowsSourceSHA256": "3537880bfdf78a10abdfe996c3aa60471813568a9228b09e4579d7529e13058b",
+    "Scope": "Native hidden-active and repeated diagnostic show/hide property checks; no Apple navigation, credentials or audio"
+  },
+  "ReadOnly": {
+    "SourceBase": "ab755f8f68ddf74bcc52fa18b17c6bb08c4227a8",
+    "TestSourceSHA256": "66d7e21535a43aa2143a95910614fc38a08798ea1e803f810114f9c5bb020ae3",
+    "ManifestSHA256": "bbf1ede6e850ebf676a54d4569c2d3a39acf1f5565656e7eb3bb906d982ca0b1",
+    "LockSHA256": "bec58341b0f568501d32503ace94cbb0f62b7ad6985c68b9599d60c6e26d3b2c",
+    "DependencyRevision": "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87",
+    "BinarySHA256": "a7191f02399c7bc4a1f2bdb9aa822b32dd2d1dcd20cc8d5ba57426de940e792b",
+    "Exit": 0,
+    "TimedOut": false,
+    "Seconds": 6.158,
+    "EmbeddedPageMatches": true,
+    "EmbeddedBridgeMatches": true,
+    "ModelsSourceSHA256": "5fb9068cb5c5defd6332bc16ce31ff051897906b92f18e0459505955e7a37275",
+    "ImagesSourceSHA256": "00c3e6a621d82b0fbdc212ad8ca2b17eadfcfaed5ddfeb54ff006c4c7f619655",
+    "WindowsBridgeSourceSHA256": "3537880bfdf78a10abdfe996c3aa60471813568a9228b09e4579d7529e13058b",
+    "BridgeSourceSHA256": "625fd438b62a54ab19e1f975e76999b4081a02112c21bf3a778645e9c49de164",
+    "HostPageSHA256": "1f7bb863179520457d3ec4d8cda76a743e830fcc9a394467a6809af29dfed9aa",
+    "Mode": "Read-only library, catalog and original library thumbnail plus public catalog artwork dimensions; fresh owned profile and image cache; protected local authorization; no audio, sign-out, popup or account mutation commands"
+  },
+  "Transport": {
+    "SourceBase": "ab755f8f68ddf74bcc52fa18b17c6bb08c4227a8",
+    "WindowsSourceSHA256": "3537880bfdf78a10abdfe996c3aa60471813568a9228b09e4579d7529e13058b",
+    "Test": "apple::tests::native_host_restores_library_plays_seeks_and_pauses",
+    "BinarySHA256": "a7191f02399c7bc4a1f2bdb9aa822b32dd2d1dcd20cc8d5ba57426de940e792b",
+    "Exit": 0,
+    "Seconds": 56.389,
+    "Cancellation": null,
+    "Scope": "Muted native playback, fresh owned profile, existing protected authorization; no playlist/favorite/account mutations; abort if normal player starts"
+  },
+  "FullTracks": {
+    "SourceBase": "ab755f8f68ddf74bcc52fa18b17c6bb08c4227a8",
+    "WindowsSourceSHA256": "3537880bfdf78a10abdfe996c3aa60471813568a9228b09e4579d7529e13058b",
+    "Test": "apple::tests::native_full_tracks_advance_manual_then_duplicate_context_occurrences",
+    "BinarySHA256": "a7191f02399c7bc4a1f2bdb9aa822b32dd2d1dcd20cc8d5ba57426de940e792b",
+    "Exit": 0,
+    "Seconds": 190.6,
+    "Cancellation": null,
+    "Scope": "Muted native playback, fresh owned profile, existing protected authorization; no playlist/favorite/account mutations; abort if normal player starts"
+  },
+  "CompleteTrackDurationsSeconds": [
+    90.013,
+    90.013
+  ],
+  "NaturalNextOccurrenceIndices": [
+    2,
+    1
+  ],
+  "Scope": "Windows x64 native host qualification only. Playback muted; protected existing authorization; fresh owned profiles; no explicit playlist/favorite/account mutation requests. No frontend interaction, audible-output, minimized resource, latency or gaming acceptance.",
+  "WholePlayerMemorySample": "Deferred by maintainer; 250 MiB aggregate-private gate remains open"
+}

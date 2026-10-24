@@ -1,0 +1,71 @@
+diff --git a/src/apple.rs b/src/apple.rs
+index d273509..bfa50ac 100644
+--- a/src/apple.rs
++++ b/src/apple.rs
+@@ -1150 +1150 @@ impl State {
+-            state.local.playback = Playback::Playing;
++            state.local.playback = Playback::Paused;
+diff --git a/src/demo.rs b/src/demo.rs
+index 0067c57..27ab07f 100644
+--- a/src/demo.rs
++++ b/src/demo.rs
+@@ -22,19 +22 @@ use crate::model::*;
+-fn image(seed: u32) -> Vec<Image> {
+-    vec![
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/640/640"),
+-            width: Some(640),
+-            height: Some(640),
+-        },
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/300/300"),
+-            width: Some(300),
+-            height: Some(300),
+-        },
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/64/64"),
+-            width: Some(64),
+-            height: Some(64),
+-        },
+-    ]
+-}
++fn image(_seed: u32) -> Vec<Image> { Vec::new() }
+diff --git a/src/entrypoint.rs b/src/entrypoint.rs
+index fe81a8e..f0a2418 100644
+--- a/src/entrypoint.rs
++++ b/src/entrypoint.rs
+@@ -913,0 +914 @@ fn demo_native_options(
++    options.viewport = options.viewport.with_active(false);
+@@ -1477,0 +1479,12 @@ impl Shell {
++            ctx.data_mut(|data| data.insert_temp(egui::Id::new("qa-transition-index"), request.index));
++            if request.index == 1 {
++                match std::env::var("APPLIFAST_QA_TRANSITION").unwrap_or_default().as_str() {
++                    "heart" | "mini-heart" => {
++                        if let Some(now) = self.app.now_playing() {
++                            spotifast::ui::motion::pop_heart(ctx, &now.uri);
++                        }
++                    }
++                    "page" => self.app.actions.push(spotifast::model::Action::Open(spotifast::model::Page::LikedSongs)),
++                    _ => {}
++                }
++            }
+@@ -1505,0 +1519 @@ impl eframe::App for Shell {
++        raw_input.events.retain(|event| matches!(event, egui::Event::Screenshot { .. }));
+diff --git a/src/ui/player_bar.rs b/src/ui/player_bar.rs
+index 07e287b..ff3ea42 100644
+--- a/src/ui/player_bar.rs
++++ b/src/ui/player_bar.rs
+@@ -446,0 +447,13 @@ fn crossfaded_cover(
++    #[cfg(feature = "demo")]
++    let url = if std::env::var("APPLIFAST_QA_TRANSITION").ok().as_deref() == Some("cover") {
++        let marker = id.with("qa-transition-images");
++        let first = "bytes://qa-transition-first.svg";
++        let second = "bytes://qa-transition-second.svg";
++        if !ctx.data(|data| data.get_temp::<bool>(marker)).unwrap_or(false) {
++            ctx.include_bytes(first, br##"<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#c83558"/><circle cx="32" cy="32" r="19" fill="#f4cbd5"/></svg>"##.as_slice());
++            ctx.include_bytes(second, br##"<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#285fa8"/><path d="M14 14h36v36H14z" fill="#b7d7f2"/></svg>"##.as_slice());
++            ctx.data_mut(|data| data.insert_temp(marker, true));
++        }
++        if ctx.data(|data| data.get_temp::<usize>(egui::Id::new("qa-transition-index"))).unwrap_or(0) == 0 {Some(first)} else {Some(second)}
++    } else {url};
++

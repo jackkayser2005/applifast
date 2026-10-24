@@ -774,6 +774,19 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 };
             }
             "queue" => app.show_queue_panel = true,
+            "queue-menu" => {
+                app.show_queue_panel = true;
+                app.demo_queue_menu = true;
+            }
+            "song-menu" => app.demo_play_next_menu = Some("song"),
+            "selection-menu" => app.demo_play_next_menu = Some("selection"),
+            "album-menu" => app.demo_play_next_menu = Some("album"),
+            // The first cover card as under the pointer.
+            "card-hover" => crate::ui::motion::force_hover("card"),
+            "ambient-pulse" => app.settings.ambient_pulse = true,
+            "reduce-motion" => app.settings.reduce_motion = true,
+            // The seek bar, the first slider drawn, as under the pointer.
+            "seek-hover" => crate::ui::motion::force_hover("slider"),
             "playing-next" => {
                 app.show_queue_panel = true;
                 if let Loadable::Loaded(queue) = &app.queue {
@@ -1017,6 +1030,16 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 app.settings.eq_bands_db = crate::eq::PRESETS[13].bands_db;
             }
             "presets" => app.winamp.open_presets = true,
+            "mini-menu" => app.winamp.demo_options_open = true,
+            "mini-add-menu" | "mini-rem-menu" => {
+                app.settings.playlist_open = true;
+                app.winamp.demo_playlist_menu = Some(if surface == "mini-add-menu" {
+                    "add"
+                } else {
+                    "rem"
+                });
+                app.winamp.playlist_selection.extend([0, 1, 3]);
+            }
             "art" => app.settings.art_expanded = true,
             "folders" => {
                 use crate::player::RootlistEntry;
@@ -1223,6 +1246,254 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
     }
 }
 
+/// Apple write states use the real action/response path with sample resources only.
+#[cfg(feature = "demo")]
+pub fn apply_apple_flags(app: &mut App, show: Option<&str>) {
+    if app.show_lyrics_panel || app.lyrics_fullscreen.is_some() {
+        // The legacy flags run before the demo adopts Apple song identities.
+        app.lyrics_uri = app.now_playing().map(|now| now.uri);
+    }
+    for flag in show.unwrap_or("").split(',').map(str::trim) {
+        if flag == "apple-token-pending" {
+            if let Some(apple) = &mut app.apple {
+                apple.begin_token_import();
+            }
+            continue;
+        }
+        if let Some(status) = match flag {
+            "apple-api-developer" => Some(401),
+            "apple-api-account" => Some(403),
+            "apple-api-limit" => Some(429),
+            "apple-api-service" => Some(503),
+            _ => None,
+        } {
+            if let Some(apple) = &mut app.apple {
+                apple.songs.truncate(2);
+                let request = apple.refresh_library();
+                apple.event(apple.generation, &serde_json::json!({"type":"library","session":apple.session,
+                    "id":request["id"],"httpStatus":status,"error":"Fixed failure","items":[],"next":null}));
+            }
+            app.sync_apple_library();
+            app.open(Page::LikedSongs);
+            continue;
+        }
+        if flag == "apple-search-empty" {
+            app.search = crate::model::SearchState::default();
+            app.settings.search_history.clear();
+            app.open(Page::Search);
+            continue;
+        }
+        if matches!(
+            flag,
+            "apple-search-pages" | "apple-search-error" | "apple-search-loading"
+        ) {
+            let songs = app
+                .apple
+                .as_ref()
+                .unwrap()
+                .songs
+                .iter()
+                .take(3)
+                .map(crate::apple::Song::track)
+                .collect();
+            app.search.results = Loadable::Loaded(SearchResults {
+                tracks: Some(page(songs)),
+                ..Default::default()
+            });
+            app.search.filter = SearchFilter::Songs;
+            app.search.catalogue_pending = flag == "apple-search-loading";
+            app.search.error =
+                (flag == "apple-search-error").then(|| "Connection interrupted".into());
+            app.apple.as_mut().unwrap().next_reads.insert(
+                crate::apple::Read::SearchPage {
+                    serial: app.search.serial,
+                    library: true,
+                    filter: SearchFilter::Songs,
+                },
+                (
+                    "/v1/me/library/search?term=Bonobo&types=library-songs&offset=3".into(),
+                    3,
+                ),
+            );
+            app.open(Page::Search);
+            continue;
+        }
+        if flag == "favorites-page" {
+            app.open(Page::Favorites);
+            continue;
+        }
+        if flag == "favorites-shelf-hidden" {
+            app.settings.favorite_shelf_count = 0;
+            continue;
+        }
+        if matches!(
+            flag,
+            "apple-home-empty" | "apple-home-error" | "apple-home-loading"
+        ) {
+            if let Some(apple) = &mut app.apple {
+                for shelf in crate::apple::HomeShelf::ALL {
+                    apple.home.insert(
+                        shelf,
+                        match flag {
+                            "apple-home-empty" => Loadable::Loaded(Vec::new()),
+                            "apple-home-error" => Loadable::Failed("Connection interrupted".into()),
+                            _ => Loadable::Loading,
+                        },
+                    );
+                }
+            }
+            continue;
+        }
+        if matches!(
+            flag,
+            "favorite-pending" | "favorite-confirmed" | "favorite-error"
+        ) {
+            if let Some(apple) = &mut app.apple {
+                let uris = apple
+                    .songs
+                    .iter()
+                    .take(2)
+                    .map(crate::apple::Song::uri)
+                    .collect::<Vec<_>>();
+                if let Ok(Some(command)) = apple.favorite_songs(&uris)
+                    && flag != "favorite-pending"
+                {
+                    let data = if flag == "favorite-confirmed" {
+                        command["items"].as_array().unwrap().iter().map(|item| serde_json::json!({
+                                "id":item["id"], "type":if item["kind"] == "library" { "library-songs" } else { "songs" },
+                                "attributes":{"inFavorites":true}})).collect::<Vec<_>>()
+                    } else {
+                        Vec::new()
+                    };
+                    app.apple_response(&serde_json::json!({"type":"response","session":1,"id":command["id"],"data":{"data":data}}));
+                }
+            }
+            continue;
+        }
+        if flag == "favorites" || flag == "favorites-empty" {
+            if let Some(apple) = &mut app.apple {
+                if flag == "favorites-empty" {
+                    for song in &mut apple.songs {
+                        song.in_favorites = None;
+                    }
+                    apple.next = Some("/v1/me/library/songs?offset=100".into());
+                    app.library.liked.next_offset = Some(apple.songs.len() as u32);
+                }
+                app.apply(Action::AppleShowFavorites(true), &egui::Context::default());
+                app.open(Page::LikedSongs);
+            }
+            continue;
+        }
+        if !matches!(
+            flag,
+            "create"
+                | "playlist-saving"
+                | "playlist-created"
+                | "playlist-error"
+                | "playlist-appending"
+                | "playlist-appended"
+                | "playlist-append-error"
+                | "playlist-duplicates"
+        ) {
+            continue;
+        }
+        let Some(apple) = &app.apple else {
+            return;
+        };
+        let uris = apple
+            .songs
+            .iter()
+            .take(1)
+            .map(crate::apple::Song::uri)
+            .collect::<Vec<_>>();
+        if flag == "create" {
+            app.dialog = Some(Dialog::CreatePlaylist {
+                name: "Autumn drives".into(),
+                public: false,
+                add_uris: uris,
+            });
+            continue;
+        }
+        app.apply(
+            Action::CreatePlaylist {
+                name: "Autumn drives".into(),
+                public: false,
+                add_uris: uris,
+            },
+            &egui::Context::default(),
+        );
+        let Some(id) = app
+            .apple
+            .as_ref()
+            .and_then(|apple| apple.playlist_creates.keys().next().copied())
+        else {
+            continue;
+        };
+        if flag == "playlist-created"
+            || flag.starts_with("playlist-append")
+            || flag == "playlist-duplicates"
+        {
+            app.apple_response(&serde_json::json!({"id":id,"data":{"data":[{"id":"p.demoCreated","type":"library-playlists","attributes":{"name":"Autumn drives","canEdit":true,"isPublic":false}}]}}));
+            if flag != "playlist-created" {
+                let song = app.apple.as_ref().unwrap().songs[0].clone();
+                let resource = serde_json::json!({"id":song.item.id,"type":"library-songs","attributes":{
+                    "name":song.title,"artistName":song.artist,"albumName":song.album,"durationInMillis":song.duration_ms,
+                    "playParams":song.item.play_params,"artwork":{"url":song.artwork}
+                }});
+                let read = app.apple.as_mut().unwrap().read(
+                    crate::apple::Read::PlaylistTracks("library.p.demoCreated".into()),
+                    "/v1/me/library/playlists/p.demoCreated/tracks?limit=100".into(),
+                    0,
+                );
+                app.apple_response(
+                    &serde_json::json!({"id":read["id"],"data":{"data":[resource.clone()]}}),
+                );
+                let items = vec![PlayableItem::Track(song.track()); 2];
+                let action = if flag == "playlist-duplicates" {
+                    Action::AddToPlaylist {
+                        playlist_id: "library.p.demoCreated".into(),
+                        playlist_name: "Autumn drives".into(),
+                        items,
+                    }
+                } else {
+                    Action::ConfirmAddToPlaylist {
+                        playlist_id: "library.p.demoCreated".into(),
+                        playlist_name: "Autumn drives".into(),
+                        items,
+                        position: None,
+                    }
+                };
+                app.apply(action, &egui::Context::default());
+                if flag == "playlist-append-error" || flag == "playlist-appended" {
+                    let request = *app
+                        .apple
+                        .as_ref()
+                        .unwrap()
+                        .playlist_appends
+                        .keys()
+                        .next()
+                        .unwrap();
+                    app.apple_response(&if flag == "playlist-append-error" {
+                        serde_json::json!({"id":request,"error":"Example connection failure"})
+                    } else {
+                        serde_json::json!({"id":request,"data":null})
+                    });
+                    if flag == "playlist-appended" {
+                        let read = app.apple.as_mut().unwrap().read(
+                            crate::apple::Read::PlaylistTracks("library.p.demoCreated".into()),
+                            "/v1/me/library/playlists/p.demoCreated/tracks?limit=100".into(),
+                            0,
+                        );
+                        app.apple_response(&serde_json::json!({"id":read["id"],"data":{"data":[resource.clone(), resource.clone(), resource]}}));
+                    }
+                }
+            }
+        } else if flag == "playlist-error" {
+            app.apple_response(&serde_json::json!({"id":id,"error":"Example connection failure"}));
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1257,6 +1528,1361 @@ mod tests {
         // These frames never advance the clock or take pictures.
         app.reveal_theme_changes = false;
         (ctx, app)
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_lyrics_render_wide_and_narrow_and_seek_from_a_timed_line() {
+        for width in [1100.0, 760.0] {
+            let (ctx, mut app) = accessible_app(&format!("apple-lyrics-{width}"));
+            app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+            app.local = app.apple.as_ref().unwrap().local.clone();
+            app.local.position_ms = 41_000;
+            app.remote = None;
+            apply_flags(&mut app, None, Some("lyrics-fullscreen-view,reduce-motion"));
+            apply_apple_flags(&mut app, Some("lyrics-fullscreen-view"));
+            let draw = |app: &mut App, events: Vec<egui::Event>| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(width, 760.0),
+                        )),
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| crate::ui::show(app, ui),
+                );
+                output.textures_delta.clear();
+                menu_text(&output)
+            };
+            draw(&mut app, vec![]);
+            let text = draw(&mut app, vec![]);
+            assert!(text.iter().any(|(label, _)| label == "Rosewood"));
+            let line = text
+                .iter()
+                .find(|(label, _)| label == "Streetlights blinking down the river road")
+                .expect("the first timed line is visible")
+                .1;
+            draw(
+                &mut app,
+                pointer_click(line.center(), egui::PointerButton::Primary),
+            );
+            assert!(
+                app.actions
+                    .iter()
+                    .any(|action| matches!(action, Action::Seek(40000)))
+            );
+            assert!(
+                app.actions
+                    .iter()
+                    .any(|action| matches!(action, Action::FollowLyrics))
+            );
+            app.lyrics = Loadable::Failed("Connection interrupted".into());
+            let text = draw(&mut app, vec![]);
+            assert!(text.iter().any(|(label, _)| label == "Try again"));
+            app.backend.shutdown();
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_home_cards_play_and_empty_shelves_do_not_spin_forever() {
+        let (ctx, mut app) = accessible_app("apple-home-cards");
+        let mut state = crate::apple::State::demo(&app.library.liked.items);
+        let uri = state.songs[0].uri();
+        let title = state.songs[0].title.clone();
+        for shelf in crate::apple::HomeShelf::ALL {
+            state.home.insert(shelf, Loadable::Loaded(Vec::new()));
+        }
+        state.home.insert(
+            crate::apple::HomeShelf::Recent,
+            Loadable::Loaded(vec![crate::apple::HomeCard {
+                name: title.clone(),
+                subtitle: "Sample artist".into(),
+                image: None,
+                uri: uri.clone(),
+                page: None,
+                playable: true,
+            }]),
+        );
+        app.apple = Some(state);
+        let draw = crate::ui::home::show;
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(
+            text.iter()
+                .any(|(text, _)| text == "No items in this shelf yet.")
+        );
+        assert!(
+            !text
+                .iter()
+                .any(|(text, _)| text == "Loading…" || text == "Your top artists")
+        );
+        let position = text
+            .iter()
+            .find(|(text, _)| text == &title)
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(position, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(app.actions.iter().any(
+            |action| matches!(action, Action::PlayUris { uris, index:0 } if uris == std::slice::from_ref(&uri))
+        ));
+        apply_apple_flags(&mut app, Some("apple-home-error"));
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(
+            text.iter()
+                .any(|(text, _)| text == "Connection interrupted")
+        );
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_favorite_hearts_offer_accessible_add_buttons_and_read_only_existing_favorites() {
+        use egui::accesskit::Role;
+        let (ctx, mut app) = accessible_app("apple-favorite-hearts");
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        for song in &mut apple.songs {
+            song.in_favorites = Some(false);
+        }
+        apple.songs[0].in_favorites = Some(true);
+        apple.songs[1].in_favorites = None;
+        app.library.liked.items = apple
+            .songs
+            .iter()
+            .map(|song| SavedTrack {
+                added_at: None,
+                track: song.track(),
+            })
+            .collect();
+        app.local = apple.local.clone();
+        app.apple = Some(apple);
+        app.remote = None;
+        app.open(Page::LikedSongs);
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let hearts = tree
+            .nodes
+            .iter()
+            .filter(|(_, node)| node.label() == Some("Favorites") && node.role() == Role::Image)
+            .collect::<Vec<_>>();
+        assert_eq!(hearts.len(), 2, "one song-row heart and one player heart");
+        for (_, heart) in hearts {
+            assert!(!heart.supports_action(egui::accesskit::Action::Click));
+        }
+        assert!(!tree.nodes.iter().any(|(_, node)| matches!(
+            node.label(),
+            Some("Save to Liked Songs" | "Remove from Liked Songs")
+        )));
+        app.apple.as_mut().unwrap().songs[0].in_favorites = None;
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .any(|(_, node)| node.label() == Some("Favorites") && node.role() == Role::Image)
+        );
+        let button = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| {
+                node.label() == Some("Add to Favorites")
+                    && node.role() == Role::Button
+                    && node.bounds().is_some_and(|bounds| bounds.y0 > 700.0)
+            })
+            .unwrap();
+        assert!(button.1.supports_action(egui::accesskit::Action::Click));
+        let uri = app.now_playing().unwrap().uri;
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(
+                button.0,
+                egui::accesskit::Action::Click,
+                None,
+            )],
+        );
+        assert_eq!(app.is_saved(&uri), Some(true));
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_filled_hearts_keep_the_pop_after_optimistic_add() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        fn images(shape: &egui::Shape, found: &mut Vec<egui::Rect>) {
+            match shape {
+                egui::Shape::Mesh(_) => found.push(shape.visual_bounding_rect()),
+                egui::Shape::Rect(rect) if rect.brush.is_some() => found.push(rect.rect),
+                egui::Shape::Vec(shapes) => {
+                    for shape in shapes {
+                        images(shape, found);
+                    }
+                }
+                _ => {}
+            }
+        }
+        let check_hearts = |tree: &egui::accesskit::TreeUpdate,
+                            painted: &[egui::Rect],
+                            enlarged: bool| {
+            let hearts = tree
+                .nodes
+                .iter()
+                .filter(|(_, node)| node.label() == Some("Favorites") && node.role() == Role::Image)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                hearts.len(),
+                2,
+                "the row and player switch to filled read-only hearts"
+            );
+            for (_, heart) in hearts {
+                let bounds = heart.bounds().unwrap();
+                let area = egui::Rect::from_min_max(
+                    egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                    egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                );
+                let icon = painted
+                    .iter()
+                    .find(|rect| area.contains_rect(**rect))
+                    .expect("painted heart image within its accessibility cell");
+                let base = if bounds.y0 > 700.0 { 17.0 } else { 16.0 };
+                if enlarged {
+                    assert!(
+                        icon.width() > base * 1.2,
+                        "the filled heart must keep the pop: {icon:?}"
+                    );
+                } else {
+                    assert!(
+                        (icon.width() - base).abs() < 0.01,
+                        "the heart must settle to its normal size: {icon:?}"
+                    );
+                }
+                assert!(!heart.supports_action(AccessibleAction::Click));
+            }
+        };
+        for light in [false, true] {
+            for width in [760.0, 1100.0] {
+                for source in ["row", "player", "shortcut"] {
+                    let (ctx, mut app) =
+                        accessible_app(&format!("apple-heart-pop-{light}-{width}-{source}"));
+                    if light {
+                        app.palette = crate::theme::Palette::light();
+                    }
+                    let mut apple = crate::apple::State::demo(&app.library.liked.items);
+                    for song in &mut apple.songs {
+                        song.in_favorites = Some(false);
+                    }
+                    app.library.liked.items = apple
+                        .songs
+                        .iter()
+                        .map(|song| SavedTrack {
+                            added_at: None,
+                            track: song.track(),
+                        })
+                        .collect();
+                    app.local = apple.local.clone();
+                    app.apple = Some(apple);
+                    app.remote = None;
+                    app.open(Page::LikedSongs);
+                    let uri = app.now_playing().unwrap().uri;
+                    let frame = |app: &mut App, time: f64, events: Vec<egui::Event>| {
+                        let mut output = ctx.run_ui(
+                            egui::RawInput {
+                                time: Some(time),
+                                screen_rect: Some(egui::Rect::from_min_size(
+                                    egui::Pos2::ZERO,
+                                    egui::vec2(width, 800.0),
+                                )),
+                                events,
+                                ..Default::default()
+                            },
+                            |ui| app.frame_ui(ui),
+                        );
+                        output.textures_delta.clear();
+                        let mut painted = Vec::new();
+                        for shape in &output.shapes {
+                            images(&shape.shape, &mut painted);
+                        }
+                        (output.platform_output.accesskit_update.unwrap(), painted)
+                    };
+                    frame(&mut app, 0.0, vec![]);
+                    let (tree, _) = frame(&mut app, 0.0, vec![]);
+                    let event = if source == "shortcut" {
+                        egui::Event::Key {
+                            key: egui::Key::B,
+                            physical_key: None,
+                            pressed: true,
+                            repeat: false,
+                            modifiers: egui::Modifiers::NONE,
+                        }
+                    } else {
+                        let button = tree
+                            .nodes
+                            .iter()
+                            .filter(|(_, node)| {
+                                node.label() == Some("Add to Favorites")
+                                    && node.role() == Role::Button
+                            })
+                            .filter(|(_, node)| {
+                                node.bounds().is_some_and(|rect| {
+                                    if source == "player" {
+                                        rect.y0 > 700.0 && rect.x0 < width as f64 / 2.0
+                                    } else {
+                                        rect.y0 < 700.0 && rect.x0 > width as f64 / 2.0
+                                    }
+                                })
+                            })
+                            .min_by(|(_, a), (_, b)| {
+                                a.bounds().unwrap().y0.total_cmp(&b.bounds().unwrap().y0)
+                            })
+                            .expect("first song or player favorite control")
+                            .0;
+                        accessible_action(button, AccessibleAction::Click, None)
+                    };
+                    frame(&mut app, 0.01, vec![event]);
+                    let (tree, painted) = frame(&mut app, 0.08, vec![]);
+                    check_hearts(&tree, &painted, true);
+                    app.settings.reduce_motion = true;
+                    let (tree, painted) = frame(&mut app, 0.09, vec![]);
+                    check_hearts(&tree, &painted, false);
+                    app.settings.reduce_motion = false;
+                    let (tree, painted) = frame(&mut app, 0.1, vec![]);
+                    check_hearts(&tree, &painted, false);
+                    let (tree, painted) = frame(&mut app, 0.3, vec![]);
+                    check_hearts(&tree, &painted, false);
+                    assert_eq!(app.is_saved(&uri), Some(true));
+                    app.backend.shutdown();
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_mini_player_favorites_are_accessible_at_each_scale_and_share_rollback() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        for scale in 1..=4 {
+            let (ctx, mut app) = accessible_app(&format!("apple-mini-favorite-{scale}"));
+            app.backend.set_offline(true);
+            let mut apple = crate::apple::State::demo(&app.library.liked.items);
+            apple.songs[0].in_favorites = None;
+            app.local = apple.local.clone();
+            app.apple = Some(apple);
+            app.remote = None;
+            app.settings.winamp_window = true;
+            app.settings.skin_scale = Some(scale);
+            let uri = app.now_playing().unwrap().uri;
+            accessible_frame(&ctx, &mut app, vec![]);
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let button = accessible_node(&tree, "Add to Favorites", Role::Button);
+            assert!(
+                tree.nodes
+                    .iter()
+                    .find(|(id, _)| *id == button)
+                    .unwrap()
+                    .1
+                    .supports_action(AccessibleAction::Click)
+            );
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(button, AccessibleAction::Click, None)],
+            );
+            assert_eq!(app.is_saved(&uri), Some(true));
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let image = accessible_node(&tree, "Favorites", Role::Image);
+            assert!(
+                !tree
+                    .nodes
+                    .iter()
+                    .find(|(id, _)| *id == image)
+                    .unwrap()
+                    .1
+                    .supports_action(AccessibleAction::Click)
+            );
+            assert!(
+                !tree
+                    .nodes
+                    .iter()
+                    .any(|(_, node)| node.label() == Some("Add to Favorites"))
+            );
+            app.apple_response(
+                &serde_json::json!({"type":"response","session":1,"id":1,"error":"unconfirmed"}),
+            );
+            assert_eq!(app.is_saved(&uri), None);
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            accessible_node(&tree, "Add to Favorites", Role::Button);
+            app.backend.shutdown();
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_mini_favorite_motion_preserves_the_skin_cell_and_reduced_motion() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        fn images(shape: &egui::Shape, found: &mut Vec<egui::Rect>) {
+            match shape {
+                egui::Shape::Mesh(_) => found.push(shape.visual_bounding_rect()),
+                egui::Shape::Rect(rect) if rect.brush.is_some() => found.push(rect.rect),
+                egui::Shape::Vec(shapes) => {
+                    for shape in shapes {
+                        images(shape, found);
+                    }
+                }
+                _ => {}
+            }
+        }
+        for light in [false, true] {
+            for scale in 1..=4 {
+                for source in ["button", "shortcut", "menu"] {
+                    for reduced in [false, true] {
+                        let (ctx, mut app) = accessible_app(&format!(
+                            "mini-heart-motion-{light}-{scale}-{source}-{reduced}"
+                        ));
+                        app.backend.set_offline(true);
+                        if light {
+                            app.palette = crate::theme::Palette::light();
+                        }
+                        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+                        apple.songs[0].in_favorites = None;
+                        app.local = apple.local.clone();
+                        app.apple = Some(apple);
+                        app.remote = None;
+                        app.settings.winamp_window = true;
+                        app.settings.skin_scale = Some(scale);
+                        app.settings.reduce_motion = reduced;
+                        let uri = app.now_playing().unwrap().uri;
+                        let frame = |app: &mut App, time: f64, events: Vec<egui::Event>| {
+                            let mut output = ctx.run_ui(
+                                egui::RawInput {
+                                    time: Some(time),
+                                    screen_rect: Some(egui::Rect::from_min_size(
+                                        egui::Pos2::ZERO,
+                                        egui::vec2(1280.0, 800.0),
+                                    )),
+                                    events,
+                                    ..Default::default()
+                                },
+                                |ui| app.frame_ui(ui),
+                            );
+                            output.textures_delta.clear();
+                            let mut painted = Vec::new();
+                            for shape in &output.shapes {
+                                images(&shape.shape, &mut painted);
+                            }
+                            (output.platform_output.accesskit_update.unwrap(), painted)
+                        };
+                        frame(&mut app, 0.0, vec![]);
+                        let (tree, _) = frame(&mut app, 0.0, vec![]);
+                        let button = accessible_node(&tree, "Add to Favorites", Role::Button);
+                        let bounds = tree
+                            .nodes
+                            .iter()
+                            .find(|(id, _)| *id == button)
+                            .unwrap()
+                            .1
+                            .bounds()
+                            .unwrap();
+                        let area = egui::Rect::from_min_max(
+                            egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                            egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                        );
+                        let event = match source {
+                            "shortcut" => keyboard(egui::Key::B, egui::Modifiers::NONE),
+                            "menu" => {
+                                app.winamp.demo_options_open = true;
+                                frame(&mut app, 0.001, vec![]);
+                                let (menu, _) = frame(&mut app, 0.002, vec![]);
+                                let button = menu
+                                    .nodes
+                                    .iter()
+                                    .find(|(_, node)| {
+                                        node.label() == Some("Add to Favorites")
+                                            && node.role() == Role::Button
+                                            && node.bounds() != Some(bounds)
+                                    })
+                                    .expect("the options menu's favorite action")
+                                    .0;
+                                accessible_action(button, AccessibleAction::Click, None)
+                            }
+                            _ => accessible_action(button, AccessibleAction::Click, None),
+                        };
+                        frame(&mut app, 0.01, vec![event]);
+                        assert_eq!(app.is_saved(&uri), Some(true), "{source}");
+                        app.winamp.demo_options_open = false;
+                        let check = |tree: &egui::accesskit::TreeUpdate,
+                                     painted: &[egui::Rect],
+                                     enlarged: bool| {
+                            let image = accessible_node(tree, "Favorites", Role::Image);
+                            let image = &tree.nodes.iter().find(|(id, _)| *id == image).unwrap().1;
+                            assert_eq!(image.bounds(), Some(bounds), "fixed skin cell");
+                            assert!(!image.supports_action(AccessibleAction::Click));
+                            let icon = painted
+                                .iter()
+                                .find(|rect| area.contains_rect(**rect))
+                                .expect("painted heart inside its fixed skin cell");
+                            let base = 9.0 * scale as f32 / ctx.pixels_per_point();
+                            if enlarged {
+                                assert!(icon.width() > base * 1.2, "{source}: {icon:?}");
+                            } else {
+                                assert!((icon.width() - base).abs() < 0.01, "{source}: {icon:?}");
+                            }
+                        };
+                        let (tree, painted) = frame(&mut app, 0.08, vec![]);
+                        check(&tree, &painted, !reduced);
+                        app.settings.reduce_motion = true;
+                        let (tree, painted) = frame(&mut app, 0.09, vec![]);
+                        check(&tree, &painted, false);
+                        app.settings.reduce_motion = false;
+                        let (tree, painted) = frame(&mut app, 0.1, vec![]);
+                        check(&tree, &painted, false);
+                        let (tree, painted) = frame(&mut app, 0.3, vec![]);
+                        check(&tree, &painted, false);
+                        app.apple_response(&serde_json::json!({
+                            "type":"response","session":1,"id":1,"error":"unconfirmed"
+                        }));
+                        assert_eq!(app.is_saved(&uri), None);
+                        let (tree, _) = frame(&mut app, 0.4, vec![]);
+                        accessible_node(&tree, "Add to Favorites", Role::Button);
+                        app.backend.shutdown();
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_queue_removal_rejects_stale_actions_and_restores_exact_occurrences() {
+        let (ctx, mut app) = accessible_app("apple-queue-removal");
+        app.backend.set_offline(true);
+        assert!(app.queue_removal(vec![0]).is_none());
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        let uri = apple.songs[0].uri();
+        apple.account_tag = Some("a".repeat(64));
+        apple.cache_checked = true;
+        apple.storefront = "us".into();
+        apple.add_uris(
+            &[uri.clone(), uri.clone()],
+            0,
+            std::time::Duration::ZERO,
+            false,
+        );
+        app.apple = Some(apple);
+        app.apply(Action::SetRepeat(crate::player::RepeatMode::Context), &ctx);
+        assert!(app.queue_removal(vec![]).is_none());
+        assert!(app.queue_removal(vec![usize::MAX]).is_none());
+        for epoch in 0..3 {
+            let stale = app.queue_removal(vec![0]).unwrap();
+            let apple = app.apple.as_mut().unwrap();
+            match epoch {
+                0 => apple.generation += 1,
+                1 => apple.session += 1,
+                _ => {
+                    apple.intent(serde_json::json!({"type":"pause"}));
+                }
+            }
+            let before = apple.queue_command();
+            app.apply(stale, &ctx);
+            assert_eq!(app.apple.as_ref().unwrap().queue_command(), before);
+        }
+        let remove = app.queue_removal(vec![0]).unwrap();
+        let generation = app.apple.as_ref().unwrap().queue_generation();
+        app.winamp.playlist_selection.extend([0, 1, 2]);
+        app.apply(remove, &ctx);
+        let apple = app.apple.as_ref().unwrap();
+        assert_eq!(apple.order.manual_count, 1);
+        assert_eq!(apple.queue[apple.index.unwrap()].uri(), uri);
+        assert_eq!(app.queue.get().unwrap().queue[0].uri(), uri);
+        assert!(app.winamp.playlist_selection.is_empty());
+        let before = apple.queue_command();
+        app.apply(
+            Action::RemoveFromQueue {
+                indices: vec![0],
+                generation,
+            },
+            &ctx,
+        );
+        assert_eq!(app.apple.as_ref().unwrap().queue_command(), before);
+        let snapshot = app.apple.as_mut().unwrap().cache_snapshot(true).unwrap();
+        let mut restored = crate::apple::State::default();
+        restored.authorized = true;
+        restored.account_tag = app.apple.as_ref().unwrap().account_tag.clone();
+        restored.storefront = app.apple.as_ref().unwrap().storefront.clone();
+        restored.restore_cache(Some(snapshot)).unwrap();
+        assert_eq!(restored.queue_command(), before);
+        app.apple.as_mut().unwrap().authorized = false;
+        assert!(app.queue_removal(vec![0]).is_none());
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_api_recovery_is_visible_and_retry_preserves_cached_music() {
+        fn draw(app: &mut App, ui: &mut egui::Ui) {
+            crate::ui::collection::liked(app, ui);
+        }
+        for flag in [
+            "apple-api-developer",
+            "apple-api-account",
+            "apple-api-limit",
+            "apple-api-service",
+        ] {
+            let (ctx, mut app) = accessible_app(flag);
+            app.backend.set_offline(true);
+            app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+            apply_apple_flags(&mut app, Some(flag));
+            let expected = app.apple.as_ref().unwrap().library_error.clone().unwrap();
+            assert_eq!(app.library.liked.error.as_deref(), Some(expected.as_str()));
+            let queue = app.apple.as_ref().unwrap().queue_command();
+            view_frame(&ctx, &mut app, vec![], draw);
+            let text = view_frame(&ctx, &mut app, vec![], draw);
+            assert!(text.iter().any(|(label, _)| label == &expected));
+            let retry = text
+                .iter()
+                .find(|(label, _)| label == "Retry")
+                .unwrap()
+                .1
+                .center();
+            app.actions.clear();
+            view_frame(
+                &ctx,
+                &mut app,
+                pointer_click(retry, egui::PointerButton::Primary),
+                draw,
+            );
+            assert!(matches!(
+                app.actions.as_slice(),
+                [Action::Reload(Page::LikedSongs)]
+            ));
+            let action = app.actions.pop().unwrap();
+            app.apply(action, &ctx);
+            assert!(app.apple.as_ref().unwrap().library_error.is_none());
+            assert!(app.library.liked.error.is_none());
+            assert!(app.library.liked.loading);
+            app.sync_apple_library();
+            assert!(app.library.liked.error.is_none());
+            assert_eq!(app.library.liked.items.len(), 2);
+            assert_eq!(app.apple.as_ref().unwrap().queue_command(), queue);
+            app.apple.as_mut().unwrap().error = Some("Playback failed".into());
+            app.sync_apple_library();
+            assert!(app.library.liked.error.is_none());
+            app.backend.shutdown();
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_api_recovery_and_retry_fit_in_a_narrow_error_row() {
+        fn draw(app: &mut App, ui: &mut egui::Ui) {
+            ui.set_width(300.0);
+            let message =
+                applifast_playback_probe::protocol::api_failure_message(Some(403), "unused");
+            crate::ui::widgets::error_row(ui, app, message, Some(Page::LikedSongs));
+        }
+        let (ctx, mut app) = accessible_app("apple-api-recovery-narrow");
+        app.backend.set_offline(true);
+        app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let message = text
+            .iter()
+            .find(|(label, _)| label.contains("account authorization"))
+            .unwrap();
+        let retry = text.iter().find(|(label, _)| label == "Retry").unwrap();
+        assert!(
+            message.1.height() > 20.0,
+            "Recovery guidance must wrap instead of truncating"
+        );
+        assert!(message.1.right() <= 320.0);
+        assert!(retry.1.right() <= 320.0);
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_play_next_menus_dispatch_songs_selections_and_albums() {
+        fn song(app: &mut App, ui: &mut egui::Ui) {
+            let track = app
+                .apple
+                .as_ref()
+                .map(|apple| apple.songs[0].track())
+                .unwrap_or_else(|| app.library.liked.items[0].track.clone());
+            crate::ui::widgets::item_menu(ui, app, &PlayableItem::Track(track), None, None);
+        }
+        fn selection(app: &mut App, ui: &mut egui::Ui) {
+            let tracks = app
+                .apple
+                .as_ref()
+                .map(|apple| {
+                    apple
+                        .songs
+                        .iter()
+                        .take(2)
+                        .map(crate::apple::Song::track)
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_else(|| {
+                    app.library.liked.items[..2]
+                        .iter()
+                        .map(|saved| saved.track.clone())
+                        .collect()
+                });
+            let items = [0, 1, 0].map(|index| PlayableItem::Track(tracks[index].clone()));
+            crate::ui::widgets::picked_menu(ui, app, &items, None);
+        }
+        fn album(app: &mut App, ui: &mut egui::Ui) {
+            crate::ui::widgets::context_menu_items(
+                ui,
+                app,
+                "apple:album:library.l.album",
+                "Album",
+                None,
+            );
+        }
+        for (index, draw) in [song as fn(&mut App, &mut egui::Ui), selection, album]
+            .into_iter()
+            .enumerate()
+        {
+            let (ctx, mut app) = accessible_app(&format!("apple-play-next-menu-{index}"));
+            app.backend.set_offline(true);
+            app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+            view_frame(&ctx, &mut app, vec![], draw);
+            let text = view_frame(&ctx, &mut app, vec![], draw);
+            let next = text
+                .iter()
+                .find(|(label, _)| label == "Play next")
+                .unwrap()
+                .1
+                .center();
+            app.actions.clear();
+            view_frame(
+                &ctx,
+                &mut app,
+                pointer_click(next, egui::PointerButton::Primary),
+                draw,
+            );
+            match app.actions.as_slice() {
+                [Action::PlayNext { uri, .. }] => assert_eq!(
+                    crate::util::uri_kind(uri),
+                    Some(if index == 0 { "track" } else { "album" })
+                ),
+                [Action::InsertInQueue { items, position: 0 }] => {
+                    assert_eq!(index, 1);
+                    assert_eq!(items.len(), 3);
+                    assert_eq!(items[0].uri(), items[2].uri());
+                    assert_ne!(items[0].uri(), items[1].uri());
+                }
+                _ => panic!("Play next did not dispatch the selected rows"),
+            }
+            app.apple = None;
+            let text = view_frame(&ctx, &mut app, vec![], draw);
+            assert!(!text.iter().any(|(label, _)| label == "Play next"));
+            app.backend.shutdown();
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_queue_row_menu_removes_only_the_selected_occurrence() {
+        fn draw(app: &mut App, ui: &mut egui::Ui) {
+            let apple = app.apple.as_ref().unwrap();
+            let item = PlayableItem::Track(apple.queue[apple.order.upcoming[1]].track());
+            crate::ui::widgets::item_menu(ui, app, &item, Some(&RowContext::Queue), Some(1));
+        }
+        let (ctx, mut app) = accessible_app("apple-queue-removal-menu");
+        app.backend.set_offline(true);
+        app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(!text.iter().any(|(label, _)| label == "Play next"));
+        let remove = text
+            .iter()
+            .find(|(label, _)| label == "Remove from queue")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(remove, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            matches!(app.actions.as_slice(), [Action::RemoveFromQueue {indices, ..}] if indices == &[1])
+        );
+        app.apple = None;
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_mini_playlist_removes_selected_copies_and_uses_apple_navigation() {
+        let (ctx, mut app) = accessible_app("apple-mini-queue-removal");
+        app.backend.set_offline(true);
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        let uri = apple.songs[0].uri();
+        apple.add_uris(
+            &[uri.clone(), uri.clone(), uri.clone()],
+            0,
+            std::time::Duration::ZERO,
+            false,
+        );
+        app.apple = Some(apple);
+        app.remote = None;
+        app.apply(Action::SetRepeat(crate::player::RepeatMode::Off), &ctx);
+        app.settings.winamp_window = true;
+        app.settings.skin_scale = Some(2);
+        apply_flags(&mut app, None, Some("mini-rem-menu"));
+        let draw = crate::ui::winamp::show;
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let remove = text
+            .iter()
+            .find(|(label, _)| label == "Remove selected")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(remove, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            matches!(app.actions.as_slice(), [Action::RemoveFromQueue { indices, .. }] if indices == &[0, 2])
+        );
+        let action = app.actions.pop().unwrap();
+        app.apply(action, &ctx);
+        let apple = app.apple.as_ref().unwrap();
+        assert_eq!(apple.order.manual_count, 1);
+        assert_eq!(apple.queue[apple.index.unwrap()].uri(), uri);
+        assert_eq!(apple.queue[apple.order.upcoming[0]].uri(), uri);
+        app.winamp.demo_playlist_menu = None;
+        app.winamp.playlist_selection.insert(1);
+        app.apply(Action::SetVolume(25), &ctx);
+        assert!(app.winamp.playlist_selection.contains(&1));
+        app.apply(Action::Next, &ctx);
+        assert!(app.winamp.playlist_selection.is_empty());
+        apply_flags(&mut app, None, Some("mini-add-menu"));
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let search = text
+            .iter()
+            .find(|(label, _)| label == "Search Apple Music")
+            .unwrap()
+            .1
+            .center();
+        assert!(text.iter().any(|(label, _)| label == "Favorites"));
+        assert!(
+            !text
+                .iter()
+                .any(|(label, _)| label == "Search Spotify" || label == "Liked Songs")
+        );
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(search, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(matches!(
+            app.actions.as_slice(),
+            [Action::FocusSearch, Action::ToggleWinampWindow]
+        ));
+        app.apple = None;
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(text.iter().any(|(label, _)| label == "Search Spotify"));
+        assert!(text.iter().any(|(label, _)| label == "Liked Songs"));
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_rolled_up_mini_player_menu_adds_the_current_song() {
+        let (ctx, mut app) = accessible_app("apple-mini-favorite-menu");
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        apple.songs[0].in_favorites = Some(false);
+        app.local = apple.local.clone();
+        app.apple = Some(apple);
+        app.remote = None;
+        app.settings.winamp_window = true;
+        app.settings.winamp_shaded = true;
+        app.settings.skin_scale = Some(2);
+        let uri = app.now_playing().unwrap().uri;
+        view_frame(&ctx, &mut app, vec![], crate::ui::winamp::show);
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(egui::pos2(80.0, 8.0), egui::PointerButton::Secondary),
+            crate::ui::winamp::show,
+        );
+        let text = view_frame(&ctx, &mut app, vec![], crate::ui::winamp::show);
+        let button = text
+            .iter()
+            .find(|(label, _)| label == "Add to Favorites")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(button, egui::PointerButton::Primary),
+            crate::ui::winamp::show,
+        );
+        assert!(
+            app.actions
+                .iter()
+                .any(|action| matches!(action, Action::ToggleSaved(selected) if selected == &uri))
+        );
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_selection_menu_adds_favorites_without_offering_removal() {
+        fn draw(app: &mut App, ui: &mut egui::Ui) {
+            let items = app
+                .apple
+                .as_ref()
+                .unwrap()
+                .songs
+                .iter()
+                .take(2)
+                .map(|song| PlayableItem::Track(song.track()))
+                .collect::<Vec<_>>();
+            crate::ui::widgets::picked_menu(ui, app, &items, None);
+        }
+        let (ctx, mut app) = accessible_app("apple-favorite-selection");
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        apple.songs[0].in_favorites = Some(false);
+        apple.songs[1].in_favorites = None;
+        let uris = apple
+            .songs
+            .iter()
+            .take(2)
+            .map(crate::apple::Song::uri)
+            .collect::<Vec<_>>();
+        app.apple = Some(apple);
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let add = text
+            .iter()
+            .find(|(label, _)| label == "Add to Favorites")
+            .unwrap()
+            .1
+            .center();
+        assert!(!text.iter().any(|(label, _)| label.contains("Liked Songs")));
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(add, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(app.actions.iter().any(|action| matches!(action, Action::SetSavedMany { uris: selected, saved: true } if selected == &uris)));
+        for song in app.apple.as_mut().unwrap().songs.iter_mut().take(2) {
+            song.in_favorites = Some(true);
+        }
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(
+            !text
+                .iter()
+                .any(|(label, _)| label == "Add to Favorites" || label.contains("Liked Songs"))
+        );
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_favorites_shelf_and_page_keep_songs_navigation_and_playable_identity() {
+        let (ctx, mut app) = accessible_app("apple-favorites-shelf");
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        for song in &mut apple.songs {
+            song.in_favorites = Some(false);
+        }
+        apple.songs[0].in_favorites = Some(true);
+        apple.songs[1].in_favorites = None;
+        apple.songs[2].in_favorites = Some(true);
+        apple.songs[2].item.play_params = None;
+        apple.songs[4].in_favorites = Some(true);
+        let first = apple.songs[0].title.clone();
+        let unavailable = apple.songs[2].title.clone();
+        let wanted = vec![apple.songs[0].uri(), apple.songs[4].uri()];
+        app.open(Page::LikedSongs);
+        app.local = apple.local.clone();
+        app.apple = Some(apple);
+        app.remote = None;
+        app.apply(Action::SetFavoriteShelfCount(1), &ctx);
+        let draw = crate::ui::show;
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        let shelf = |label: &str, rect: egui::Rect| {
+            label == first && rect.center().x < 250.0 && rect.center().y < 500.0
+        };
+        let song = text
+            .iter()
+            .find(|(label, rect)| shelf(label, *rect))
+            .unwrap()
+            .1;
+        assert!(!text.iter().any(|(label, rect)| label == &unavailable
+            && rect.center().x < 250.0
+            && rect.center().y < 500.0));
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(song.center(), egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            app.actions.iter().any(
+                |action| matches!(action, Action::PlayUris {uris, index:0} if uris == &wanted)
+            )
+        );
+        app.actions.clear();
+        let show_all = text
+            .iter()
+            .find(|(label, _)| label == "Show all favorites")
+            .unwrap()
+            .1;
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(show_all.center(), egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            app.actions
+                .iter()
+                .any(|action| matches!(action, Action::Open(Page::Favorites)))
+        );
+        app.actions.clear();
+        app.apply(Action::Open(Page::Favorites), &ctx);
+        assert!(!app.apple.as_ref().unwrap().favorites_only);
+        assert_eq!(Page::decode(&app.page().encode()), Some(Page::Favorites));
+        let draw_page = crate::ui::collection::liked;
+        view_frame(&ctx, &mut app, vec![], draw_page);
+        let text = view_frame(&ctx, &mut app, vec![], draw_page);
+        assert_eq!(app.table_rows[&Page::Favorites].items.len(), 3);
+        assert!(text.iter().any(|(label, _)| label == &unavailable));
+        assert!(!text.iter().any(|(label, _)| label == "Show only favorites"));
+        let play = text.iter().find(|(label, _)| label == "Play").unwrap().1;
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(play.center(), egui::PointerButton::Primary),
+            draw_page,
+        );
+        assert!(app.actions.iter().any(|action| matches!(action,
+            Action::PlayFromRow {context:RowContext::View {uris, context_uri, ..}, ..}
+                if uris.as_ref() == wanted && context_uri == "apple:collection:favorites")));
+        app.actions.clear();
+        app.apply(Action::Back, &ctx);
+        assert_eq!(app.page(), &Page::LikedSongs);
+        view_frame(&ctx, &mut app, vec![], draw_page);
+        assert_eq!(
+            app.table_rows[&Page::LikedSongs].items.len(),
+            app.library.liked.items.len()
+        );
+        app.apply(Action::SetFavoriteShelfCount(255), &ctx);
+        assert_eq!(app.settings.favorite_shelf_count, 10);
+        app.apply(Action::SetFavoriteShelfCount(0), &ctx);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(!text.iter().any(|(label, _)| label == "Show all favorites"));
+        assert!(!text.iter().any(|(label, rect)| shelf(label, *rect)));
+        app.apply(Action::SignOut, &ctx);
+        assert!(app.apple.as_ref().unwrap().songs.is_empty());
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_favorites_filter_keeps_unknowns_distinct_and_plays_the_shuffled_view() {
+        let (ctx, mut app) = accessible_app("apple-favorites");
+        let mut apple = crate::apple::State::demo(&app.library.liked.items);
+        for song in &mut apple.songs {
+            song.in_favorites = Some(false);
+        }
+        apple.songs[0].in_favorites = Some(true);
+        apple.songs[1].in_favorites = None;
+        apple.songs[2].in_favorites = Some(true);
+        apple.songs[2].item.play_params = None;
+        apple.local.shuffle = true;
+        apple.local.playback = crate::player::Playback::Paused;
+        let wanted = apple.songs[0].uri();
+        app.library.liked.items = apple
+            .songs
+            .iter()
+            .map(|song| SavedTrack {
+                track: song.track(),
+                added_at: None,
+            })
+            .collect();
+        app.library.liked.revision += 1;
+        app.local = apple.local.clone();
+        app.local_ready = true;
+        app.apple = Some(apple);
+        app.remote = None;
+        let draw = crate::ui::collection::liked;
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(!text.iter().any(|(label, _)| label == "DATE ADDED"));
+        let toggle = text
+            .iter()
+            .find(|(label, _)| label == "Show only favorites")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(toggle, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            app.actions
+                .iter()
+                .any(|action| matches!(action, Action::AppleShowFavorites(true)))
+        );
+        app.actions.clear();
+        app.apply(Action::AppleShowFavorites(true), &ctx);
+        view_frame(&ctx, &mut app, vec![], draw);
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert_eq!(app.table_rows[&Page::LikedSongs].items.len(), 2);
+        assert!(text.iter().any(|(label, _)| label == "Favorites"));
+        let play = text
+            .iter()
+            .find(|(label, _)| label == "Play")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(play, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(app.actions.iter().any(|action| matches!(action,
+            Action::PlayFromRow { context: RowContext::View { uris, .. }, .. }
+                if uris.as_ref() == [wanted.clone()])));
+        app.actions.clear();
+        app.apply(Action::AppleShowFavorites(false), &ctx);
+        view_frame(&ctx, &mut app, vec![], draw);
+        assert_eq!(
+            app.table_rows[&Page::LikedSongs].items.len(),
+            app.apple.as_ref().unwrap().songs.len()
+        );
+        apply_apple_flags(&mut app, Some("favorites-empty"));
+        let text = view_frame(&ctx, &mut app, vec![], draw);
+        assert!(
+            text.iter()
+                .any(|(label, _)| label == "No favorites in the loaded songs")
+        );
+        let load = text
+            .iter()
+            .find(|(label, _)| label == "Load more songs")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(load, egui::PointerButton::Primary),
+            draw,
+        );
+        assert!(
+            app.actions
+                .iter()
+                .any(|action| matches!(action, Action::LoadMore(Page::LikedSongs)))
+        );
+        app.apply(Action::SignOut, &ctx);
+        assert!(!app.apple.as_ref().unwrap().favorites_only);
+        assert!(app.apple.as_ref().unwrap().songs.is_empty());
+        app.backend.shutdown();
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_playlist_append_demo_draws_pending_confirmed_duplicate_and_error_states() {
+        for flag in [
+            "playlist-appending",
+            "playlist-appended",
+            "playlist-append-error",
+            "playlist-duplicates",
+        ] {
+            let (ctx, mut app) = accessible_app(flag);
+            app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+            apply_apple_flags(&mut app, Some(flag));
+            assert_eq!(app.playlist_busy, flag == "playlist-appending");
+            assert_eq!(
+                app.playlist_pages["library.p.demoCreated"]
+                    .items
+                    .items
+                    .len(),
+                if flag == "playlist-appending" || flag == "playlist-appended" {
+                    3
+                } else {
+                    1
+                }
+            );
+            assert_eq!(
+                matches!(app.dialog, Some(Dialog::ConfirmPlaylistDuplicates { .. })),
+                flag == "playlist-duplicates"
+            );
+            for _ in 0..3 {
+                frame(&ctx, &mut app);
+            }
+            app.backend.shutdown();
+        }
+    }
+    #[test]
+    fn apple_playlist_picker_filters_permissions_and_dispatches_whole_album_selection() {
+        let (ctx, mut app) = accessible_app("apple-playlist-picker");
+        let mut state = crate::apple::State::default();
+        state.authorized = true;
+        state.ready = true;
+        let rows = vec![
+            serde_json::json!({"id":"p.writable","type":"library-playlists","attributes":{"name":"Night drive","canEdit":true}}),
+            serde_json::json!({"id":"p.readonly","type":"library-playlists","attributes":{"name":"Night locked","canEdit":false}}),
+        ];
+        state.remember_playlist_permissions(&rows);
+        app.apple = Some(state);
+        app.library.playlists =
+            Loadable::Loaded(rows.iter().map(crate::apple::models::playlist).collect());
+        let mut query = String::new();
+        let draw = |app: &mut App, query: &mut String, focus, events| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(760.0, 620.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    let field = crate::ui::widgets::playlist_picker(
+                        ui,
+                        app,
+                        &[],
+                        query,
+                        Some(("apple:album:library.l.test", "Album")),
+                    );
+                    if focus {
+                        field.request_focus();
+                    }
+                },
+            );
+            output.textures_delta.clear();
+            output
+        };
+        draw(&mut app, &mut query, true, vec![]);
+        let output = draw(
+            &mut app,
+            &mut query,
+            false,
+            vec![egui::Event::Text("Night".into())],
+        );
+        let tree = output.platform_output.accesskit_update.unwrap();
+        accessible_node(&tree, "Night drive", egui::accesskit::Role::Button);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .any(|(_, node)| node.label() == Some("Night locked"))
+        );
+        app.actions.clear();
+        draw(
+            &mut app,
+            &mut query,
+            false,
+            vec![keyboard(egui::Key::Enter, egui::Modifiers::NONE)],
+        );
+        assert!(
+            matches!(app.actions.as_slice(), [Action::AddAlbumToPlaylist { uri, playlist: Some((id, _)), .. }] if uri == "apple:album:library.l.test" && id == "library.p.writable")
+        );
+        app.backend.shutdown();
+    }
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_playlist_demo_draws_create_saving_success_and_retry_states() {
+        for flag in [
+            "create",
+            "playlist-saving",
+            "playlist-created",
+            "playlist-error",
+        ] {
+            let (ctx, mut app) = accessible_app(flag);
+            let state = crate::apple::State::demo(&app.library.liked.items);
+            app.local = state.local.clone();
+            app.apple = Some(state);
+            apply_apple_flags(&mut app, Some(flag));
+            assert_eq!(app.playlist_busy, flag == "playlist-saving");
+            assert_eq!(app.dialog.is_none(), flag == "playlist-created");
+            if flag == "playlist-created" {
+                assert_eq!(*app.page(), Page::Playlist("library.p.demoCreated".into()));
+                assert_eq!(
+                    app.playlist_pages["library.p.demoCreated"]
+                        .items
+                        .items
+                        .len(),
+                    1
+                );
+            }
+            for _ in 0..3 {
+                frame(&ctx, &mut app);
+            }
+            app.backend.shutdown();
+        }
+    }
+
+    /// The open page's sidebar row sits on a rounded highlight, so the
+    /// place is shown by a fill rather than by dimming the other rows.
+    #[test]
+    fn the_open_pages_sidebar_row_is_highlighted() {
+        let (ctx, mut app) = accessible_app("sidebar-nav-highlight");
+        app.open(Page::Home);
+        let view = crate::ui::sidebar::show;
+        view_frame(&ctx, &mut app, vec![], view);
+        let painted = view_frame(&ctx, &mut app, vec![], view);
+        let home = sidebar_text(&painted, "Home").center();
+        let search = sidebar_text(&painted, "Search").center();
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(1280.0, 800.0),
+                )),
+                ..Default::default()
+            },
+            |ui| view(&mut app, ui),
+        );
+        output.textures_delta.clear();
+        let highlighted = |at: egui::Pos2| {
+            output.shapes.iter().any(|clipped| {
+                matches!(&clipped.shape, egui::epaint::Shape::Rect(rect)
+                    if rect.fill == app.palette.surface_active && rect.rect.contains(at))
+            })
+        };
+        assert!(highlighted(home), "the open page's row has no highlight");
+        assert!(!highlighted(search), "a closed page's row is highlighted");
+        app.backend.shutdown();
     }
 
     /// #576: the Library heading never runs under the header's buttons. It
@@ -1404,6 +3030,44 @@ mod tests {
         }
     }
 
+    /// Home's lower shelves run past the bottom of the window; debug builds
+    /// painted an ID clash over them until each shelf's autoscroll
+    /// background had its own ID.
+    #[test]
+    fn home_shelves_below_the_window_have_no_id_clash() {
+        fn warnings(shape: &egui::Shape, out: &mut Vec<String>) {
+            match shape {
+                egui::Shape::Text(text) if text.galley.text().contains("use of widget ID") => {
+                    out.push(text.galley.text().to_owned());
+                }
+                egui::Shape::Vec(shapes) => shapes.iter().for_each(|s| warnings(s, out)),
+                _ => {}
+            }
+        }
+        let (ctx, mut app) = accessible_app("home-id-clash");
+        ctx.options_mut(|options| options.warn_on_id_clash = true);
+        app.open(Page::Home);
+        let mut found = Vec::new();
+        for _ in 0..4 {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            found.clear();
+            for clipped in &output.shapes {
+                warnings(&clipped.shape, &mut found);
+            }
+        }
+        assert_eq!(found, Vec::<String>::new());
+    }
+
     fn accessible_frame(
         ctx: &egui::Context,
         app: &mut App,
@@ -1496,6 +3160,92 @@ mod tests {
         app.backend.shutdown();
     }
 
+    /// A collection header offers Play and Shuffle as a pair of labelled
+    /// buttons of one width, and each still does its job.
+    #[test]
+    fn collection_header_has_labelled_play_and_shuffle_buttons() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        let (ctx, mut app) = accessible_app("header-buttons");
+        app.open(Page::Album("alb0".into()));
+        let frame = |ctx: &egui::Context, app: &mut App, events| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            output
+        };
+        let header = |tree: &egui::accesskit::TreeUpdate, labels: &[&str]| {
+            tree.nodes
+                .iter()
+                .find(|(_, node)| {
+                    node.role() == Role::Button
+                        && node.label().is_some_and(|label| labels.contains(&label))
+                        // The player bar's own Play sits at the bottom.
+                        && node.bounds().is_some_and(|bounds| bounds.y1 < 600.0)
+                })
+                .map(|(id, node)| {
+                    let bounds = node.bounds().unwrap();
+                    (
+                        *id,
+                        egui::Rect::from_min_max(
+                            egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                            egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                        ),
+                    )
+                })
+                .unwrap_or_else(|| panic!("missing header button {labels:?}"))
+        };
+        frame(&ctx, &mut app, vec![]);
+        let output = frame(&ctx, &mut app, vec![]);
+        let painted = menu_text(&output);
+        let tree = output.platform_output.accesskit_update.unwrap();
+        let (_, play) = header(&tree, &["Play", "Pause"]);
+        let (shuffle_id, shuffle) = header(&tree, &["Shuffle", "Shuffle off"]);
+        assert_eq!(play.size(), shuffle.size(), "the pair shares one width");
+        assert!(play.width() > play.height() * 2.0, "{play:?} is not a pill");
+        assert!(shuffle.left() > play.right(), "Shuffle follows Play");
+        for (label, rect) in [("Play", play), ("Shuffle", shuffle)] {
+            assert!(
+                painted
+                    .iter()
+                    .any(|(text, at)| text == label && rect.contains_rect(*at)),
+                "{label} is written on its button"
+            );
+        }
+
+        let before = app.playing_context_shuffle();
+        frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(shuffle_id, AccessibleAction::Click, None)],
+        );
+        assert_eq!(app.playing_context_shuffle(), !before);
+
+        let tree = frame(&ctx, &mut app, vec![])
+            .platform_output
+            .accesskit_update
+            .unwrap();
+        let (play_id, _) = header(&tree, &["Play"]);
+        frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(play_id, AccessibleAction::Click, None)],
+        );
+        assert_eq!(
+            app.playing_context_uri().as_deref(),
+            Some("spotify:album:alb0")
+        );
+        app.backend.shutdown();
+    }
+
     #[test]
     fn translated_sidebar_keeps_keyboard_navigation_and_accessible_names() {
         use crate::i18n::{Locale, gettext};
@@ -1564,6 +3314,117 @@ mod tests {
             );
             app.backend.shutdown();
         }
+    }
+
+    /// Every other song in a list is shaded by its place in the list, so a
+    /// song keeps its shade while the virtual rows scroll past.
+    #[test]
+    fn song_list_stripes_follow_the_songs_when_scrolling() {
+        let (ctx, mut app) = accessible_app("striped-rows");
+        app.open(Page::Playlist("pl1".into()));
+        let stripe = crate::ui::widgets::stripe_fill(&app.palette);
+        let frame = |ctx: &egui::Context, app: &mut App, events| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            output
+        };
+        // Each song row clear of the player bar: its top edge and whether
+        // it is shaded.
+        let rows = |output: &egui::FullOutput| {
+            let stripes: Vec<egui::Rect> = output
+                .shapes
+                .iter()
+                .filter_map(|shape| match &shape.shape {
+                    egui::epaint::Shape::Rect(rect) if rect.fill == stripe => Some(rect.rect),
+                    _ => None,
+                })
+                .collect();
+            let tree = output.platform_output.accesskit_update.as_ref().unwrap();
+            fn label(node: &egui::accesskit::Node) -> Option<&str> {
+                node.label().filter(|label| label.starts_with("Play "))
+            }
+            // A song the playlist holds twice cannot say which copy it is.
+            let once = |wanted: &str| {
+                tree.nodes
+                    .iter()
+                    .filter(|(_, node)| label(node) == Some(wanted))
+                    .count()
+                    == 1
+            };
+            tree.nodes
+                .iter()
+                .filter(|(_, node)| label(node).is_some_and(once))
+                .filter_map(|(_, node)| {
+                    let bounds = node.bounds()?;
+                    let rect = egui::Rect::from_min_max(
+                        egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                        egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                    );
+                    let clear = rect.top() > 0.0 && rect.bottom() < 700.0;
+                    (rect.height() >= crate::theme::THIN_ROW_HEIGHT && clear).then(|| {
+                        let shaded = stripes
+                            .iter()
+                            .any(|stripe| (stripe.top() - rect.top()).abs() < 0.5);
+                        (node.label().unwrap().to_owned(), (rect.top(), shaded))
+                    })
+                })
+                .collect::<std::collections::BTreeMap<_, _>>()
+        };
+        frame(&ctx, &mut app, vec![]);
+        let before = rows(&frame(&ctx, &mut app, vec![egui::Event::PointerGone]));
+        let shaded = before.values().filter(|(_, shaded)| *shaded).count();
+        assert!(
+            shaded > 0 && shaded < before.len(),
+            "some rows are shaded, not all: {before:?}"
+        );
+
+        let over_list = egui::pos2(700.0, 600.0);
+        frame(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(over_list),
+                egui::Event::MouseWheel {
+                    unit: egui::MouseWheelUnit::Point,
+                    delta: egui::vec2(0.0, -150.0),
+                    modifiers: egui::Modifiers::NONE,
+                    phase: egui::TouchPhase::Move,
+                },
+            ],
+        );
+        let mut after = Default::default();
+        for _ in 0..30 {
+            after = rows(&frame(&ctx, &mut app, vec![egui::Event::PointerGone]));
+        }
+        let mut compared = 0;
+        for (song, (top, shaded)) in &after {
+            if let Some((was, was_shaded)) = before.get(song) {
+                assert!(*top < *was, "{song} moved up as the list scrolled");
+                assert_eq!(shaded, was_shaded, "{song} kept its shade");
+                compared += 1;
+            }
+        }
+        let distances: std::collections::BTreeSet<i32> = after
+            .iter()
+            .filter_map(|(song, (top, _))| Some((before.get(song)?.0 - top).round() as i32))
+            .collect();
+        assert_eq!(
+            distances.len(),
+            1,
+            "one scroll for every row: {distances:?}"
+        );
+        assert!(compared >= 2, "{before:?} then {after:?}");
+        app.backend.shutdown();
     }
 
     #[test]
@@ -3004,6 +4865,243 @@ mod tests {
             .collect()
     }
 
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_search_enter_opens_a_link_without_starting_or_replacing_playback() {
+        let (ctx, mut app) = accessible_app("apple-search-link");
+        app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+        app.user = None;
+        app.search.query.clear();
+        app.search.committed.clear();
+        let queue = app
+            .apple
+            .as_ref()
+            .unwrap()
+            .queue
+            .iter()
+            .map(crate::apple::Song::uri)
+            .collect::<Vec<_>>();
+        accessible_frame(&ctx, &mut app, vec![]);
+        ctx.memory_mut(|memory| memory.request_focus(egui::Id::new("global-search")));
+        accessible_frame(&ctx, &mut app, vec![]);
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::Text("apple:track:library.i.demo0".into())],
+        );
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![egui::Event::Key {
+                key: egui::Key::Enter,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+        );
+        assert_eq!(*app.page(), Page::Album("alb0".into()));
+        assert!(app.search.typed_at.is_none());
+        assert_eq!(
+            app.apple
+                .as_ref()
+                .unwrap()
+                .queue
+                .iter()
+                .map(crate::apple::Song::uri)
+                .collect::<Vec<_>>(),
+            queue
+        );
+        app.actions.push(Action::Search("Bonobo".into()));
+        accessible_frame(&ctx, &mut app, vec![]);
+        assert_eq!(*app.page(), Page::Search);
+        assert_eq!(app.search.committed, "Bonobo");
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn apple_sidebar_hides_podcasts_and_recovers_a_stale_filter() {
+        let (ctx, mut app) = accessible_app("apple-supported-sidebar");
+        app.apple = Some(crate::apple::State::default());
+        app.apple.as_mut().unwrap().authorized = true;
+        let filter = egui::Id::new("sidebar-filter");
+        ctx.data_mut(|data| data.insert_temp(filter, crate::settings::LibraryShelf::Podcasts));
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .any(|(_, node)| node.label() == Some("Podcasts"))
+        );
+        assert_eq!(
+            ctx.data(|data| data.get_temp::<crate::settings::LibraryShelf>(filter)),
+            Some(crate::settings::LibraryShelf::Playlists)
+        );
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn apple_settings_header_opens_shortcuts_without_scrolling() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        let (ctx, mut app) = accessible_app("apple-settings-shortcuts");
+        app.apple = Some(crate::apple::State::default());
+        app.apple.as_mut().unwrap().authorized = true;
+        app.open(Page::Settings);
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let button = accessible_node(&tree, "Keyboard shortcuts", Role::Button);
+        let bounds = tree
+            .nodes
+            .iter()
+            .find(|(id, _)| *id == button)
+            .unwrap()
+            .1
+            .bounds()
+            .unwrap();
+        assert!(
+            bounds.y1 < 170.0,
+            "shortcut entry belongs in the visible header"
+        );
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(button, AccessibleAction::Click, None)],
+        );
+        assert!(matches!(app.dialog, Some(Dialog::Shortcuts)));
+        app.dialog = None;
+        let text = settings_text(&ctx, &mut app, "keyboard shortcuts");
+        assert!(!text.iter().any(|text| text.starts_with("No settings for")));
+        app.backend.shutdown();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn apple_startup_failure_offers_accessible_retry_without_overlapping_setup() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        let (ctx, mut app) = accessible_app("apple-host-recovery");
+        let mut apple = crate::apple::State::default();
+        apple.loading = false;
+        apple.error = Some("Playback host could not start.".into());
+        let generation = apple.generation;
+        app.apple = Some(apple);
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let retry = accessible_node(&tree, "Retry connection", Role::Button);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .find(|(id, _)| *id == retry)
+                .unwrap()
+                .1
+                .is_disabled()
+        );
+        app.apple.as_mut().unwrap().token_request = Some(77);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let retry = accessible_node(&tree, "Retry connection", Role::Button);
+        assert!(
+            tree.nodes
+                .iter()
+                .find(|(id, _)| *id == retry)
+                .unwrap()
+                .1
+                .is_disabled()
+        );
+        app.apple.as_mut().unwrap().token_request = None;
+        accessible_frame(&ctx, &mut app, vec![]);
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(retry, AccessibleAction::Click, None)],
+        );
+        let apple = app.apple.as_ref().unwrap();
+        assert_eq!(apple.generation, generation + 1);
+        assert!(apple.loading && !apple.ready && apple.error.is_none());
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let sign_in = accessible_node(&tree, "Sign in with Apple", Role::Button);
+        assert!(
+            tree.nodes
+                .iter()
+                .find(|(id, _)| *id == sign_in)
+                .unwrap()
+                .1
+                .is_disabled()
+        );
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .any(|(_, node)| node.label() == Some("Retry connection"))
+        );
+        app.backend.shutdown();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn apple_token_setup_disables_overlapping_import_and_signin_controls() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        let (ctx, mut app) = accessible_app("apple-token-setup");
+        let mut apple = crate::apple::State::default();
+        apple.ready = true;
+        apple.loading = false;
+        app.apple = Some(apple);
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .any(|(_, node)| node.label() == Some("Import developer token"))
+        );
+        let sign_in = accessible_node(&tree, "Sign in with Apple", Role::Button);
+        assert!(
+            !tree
+                .nodes
+                .iter()
+                .find(|(id, _)| *id == sign_in)
+                .unwrap()
+                .1
+                .is_disabled()
+        );
+        app.apple.as_mut().unwrap().error = Some("App developer token needs renewal.".into());
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let import = accessible_node(&tree, "Import developer token", Role::Button);
+        let button = &tree.nodes.iter().find(|(id, _)| *id == import).unwrap().1;
+        assert!(!button.is_disabled());
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(import, AccessibleAction::Click, None)],
+        );
+        assert!(app.apple.as_ref().unwrap().token_request.is_some());
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        for label in ["Import developer token", "Sign in with Apple"] {
+            let id = accessible_node(&tree, label, Role::Button);
+            assert!(
+                tree.nodes
+                    .iter()
+                    .find(|(held, _)| *held == id)
+                    .unwrap()
+                    .1
+                    .is_disabled()
+            );
+        }
+        app.apple.as_mut().unwrap().token_request = None;
+        app.apple.as_mut().unwrap().loading = true;
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let id = accessible_node(&tree, "Import developer token", Role::Button);
+        assert!(
+            tree.nodes
+                .iter()
+                .find(|(held, _)| *held == id)
+                .unwrap()
+                .1
+                .is_disabled()
+        );
+        app.backend.shutdown();
+    }
+
     /// The About card ends with the author's credit, and the name opens
     /// the author's website.
     #[test]
@@ -3117,6 +5215,64 @@ mod tests {
         app.web_app = Some("test-client".into());
         let text = settings_text(&ctx, &mut app, "Personal app ready");
         assert!(text.iter().any(|text| text == "Personal app ready"));
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn apple_settings_do_not_scan_hidden_milkdrop_presets() {
+        let (ctx, mut app) = accessible_app("apple-settings-no-preset-scan");
+        let folder = app.dirs.milkdrop_dir();
+        std::fs::create_dir_all(folder.join("nested")).unwrap();
+        std::fs::write(folder.join("one.milk"), b"").unwrap();
+        std::fs::write(folder.join("nested/two.milk"), b"").unwrap();
+        assert_eq!(app.winamp.presets.count(), 0);
+
+        app.apple = Some(crate::apple::State::default());
+        for query in ["", "MilkDrop", "Reduce motion"] {
+            settings_text(&ctx, &mut app, query);
+            assert_eq!(
+                app.winamp.presets.count(),
+                0,
+                "Apple Settings must not scan unsupported preset folders"
+            );
+        }
+
+        app.apple = None;
+        settings_text(&ctx, &mut app, "MilkDrop");
+        assert_eq!(app.winamp.presets.count(), 2);
+        app.backend.shutdown();
+        std::fs::remove_dir_all(folder).unwrap();
+    }
+
+    #[test]
+    fn apple_settings_offer_motion_and_hide_unsupported_audio_controls() {
+        let (ctx, mut app) = accessible_app("apple-settings-capabilities");
+        app.apple = Some(crate::apple::State::default());
+        for query in [
+            "Equalizer",
+            "MilkDrop",
+            "Normalize volume",
+            "Audio cache",
+            "Personal app",
+            "Spectrum analyser",
+        ] {
+            let text = settings_text(&ctx, &mut app, query);
+            assert!(
+                text.iter().any(|text| text.starts_with("No settings for")),
+                "{query}: {text:?}"
+            );
+        }
+        for query in [
+            "Ambient Pulse",
+            "Reduce motion",
+            "Keep music playing when the window closes",
+        ] {
+            let text = settings_text(&ctx, &mut app, query);
+            assert!(text.iter().any(|text| text == query), "{query}: {text:?}");
+        }
+        let text = settings_text(&ctx, &mut app, "developer token");
+        assert!(text.iter().any(|text| text == "Apple Music account"));
+        assert!(!text.iter().any(|text| text == "Account"));
         app.backend.shutdown();
     }
 
@@ -3293,6 +5449,7 @@ mod tests {
                                 shift: 0.0,
                                 picked: false,
                                 picked_songs: &[],
+                                striped: false,
                             },
                         );
                     }
@@ -3398,6 +5555,7 @@ mod tests {
                                     shift: 0.0,
                                     picked: false,
                                     picked_songs: &[],
+                                    striped: false,
                                 },
                             );
                         });
@@ -3479,6 +5637,69 @@ mod tests {
         app.backend.shutdown();
     }
 
+    /// Hovering a card fades its Play button in on a rising cover, and
+    /// Reduce motion shows the button at once.
+    #[test]
+    fn a_hovered_cards_play_button_fades_in_unless_motion_is_reduced() {
+        use crate::ui::widgets::{CardCover, card};
+        for reduced in [false, true] {
+            let (ctx, mut app) = accessible_app(if reduced {
+                "card-hover-still"
+            } else {
+                "card-hover"
+            });
+            let accent = app.palette.accent;
+            let mut draw = |time: f64, pointer: Option<egui::Pos2>| {
+                let mut card_rect = egui::Rect::NOTHING;
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(time),
+                        events: pointer.map(egui::Event::PointerMoved).into_iter().collect(),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        crate::ui::motion::set_reduced(ui.ctx(), reduced);
+                        card_rect = card(
+                            ui,
+                            &mut app,
+                            None,
+                            "Album",
+                            "Artist",
+                            CardCover::square(false),
+                        )
+                        .response
+                        .rect;
+                    },
+                );
+                output.textures_delta.clear();
+                let disc = output
+                    .shapes
+                    .iter()
+                    .find_map(|clipped| match &clipped.shape {
+                        egui::epaint::Shape::Circle(circle)
+                            if (circle.radius - 22.0).abs() < 0.5 && circle.fill.a() > 0 =>
+                        {
+                            Some(circle.fill.a())
+                        }
+                        _ => None,
+                    });
+                (card_rect, disc)
+            };
+            let (rect, disc) = draw(0.0, None);
+            assert_eq!(disc, None, "no button before hovering");
+            let (_, disc) = draw(0.02, Some(rect.center()));
+            let disc = disc.expect("the Play button on hover");
+            if reduced {
+                assert_eq!(disc, accent.a());
+            } else {
+                assert!(disc < accent.a(), "fading in: {disc}");
+            }
+            let (_, disc) = draw(1.0, Some(rect.center()));
+            assert_eq!(disc, Some(accent.a()));
+            app.backend.shutdown();
+        }
+    }
+
     #[test]
     fn accessible_playing_and_queued_copies_target_their_own_context() {
         use crate::model::RowContext;
@@ -3518,6 +5739,7 @@ mod tests {
                                 shift: 0.0,
                                 picked: false,
                                 picked_songs: &[],
+                                striped: false,
                             },
                         );
                     }
@@ -3846,7 +6068,8 @@ mod tests {
                         ..Default::default()
                     },
                     |ui| {
-                        let field = crate::ui::widgets::playlist_picker(ui, app, &items, query);
+                        let field =
+                            crate::ui::widgets::playlist_picker(ui, app, &items, query, None);
                         if focus {
                             field.request_focus();
                         }
@@ -3946,7 +6169,7 @@ mod tests {
                     ..Default::default()
                 },
                 |ui| {
-                    let field = crate::ui::widgets::playlist_picker(ui, app, &items, query);
+                    let field = crate::ui::widgets::playlist_picker(ui, app, &items, query, None);
                     if focus {
                         field.request_focus();
                     }
@@ -4205,6 +6428,108 @@ mod tests {
         view_frame(ctx, app, events, crate::ui::search::show)
     }
 
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_search_controls_load_pages_and_play_tracks_with_original_identity() {
+        let (ctx, mut app) = accessible_app("apple-search-controls");
+        app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+        app.remote = None;
+        apply_apple_flags(&mut app, Some("apple-search-pages"));
+        search_frame(&ctx, &mut app, vec![]);
+        let labels = search_frame(&ctx, &mut app, vec![]);
+        assert!(
+            !labels
+                .iter()
+                .any(|(label, _)| matches!(label.as_str(), "Podcasts" | "Episodes"))
+        );
+        let more = labels
+            .iter()
+            .find(|(label, _)| label == "Load more")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        search_frame(
+            &ctx,
+            &mut app,
+            pointer_click(more, egui::PointerButton::Primary),
+        );
+        assert!(matches!(
+            app.actions.as_slice(),
+            [Action::LoadMore(Page::Search)]
+        ));
+        app.search.catalogue_pending = true;
+        search_frame(&ctx, &mut app, vec![]);
+        let labels = search_frame(&ctx, &mut app, vec![]);
+        let more = labels
+            .iter()
+            .find(|(label, _)| label == "Load more")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        search_frame(
+            &ctx,
+            &mut app,
+            pointer_click(more, egui::PointerButton::Primary),
+        );
+        assert!(
+            app.actions.is_empty(),
+            "pending pages cannot be requested again"
+        );
+        app.search.catalogue_pending = false;
+        app.search.filter = SearchFilter::All;
+        let song = app.apple.as_ref().unwrap().songs[0].track();
+        app.search.results = Loadable::Loaded(SearchResults {
+            tracks: Some(page(vec![song.clone()])),
+            ..Default::default()
+        });
+        search_frame(&ctx, &mut app, vec![]);
+        let labels = search_frame(&ctx, &mut app, vec![]);
+        let title = labels
+            .iter()
+            .find(|(label, _)| label == &song.name)
+            .unwrap()
+            .1
+            .center();
+        search_frame(&ctx, &mut app, vec![egui::Event::PointerMoved(title)]);
+        let output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(1280.0, 2200.0),
+                )),
+                events: vec![egui::Event::PointerMoved(title)],
+                ..Default::default()
+            },
+            |ui| crate::ui::search::show(&mut app, ui),
+        );
+        let tree = output.platform_output.accesskit_update.unwrap();
+        let play = accessible_node(&tree, "Play", egui::accesskit::Role::Button);
+        app.actions.clear();
+        search_frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(
+                play,
+                egui::accesskit::Action::Click,
+                None,
+            )],
+        );
+        assert!(
+            matches!(app.actions.as_slice(), [Action::PlayUris {uris, index: 0}] if uris == &[song.uri])
+        );
+        apply_apple_flags(&mut app, Some("apple-search-empty"));
+        search_frame(&ctx, &mut app, vec![]);
+        let labels = search_frame(&ctx, &mut app, vec![]);
+        assert!(
+            labels
+                .iter()
+                .any(|(label, _)| label == "Search Apple Music")
+        );
+        app.backend.shutdown();
+    }
+
     #[test]
     fn playing_artist_links_work_before_web_metadata_and_after_focus_returns() {
         use crate::player::{LocalState, LocalTrack, Playback};
@@ -4306,6 +6631,7 @@ mod tests {
                         shift: 0.0,
                         picked: false,
                         picked_songs: &[],
+                        striped: false,
                     },
                 );
             }
@@ -6033,6 +8359,137 @@ mod tests {
         }
     }
 
+    /// The next sung line lights up over a moment rather than at once;
+    /// Reduce motion lights it at once.
+    #[test]
+    fn the_next_sung_line_lights_up_gradually_unless_motion_is_reduced() {
+        for reduced in [false, true] {
+            let (ctx, mut app) = accessible_app(&format!("lyric-light-{reduced}"));
+            app.settings.reduce_motion = reduced;
+            app.show_lyrics_panel = true;
+            app.lyrics_fullscreen = Some(false);
+            app.lyrics = Loadable::Loaded(Some(sample_lyrics()));
+            app.lyrics_following = true;
+            let colour_at = |app: &mut App, time: f64, position: u32| {
+                let remote = app.remote.as_mut().unwrap();
+                remote.state.is_playing = false;
+                remote.state.progress_ms = Some(position);
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(time),
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(1280.0, 800.0),
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| app.frame_ui(ui),
+                );
+                output.textures_delta.clear();
+                output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::Shape::Text(text)
+                            if text.galley.job.text == "Every window holding someone's evening" =>
+                        {
+                            Some(text.galley.job.sections[0].format.color)
+                        }
+                        _ => None,
+                    })
+                    .expect("the next line is drawn")
+            };
+            let mut quiet = egui::Color32::TRANSPARENT;
+            for frame in 0..10 {
+                quiet = colour_at(&mut app, f64::from(frame) * 0.1, 41_000);
+            }
+            let early = colour_at(&mut app, 1.03, 47_000);
+            let mut lit = early;
+            for frame in 1..10 {
+                lit = colour_at(&mut app, 1.03 + f64::from(frame) * 0.1, 47_000);
+            }
+            assert_ne!(quiet, lit);
+            if reduced {
+                assert_eq!(early, lit);
+            } else {
+                assert!(
+                    early != quiet && early != lit,
+                    "{quiet:?} {early:?} {lit:?}"
+                );
+            }
+            app.backend.shutdown();
+        }
+    }
+
+    /// Full screen is a Now Playing screen: its own seek bar and transport
+    /// buttons sit under the cover, or under the song in a narrow window,
+    /// and they control playback like the player bar's.
+    #[cfg(feature = "demo")]
+    #[test]
+    fn full_screen_now_playing_has_its_own_controls() {
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        for (width, surface) in [
+            (1600.0, "lyrics-fullscreen-view"),
+            (820.0, "lyrics-fullscreen-view"),
+            (1600.0, "lyrics-fullscreen-instrumental"),
+        ] {
+            let (ctx, mut app) = accessible_app(&format!("now-playing-{width}-{surface}"));
+            apply_flags(&mut app, None, Some(surface));
+            let frame = |app: &mut App, events: Vec<egui::Event>| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(width, 900.0),
+                        )),
+                        events,
+                        ..Default::default()
+                    },
+                    // Drawn without applying, so the actions stay to be seen.
+                    |ui| crate::ui::show(app, ui),
+                );
+                output.textures_delta.clear();
+                output.platform_output.accesskit_update.unwrap()
+            };
+            frame(&mut app, vec![]);
+            let tree = frame(&mut app, vec![]);
+            let sliders = tree
+                .nodes
+                .iter()
+                .filter(|(_, node)| {
+                    node.role() == Role::Slider && node.label() == Some("Playback position (%)")
+                })
+                .count();
+            assert_eq!(sliders, 2, "{width} {surface}: player bar and full screen");
+            let nexts = tree
+                .nodes
+                .iter()
+                .filter(|(_, node)| node.label() == Some("Next") && node.role() == Role::Button)
+                .map(|(id, node)| (*id, node.bounds().map_or(0.0, |bounds| bounds.y0)))
+                .collect::<Vec<_>>();
+            assert_eq!(nexts.len(), 2, "{width} {surface}");
+            // The full-screen Next is the one above the player bar.
+            let (next, _) = nexts
+                .iter()
+                .min_by(|a, b| a.1.total_cmp(&b.1))
+                .copied()
+                .unwrap();
+            app.actions.clear();
+            frame(
+                &mut app,
+                vec![accessible_action(next, AccessibleAction::Click, None)],
+            );
+            assert!(
+                app.actions
+                    .iter()
+                    .any(|action| matches!(action, Action::Next)),
+                "{width} {surface}: {:?}",
+                app.actions
+            );
+            app.backend.shutdown();
+        }
+    }
+
     /// Full screen puts the cover and the lyrics side by side as one centred
     /// group, and a song without words gets its cover alone in the middle.
     #[cfg(feature = "demo")]
@@ -6046,12 +8503,19 @@ mod tests {
                 _ => None,
             })
         };
-        for (surface, words) in [
-            ("lyrics-fullscreen-view", true),
-            ("lyrics-fullscreen-instrumental", false),
+        for (surface, words, apple) in [
+            ("lyrics-fullscreen-view", true, false),
+            ("lyrics-fullscreen-instrumental", false, false),
+            ("lyrics-fullscreen-view", false, true),
         ] {
             let (ctx, mut app) = accessible_app(surface);
             apply_flags(&mut app, None, Some(surface));
+            if apple {
+                let state = crate::apple::State::demo(&app.library.liked.items);
+                app.local = state.local.clone();
+                app.local_ready = true;
+                app.apple = Some(state);
+            }
             let mut shapes = Vec::new();
             for frame in 0..30 {
                 let mut output = ctx.run_ui(
@@ -6077,8 +8541,13 @@ mod tests {
                 assert!(lyric.left() < 1000.0, "the group is centred: {lyric:?}");
             } else {
                 assert!(lyric.is_none());
-                let detail = detail.expect("why there are no words");
-                assert!((detail.center().x - 800.0).abs() < 2.0, "{detail:?}");
+                if apple {
+                    assert!(detail.is_none(), "Apple Now Playing has no lyrics panel");
+                    assert!(find(&shapes, "Rosewood").is_some(), "the playing song");
+                } else {
+                    let detail = detail.expect("why there are no words");
+                    assert!((detail.center().x - 800.0).abs() < 2.0, "{detail:?}");
+                }
             }
             app.backend.shutdown();
         }
@@ -8972,6 +11441,84 @@ mod tests {
         let _ = std::fs::remove_dir_all(root);
     }
 
+    /// Where playback is reads as a neutral status, whatever the accent;
+    /// only the update badge, which asks to be used, keeps the accent tint.
+    #[test]
+    fn only_the_update_badge_is_tinted_with_the_accent() {
+        for light in [false, true] {
+            let (ctx, mut app) = accessible_app("badges");
+            if light {
+                app.settings.theme = crate::settings::ThemeChoice::Light;
+                app.actions.push(Action::SettingsChanged);
+            }
+            app.update = Some(crate::updates::Release {
+                version: "0.7.1".into(),
+                url: "https://example.invalid/releases".into(),
+            });
+            accessible_frame(&ctx, &mut app, vec![]);
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    events: vec![egui::Event::PointerGone],
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            let palette = app.palette;
+            assert_eq!(palette.dark, !light);
+            let tree = output.platform_output.accesskit_update.as_ref().unwrap();
+            let fill = |prefix: &str| {
+                let bounds = tree
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| node.label().is_some_and(|label| label.starts_with(prefix)))
+                    .and_then(|(_, node)| node.bounds())
+                    .unwrap_or_else(|| panic!("missing the {prefix} badge"));
+                let badge = egui::Rect::from_min_max(
+                    egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                    egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                );
+                output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::epaint::Shape::Rect(rect)
+                            if (rect.rect.min - badge.min).length() < 0.5
+                                && (rect.rect.max - badge.max).length() < 0.5 =>
+                        {
+                            Some(rect.fill)
+                        }
+                        _ => None,
+                    })
+                    .unwrap_or_else(|| panic!("the {prefix} badge has no fill"))
+            };
+            assert_eq!(fill("Playing on"), palette.surface, "light: {light}");
+            assert_eq!(
+                fill("Update to"),
+                palette.accent.gamma_multiply(0.16),
+                "light: {light}"
+            );
+            let color = output
+                .shapes
+                .iter()
+                .find_map(|shape| match &shape.shape {
+                    egui::epaint::Shape::Text(text)
+                        if text.galley.job.text.starts_with("Playing on") =>
+                    {
+                        Some(text.galley.job.sections[0].format.color)
+                    }
+                    _ => None,
+                })
+                .expect("the device label");
+            assert_eq!(color, palette.text, "light: {light}");
+            app.backend.shutdown();
+        }
+    }
+
     /// The badges at the right end of the top bar sit in a right-to-left
     /// layout, which does not wrap and does not clip: anything that does not
     /// fit marches left over the search field. Draw the real bar and check
@@ -9152,6 +11699,377 @@ mod tests {
                 }
             }
             app.backend.shutdown();
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_toolbar_controls_fit_beside_narrow_queue_and_lyrics() {
+        use egui::accesskit::Role;
+        for light in [false, true] {
+            let (ctx, mut app) = accessible_app(&format!("apple-narrow-toolbar-{light}"));
+            app.apple = Some(crate::apple::State::demo(&app.library.liked.items));
+            app.local = app.apple.as_ref().unwrap().local.clone();
+            app.remote = None;
+            app.open(Page::LikedSongs);
+            app.settings.theme = if light {
+                crate::settings::ThemeChoice::Light
+            } else {
+                crate::settings::ThemeChoice::Dark
+            };
+            app.actions.push(Action::SettingsChanged);
+            for sidebar in [true, false] {
+                app.settings.sidebar_visible = sidebar;
+                for panel in [Some("queue"), Some("lyrics"), None] {
+                    app.show_queue_panel = panel == Some("queue");
+                    app.show_lyrics_panel = panel == Some("lyrics");
+                    for width in [760.0, 1100.0, 760.0] {
+                        let mut tree = None;
+                        for _ in 0..3 {
+                            let mut output = ctx.run_ui(
+                                egui::RawInput {
+                                    screen_rect: Some(egui::Rect::from_min_size(
+                                        egui::Pos2::ZERO,
+                                        egui::vec2(width, 760.0),
+                                    )),
+                                    ..Default::default()
+                                },
+                                |ui| app.frame_ui(ui),
+                            );
+                            output.textures_delta.clear();
+                            tree = output.platform_output.accesskit_update;
+                        }
+                        let tree = tree.unwrap();
+                        let search = ctx.read_response(egui::Id::new("global-search")).unwrap();
+                        let pill = egui::Rect::from_min_max(
+                            search.rect.min - egui::vec2(34.0, 1.0),
+                            search.rect.max + egui::vec2(30.0, 1.0),
+                        );
+                        let pill = egui::Rect::from_center_size(
+                            pill.center(),
+                            egui::vec2(pill.width(), 34.0),
+                        );
+                        let left = if sidebar {
+                            egui::containers::panel::PanelState::load(
+                                &ctx,
+                                egui::Id::new("sidebar"),
+                            )
+                            .unwrap()
+                            .outer_rect
+                            .right()
+                        } else {
+                            0.0
+                        };
+                        let right = panel.map_or(width, |name| {
+                            egui::containers::panel::PanelState::load(
+                                &ctx,
+                                egui::Id::new(format!("{name}-panel")),
+                            )
+                            .unwrap()
+                            .outer_rect
+                            .left()
+                        });
+                        assert!(
+                            right - left >= 270.0,
+                            "The page must retain its narrow-window room."
+                        );
+                        assert!(pill.left() >= left && pill.right() <= right);
+                        for label in ["Settings", "Now playing", "Winamp mini player"] {
+                            let bounds = tree
+                                .nodes
+                                .iter()
+                                .find_map(|(_, node)| {
+                                    (node.role() == Role::Button
+                                        && node.label().is_some_and(|name| name.starts_with(label)))
+                                    .then(|| node.bounds())
+                                    .flatten()
+                                    .filter(|bounds| bounds.y0 < 150.0)
+                                })
+                                .unwrap_or_else(|| panic!("Missing toolbar action {label}"));
+                            let rect = egui::Rect::from_min_max(
+                                egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                                egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+                            );
+                            assert!(
+                                rect.left() >= left && rect.right() <= right,
+                                "{label} leaves the page at {width}, sidebar={sidebar}, panel={panel:?}"
+                            );
+                            let overlap = rect.intersect(pill);
+                            assert!(
+                                overlap.width() <= 0.0 || overlap.height() <= 0.0,
+                                "{label} {rect:?} overlaps search {pill:?} at {width}, sidebar={sidebar}, panel={panel:?}"
+                            );
+                        }
+                    }
+                }
+            }
+            app.backend.shutdown();
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_narrow_collections_keep_names_and_actions_visible() {
+        use egui::accesskit::Role;
+        fn painted_box(
+            shape: &egui::epaint::Shape,
+            clip: egui::Rect,
+            pane: egui::Rect,
+            height: f32,
+            min_y: f32,
+        ) -> Option<egui::Rect> {
+            match shape {
+                egui::epaint::Shape::Rect(shape)
+                    if (shape.rect.height() - height).abs() < 0.5
+                        && shape.rect.top() >= min_y
+                        && clip.contains_rect(shape.rect)
+                        && pane.contains_rect(shape.rect) =>
+                {
+                    Some(shape.rect)
+                }
+                egui::epaint::Shape::Vec(shapes) => shapes
+                    .iter()
+                    .find_map(|shape| painted_box(shape, clip, pane, height, min_y)),
+                _ => None,
+            }
+        }
+        fn label(
+            shape: &egui::epaint::Shape,
+            clip: egui::Rect,
+            pane: egui::Rect,
+            wanted: &str,
+        ) -> Option<egui::Rect> {
+            match shape {
+                egui::epaint::Shape::Text(text) if text.galley.job.text == wanted => {
+                    let drawn: String = text
+                        .galley
+                        .rows
+                        .iter()
+                        .flat_map(|row| row.row.glyphs.iter().map(|glyph| glyph.chr))
+                        .collect();
+                    let bounds = text.visual_bounding_rect();
+                    (drawn == wanted && clip.contains_rect(bounds) && pane.contains_rect(bounds))
+                        .then_some(bounds)
+                }
+                egui::epaint::Shape::Vec(shapes) => shapes
+                    .iter()
+                    .find_map(|shape| label(shape, clip, pane, wanted)),
+                _ => None,
+            }
+        }
+        for light in [false, true] {
+            for panel in ["queue", "lyrics"] {
+                for width in [760.0, 1100.0] {
+                    let (ctx, mut app) = accessible_app(&format!(
+                        "apple-narrow-collections-{light}-{panel}-{width}"
+                    ));
+                    let apple = crate::apple::State::demo(&app.library.liked.items);
+                    let wanted_uri = apple.songs[1].uri();
+                    app.library.liked.items = apple
+                        .songs
+                        .iter()
+                        .map(|song| SavedTrack {
+                            track: song.track(),
+                            added_at: None,
+                        })
+                        .collect();
+                    app.library.liked.revision += 1;
+                    app.local = apple.local.clone();
+                    app.remote = None;
+                    app.apple = Some(apple);
+                    app.open(Page::LikedSongs);
+                    app.settings.reduce_motion = true;
+                    app.settings.theme = if light {
+                        crate::settings::ThemeChoice::Light
+                    } else {
+                        crate::settings::ThemeChoice::Dark
+                    };
+                    app.actions.push(Action::SettingsChanged);
+                    app.show_queue_panel = panel == "queue";
+                    app.show_lyrics_panel = panel == "lyrics";
+                    app.table_sorts.remove(&Page::LikedSongs);
+                    let draw = |app: &mut App, events| {
+                        let mut output = ctx.run_ui(
+                            egui::RawInput {
+                                screen_rect: Some(egui::Rect::from_min_size(
+                                    egui::Pos2::ZERO,
+                                    egui::vec2(width, 760.0),
+                                )),
+                                events,
+                                ..Default::default()
+                            },
+                            |ui| app.frame_ui(ui),
+                        );
+                        output.textures_delta.clear();
+                        output
+                    };
+                    draw(&mut app, vec![]);
+                    draw(&mut app, vec![]);
+                    let output = draw(&mut app, vec![]);
+                    let pane = egui::Rect::from_min_max(
+                        egui::pos2(
+                            egui::containers::panel::PanelState::load(
+                                &ctx,
+                                egui::Id::new("sidebar"),
+                            )
+                            .unwrap()
+                            .outer_rect
+                            .right(),
+                            0.0,
+                        ),
+                        egui::pos2(
+                            egui::containers::panel::PanelState::load(
+                                &ctx,
+                                egui::Id::new(format!("{panel}-panel")),
+                            )
+                            .unwrap()
+                            .outer_rect
+                            .left(),
+                            egui::containers::panel::PanelState::load(
+                                &ctx,
+                                egui::Id::new("player-bar"),
+                            )
+                            .unwrap()
+                            .outer_rect
+                            .top(),
+                        ),
+                    );
+                    let painted = |wanted| {
+                        output
+                            .shapes
+                            .iter()
+                            .find_map(|shape| label(&shape.shape, shape.clip_rect, pane, wanted))
+                            .unwrap_or_else(|| {
+                                panic!("{wanted} is clipped at {width} with {panel}")
+                            })
+                    };
+                    let header = painted("Songs");
+                    painted("Rosewood");
+                    let tides = painted("Tides");
+                    let painted_box = |height| {
+                        output
+                            .shapes
+                            .iter()
+                            .find_map(|shape| {
+                                painted_box(
+                                    &shape.shape,
+                                    shape.clip_rect,
+                                    pane,
+                                    height,
+                                    header.bottom(),
+                                )
+                            })
+                            .expect("Visible collection control")
+                    };
+                    let filter = painted_box(34.0);
+                    let play = painted_box(36.0);
+                    let overlap = play.intersect(filter);
+                    assert!(
+                        overlap.width() <= 0.0 || overlap.height() <= 0.0,
+                        "Filter {filter:?} covers Play {play:?} at {width}, {panel}, light={light}"
+                    );
+                    let click = |app: &mut App, position: egui::Pos2| {
+                        draw(
+                            app,
+                            vec![
+                                egui::Event::PointerMoved(position),
+                                egui::Event::PointerButton {
+                                    pos: position,
+                                    button: egui::PointerButton::Primary,
+                                    pressed: true,
+                                    modifiers: Default::default(),
+                                },
+                            ],
+                        );
+                        draw(
+                            app,
+                            vec![egui::Event::PointerButton {
+                                pos: position,
+                                button: egui::PointerButton::Primary,
+                                pressed: false,
+                                modifiers: Default::default(),
+                            }],
+                        );
+                    };
+                    click(&mut app, tides.center());
+                    click(&mut app, tides.center());
+                    assert_eq!(
+                        app.current_track_uri().as_deref(),
+                        Some(wanted_uri.as_str())
+                    );
+                    let hovered = draw(&mut app, vec![egui::Event::PointerMoved(tides.center())]);
+                    let more = hovered
+                        .platform_output
+                        .accesskit_update
+                        .as_ref()
+                        .unwrap()
+                        .nodes
+                        .iter()
+                        .find_map(|(_, node)| {
+                            (node.role() == Role::Button && node.label() == Some("More"))
+                                .then(|| node.bounds())
+                                .flatten()
+                                .filter(|bounds| {
+                                    bounds.y0 <= f64::from(tides.center().y)
+                                        && bounds.y1 >= f64::from(tides.center().y)
+                                })
+                        })
+                        .expect("Row More action remains available");
+                    let position = egui::pos2(
+                        ((more.x0 + more.x1) / 2.0) as f32,
+                        ((more.y0 + more.y1) / 2.0) as f32,
+                    );
+                    assert!(pane.contains(position));
+                    click(&mut app, position);
+                    let menu = draw(&mut app, vec![]);
+                    let queue = menu_text(&menu)
+                        .into_iter()
+                        .find(|(text, _)| text == "Add to queue")
+                        .expect("Row queue command")
+                        .1;
+                    let before = app.apple.as_ref().unwrap().order.manual_count;
+                    click(&mut app, queue.center());
+                    assert_eq!(app.apple.as_ref().unwrap().order.manual_count, before + 1);
+                    let sorted = draw(&mut app, vec![]);
+                    let duration = sorted
+                        .platform_output
+                        .accesskit_update
+                        .as_ref()
+                        .unwrap()
+                        .nodes
+                        .iter()
+                        .find_map(|(_, node)| {
+                            (node.role() == Role::Button
+                                && node.label() == Some("Sort by duration"))
+                            .then(|| node.bounds())
+                            .flatten()
+                        })
+                        .expect("Duration sorting remains available");
+                    click(
+                        &mut app,
+                        egui::pos2(
+                            ((duration.x0 + duration.x1) / 2.0) as f32,
+                            ((duration.y0 + duration.y1) / 2.0) as f32,
+                        ),
+                    );
+                    assert_eq!(
+                        app.table_sorts.get(&Page::LikedSongs).unwrap().column,
+                        crate::model::SortColumn::Duration
+                    );
+                    app.demo_play_next_menu = Some("song");
+                    draw(&mut app, vec![]);
+                    let forced = draw(&mut app, vec![]);
+                    assert_eq!(
+                        menu_text(&forced)
+                            .iter()
+                            .filter(|(text, _)| text == "Add to queue")
+                            .count(),
+                        1,
+                        "The collection capture must open one menu, excluding the compact current-song row."
+                    );
+                    app.backend.shutdown();
+                }
+            }
         }
     }
 

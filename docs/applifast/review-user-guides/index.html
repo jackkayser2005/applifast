@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>PR #90: Apple Music documentation comparison</title>
+<style>
+body{font:16px system-ui;margin:24px;background:#202022;color:#eee}
+p{max-width:1050px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}
+a{color:#ff7a80}img{display:block;max-width:100%;height:auto;border:1px solid #666}
+button[aria-pressed=true]{outline:2px solid #ff7a80}code{overflow-wrap:anywhere}
+</style>
+<h1>PR #90: Apple Music documentation</h1>
+<p><a href="https://github.com/jackkayser2005/applifast/pull/90">PR #90</a> adapts the existing website to Windows Apple Music: copy, current demo images, preview availability, account setup, everyday controls and privacy. The existing website theme and guide navigation structure remain. The application interface is unchanged.</p>
+<p>Actual CI Jekyll output, baseline <code>8da79db</code>, candidate <code>55c0450</code>, captured in a separate disposable Chrome session on Windows. Both versions use the same route, viewport, theme, reduced-motion preference, zoom and neutral pointer. These are website captures, not new native app or real-account acceptance.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="normal">Normal (1400 × 900)</option><option value="narrow">Narrow (760 × 760)</option></select></label>
+<label>View <select id="view">
+<option value="home">Landing page</option><option value="setup">Installation and sign-in</option>
+<option value="download">Download availability</option><option value="everyday">Everyday use</option>
+<option value="mini">Mini player guide</option><option value="privacy">Privacy</option>
+<option value="navigation">Open navigation menu</option>
+</select></label>
+<button id="previous">Previous view</button><button id="next">Next view</button>
+<button id="before" aria-pressed="false">Before</button><button id="after" aria-pressed="true">After</button>
+<p id="label" aria-live="polite"></p>
+<img id="capture" alt="Matching rendered Windows documentation comparison">
+<p>The navigation view shows the version menu at normal width and the guide sidebar at narrow width. All 56 capture paths, PNG dimensions and hashes are recorded in <a href="evidence.json">the evidence manifest</a>. The six-page capture matrix asserted matching theme, no horizontal document overflow and successful local image loading. The three fixed tester/implementation/readiness routes return HTTP 200, and clicking the tester-guide link opens its destination.</p>
+<p>All external browser requests were blocked before loading either site for this comparison. The inherited baseline analytics script, remote fonts, GitHub counts and remote promotional logos were not fetched. Font fallback and unavailable external assets are shared test constraints. The candidate HTML no longer includes upstream analytics. Large video files were excluded from the local review copy; below-the-fold video playback and live external services are untested.</p>
+<p>Scope ledger: the maintainer requested documentation in the existing style adapted for Apple Music on October 23, 2026. This evidence records that requested scope; it does not imply approval of unrelated interface changes, public publication or completion of release gates. Required hosted checks, fresh-PC sign-in, actual recovery and the original memory target remain separate.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){
+ const view=byId('view'),suffix=view.value+'-'+byId('theme').value+'-'+byId('size').value;
+ byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;
+ byId('before').setAttribute('aria-pressed',String(phase==='before'));
+ byId('after').setAttribute('aria-pressed',String(phase==='after'));
+ byId('previous').disabled=view.selectedIndex===0;
+ byId('next').disabled=view.selectedIndex===view.options.length-1;
+}
+for(const id of ['theme','size','view'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};
+byId('previous').onclick=()=>{byId('view').selectedIndex--;draw()};
+byId('next').onclick=()=>{byId('view').selectedIndex++;draw()};draw();
+</script></html>

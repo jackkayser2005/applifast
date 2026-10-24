@@ -1,0 +1,26 @@
+{
+  "base": "8baea733ae511f687b19e9a1e0793986ae4e74f8",
+  "fixture": "Capture index one switches two valid local SVG covers, starts existing heart pop, or queues existing Open action. Demo paused/offline; no activation requested; actual keyboard/text input dropped. Animation durations and screenshot cadence unchanged.",
+  "files": [
+    {
+      "file": "src/entrypoint.rs",
+      "originalSHA256": "3846023ce621cedce7e42134299c0d250c7757c3ae716d3b138a6d47ff2e40e7",
+      "captureSHA256": "804875aa4fdf686100351f32c88ec69f08a23701fbec602755998bea0d2e54f7"
+    },
+    {
+      "file": "src/ui/player_bar.rs",
+      "originalSHA256": "e7316e647503f20820d40e330f577c3bc8051963a5111581400e8a84f2c7f675",
+      "captureSHA256": "a0b8dd8c51fef34ff41778ccb32c6b1efb99267a8dc026e9e8928ba1e2812430"
+    },
+    {
+      "file": "src/demo.rs",
+      "originalSHA256": "5fd63d72e1d6901e55ea8d99edb803cfd76b8e895828a4dfec3787796bf161a2",
+      "captureSHA256": "eeff4f05da0e1d6996d871bf0b2cd87a141c0d2814244f752ce4e19ac0b4dffe"
+    },
+    {
+      "file": "src/apple.rs",
+      "originalSHA256": "5dd1fb5e33e41ede382f8d57bb176f55d5f2d74ac55e63f6309ecdea2d665d41",
+      "captureSHA256": "10fdd6344aaa5d5b7f7d1ff9ac03e35760b007d45ea5a231c6d7b567d072e928"
+    }
+  ]
+}

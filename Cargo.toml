@@ -5,9 +5,9 @@ version = "0.12.0"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
-description = "A native Spotify client"
-repository = "https://github.com/crmne/spotifast"
-keywords = ["spotify", "music", "egui", "librespot", "player"]
+description = "A lightweight Apple Music client for Windows"
+repository = "https://github.com/jackkayser2005/applifast"
+keywords = ["apple-music", "music", "egui", "windows", "player"]
 categories = ["multimedia::audio"]
 
 [lib]
@@ -19,6 +19,8 @@ name = "spotifast"
 path = "src/spotifast.rs"
 
 [dependencies]
+# The tested MusicKit boundary is shared with the diagnostic CLI; it owns its STA.
+applifast-playback-probe = { path = "prototypes/apple-playback" }
 anyhow = "1"
 thiserror = "2"
 clap = { version = "4.5", features = ["derive"] }
@@ -36,46 +38,47 @@ eframe = { version = "0.36", default-features = false, features = ["accesskit", 
 egui = "0.36"
 egui_extras = { version = "0.36", features = ["image", "svg"] }
 # The shared foundation of Spotifast, ZapFast, RekordFlash and TonePush
-# (crmne/fastframe). Every crate comes from the same revision; move them
-# together.
-fastframe-text = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
-fastframe-fonts = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
-fastframe-icons = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
-fastframe-theme = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
+# (crmne/fastframe). The maintainer-owned fork backports upstream #17's
+# font-memory fix with Windows read-handle lifetime protection. Every crate
+# comes from the same immutable revision; move them together.
+fastframe-text = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
+fastframe-fonts = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
+fastframe-icons = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
+fastframe-theme = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
 # Colour emoji in the platform's own style (Apple Color Emoji, Segoe UI
 # Emoji, the desktop's colour emoji font), in every text through its egui
 # plugin.
-fastframe-emoji = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
+fastframe-emoji = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
 # Catalogs compiled from PO files at build time (see build.rs) and the
 # system's preferred languages. No libintl or runtime catalog parsing.
-fastframe-i18n = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
+fastframe-i18n = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
 # The log file for bug reports and the panic log (env_logger underneath).
-fastframe-log = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
+fastframe-log = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
 # The tray item, so closing the window can keep the music playing:
 # StatusNotifier on Linux, the notification area on Windows, the menu bar
 # on macOS.
-fastframe-tray = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
+fastframe-tray = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
 # Keeps the app running without a window around eframe::run_native.
-fastframe-shell = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
+fastframe-shell = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
 # The macOS title-bar double-click setting (does nothing elsewhere).
-fastframe-macos = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
+fastframe-macos = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
 # Self-update from GitHub releases, on the reqwest client below.
-fastframe-update = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1", features = ["reqwest"] }
+fastframe-update = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87", features = ["reqwest"] }
 # The audio device stream: it pauses, so a paused player costs no CPU (#636),
 # follows the default output and reopens after a failure. Its cpal 0.18
 # cannot share a build with the cpal 0.16 of librespot's rodio backend (both
 # link ALSA), so that backend is left out.
-fastframe-audio = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
+fastframe-audio = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
 # The wheel step, the Linux touchpad scale and glide, and the axis a scroll
 # gesture holds.
-fastframe-scroll = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
+fastframe-scroll = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
 # One running copy per user: a lock and a private channel that a second
 # launch and the command line hand their requests to.
-fastframe-instance = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
+fastframe-instance = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
 # The desktop's media controls: MPRIS on Linux, the media overlay on
 # Windows, Now Playing on macOS. The media keys and those panels send
 # commands back, and closing the window keeps the music playing.
-fastframe-now-playing = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1" }
+fastframe-now-playing = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87" }
 # Reading installed fonts for MilkDrop's overlays, the Winamp playlist's
 # pixel text, and the playlist face. skrifa is the parser epaint already
 # rasterizes with, and the version has to track epaint's or the binary
@@ -189,7 +192,7 @@ x11rb = { version = "0.13", default-features = false }
 [build-dependencies]
 # Drops unfinished PO entries and compiles catalog text and gettext plural
 # expressions to Rust. Ordinary builds do not need gettext tools.
-fastframe-i18n = { git = "https://github.com/crmne/fastframe", tag = "v0.4.1", features = ["build"] }
+fastframe-i18n = { git = "https://github.com/jackkayser2005/fastframe", rev = "ba3db2d36f7b08f5d99e650c4adcaa05f90cda87", features = ["build"] }
 
 [dev-dependencies]
 # Checks that every catalog covers the template and keeps its placeholders.
@@ -202,7 +205,9 @@ tokio = { version = "1", features = ["test-util"] }
 winresource = "0.1"
 
 [features]
-default = ["milkdrop"]
+# MusicKit does not expose the PCM tap used by MilkDrop. The listening build
+# leaves that optional upstream renderer out rather than implying it works.
+default = []
 # Sample data and screenshot flags; never part of a release build.
 demo = []
 # MilkDrop, through libprojectM: a C++ library that CMake builds into the

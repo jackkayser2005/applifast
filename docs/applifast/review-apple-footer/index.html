@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast Apple sign-in footer comparison</title>
+<style>
+body { font: 16px system-ui; margin: 24px; background: #202022; color: #eee; }
+p { max-width: 1000px; line-height: 1.5; }
+select, button { font: inherit; padding: 8px; margin: 4px; }
+a { color: #ff7a80; }
+button[aria-pressed="true"] { outline: 2px solid #ff7a80; }
+img { display: block; max-width: 100%; height: auto; border: 1px solid #666; margin-top: 16px; }
+</style>
+<h1>Apple sign-in footer</h1>
+<p>Apple mode names Apple in its affiliation disclaimer. The retained Spotify
+mode keeps its existing disclaimer. No layout, sizing, controls or interaction
+changes are intended. See the <a href="../apple-sign-in-footer.md">evidence report</a>.</p>
+<p>Matching native Windows demo captures show signed-out Apple mode in both
+themes and window sizes. Both builds use isolated sample data, no account
+connection or audio, and a two-second capture delay. Native captures and static
+selector checks do not establish browser rendering or real Apple authorization.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal, 1100 by 760</option><option value="760x760">Narrow, 760 by 760</option></select></label>
+<button id="before" aria-pressed="true">Before</button>
+<button id="after" aria-pressed="false">After</button>
+<p id="caption" aria-live="polite"></p>
+<img id="capture" alt="Native Apple sign-in footer comparison">
+<script>
+const byId = id => document.getElementById(id);
+let phase = 'before';
+function draw() {
+ const theme = byId('theme').value, size = byId('size').value;
+ byId('capture').src = `${phase}-${theme}-${size}.png`;
+ byId('capture').alt = `${phase} Apple sign-in, ${theme}, ${size}`;
+ byId('caption').textContent = `${phase === 'before' ? 'Before: Spotify disclaimer in Apple mode' : 'After: Apple disclaimer in Apple mode'} · ${theme} · ${size}`;
+ byId('before').setAttribute('aria-pressed', String(phase === 'before'));
+ byId('after').setAttribute('aria-pressed', String(phase === 'after'));
+}
+byId('theme').onchange = draw;
+byId('size').onchange = draw;
+byId('before').onclick = () => { phase = 'before'; draw(); };
+byId('after').onclick = () => { phase = 'after'; draw(); };
+draw();
+</script>
+</html>

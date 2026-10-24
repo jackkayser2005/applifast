@@ -6,11 +6,26 @@ use egui::{Align, Frame, Layout, Margin};
 
 use crate::api::models::PlayableItem;
 use crate::app::App;
-use crate::i18n::{Locale, gettext};
+use crate::i18n::gettext;
 use crate::model::{Action, DragTrack, Loadable, QueueTab, RowContext};
 use crate::theme::{self, Icon};
 
 use super::widgets::{self, TrackRow};
+
+/// Repeated songs need separate arrival animations too. Ordinals change only
+/// when another copy is inserted or removed, without restarting surviving rows.
+fn occurrence_keys(items: &[PlayableItem]) -> Vec<String> {
+    let mut counts = std::collections::HashMap::<&str, usize>::new();
+    items
+        .iter()
+        .map(|item| {
+            let ordinal = counts.entry(item.uri()).or_default();
+            let key = format!("{ordinal}:{}", item.uri());
+            *ordinal += 1;
+            key
+        })
+        .collect()
+}
 
 pub fn page(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
@@ -25,7 +40,7 @@ pub fn page(app: &mut App, ui: &mut egui::Ui) {
             palette.text,
         );
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if save_button(ui, &palette, offer_save, app.locale) {
+            if save_button(app, ui, offer_save) {
                 app.actions.push(Action::SaveQueueAsPlaylist);
             }
         });
@@ -41,7 +56,7 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
         "queue-panel",
         theme::SIDE_PANEL_MIN_WIDTH..=560.0,
         app.settings.queue_width,
-        ui.available_width() - super::topbar::least_width(ui.ctx()),
+        ui.available_width() - super::topbar::least_width(ui.ctx(), app.apple.is_some()),
     );
     let panel = egui::Panel::right("queue-panel")
         .resizable(true)
@@ -64,6 +79,7 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
         // Measure buttons first and give the remaining width to the chips.
         // Without `shrink_left`, wrapped chips can overlap the close button.
         let tab = app.queue_tab;
+        let locale = app.locale;
         let offer_save = tab == QueueTab::Queue && !app.queue_playlist_uris().is_empty();
         let mut picked = None;
         let mut close = false;
@@ -76,8 +92,8 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
                     ui,
                     &palette,
                     &[
-                        (QueueTab::Queue, &gettext(app.locale, "Queue")),
-                        (QueueTab::Recents, &gettext(app.locale, "Recent")),
+                        (QueueTab::Queue, &gettext(locale, "Queue")),
+                        (QueueTab::Recents, &gettext(locale, "Recent")),
                     ],
                     tab,
                 );
@@ -92,7 +108,7 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
                     &gettext(app.locale, "Close"),
                 )
                 .clicked();
-                save = save_button(ui, &palette, offer_save, app.locale);
+                save = save_button(app, ui, offer_save);
             },
         );
         if let Some(tab) = picked {
@@ -136,22 +152,34 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
 }
 
 /// Saves the current and upcoming queue as a playlist.
-fn save_button(
-    ui: &mut egui::Ui,
-    palette: &crate::theme::Palette,
-    offer: bool,
-    locale: Locale,
-) -> bool {
-    offer
-        && theme::icon_button(
-            ui,
-            Icon::ListPlus,
-            18.0,
-            palette.secondary,
-            palette.text,
-            &gettext(locale, "Save as a playlist"),
-        )
-        .clicked()
+fn save_button(app: &mut App, ui: &mut egui::Ui, offer: bool) -> bool {
+    if !offer {
+        return false;
+    }
+    let response = theme::icon_button(
+        ui,
+        Icon::ListPlus,
+        18.0,
+        app.palette.secondary,
+        app.palette.text,
+        &gettext(app.locale, "Save as a playlist"),
+    );
+    if app.apple.is_some() {
+        response.context_menu(|ui| {
+            let apple = app.apple.as_ref().unwrap();
+            let items = app
+                .queue_playlist_uris()
+                .iter()
+                .filter_map(|uri| {
+                    apple
+                        .find_song(uri)
+                        .map(|song| PlayableItem::Track(song.track()))
+                })
+                .collect::<Vec<_>>();
+            widgets::add_to_playlist_menu(ui, app, &items, None);
+        });
+    }
+    response.clicked()
 }
 
 /// Clears manual rows from the active local queue.
@@ -282,6 +310,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, compact: bool) {
                 shift: 0.0,
                 picked: false,
                 picked_songs: &[],
+                striped: false,
             },
         );
         ui.add_space(SECTION_GAP);
@@ -364,9 +393,16 @@ fn contents(app: &mut App, ui: &mut egui::Ui, compact: bool) {
                 (row >= 0.0).then(|| (row.round() as usize).min(queued_len))
             })
             .flatten();
+        // Songs just queued ease in: a fade and a short rise into place.
+        let arrivals = egui::Id::new(("queue-arrivals", compact));
+        let arrival_keys = app.queue.get().map_or_else(Vec::new, |queue| {
+            occurrence_keys(&queue.queue[..queued_len])
+        });
+        super::motion::note_rows(ui.ctx(), arrivals, arrival_keys.iter().map(String::as_str));
         widgets::virtual_rows(ui, queued_len, row_height + gap, |ui, index| {
             let width = ui.available_width();
-            let shift = ui.ctx().animate_value_with_time(
+            let shift = super::motion::animate_value(
+                ui.ctx(),
                 ui.id().with(("queue-move-shift", index)),
                 match move_slot {
                     Some(slot) if index < slot => -4.0,
@@ -375,7 +411,13 @@ fn contents(app: &mut App, ui: &mut egui::Ui, compact: bool) {
                 },
                 0.12,
             );
-            queue_row(app, ui, index, compact, shift);
+            let arrived = arrival_keys
+                .get(index)
+                .map_or(1.0, |key| super::motion::arrival(ui.ctx(), arrivals, key));
+            ui.scope(|ui| {
+                ui.multiply_opacity(arrived);
+                queue_row(app, ui, index, compact, shift + 8.0 * (1.0 - arrived));
+            });
             ui.allocate_space(egui::vec2(width, gap));
         });
         if let Some(slot) = move_slot {
@@ -540,6 +582,7 @@ fn recents_contents(app: &mut App, ui: &mut egui::Ui) {
                 shift: 0.0,
                 picked: false,
                 picked_songs: &[],
+                striped: false,
             },
         );
     });
@@ -602,6 +645,34 @@ fn queue_row(app: &mut App, ui: &mut egui::Ui, index: usize, compact: bool, shif
             shift,
             picked: false,
             picked_songs: &[],
+            striped: false,
         },
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn duplicate_queue_occurrences_get_independent_arrival_keys() {
+        let song = |uri: &str| {
+            PlayableItem::Track(crate::api::models::Track {
+                uri: uri.to_owned(),
+                ..Default::default()
+            })
+        };
+        let before = occurrence_keys(&[song("apple:library:song:a"), song("apple:library:song:b")]);
+        let after = occurrence_keys(&[
+            song("apple:library:song:a"),
+            song("apple:library:song:b"),
+            song("apple:library:song:a"),
+        ]);
+        assert_eq!(&after[..2], before);
+        assert_ne!(after[0], after[2]);
+        assert_eq!(
+            occurrence_keys(&[song("apple:library:song:a")])[0],
+            before[0]
+        );
+    }
 }

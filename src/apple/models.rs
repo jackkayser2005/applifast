@@ -1,0 +1,375 @@
+//! Apple resources mapped into the existing desktop display models.
+use super::Song;
+use crate::api::models::{Album, Artist, ArtistRef, Image, Owner, Playlist, TrackCount};
+use applifast_playback_probe::protocol::{ItemKind, PlaybackItem};
+use serde_json::Value;
+
+pub fn added_at(resource: &Value) -> Option<String> {
+    let date = resource["attributes"]["dateAdded"].as_str()?;
+    let date = match date.len() {
+        4 => format!("{date}-01-01T00:00:00Z"),
+        10 => format!("{date}T00:00:00Z"),
+        _ => date.to_owned(),
+    };
+    date.parse::<jiff::Timestamp>().ok().map(|_| date)
+}
+
+pub fn home_card(resource: &Value) -> Option<super::HomeCard> {
+    use crate::model::Page;
+    let (name, subtitle, image, uri, page, playable) = match resource["type"].as_str()? {
+        "songs" | "library-songs" => {
+            let song = song(resource)?;
+            let page = song.album_id.clone().map(Page::Album);
+            (
+                song.title.clone(),
+                song.artist.clone(),
+                song.artwork.clone(),
+                song.uri(),
+                page,
+                song.available(),
+            )
+        }
+        "albums" | "library-albums" => {
+            let album = album(resource);
+            (
+                album.name,
+                album
+                    .artists
+                    .iter()
+                    .map(|artist| artist.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                album.images.first().map(|image| image.url.clone()),
+                album.uri,
+                Some(Page::Album(album.id)),
+                true,
+            )
+        }
+        "playlists" | "library-playlists" => {
+            let playlist = playlist(resource);
+            let owner = playlist.owner_name().to_owned();
+            (
+                playlist.name,
+                owner,
+                playlist.images.first().map(|image| image.url.clone()),
+                playlist.uri,
+                Some(Page::Playlist(playlist.id)),
+                true,
+            )
+        }
+        "artists" | "library-artists" => {
+            let artist = artist(resource);
+            (
+                artist.name,
+                String::new(),
+                artist.images.first().map(|image| image.url.clone()),
+                artist.uri,
+                Some(Page::Artist(artist.id)),
+                false,
+            )
+        }
+        _ => return None,
+    };
+    Some(super::HomeCard {
+        name,
+        subtitle,
+        image,
+        uri,
+        page,
+        playable,
+    })
+}
+
+fn text(value: &Value, key: &str) -> String {
+    value[key].as_str().unwrap_or_default().to_owned()
+}
+pub fn id(resource: &Value) -> String {
+    format!(
+        "{}.{}",
+        if resource["type"]
+            .as_str()
+            .is_some_and(|kind| kind.starts_with("library-"))
+        {
+            "library"
+        } else {
+            "catalog"
+        },
+        text(resource, "id")
+    )
+}
+fn related_id(resource: &Value, relationship: &str) -> Option<String> {
+    resource["relationships"][relationship]["data"]
+        .as_array()?
+        .first()
+        .map(id)
+}
+fn images(resource: &Value) -> Vec<Image> {
+    let Some(url) = resource["attributes"]["artwork"]["url"].as_str() else {
+        return Vec::new();
+    };
+    // Keep the large image first for existing headers and Home cards.
+    let sizes: &[u32] = if url.contains("{w}") && url.contains("{h}") {
+        &[640, 320, 160]
+    } else {
+        &[640]
+    };
+    let mut images: Vec<Image> = sizes
+        .iter()
+        .map(|&size| {
+            let dimension = size.to_string();
+            Image {
+                url: url.replace("{w}", &dimension).replace("{h}", &dimension),
+                width: Some(size),
+                height: Some(size),
+            }
+        })
+        .collect();
+    if sizes.len() == 1
+        && let Some(url) = crate::images::thumbnail_uri(url)
+    {
+        images.push(Image {
+            url,
+            width: Some(160),
+            height: Some(160),
+        });
+    }
+    images
+}
+fn artists(resource: &Value) -> Vec<ArtistRef> {
+    let artist_id = related_id(resource, "artists");
+    vec![ArtistRef {
+        id: artist_id.clone(),
+        name: text(&resource["attributes"], "artistName"),
+        uri: artist_id.map(|id| format!("apple:artist:{id}")),
+    }]
+}
+pub fn song(resource: &Value) -> Option<Song> {
+    let attributes = &resource["attributes"];
+    let kind = match resource["type"].as_str()? {
+        "library-songs" => ItemKind::Library,
+        "songs" => ItemKind::Catalog,
+        _ => return None,
+    };
+    let item = PlaybackItem {
+        kind,
+        id: text(resource, "id"),
+        play_params: attributes
+            .get("playParams")
+            .filter(|value| value.is_object())
+            .cloned(),
+    };
+    item.validate().ok()?;
+    let artwork = images(resource);
+    Some(Song {
+        catalog_id: item
+            .play_params
+            .as_ref()
+            .and_then(|params| params["catalogId"].as_str().map(str::to_owned)),
+        item,
+        title: text(attributes, "name"),
+        artist: text(attributes, "artistName"),
+        album: text(attributes, "albumName"),
+        duration_ms: attributes["durationInMillis"]
+            .as_u64()
+            .unwrap_or(0)
+            .min(u64::from(u32::MAX)) as u32,
+        artwork: artwork.first().map(|image| image.url.clone()),
+        artwork_small: artwork
+            .iter()
+            .find(|image| image.width == Some(160))
+            .cloned(),
+        album_id: related_id(resource, "albums"),
+        artist_id: related_id(resource, "artists"),
+        in_favorites: attributes["inFavorites"].as_bool(),
+    })
+}
+pub fn album(resource: &Value) -> Album {
+    let attributes = &resource["attributes"];
+    let id = id(resource);
+    Album {
+        uri: format!("apple:album:{id}"),
+        id,
+        name: text(attributes, "name"),
+        artists: artists(resource),
+        images: images(resource),
+        album_type: Some(
+            if attributes["isCompilation"] == true {
+                "compilation"
+            } else if attributes["isSingle"] == true {
+                "single"
+            } else {
+                "album"
+            }
+            .into(),
+        ),
+        total_tracks: attributes["trackCount"]
+            .as_u64()
+            .map(|count| count.min(u64::from(u32::MAX)) as u32),
+        release_date: attributes["releaseDate"].as_str().map(str::to_owned),
+        ..Default::default()
+    }
+}
+pub fn artist(resource: &Value) -> Artist {
+    let id = id(resource);
+    Artist {
+        uri: format!("apple:artist:{id}"),
+        id,
+        name: text(&resource["attributes"], "name"),
+        images: images(resource),
+        ..Default::default()
+    }
+}
+pub fn playlist(resource: &Value) -> Playlist {
+    let id = id(resource);
+    let attributes = &resource["attributes"];
+    Playlist {
+        uri: format!("apple:playlist:{id}"),
+        id,
+        name: text(attributes, "name"),
+        public: attributes["isPublic"].as_bool(),
+        images: images(resource),
+        description: attributes["description"]["standard"]
+            .as_str()
+            .map(str::to_owned),
+        owner: Owner {
+            display_name: Some(
+                attributes["curatorName"]
+                    .as_str()
+                    .filter(|name| !name.is_empty())
+                    .unwrap_or("Apple Music")
+                    .into(),
+            ),
+            ..Default::default()
+        },
+        tracks: attributes["trackCount"].as_u64().map(|total| TrackCount {
+            total: total.min(u64::from(u32::MAX)) as u32,
+        }),
+        ..Default::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::models::pick_image;
+    use serde_json::json;
+
+    #[test]
+    fn artwork_sizes_follow_existing_thumbnail_card_and_header_targets() {
+        let resource = json!({"id":"fixture","type":"albums","attributes":{"artwork":{"url":"https://example.com/art/{w}x{h}bb.jpg"}}});
+        let images = album(&resource).images;
+        assert_eq!(
+            images.first().unwrap().url,
+            "https://example.com/art/640x640bb.jpg"
+        );
+        for (target, expected) in [(64, 160), (160, 160), (300, 320), (640, 640)] {
+            assert_eq!(
+                pick_image(&images, target),
+                Some(format!("https://example.com/art/{expected}x{expected}bb.jpg").as_str())
+            );
+        }
+    }
+
+    #[test]
+    fn artwork_sizes_survive_song_cache_without_changing_upload_identity() {
+        let resource = json!({"id":"i.fixture","type":"library-songs","attributes":{"name":"Fixture upload","playParams":{"id":"i.fixture","isLibrary":true},"artwork":{"url":"https://example.com/art/{w}x{h}bb.jpg"}}});
+        let parsed = song(&resource).unwrap();
+        let mut cached = serde_json::to_value(&parsed).unwrap();
+        let restored: Song = serde_json::from_value(cached.clone()).unwrap();
+        assert_eq!(restored.uri(), parsed.uri());
+        assert_eq!(restored.item.play_params, parsed.item.play_params);
+        assert_eq!(restored.catalog_id, None);
+        assert_eq!(
+            restored.artwork.as_deref(),
+            Some("https://example.com/art/640x640bb.jpg")
+        );
+        assert_eq!(
+            restored.local_track().art_small_url.as_deref(),
+            Some("https://example.com/art/160x160bb.jpg")
+        );
+        let track = restored.track();
+        assert_eq!(
+            pick_image(&track.album.unwrap().images, 64),
+            Some("https://example.com/art/160x160bb.jpg")
+        );
+        cached.as_object_mut().unwrap().remove("artworkSmall");
+        let legacy: Song = serde_json::from_value(cached).unwrap();
+        assert_eq!(legacy.uri(), parsed.uri());
+        assert_eq!(legacy.local_track().art_small_url, legacy.artwork);
+        assert_eq!(legacy.track().album.unwrap().images.len(), 1);
+    }
+
+    #[test]
+    fn fixed_artwork_urls_and_missing_images_keep_their_existing_behavior() {
+        let fixed = "https://example.com/art/640x640bb.jpg?version=1";
+        let images = images(&json!({"attributes":{"artwork":{"url":fixed}}}));
+        assert_eq!(images.len(), 2);
+        assert_eq!(images[0].url, fixed);
+        assert_eq!(pick_image(&images, 640), Some(fixed));
+        assert_eq!(
+            pick_image(&images, 64),
+            Some("https://example.com/art/640x640bb.jpg?version=1#applifast-thumb-160")
+        );
+        assert!(super::images(&json!({"attributes":{}})).is_empty());
+    }
+
+    #[test]
+    fn apple_added_dates_keep_timestamp_date_and_year_ordering() {
+        for (input, expected) in [
+            ("2026-10-08", Some("2026-10-08T00:00:00Z")),
+            ("2025", Some("2025-01-01T00:00:00Z")),
+            ("2026-10-08T16:30:00Z", Some("2026-10-08T16:30:00Z")),
+            ("2026-99-99", None),
+            ("unknown", None),
+        ] {
+            assert_eq!(
+                added_at(&json!({"attributes":{"dateAdded":input}})).as_deref(),
+                expected
+            );
+        }
+    }
+    #[test]
+    fn favorites_are_optional_booleans_and_survive_metadata_serialization() {
+        for (flag, expected) in [
+            (json!(true), Some(true)),
+            (json!(false), Some(false)),
+            (Value::Null, None),
+            (json!("true"), None),
+        ] {
+            let resource = json!({"id":"i.upload","type":"library-songs","attributes":{
+                "name":"Upload", "inFavorites":flag, "rating":1}});
+            let song = song(&resource).unwrap();
+            assert_eq!(song.in_favorites, expected);
+            assert!(!song.available());
+            let mut cached = serde_json::to_value(&song).unwrap();
+            assert_eq!(
+                serde_json::from_value::<Song>(cached.clone())
+                    .unwrap()
+                    .in_favorites,
+                expected
+            );
+            cached.as_object_mut().unwrap().remove("inFavorites");
+            assert_eq!(
+                serde_json::from_value::<Song>(cached).unwrap().in_favorites,
+                None
+            );
+        }
+    }
+    #[test]
+    fn library_and_catalog_identity_never_collapse() {
+        let upload = json!({"id":"i.upload","type":"library-songs","attributes":{"name":"Upload","playParams":{"id":"i.upload","isLibrary":true,"catalogId":"123"}},"relationships":{"albums":{"data":[{"id":"l.album","type":"library-albums"}]}}});
+        let song = song(&upload).unwrap();
+        assert_eq!(song.uri(), "apple:track:library.i.upload");
+        assert_eq!(song.catalog_id.as_deref(), Some("123"));
+        assert_eq!(song.track().album.unwrap().id, "library.l.album");
+        assert!(
+            !super::song(&json!({"id":"i.upload","type":"library-songs","attributes":{}}))
+                .unwrap()
+                .available()
+        );
+        assert_eq!(super::song(&json!({"id":"123","type":"songs","attributes":{"playParams":{"id":"123","kind":"song"}}})).unwrap().uri(), "apple:track:catalog.123");
+        let canonical=super::song(&json!({"id":"123","type":"songs","attributes":{"playParams":{"id":"456","kind":"song"}}})).unwrap();
+        assert_eq!(canonical.item.id, "123");
+        assert_eq!(canonical.item.play_params.unwrap()["id"], "456");
+    }
+}

@@ -1,5 +1,12 @@
 # Contributing to Spotifast
 
+> **Applifast fork:** Apple Music on Windows is the authorized product direction.
+> Rust/egui remains the interface; MusicKit/WebView2 provides the playback host.
+> Work through feature branches and PRs on this fork. These defaults supersede
+> the upstream Spotify-only, no-browser and direct-main rules below. Keep the
+> existing tests, architecture, visual reviews, MIT license and upstream credit.
+> See [current scope](docs/applifast/listening-slice.md) before promising features.
+
 Spotifast is a native Spotify client. Changes should improve the
 desktop app without adding a browser, fallback services, or another backend.
 
@@ -128,6 +135,7 @@ ask again only if the resulting scope goes beyond what was approved or requested
 Run the same checks CI runs before submitting:
 
 ```sh
+ruby packaging/test-fork-workflows.rb
 python3 packaging/test-launchers.py
 cargo fmt --all --check
 cargo clippy --locked --all-targets -- -D warnings

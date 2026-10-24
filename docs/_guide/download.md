@@ -1,165 +1,66 @@
 ---
 title: Download
-description: Download the app for macOS, Windows, or Linux, with install instructions for each.
+description: Windows preview installation, checksums, updates and release availability.
 nav_order: 1
 ---
 
-{% assign v = site.spotifast_version %}
-{% assign base = "https://github.com/crmne/spotifast/releases/download/v" | append: v %}
+## Windows preview
 
-The current version is **v{{ v }}**. You can use the
-[download checksums]({{ base }}/checksums.txt) to check that a file has not
-been damaged or changed. Older versions are on the
-[releases page](https://github.com/crmne/spotifast/releases).
+Applifast is currently an invited **Windows x64 development preview**.
+Ask the maintainer for the current installer or portable ZIP and its SHA-256
+checksum. This documentation change does not publish a public beta download.
 
-## macOS
+Original Spotifast releases, Homebrew, AUR and Flatpak packages install the
+upstream Spotify product, not this Windows Apple Music port.
 
-One download for both Apple Silicon and Intel:
+## Install
 
-- [Download for Mac]({{ base }}/spotifast-v{{ v }}-macos-universal.dmg)
+Quit older Applifast builds through their tray menus. Run the preview installer,
+then open **Applifast** from Start. It installs per user in
+`%LOCALAPPDATA%\Programs\Applifast`, without an administrator account.
+A desktop shortcut is optional.
 
-Open the downloaded file and drag **Spotifast** to **Applications**.
+The portable ZIP contains the app, companion developer token, build record,
+tester guide and licenses. Extract the whole archive. Keep **Applifast.exe**
+and **developer-token.txt** together.
 
-If you use [Homebrew](https://brew.sh), you can install it with:
+You need an Apple Music subscription, internet access and the
+[Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
+The installer does not download that runtime.
+[Getting Started](/getting-started/) explains authorization and recovery.
 
-```sh
-brew install --cask crmne/tap/spotifast
+## Check your download
+
+Compare the file with its supplied SHA-256 checksum:
+
+```powershell
+Get-FileHash -Algorithm SHA256 -LiteralPath .\applifast-preview-SOURCE-setup.exe
 ```
 
-### First open on macOS
+Replace the example filename with your download's name. Current previews are
+not Authenticode-signed. A matching hash checks file integrity, not publisher
+identity.
 
-Open **Spotifast** from Applications. If your Mac asks whether you want to
-open an app downloaded from the internet, choose **Open**.
+**BUILD.txt** records the source revision, executable hash, preview status and
+app-token expiry. Include these details in reports; a Windows file version
+alone does not distinguish development snapshots.
 
-Starting with 0.8.0, the Mac download passes Apple's security checks. You do
-not need to change security settings or run commands in Terminal to open it.
+## Update or remove
 
-Quit the old app before opening Spotifast. Your saved settings and sign-ins
-carry over. If an older version reports that its update helper exited before
-it was ready, install the DMG above manually once. The helper changes take
-effect for updates started from 0.9.1 onward.
+Apple mode does not use the upstream Spotifast updater. Quit through the tray,
+then install a replacement preview manually. Keep the app and token together.
+A valid stored developer token takes precedence until renewal is needed.
 
-## Windows
+Uninstall through Windows Settings. Uninstalling does not sign out or erase
+settings, account metadata or the browser profile. Use **Sign out** inside
+Applifast before uninstalling if you want to clear account authorization.
 
-Download and run the installer. It adds Spotifast to the Start menu and does
-not need an administrator password. Choose the first download for most PCs,
-or the ARM version if your PC uses an ARM processor:
+## Other platforms and public releases
 
-- [Windows installer (most PCs)]({{ base }}/spotifast-v{{ v }}-x86_64-pc-windows-msvc-setup.exe)
-- [Windows installer (ARM PCs)]({{ base }}/spotifast-v{{ v }}-aarch64-pc-windows-msvc-setup.exe)
+Linux and macOS compilation is checked, but Apple playback is unsupported.
+The private package qualifies Windows x64, not a Windows ARM installer.
 
-To run Spotifast without an installer, download a ZIP file, extract it, and
-open `spotifast.exe`.
-
-- [Windows ZIP (most PCs)]({{ base }}/spotifast-v{{ v }}-x86_64-pc-windows-msvc.zip)
-- [Windows ZIP (ARM PCs)]({{ base }}/spotifast-v{{ v }}-aarch64-pc-windows-msvc.zip)
-
-Either way, SmartScreen may warn about an unknown publisher on first run;
-choose **More info**, then **Run anyway**.
-
-Spotifast needs OpenGL 2.0 or newer, which every current Windows graphics
-driver provides. In a virtual machine or remote session that only has the
-Microsoft Basic Display Adapter, it may not start; install the machine's
-graphics driver, or enable GPU acceleration for the virtual machine.
-
-To choose which app opens Spotify links, use **Settings → Apps → Default apps**
-in Windows.
-
-## Linux
-
-### Arch Linux
-
-Spotifast is in the AUR, Arch's community package collection. Installing it
-also adds it to your app launcher:
-
-```sh
-yay -S spotifast-bin      # the released build, ready made
-yay -S spotifast          # the release, built from source
-yay -S spotifast-git      # built from the latest commit
-```
-
-### Flatpak
-
-Download the [Spotifast Flatpak]({{ base }}/spotifast-v{{ v }}-x86_64.flatpak?flatpak-id=rocks.spotifast.Spotifast).
-It requires Flatpak and the Freedesktop 24.08 runtime, a set of shared
-components used by Flatpak apps:
-
-```sh
-flatpak install --user ~/Downloads/spotifast-v{{ v }}-x86_64.flatpak
-flatpak run rocks.spotifast.Spotifast
-```
-
-The application ID is **`rocks.spotifast.Spotifast`**.
-
-To update this Flatpak installation, download and install the new release.
-Flathub support is planned.
-
-Packages from other stores are maintained by their publishers. Report
-problems specific to those packages to their maintainers.
-
-### AppImage
-
-- [AppImage (Intel and AMD, 64-bit)]({{ base }}/spotifast-{{ v }}-x86_64.AppImage)
-- [AppImage (ARM, 64-bit)]({{ base }}/spotifast-{{ v }}-aarch64.AppImage)
-
-One file, no installation: make it executable and run it.
-
-```sh
-chmod +x ~/Downloads/spotifast-{{ v }}-x86_64.AppImage
-~/Downloads/spotifast-{{ v }}-x86_64.AppImage
-```
-
-The AppImage bundles no libraries: like the DEB and RPM, it needs glibc 2.39
-or newer and your desktop's own libraries. Running it needs FUSE; without
-FUSE, start it with `--appimage-extract-and-run`. It does not update itself:
-download the new file when Spotifast says a release is out.
-
-### Other distributions
-
-- [Linux archive (Intel and AMD, 64-bit)]({{ base }}/spotifast-v{{ v }}-x86_64-unknown-linux-gnu.tar.gz)
-- [Linux archive (ARM, 64-bit)]({{ base }}/spotifast-v{{ v }}-aarch64-unknown-linux-gnu.tar.gz)
-
-Unpack, put `spotifast` on your PATH, and copy the desktop entry and icon
-from the bundled `packaging/` directory if you want it in your launcher and
-handling `spotify:` links.
-The binary needs ALSA, PulseAudio or PipeWire, and Wayland or X11.
-
-Or build from source: see the [build instructions](/getting-started/#build-from-source).
-
-## Nix
-
-Add the repository [flake](https://github.com/crmne/spotifast) to your
-inputs:
-
-```nix
-inputs.spotifast.url = "github:crmne/spotifast";
-```
-
-On NixOS, install the default package:
-
-```nix
-environment.systemPackages = [
-  inputs.spotifast.packages."${pkgs.stdenv.hostPlatform.system}".default
-];
-```
-
-### nix-darwin
-
-On macOS, use the same `spotifast` package to install Spotifast as a Mac app:
-
-```nix
-environment.systemPackages = [
-  inputs.spotifast.packages."${pkgs.stdenv.hostPlatform.system}".spotifast
-];
-environment.pathsToLink = [ "/Applications" ];
-```
-
-The bundle appears in `/Applications/Nix Apps`. With Home Manager,
-`home.packages` is enough; its darwin support links app bundles into
-`~/Applications`:
-
-```nix
-home.packages = [
-  inputs.spotifast.packages."${pkgs.stdenv.hostPlatform.system}".spotifast
-];
-```
+A public beta still needs final runtime acceptance, release metadata, a signing
+decision, verified artifacts and download links. Follow
+[the fork](https://github.com/jackkayser2005/applifast) and its
+[release checklist](/applifast/release-readiness.html).

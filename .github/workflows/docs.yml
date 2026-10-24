@@ -20,6 +20,8 @@ concurrency:
 
 jobs:
   build:
+    # The inherited production site still uses Spotifast's domain and metadata.
+    if: github.repository == 'crmne/spotifast'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -56,6 +58,7 @@ jobs:
           path: ./docs/_site
 
   deploy:
+    if: github.repository == 'crmne/spotifast'
     needs: build
     runs-on: ubuntu-latest
     environment:

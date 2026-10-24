@@ -1,0 +1,38 @@
+{
+  "SourceBase": "afcded9f64bb9ba1edcc26104eee98e09de93c3e",
+  "WindowsSourceSHA256": "4ad040a5074eb0e9dd73055520edc877f7ade7a76d3538e65c8ae40a7341eb72",
+  "NativeTestBinarySHA256": "8447d85496796951abb00796ed45dba29266182eaae4b75f1b2a564724688c09",
+  "BeforeLogSHA256": "be658aac0bea84ea7ab33ba4c379d864d2622a698e9925c5b0c5502c5e01d68a",
+  "AfterLogSHA256": "7b4454d5c167c348dc0567927bb97ef5f8202524b9b50da6bdc78ee3132946b6",
+  "BeforeScope": "afcded9 production behavior with new native fixture/diagnostic instrumentation; before binary hash was not recorded",
+  "BeforeOrder": [
+    "authorize",
+    "cleared",
+    "authorize",
+    "cleared"
+  ],
+  "AfterOrder": [
+    "cleared",
+    "authorize",
+    "cleared",
+    "authorize"
+  ],
+  "Result": "Pass",
+  "Platform": "Windows x64",
+  "OrderingTestDurationSeconds": 0.44,
+  "CredentialServiceInvoked": false,
+  "AppleNavigation": false,
+  "RealAccountSignOut": false,
+  "ActualStalledCleanupTimeoutTested": false,
+  "Scope": "Direct native STA loop with inert page, fresh isolated LOCALAPPDATA and empty credentials. Native sequencing only; actual Apple account lifecycle remains unverified.",
+  "RestoredAccountReadOnly": {
+    "Exit": 0,
+    "Seconds": 6.776,
+    "BinarySHA256": "68a4f141b8c613bb9684ee7f39d6679eec9503ee06d1f28d83d3e8f9804507e8",
+    "WindowsSourceSHA256": "4ad040a5074eb0e9dd73055520edc877f7ade7a76d3538e65c8ae40a7341eb72",
+    "EmbeddedPageMatches": true,
+    "EmbeddedBridgeMatches": true,
+    "CredentialServiceRead": true,
+    "Scope": "Read-only library, catalog and original library thumbnail plus public catalog artwork dimensions; fresh owned profile and image cache; protected local authorization; no audio, sign-out, popup or account mutation commands"
+  }
+}
