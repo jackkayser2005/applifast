@@ -6,7 +6,7 @@ The evidence below qualifies only the named path and conditions.
 
 | Requested item | Current evidence | Remaining acceptance |
 | --- | --- | --- |
-| Reduce motion in Settings | Connected setting, switch/tint/drag regressions and [setting comparisons](reduce-motion-controls.md). Native indicators stay still; native hover snaps directly to its final state. | Actual Settings interaction alongside every remaining transition. CLI-selected demo settings do not establish that interaction. |
+| Reduce motion in Settings | Connected setting, switch/tint/drag regressions and [setting comparisons](reduce-motion-controls.md). Native indicators stay still; hover snaps to its final state. The [paused mini-player clock](paused-clock-motion.md) now stays visible, with actual sprite and native frame regressions. | Actual Settings interaction alongside every remaining transition. CLI-selected demo settings do not establish that interaction. |
 | Play on cover hover, with lift | [Native hover frames](native-hover-frames.md): intermediate native pixels, four-pixel lift and Play affordance, both themes and widths. Existing deterministic pointer/action tests cover dispatch. | Natural pointer/click use with the Apple library. |
 | Dancing bars on the playing song | [Native indicator frames](native-motion-frames.md): eight distinct moving frames and identical Reduce motion frames in each theme/size. | Live playing/paused/zero-volume desktop use. These are decorative patterns, not audio analysis. |
 | Thicker seek bar and hover knob | [Native hover frames](native-hover-frames.md): intermediate fill colors, thicker track and visible knob; Reduce motion snaps. Deterministic keyboard/pointer controls are tested. | Natural hover/seek while real Apple playback continues. |
@@ -24,9 +24,11 @@ conditions. Neither establishes memory limits, one-hour gaming reliability,
 account lifecycle, new Favorites writes or all eleven paths at once.
 
 The additional transition captures use a paused offline fixture and preserve
-the same limits. They also expose a separate unfinished Reduce motion path:
-the classic mini-player's paused clock continues blinking. Its clock region is
-excluded only from outside-heart stability checks, not treated as verified.
+the same limits. They exposed a Reduce motion gap at capture time:
+the classic mini-player's paused clock continued blinking. The
+[clock follow-up](paused-clock-motion.md) fixes that path and supplies matching
+native comparisons. The earlier transition capture still retains its original
+clock exclusion; its historical evidence has not been rewritten.
 
 The [source integration trace](integration.md) and complete
 [release checklist](release-readiness.md) remain authoritative for broader scope.

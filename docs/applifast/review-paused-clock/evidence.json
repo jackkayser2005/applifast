@@ -1,0 +1,1419 @@
+{
+  "baselineSource": "8baea733ae511f687b19e9a1e0793986ae4e74f8",
+  "baselineFixtureBinarySHA256": "8fac78387c80a570bb6d450148a3b6a1a331af6a3090145c7a1d03deb4321761",
+  "sourceBase": "37647f594372b2c8932005e1d11105cfcdee06a5",
+  "binarySHA256": "d67862502f0eede2f48dea920da0355006ddfbe929d1dd0f522650d5e2698efa",
+  "platform": "Windows native egui demo readbacks",
+  "nativeCandidateFrames": 128,
+  "scope": "Paused classic mini-player clock only. Same colors/layout; main-window theme flags do not recolor the skin. No account, audio or resource measurement.",
+  "timing": "Unchanged native clock and capture cadence. Original blink remains with Reduce motion off.",
+  "fixture": "Demo paused, artwork URLs absent, no activation requested, real keyboard/text events dropped. No timing, layout, clock or screenshot cadence override.",
+  "regression": {
+    "test": "demo::tests::apple_mini_paused_clock_stays_visible_with_reduce_motion",
+    "testSHA256": "2d0f782cde111b206ebbee6bf2ddb5755cc7079d64b5e0836b0c0fcf874be652",
+    "baselineModuleSHA256": "dea673115daa2bc5813a21cb09f9750a2ca89bc1c054e91b3ed93450304f173c",
+    "candidateModuleSHA256": "d613bb9c94ed308861556f071b4fc4a391ae71d38f45cb00f24a5b47bc8cf4f7",
+    "baselineReproduced": true,
+    "seconds": 17.781,
+    "candidateRestored": true
+  },
+  "checks": [
+    {
+      "Name": "fmt",
+      "ExitCode": 0,
+      "Seconds": 2.052
+    },
+    {
+      "Name": "clippy-default",
+      "ExitCode": 0,
+      "Seconds": 18.152
+    },
+    {
+      "Name": "clippy-demo",
+      "ExitCode": 0,
+      "Seconds": 12.33
+    },
+    {
+      "Name": "tests-default",
+      "ExitCode": 0,
+      "Seconds": 58.817
+    },
+    {
+      "Name": "tests-demo",
+      "ExitCode": 0,
+      "Seconds": 52.462
+    },
+    {
+      "Name": "doctests-demo",
+      "ExitCode": 0,
+      "Seconds": 4.469
+    },
+    {
+      "Name": "rustdoc-demo",
+      "ExitCode": 0,
+      "Seconds": 18.76
+    }
+  ],
+  "cases": [
+    {
+      "name": "moving-dark-275x116",
+      "mode": "moving",
+      "theme": "dark",
+      "size": "275x116",
+      "clockBox": [
+        36,
+        26,
+        99,
+        39
+      ],
+      "before": "before-moving-dark-275x116.png",
+      "baselineSourceFrame": {
+        "file": "capture-000.png",
+        "requested_at_seconds": 1.600507,
+        "width": 275,
+        "height": 116,
+        "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92"
+      },
+      "baselineClockPixelSHA256": "2d6aee5c8db06a8b9821cf6381f516f65332f875b69eb3b5532c40d4f3ec429a",
+      "clockUniqueStates": 2,
+      "allOtherPixelsIdenticalToBaseline": true,
+      "frames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.4686443,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.5423307,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-dark-275x116-01.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.6238104,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-dark-275x116-01.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.7189972,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-dark-275x116-01.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 1.8034648,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-dark-275x116-01.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 1.8701431,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-dark-275x116-01.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 1.9701995,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-dark-275x116-01.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.064641,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.1644712999999998,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.2260163,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.2972131,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.4015481,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.4997612,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-dark-275x116-01.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.5774631,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-dark-275x116-01.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 2.6480599,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-dark-275x116-01.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 2.7165242000000003,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-dark-275x116-01.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        }
+      ],
+      "beforePixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+    },
+    {
+      "name": "moving-dark-550x232",
+      "mode": "moving",
+      "theme": "dark",
+      "size": "550x232",
+      "clockBox": [
+        72,
+        52,
+        198,
+        78
+      ],
+      "before": "before-moving-dark-550x232.png",
+      "baselineSourceFrame": {
+        "file": "capture-000.png",
+        "requested_at_seconds": 1.6176749,
+        "width": 550,
+        "height": 232,
+        "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083"
+      },
+      "baselineClockPixelSHA256": "c13093842e2e03efd4f629653c31f60e674a4b108eb3f6ea87f5487d2f35aa7a",
+      "clockUniqueStates": 2,
+      "allOtherPixelsIdenticalToBaseline": true,
+      "frames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.3786495,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.4563516,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.5508547,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-dark-550x232-01.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.6475678,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-dark-550x232-01.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 1.7230707,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-dark-550x232-01.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 1.806964,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-dark-550x232-01.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 1.9119207,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-dark-550x232-01.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.0453361,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.1619594,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.258201,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.3341548,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.4141728000000002,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.492744,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.5794437,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-dark-550x232-01.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 2.6571416,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-dark-550x232-01.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 2.7475783,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-dark-550x232-01.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        }
+      ],
+      "beforePixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+    },
+    {
+      "name": "moving-light-275x116",
+      "mode": "moving",
+      "theme": "light",
+      "size": "275x116",
+      "clockBox": [
+        36,
+        26,
+        99,
+        39
+      ],
+      "before": "before-moving-light-275x116.png",
+      "baselineSourceFrame": {
+        "file": "capture-000.png",
+        "requested_at_seconds": 1.6250306,
+        "width": 275,
+        "height": 116,
+        "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92"
+      },
+      "baselineClockPixelSHA256": "2d6aee5c8db06a8b9821cf6381f516f65332f875b69eb3b5532c40d4f3ec429a",
+      "clockUniqueStates": 2,
+      "allOtherPixelsIdenticalToBaseline": true,
+      "frames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.5460045,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-light-275x116-00.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.6191119,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-light-275x116-00.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.6939587,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-light-275x116-00.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.7570929,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-light-275x116-00.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 1.8349236,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-light-275x116-00.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 1.9072082,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-light-275x116-00.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 1.9737866,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-light-275x116-00.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.0460465,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-light-275x116-01.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.1126834,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-light-275x116-01.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.1904723,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-light-275x116-01.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.2682362,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-light-275x116-01.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.3460381,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-light-275x116-01.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.4238254,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-light-275x116-01.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.4904509,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-moving-light-275x116-01.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 2.557202,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-light-275x116-00.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 2.6239001,
+          "width": 275,
+          "height": 116,
+          "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92",
+          "viewerFile": "after-moving-light-275x116-00.png",
+          "pixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+        }
+      ],
+      "beforePixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+    },
+    {
+      "name": "moving-light-550x232",
+      "mode": "moving",
+      "theme": "light",
+      "size": "550x232",
+      "clockBox": [
+        72,
+        52,
+        198,
+        78
+      ],
+      "before": "before-moving-light-550x232.png",
+      "baselineSourceFrame": {
+        "file": "capture-000.png",
+        "requested_at_seconds": 1.5935888,
+        "width": 550,
+        "height": 232,
+        "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083"
+      },
+      "baselineClockPixelSHA256": "c13093842e2e03efd4f629653c31f60e674a4b108eb3f6ea87f5487d2f35aa7a",
+      "clockUniqueStates": 2,
+      "allOtherPixelsIdenticalToBaseline": true,
+      "frames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.512389,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-light-550x232-00.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.6068779,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-light-550x232-00.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.6991049,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-light-550x232-00.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.7790981000000001,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-light-550x232-00.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 1.873624,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-light-550x232-00.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 1.9600385999999999,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-light-550x232-00.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 2.0346749,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-light-550x232-01.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.1124536,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-light-550x232-01.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.2068754,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-light-550x232-01.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.2935344,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-light-550x232-01.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.3735417,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-light-550x232-01.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.4569602,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-moving-light-550x232-01.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.5451398,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-light-550x232-00.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.6180427,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-light-550x232-00.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 2.7013565,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-light-550x232-00.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 2.8034837,
+          "width": 550,
+          "height": 232,
+          "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083",
+          "viewerFile": "after-moving-light-550x232-00.png",
+          "pixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+        }
+      ],
+      "beforePixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+    },
+    {
+      "name": "reduced-dark-275x116",
+      "mode": "reduced",
+      "theme": "dark",
+      "size": "275x116",
+      "clockBox": [
+        36,
+        26,
+        99,
+        39
+      ],
+      "before": "before-reduced-dark-275x116.png",
+      "baselineSourceFrame": {
+        "file": "capture-000.png",
+        "requested_at_seconds": 1.6200714999999999,
+        "width": 275,
+        "height": 116,
+        "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92"
+      },
+      "baselineClockPixelSHA256": "2d6aee5c8db06a8b9821cf6381f516f65332f875b69eb3b5532c40d4f3ec429a",
+      "clockUniqueStates": 1,
+      "allOtherPixelsIdenticalToBaseline": true,
+      "frames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.5612012,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.6390329000000001,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.7056707,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.7834197999999999,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 1.8612444,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 1.9390192000000002,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 2.0056464,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.0781422,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.1445726,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.2223643,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.2945776,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.3612766,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.4281535,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.500131,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 2.5669619,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 2.6390782,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-dark-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        }
+      ],
+      "beforePixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+    },
+    {
+      "name": "reduced-dark-550x232",
+      "mode": "reduced",
+      "theme": "dark",
+      "size": "550x232",
+      "clockBox": [
+        72,
+        52,
+        198,
+        78
+      ],
+      "before": "before-reduced-dark-550x232.png",
+      "baselineSourceFrame": {
+        "file": "capture-000.png",
+        "requested_at_seconds": 1.5706072,
+        "width": 550,
+        "height": 232,
+        "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083"
+      },
+      "baselineClockPixelSHA256": "c13093842e2e03efd4f629653c31f60e674a4b108eb3f6ea87f5487d2f35aa7a",
+      "clockUniqueStates": 1,
+      "allOtherPixelsIdenticalToBaseline": true,
+      "frames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.5123859,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.595653,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.6789771,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.7567696000000002,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 1.8345797,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 1.9123877,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 1.9901621,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.0679109,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.1513966,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.2290417,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.3068473,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.3846057,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.4624295,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.5401443,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 2.6183912,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 2.6957571,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-dark-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        }
+      ],
+      "beforePixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+    },
+    {
+      "name": "reduced-light-275x116",
+      "mode": "reduced",
+      "theme": "light",
+      "size": "275x116",
+      "clockBox": [
+        36,
+        26,
+        99,
+        39
+      ],
+      "before": "before-reduced-light-275x116.png",
+      "baselineSourceFrame": {
+        "file": "capture-000.png",
+        "requested_at_seconds": 1.6173259,
+        "width": 275,
+        "height": 116,
+        "sha256": "e1a8b86aaa7ba3880994ff45b2f9d4021f69350687b588bf6ab83b56395d0a92"
+      },
+      "baselineClockPixelSHA256": "2d6aee5c8db06a8b9821cf6381f516f65332f875b69eb3b5532c40d4f3ec429a",
+      "clockUniqueStates": 1,
+      "allOtherPixelsIdenticalToBaseline": true,
+      "frames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.5384354,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.6217361000000001,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.6883464,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.7605504,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 1.827287,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 1.8994655,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 1.966245,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.0383523,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.1050328,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.1892184,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.2606056,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.3780252,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.4733599,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.566085,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 2.6441397,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 2.7051349,
+          "width": 275,
+          "height": 116,
+          "sha256": "d61e173fbc8dfd9a578f46e735a85075883920768f3a17c7425e44b6e3402288",
+          "viewerFile": "after-reduced-light-275x116-00.png",
+          "pixelSHA256": "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+        }
+      ],
+      "beforePixelSHA256": "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+    },
+    {
+      "name": "reduced-light-550x232",
+      "mode": "reduced",
+      "theme": "light",
+      "size": "550x232",
+      "clockBox": [
+        72,
+        52,
+        198,
+        78
+      ],
+      "before": "before-reduced-light-550x232.png",
+      "baselineSourceFrame": {
+        "file": "capture-000.png",
+        "requested_at_seconds": 1.6153444000000001,
+        "width": 550,
+        "height": 232,
+        "sha256": "2e9cdc9837d9f414d34e3fa8294878394d37d91d072b85f71100ff3fd33f9083"
+      },
+      "baselineClockPixelSHA256": "c13093842e2e03efd4f629653c31f60e674a4b108eb3f6ea87f5487d2f35aa7a",
+      "clockUniqueStates": 1,
+      "allOtherPixelsIdenticalToBaseline": true,
+      "frames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.5433439,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.6212267,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.6990904,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.7768323000000001,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 1.8491437,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 1.9323571,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 2.0101011,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.087892,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.1656823,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.2434548,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.3212013000000002,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.3990242,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.4767727,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.5545421,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 2.6323723,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 2.7157207,
+          "width": 550,
+          "height": 232,
+          "sha256": "a498b01f25b37b1f0346ec9188391a243608dc376363d10b7c5cafefcac0cacc",
+          "viewerFile": "after-reduced-light-550x232-00.png",
+          "pixelSHA256": "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+        }
+      ],
+      "beforePixelSHA256": "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+    }
+  ]
+}
