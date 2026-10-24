@@ -66,9 +66,9 @@ original PR is not evidence that the behavior is absent from the preview.
 | Requested item | Current implementation |
 | --- | --- |
 | Reduce motion in Settings | `Settings::reduce_motion`, the settings control, and `ui::motion::set_reduced` applied by the shared interface. [Follow-up evidence](reduce-motion-controls.md) covers switches, tint and drag feedback. |
-| Play on cover hover with lift | Cover/card drawing and hover actions in `src/ui/widgets.rs`, using the shared motion policy. |
+| Play on cover hover with lift | Cover/card drawing and hover actions in `src/ui/widgets.rs`, using the shared motion policy. [Native frames](native-hover-frames.md) verify intermediate pixels, the lift and Reduce motion. |
 | Dancing playing indicators | `ui::motion::playing_bars` and its song/card callers. These are decorative fixed patterns. |
-| Seek bar and hover knob | `ui::widgets::thin_slider`, reused by transport and Now Playing. |
+| Seek bar and hover knob | `ui::widgets::thin_slider`, reused by transport and Now Playing. [Native frames](native-hover-frames.md) verify the hover color, growing track, knob and Reduce motion. |
 | Cover crossfade | `ui::player_bar::crossfaded_cover`, retaining the previous ready image while a replacement loads. |
 | Heart pop | Shared `pop_heart`/`heart_scale` and Favorites control callers. Real favorite writes still need their account acceptance. |
 | Queue rows arriving | `ui::motion::note_rows`/`arrival` with occurrence keys in `src/ui/queue.rs`; duplicate rows have independent keys. |
@@ -76,6 +76,11 @@ original PR is not evidence that the behavior is absent from the preview.
 | Full-screen Now Playing controls | `src/ui/lyrics.rs` and the shared native transport actions. |
 | Smoother timed lyrics | Shared motion-aware scroll/line transitions in `src/ui/lyrics.rs`; Apple mode uses LRCLIB when available. |
 | Page fade | `ui::motion::page_opacity` applied in `src/ui/mod.rs`. |
+
+The [eleven-item acceptance ledger](motion-acceptance.md) distinguishes native
+temporal evidence from static captures, deterministic tests and live use. The
+128-frame hover follow-up qualifies two additional render paths without changing
+application code or closing the remaining interactions.
 
 Deterministic motion, slider, queue and lyrics tests exercise these paths. Stills
 can inspect appearance, hover endpoints and Reduce motion resting states. They
