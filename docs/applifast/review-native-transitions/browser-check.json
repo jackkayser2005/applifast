@@ -1,0 +1,648 @@
+{
+  "staticSelections": 120,
+  "replays": 40,
+  "externalRequestsBlocked": true,
+  "errors": [],
+  "results": [
+    {
+      "name": "cover-moving-dark-1100x760",
+      "component": "cover",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "40c1f5c50eb5d9f2d41fe929bc39f230bd5b9fec6cb548db723779ad0b94facb",
+        "1a2a3283680524718ad4c2e6451c655f8098a038272779de441b8744fe4e315c",
+        "cd1a750370929be40f62688ecd76ea83edf5b6b7f85c2cd8640b9c2ac87e95ad"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "cover-moving-dark-760x760",
+      "component": "cover",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "40c1f5c50eb5d9f2d41fe929bc39f230bd5b9fec6cb548db723779ad0b94facb",
+        "d7d56e525613a51c61893546a03c41ce6a3d26e4ad287decaef27c8e1c998277",
+        "cd1a750370929be40f62688ecd76ea83edf5b6b7f85c2cd8640b9c2ac87e95ad"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "cover-moving-light-1100x760",
+      "component": "cover",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "49cbcd0336c2d3a6a520aad243e562325729ccd2c4463d8fa524e5e7b9797568",
+        "874d3243dba4973e1973bdc5862836c1f870862797873cdebb069dfe4bbfc76e",
+        "948e0e66ee84c42c7ed5c7c8c74de6bb9900a3d70107e4bb3855298022434d4c"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "cover-moving-light-760x760",
+      "component": "cover",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "49cbcd0336c2d3a6a520aad243e562325729ccd2c4463d8fa524e5e7b9797568",
+        "9cf5ea002ae39412391b52b2469365810c0d3d8d9ecc91466d143132231237d0",
+        "948e0e66ee84c42c7ed5c7c8c74de6bb9900a3d70107e4bb3855298022434d4c"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "cover-reduced-dark-1100x760",
+      "component": "cover",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "40c1f5c50eb5d9f2d41fe929bc39f230bd5b9fec6cb548db723779ad0b94facb",
+        "cd1a750370929be40f62688ecd76ea83edf5b6b7f85c2cd8640b9c2ac87e95ad",
+        "cd1a750370929be40f62688ecd76ea83edf5b6b7f85c2cd8640b9c2ac87e95ad"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "cover-reduced-dark-760x760",
+      "component": "cover",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "40c1f5c50eb5d9f2d41fe929bc39f230bd5b9fec6cb548db723779ad0b94facb",
+        "cd1a750370929be40f62688ecd76ea83edf5b6b7f85c2cd8640b9c2ac87e95ad",
+        "cd1a750370929be40f62688ecd76ea83edf5b6b7f85c2cd8640b9c2ac87e95ad"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "cover-reduced-light-1100x760",
+      "component": "cover",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "49cbcd0336c2d3a6a520aad243e562325729ccd2c4463d8fa524e5e7b9797568",
+        "948e0e66ee84c42c7ed5c7c8c74de6bb9900a3d70107e4bb3855298022434d4c",
+        "948e0e66ee84c42c7ed5c7c8c74de6bb9900a3d70107e4bb3855298022434d4c"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "cover-reduced-light-760x760",
+      "component": "cover",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "49cbcd0336c2d3a6a520aad243e562325729ccd2c4463d8fa524e5e7b9797568",
+        "948e0e66ee84c42c7ed5c7c8c74de6bb9900a3d70107e4bb3855298022434d4c",
+        "948e0e66ee84c42c7ed5c7c8c74de6bb9900a3d70107e4bb3855298022434d4c"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "heart-moving-dark-1100x760",
+      "component": "player",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "8f9ff61359c94906ac6884c50531ba45fdb84c53fa33d7f0cf6a1044fb5eaf5e",
+        "fd6108801efd75f433da4af31705fdfca5f9e1527013004070490296af869ffb",
+        "8f9ff61359c94906ac6884c50531ba45fdb84c53fa33d7f0cf6a1044fb5eaf5e"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "heart-moving-dark-1100x760",
+      "component": "row",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "63636bf4d705907f49d507ec1e722f0d2dc3e8464a4fc02b6098d15d7a2be5f6",
+        "96e0a1a6e6b5136b833edbba59f926706535a044151ab6b5cfcf4b96a5cb547b",
+        "63636bf4d705907f49d507ec1e722f0d2dc3e8464a4fc02b6098d15d7a2be5f6"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "heart-moving-dark-760x760",
+      "component": "player",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "8f9ff61359c94906ac6884c50531ba45fdb84c53fa33d7f0cf6a1044fb5eaf5e",
+        "905a941c89517bd21e3e6b5404fff1c1e5e2ca1a11ffae773e4f805c6e402655",
+        "8f9ff61359c94906ac6884c50531ba45fdb84c53fa33d7f0cf6a1044fb5eaf5e"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "heart-moving-dark-760x760",
+      "component": "row",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "648231440b028a7bcdb92a6d09d7adb0f0be941a9b4a5de5f711de96fcd41385",
+        "15aad84e20a0c357532a4661487bb68c504c9638151ecc3cb0f82193b02295fc",
+        "648231440b028a7bcdb92a6d09d7adb0f0be941a9b4a5de5f711de96fcd41385"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "heart-moving-light-1100x760",
+      "component": "player",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "16d004947c8fc89aac28eae1719c35f60a1f665e11a1d9da1caefccdb6628c3a",
+        "d00ba3a84a8d91fec67674ad106b51b0a83872f7eaa86422a16f5b7e59554dba",
+        "16d004947c8fc89aac28eae1719c35f60a1f665e11a1d9da1caefccdb6628c3a"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "heart-moving-light-1100x760",
+      "component": "row",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "38ba4cf031eb40f6dd852557c970350f9e76c70ab57ab35451037dfd90d8df4d",
+        "c730bbd5464d1b59a4c37004160d454fb6f91a414e367f030ee18ef7bd30a823",
+        "38ba4cf031eb40f6dd852557c970350f9e76c70ab57ab35451037dfd90d8df4d"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "heart-moving-light-760x760",
+      "component": "player",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "16d004947c8fc89aac28eae1719c35f60a1f665e11a1d9da1caefccdb6628c3a",
+        "5be21b3b4efc0d2354b738f40975ae6fd68f4f5d3c9c0187cc2356f3cdc92c94",
+        "16d004947c8fc89aac28eae1719c35f60a1f665e11a1d9da1caefccdb6628c3a"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "heart-moving-light-760x760",
+      "component": "row",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "865a8f9ac3022c6a3eb09cef27d81fd56c0d6e0a7fc52fb001e89b6f5199214f",
+        "1e501659ea3b5afc179af929e0ccfbecae1e592e54293eb9407d7c9f33543f93",
+        "865a8f9ac3022c6a3eb09cef27d81fd56c0d6e0a7fc52fb001e89b6f5199214f"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "heart-reduced-dark-1100x760",
+      "component": "player",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "8f9ff61359c94906ac6884c50531ba45fdb84c53fa33d7f0cf6a1044fb5eaf5e",
+        "8f9ff61359c94906ac6884c50531ba45fdb84c53fa33d7f0cf6a1044fb5eaf5e",
+        "8f9ff61359c94906ac6884c50531ba45fdb84c53fa33d7f0cf6a1044fb5eaf5e"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "heart-reduced-dark-1100x760",
+      "component": "row",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "63636bf4d705907f49d507ec1e722f0d2dc3e8464a4fc02b6098d15d7a2be5f6",
+        "63636bf4d705907f49d507ec1e722f0d2dc3e8464a4fc02b6098d15d7a2be5f6",
+        "63636bf4d705907f49d507ec1e722f0d2dc3e8464a4fc02b6098d15d7a2be5f6"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "heart-reduced-dark-760x760",
+      "component": "player",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "8f9ff61359c94906ac6884c50531ba45fdb84c53fa33d7f0cf6a1044fb5eaf5e",
+        "8f9ff61359c94906ac6884c50531ba45fdb84c53fa33d7f0cf6a1044fb5eaf5e",
+        "8f9ff61359c94906ac6884c50531ba45fdb84c53fa33d7f0cf6a1044fb5eaf5e"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "heart-reduced-dark-760x760",
+      "component": "row",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "648231440b028a7bcdb92a6d09d7adb0f0be941a9b4a5de5f711de96fcd41385",
+        "648231440b028a7bcdb92a6d09d7adb0f0be941a9b4a5de5f711de96fcd41385",
+        "648231440b028a7bcdb92a6d09d7adb0f0be941a9b4a5de5f711de96fcd41385"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "heart-reduced-light-1100x760",
+      "component": "player",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "16d004947c8fc89aac28eae1719c35f60a1f665e11a1d9da1caefccdb6628c3a",
+        "16d004947c8fc89aac28eae1719c35f60a1f665e11a1d9da1caefccdb6628c3a",
+        "16d004947c8fc89aac28eae1719c35f60a1f665e11a1d9da1caefccdb6628c3a"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "heart-reduced-light-1100x760",
+      "component": "row",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "38ba4cf031eb40f6dd852557c970350f9e76c70ab57ab35451037dfd90d8df4d",
+        "38ba4cf031eb40f6dd852557c970350f9e76c70ab57ab35451037dfd90d8df4d",
+        "38ba4cf031eb40f6dd852557c970350f9e76c70ab57ab35451037dfd90d8df4d"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "heart-reduced-light-760x760",
+      "component": "player",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "16d004947c8fc89aac28eae1719c35f60a1f665e11a1d9da1caefccdb6628c3a",
+        "16d004947c8fc89aac28eae1719c35f60a1f665e11a1d9da1caefccdb6628c3a",
+        "16d004947c8fc89aac28eae1719c35f60a1f665e11a1d9da1caefccdb6628c3a"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "heart-reduced-light-760x760",
+      "component": "row",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "865a8f9ac3022c6a3eb09cef27d81fd56c0d6e0a7fc52fb001e89b6f5199214f",
+        "865a8f9ac3022c6a3eb09cef27d81fd56c0d6e0a7fc52fb001e89b6f5199214f",
+        "865a8f9ac3022c6a3eb09cef27d81fd56c0d6e0a7fc52fb001e89b6f5199214f"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "mini-heart-moving-dark-275x116",
+      "component": "heart",
+      "selectedFrames": [
+        0,
+        3,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "74248b8d8d673e8353975eb012c24b3fee37895de76193ccf25fbda3c6d83d46",
+        "d3e9c07749e5b5d292ac95879cdf22fefc8de0626c10438d4a6df9c18f5e004e",
+        "74248b8d8d673e8353975eb012c24b3fee37895de76193ccf25fbda3c6d83d46"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "mini-heart-moving-dark-550x232",
+      "component": "heart",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "8178dd08b1ed289d5b9e2307c256110e438e3f4d3050e8c21cdc6026108f4d07",
+        "45c33e985e1f9d7a70feac7caaf79a70bcd1e39f710c1f388beea1af0bf12ab7",
+        "8178dd08b1ed289d5b9e2307c256110e438e3f4d3050e8c21cdc6026108f4d07"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "mini-heart-moving-light-275x116",
+      "component": "heart",
+      "selectedFrames": [
+        0,
+        3,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "74248b8d8d673e8353975eb012c24b3fee37895de76193ccf25fbda3c6d83d46",
+        "d3e9c07749e5b5d292ac95879cdf22fefc8de0626c10438d4a6df9c18f5e004e",
+        "74248b8d8d673e8353975eb012c24b3fee37895de76193ccf25fbda3c6d83d46"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "mini-heart-moving-light-550x232",
+      "component": "heart",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "8178dd08b1ed289d5b9e2307c256110e438e3f4d3050e8c21cdc6026108f4d07",
+        "45c33e985e1f9d7a70feac7caaf79a70bcd1e39f710c1f388beea1af0bf12ab7",
+        "8178dd08b1ed289d5b9e2307c256110e438e3f4d3050e8c21cdc6026108f4d07"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "mini-heart-reduced-dark-275x116",
+      "component": "heart",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "74248b8d8d673e8353975eb012c24b3fee37895de76193ccf25fbda3c6d83d46",
+        "74248b8d8d673e8353975eb012c24b3fee37895de76193ccf25fbda3c6d83d46",
+        "74248b8d8d673e8353975eb012c24b3fee37895de76193ccf25fbda3c6d83d46"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "mini-heart-reduced-dark-550x232",
+      "component": "heart",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "8178dd08b1ed289d5b9e2307c256110e438e3f4d3050e8c21cdc6026108f4d07",
+        "8178dd08b1ed289d5b9e2307c256110e438e3f4d3050e8c21cdc6026108f4d07",
+        "8178dd08b1ed289d5b9e2307c256110e438e3f4d3050e8c21cdc6026108f4d07"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "mini-heart-reduced-light-275x116",
+      "component": "heart",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "74248b8d8d673e8353975eb012c24b3fee37895de76193ccf25fbda3c6d83d46",
+        "74248b8d8d673e8353975eb012c24b3fee37895de76193ccf25fbda3c6d83d46",
+        "74248b8d8d673e8353975eb012c24b3fee37895de76193ccf25fbda3c6d83d46"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "mini-heart-reduced-light-550x232",
+      "component": "heart",
+      "selectedFrames": [
+        0,
+        0,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "8178dd08b1ed289d5b9e2307c256110e438e3f4d3050e8c21cdc6026108f4d07",
+        "8178dd08b1ed289d5b9e2307c256110e438e3f4d3050e8c21cdc6026108f4d07",
+        "8178dd08b1ed289d5b9e2307c256110e438e3f4d3050e8c21cdc6026108f4d07"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "page-moving-dark-1100x760",
+      "component": "page",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "908fe4544748586a6a96919b2262f05aeb2abbda6954032da00957d9c6f7ba9a",
+        "827778ee69cee8cfd37f6a4f575bf716e75322581718396c0f1bd57101ddce81",
+        "05e9c981c5461607c5f7abdef2c2dc19f57ab83dc3e64dd8e2a9c0f3a264cfcb"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "page-moving-dark-760x760",
+      "component": "page",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "15d85f4b2ffd04e7315ee282a8ef20262071be85e4a70df96df9bb135361e276",
+        "b53100cab29a3a10720ea295e233dd2268ee2b4c6fc810920edac22e327e2cbf",
+        "1973681d345e1480bcf33912b75144db80edebaef4752a0bc354c49790a31a6a"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "page-moving-light-1100x760",
+      "component": "page",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "669b68cfd9a768391a6d880f4daf3ced1ee5223ec4339b4693d483a239ad4def",
+        "54db3cefd63caae2dd5cfd10862e13eade3a46e24614703af525a9a468a81d60",
+        "55cf2dec341e3ed27592fadd65e63e12c9d2c0bf35609cf86c33e2c843215a9a"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "page-moving-light-760x760",
+      "component": "page",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "70230b58b90ffe70926972cbf7a10734b059e33762b6f6324ee5d3a2d710f019",
+        "6688262092e7e7665fbc48dd404d98b3b2831df1612318506497ce0f2c8d5183",
+        "ecc8151dabec364796723532ce5af0e5f80b2d260f5ad2b8f60901535c22b57d"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "page-reduced-dark-1100x760",
+      "component": "page",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "908fe4544748586a6a96919b2262f05aeb2abbda6954032da00957d9c6f7ba9a",
+        "0f69622311c8f62b6024763260fd8294c57436c56e46fb6906d76fcd9b8815a5",
+        "0f69622311c8f62b6024763260fd8294c57436c56e46fb6906d76fcd9b8815a5"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "page-reduced-dark-760x760",
+      "component": "page",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "15d85f4b2ffd04e7315ee282a8ef20262071be85e4a70df96df9bb135361e276",
+        "04c0e5cc725dd58c4d23500b22a567db2773d00161492ec75f1f8f9139c8e748",
+        "04c0e5cc725dd58c4d23500b22a567db2773d00161492ec75f1f8f9139c8e748"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "page-reduced-light-1100x760",
+      "component": "page",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "669b68cfd9a768391a6d880f4daf3ced1ee5223ec4339b4693d483a239ad4def",
+        "5277e86646bb307c5cf847f5cae23f89ce6db0e9b3da7c7c42bc9ca698db5079",
+        "5277e86646bb307c5cf847f5cae23f89ce6db0e9b3da7c7c42bc9ca698db5079"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "page-reduced-light-760x760",
+      "component": "page",
+      "selectedFrames": [
+        0,
+        1,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "70230b58b90ffe70926972cbf7a10734b059e33762b6f6324ee5d3a2d710f019",
+        "0217c78a4188a1dd20e1aab0957ef38d6072b9bf13cacb40879b3ba3063877ac",
+        "0217c78a4188a1dd20e1aab0957ef38d6072b9bf13cacb40879b3ba3063877ac"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    }
+  ]
+}
