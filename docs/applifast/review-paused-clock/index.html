@@ -2,7 +2,7 @@
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,">
 <title>Paused mini-player clock and Reduce motion</title>
 <style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}a{color:#ff7a80}button,select,input{font:inherit;padding:7px;margin:5px}img{display:block;max-width:100%;height:auto;border:1px solid #666;image-rendering:pixelated}button[aria-pressed=true]{outline:2px solid #ff7a80}</style>
-<h1>Paused mini-player clock and Reduce motion</h1>
+<h1><a href="https://github.com/jackkayser2005/applifast/pull/94">PR #94</a>: Paused mini-player clock and Reduce motion</h1>
 <p>With Reduce motion enabled, the paused classic mini-player clock now stays visible. Its ordinary blink remains when the setting is off. The skin, controls and layout are unchanged. These are actual Windows native demo frames, paused and offline, with no account or audio command.</p>
 <p>Before: <code>8baea73</code>, first native contexts retained by PR #93. After: <code>37647f5</code>, 128 new native readbacks. Both captures use a temporary paused/offline fixture with unchanged clock timing and screenshot cadence. All source bytes were restored after building the capture tool.</p>
 <label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>

@@ -92,5 +92,10 @@
       "normalBlinkMatchesBaseline": null,
       "renderedScreenshotUniqueStates": 2
     }
-  ]
+  ],
+  "reviewIndex": {
+    "indexLoadsSelectedReview": true,
+    "previousNext": true,
+    "pr": 94
+  }
 }
