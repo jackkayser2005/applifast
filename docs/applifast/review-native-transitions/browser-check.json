@@ -644,5 +644,10 @@
       "pauseResumeEnd": true,
       "renderedScreenshotUniqueStates": 2
     }
-  ]
+  ],
+  "reviewIndex": {
+    "indexLoadsSelectedReview": true,
+    "previousNext": true,
+    "pr": 93
+  }
 }

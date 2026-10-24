@@ -7,7 +7,7 @@ button,select,input{font:inherit;margin:5px;padding:7px}input[type=range]{width:
 img{display:block;max-width:100%;height:auto;border:1px solid #666}#detail{image-rendering:pixelated}
 button[aria-pressed=true]{outline:2px solid #ff7a80}
 </style>
-<h1>Native cover, heart and page transitions</h1>
+<h1><a href="https://github.com/jackkayser2005/applifast/pull/93">PR #93</a>: Native cover, heart and page transitions</h1>
 <p>512 actual Windows egui readbacks from source <code>8baea73</code>. A temporary fixture changes two local SVG covers, starts the existing filled-heart pulse, or opens Songs from Home. Demo playback is paused and offline. Animation durations and the native capture cadence are unchanged. Production sources were restored after building the capture tool.</p>
 <p>Moving covers and pages include intermediate pixels. Hearts grow, remain visible and return to their original pixels in the player, track row and classic mini-player. Reduce motion switches covers/pages directly and leaves hearts still. The classic skin retains its own colors under both main-window theme settings. Its separate paused clock still blinks with Reduce motion; that gap remains open.</p>
 <label>Transition <select id="scene"><option value="cover">Cover crossfade</option><option value="heart">Player and row heart</option><option value="mini-heart">Classic mini-player heart</option><option value="page">Home to Songs page fade</option></select></label>
