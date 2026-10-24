@@ -32,6 +32,9 @@ If the next song's artwork fails, its placeholder replaces the old cover.
 Reduce motion switches immediately, and a later successful image load still
 shows the recovered cover. See [cover recovery](docs/applifast/cover-recovery.md).
 
+Reduce motion keeps the classic mini-player's paused time visible, without its
+usual blink. Turning the setting off restores the classic paused-clock behavior.
+
 Apple artwork offers smaller images for thumbnails while keeping large covers.
 Fixed library covers get locally resized thumbnails from their original artwork.
 Old metadata caches remain readable. See [artwork sizing](docs/applifast/artwork-sizes.md)

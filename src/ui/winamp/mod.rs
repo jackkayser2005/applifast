@@ -1126,7 +1126,7 @@ fn status(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
 }
 
 /// The time in the skin's digits: elapsed, or remaining with a minus sign,
-/// blinking while paused, blank with nothing on.
+/// blinking while paused unless motion is reduced, blank with nothing on.
 fn time_display(app: &mut App, view: &mut View, now: Option<&NowPlaying>, time: f64) {
     let whole = Area::new(
         layout::MINUS_EX.x,
@@ -1159,7 +1159,7 @@ fn time_display(app: &mut App, view: &mut View, now: Option<&NowPlaying>, time: 
         return;
     };
     let paused = !now.playing && !now.loading;
-    if paused && (time * 2.0).floor() as i64 % 2 == 1 {
+    if paused && !super::motion::reduced(view.ui.ctx()) && (time * 2.0).floor() as i64 % 2 == 1 {
         blank(view);
         return;
     }

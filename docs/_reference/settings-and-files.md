@@ -29,6 +29,8 @@ fails, keep the sign-out markers and resolve the reported storage error.
 
 Theme, language, tray behavior, queue restoration, mini-player preferences,
 Favorites shelf size and Reduce motion are available in Apple mode.
+Reduce motion also keeps the classic mini-player's paused clock visible instead
+of blinking. Turning it off restores the normal paused blink.
 Unsupported PCM/EQ/MilkDrop controls are absent or inactive.
 See [Everyday Use](/using-spotifast/) and [Privacy](/privacy/).
 
