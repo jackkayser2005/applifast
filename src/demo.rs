@@ -1926,6 +1926,111 @@ mod tests {
 
     #[cfg(feature = "demo")]
     #[test]
+    fn lyrics_reduce_motion_stops_a_running_glide() {
+        let mut positions = Vec::new();
+        for (fullscreen, width) in [
+            (true, 1100.0),
+            (false, 1100.0),
+            (true, 760.0),
+            (false, 760.0),
+        ] {
+            let (ctx, mut app) = accessible_app(&format!("lyrics-glide-stop-{fullscreen}-{width}"));
+            app.backend.set_offline(true);
+            for saved in &mut app.library.liked.items {
+                if let Some(album) = &mut saved.track.album {
+                    album.images.clear();
+                }
+            }
+            let mut apple = crate::apple::State::demo(&app.library.liked.items);
+            apple.local.playback = crate::player::Playback::Paused;
+            apple.local.position_ms = 0;
+            app.local = apple.local.clone();
+            app.apple = Some(apple);
+            app.remote = None;
+            app.show_lyrics_panel = true;
+            app.lyrics_fullscreen = fullscreen.then_some(false);
+            app.settings.sidebar_visible = false;
+            app.lyrics_following = true;
+            app.lyrics_line_shown = None;
+            app.lyrics_uri = app.now_playing().map(|now| now.uri);
+            app.lyrics = Loadable::Loaded(Some(crate::lyrics::Lyrics {
+                lines: (0..24)
+                    .map(|index| crate::lyrics::Line {
+                        at_ms: Some(index * 1000),
+                        text: format!("Line{index:02} lyrics"),
+                    })
+                    .collect(),
+                synced: true,
+                instrumental: false,
+            }));
+            let frame = |app: &mut App, time: f64| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(time),
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(width, 760.0),
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| app.frame_ui(ui),
+                );
+                output.textures_delta.clear();
+                menu_text(&output)
+                    .into_iter()
+                    .find(|(text, _)| text == "Line03 lyrics")
+                    .map(|(_, rect)| rect.top())
+            };
+            frame(&mut app, 0.0);
+            frame(&mut app, 0.1);
+            frame(&mut app, 1.0);
+            app.apple.as_mut().unwrap().local.position_ms = 3000;
+            app.local.position_ms = 3000;
+            frame(&mut app, 2.0);
+            let middle = frame(&mut app, 2.1).unwrap_or_else(|| {
+                panic!("active line is visible during glide: {fullscreen}, {width}")
+            });
+            app.settings.reduce_motion = true;
+            // Scroll requests apply after layout; inspect the first following paint.
+            frame(&mut app, 2.11);
+            let reduced = frame(&mut app, 2.12).expect("active line visible after Reduce motion");
+            for step in 1..=30 {
+                let after = frame(&mut app, 2.12 + f64::from(step) / 60.0)
+                    .expect("active line remains visible with Reduce motion");
+                assert!(
+                    (reduced - after).abs() < 0.5,
+                    "no rebound after Reduce motion: {fullscreen}, frame {step}, {reduced} vs {after}"
+                );
+            }
+            let settled = frame(&mut app, 3.0).expect("active line visible after settling");
+            positions.push((fullscreen, width, middle, reduced, settled));
+            app.settings.reduce_motion = false;
+            frame(&mut app, 3.1);
+            app.apple.as_mut().unwrap().local.position_ms = 4000;
+            app.local.position_ms = 4000;
+            frame(&mut app, 3.2);
+            let moving = frame(&mut app, 3.3).expect("line visible during resumed glide");
+            let later = frame(&mut app, 3.4).expect("line visible during resumed glide");
+            assert!(
+                (moving - later).abs() > 0.5,
+                "turning Reduce motion off restores the glide: {fullscreen}, {width}"
+            );
+            app.backend.shutdown();
+        }
+        for (fullscreen, width, middle, reduced, settled) in positions {
+            assert!(
+                (middle - settled).abs() > 1.0,
+                "fixture must begin mid-glide: {fullscreen}, {width}"
+            );
+            assert!(
+                (reduced - settled).abs() < 0.5,
+                "Reduce motion must stop glide immediately: {fullscreen}, {width}, {reduced} vs {settled}"
+            );
+        }
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
     fn apple_mini_paused_clock_stays_visible_with_reduce_motion() {
         for scale in [1, 2] {
             let (ctx, mut app) = accessible_app(&format!("mini-paused-clock-{scale}"));

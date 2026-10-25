@@ -691,6 +691,9 @@ use the shared motion helpers, including when the setting changes during a
 transition. See the [motion follow-up checks](reduce-motion-controls.md).
 The classic mini-player's paused clock also stays visible with Reduce motion;
 its usual blink returns when the setting is turned off.
+Enabling the setting during a lyric glide also snaps to the sung line in both
+lyric views. Turning it off restores gliding for later lines. See the
+[lyrics interruption checks](lyrics-reduce-motion.md).
 
 ### Apple lyrics
 
