@@ -1,0 +1,21 @@
+{
+  "base": "99e0132a12905d8d17855df5ee346dfd3943c1cc",
+  "fixture": "Offline paused demo, no artwork URLs or activation, real keyboard/text events dropped. Existing QueueMany actions seed two manual entries and add two copies of a seeded song at capture index one. Animation durations and opacity remain unchanged; temporary post-readback capture delay is 5 ms instead of 50 ms.",
+  "files": [
+    {
+      "file": "src/entrypoint.rs",
+      "originalSHA256": "3846023ce621cedce7e42134299c0d250c7757c3ae716d3b138a6d47ff2e40e7",
+      "captureSHA256": "1a70a7cadcd8d3145ddf09fb38622b3822bf72aa3375afa1024f5500abce85dc"
+    },
+    {
+      "file": "src/demo.rs",
+      "originalSHA256": "fe5faf6ce8d9efdc08c16c18e7fc1e9482e33c1b040eac1212b736671529a560",
+      "captureSHA256": "accebf50b636bf6a4b9250c0779a1f0c1678168967668743855d5930d177b246"
+    },
+    {
+      "file": "src/apple.rs",
+      "originalSHA256": "5dd1fb5e33e41ede382f8d57bb176f55d5f2d74ac55e63f6309ecdea2d665d41",
+      "captureSHA256": "10fdd6344aaa5d5b7f7d1ff9ac03e35760b007d45ea5a231c6d7b567d072e928"
+    }
+  ]
+}

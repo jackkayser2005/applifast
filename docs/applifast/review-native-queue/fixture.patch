@@ -1,0 +1,61 @@
+diff --git a/src/apple.rs b/src/apple.rs
+index d273509..bfa50ac 100644
+--- a/src/apple.rs
++++ b/src/apple.rs
+@@ -1150 +1150 @@ impl State {
+-            state.local.playback = Playback::Playing;
++            state.local.playback = Playback::Paused;
+diff --git a/src/demo.rs b/src/demo.rs
+index 6a1b8cf..dad05eb 100644
+--- a/src/demo.rs
++++ b/src/demo.rs
+@@ -22,19 +22 @@ use crate::model::*;
+-fn image(seed: u32) -> Vec<Image> {
+-    vec![
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/640/640"),
+-            width: Some(640),
+-            height: Some(640),
+-        },
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/300/300"),
+-            width: Some(300),
+-            height: Some(300),
+-        },
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/64/64"),
+-            width: Some(64),
+-            height: Some(64),
+-        },
+-    ]
+-}
++fn image(_seed: u32) -> Vec<Image> { Vec::new() }
+diff --git a/src/entrypoint.rs b/src/entrypoint.rs
+index fe81a8e..9357de2 100644
+--- a/src/entrypoint.rs
++++ b/src/entrypoint.rs
+@@ -588,0 +589,4 @@ pub(crate) fn run() -> eframe::Result<()> {
++        let initial = app.apple.as_ref().unwrap().songs.iter().skip(1).take(2)
++            .map(|song| (song.uri(), song.title.clone())).collect();
++        app.actions.push(spotifast::model::Action::QueueMany { songs: initial });
++
+@@ -913,0 +918 @@ fn demo_native_options(
++    options.viewport = options.viewport.with_active(false);
+@@ -1449 +1454 @@ impl Shot {
+-            self.due = std::time::Instant::now() + std::time::Duration::from_millis(50);
++            self.due = std::time::Instant::now() + std::time::Duration::from_millis(5);
+@@ -1477,0 +1483,12 @@ impl Shell {
++            if request.index == 1 {
++                let song = self.app.apple.as_ref().unwrap().songs[1].clone();
++                let item = (song.uri(), song.title.clone());
++                self.app.actions.push(spotifast::model::Action::QueueMany { songs: vec![item.clone(), item] });
++            }
++            let mut trace = ctx.data(|data| data.get_temp::<Vec<serde_json::Value>>(egui::Id::new("qa-queue-trace"))).unwrap_or_default();
++            let apple = self.app.apple.as_ref().unwrap();
++            trace.push(serde_json::json!({"index":request.index,"manualCount":apple.order.manual_count,
++                "upcoming":apple.order.upcoming.iter().map(|index| apple.queue[*index].uri()).collect::<Vec<_>>(),
++                "snapshot":self.app.queue.get().unwrap().queue.iter().map(|item| item.uri()).collect::<Vec<_>>()}));
++            std::fs::write(shot.path.with_extension("queue-state.json"), serde_json::to_vec_pretty(&trace).unwrap()).unwrap();
++            ctx.data_mut(|data| data.insert_temp(egui::Id::new("qa-queue-trace"), trace));
+@@ -1505,0 +1523 @@ impl eframe::App for Shell {
++        raw_input.events.retain(|event| matches!(event, egui::Event::Screenshot { .. }));
