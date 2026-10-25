@@ -516,5 +516,12 @@
       "pauseResumeEnd": true,
       "renderedScreenshotUniqueStates": 1
     }
-  ]
+  ],
+  "reviewIndex": {
+    "indexLoadsSelectedReview": true,
+    "previousNext": true,
+    "pr": 96,
+    "externalRequestsBlocked": true,
+    "errors": []
+  }
 }

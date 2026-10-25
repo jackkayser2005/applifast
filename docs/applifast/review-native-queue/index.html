@@ -2,7 +2,7 @@
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,">
 <title>Native queue arrival and duplicate occurrences</title>
 <style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1050px;line-height:1.5}a{color:#ff7a80}button,select,input{font:inherit;margin:5px;padding:7px}input[type=range]{width:240px;padding:0}img{display:block;max-width:100%;height:auto;border:1px solid #666}#detail{image-rendering:pixelated}button[aria-pressed=true]{outline:2px solid #ff7a80}</style>
-<h1>Native queue arrival and duplicate occurrences</h1>
+<h1><a href="https://github.com/jackkayser2005/applifast/pull/96">PR #96</a>: Native queue arrival and duplicate occurrences</h1>
 <p>256 Windows egui readbacks from source <code>99e0132</code>. The offline paused fixture uses existing QueueMany actions to seed two manual entries, then add two more copies of the first song. Both added occurrences stay ahead of unchanged context tracks. No real account or playback host is connected.</p>
 <p>Both new rows fade and rise in the side panel and full Queue page. The sampled cover edges rise one native pixel at normal width and two at narrow width; earlier motion is not captured. Reduce motion shows the final rows immediately. Existing manual-prefix crops are identical in every frame.</p>
 <label>Surface <select id="scene"><option value="panel">Queue side panel</option><option value="page">Full Queue page</option></select></label>
