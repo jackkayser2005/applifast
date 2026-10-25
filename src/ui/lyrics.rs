@@ -33,6 +33,17 @@ fn blend(from: egui::Color32, to: egui::Color32, t: f32) -> egui::Color32 {
     egui::Color32::from(egui::Rgba::from(from) * (1.0 - t) + egui::Rgba::from(to) * t)
 }
 
+/// Retarget an existing glide once when Reduce motion is enabled.
+fn motion_just_reduced(ctx: &egui::Context) -> bool {
+    let reduced = super::motion::reduced(ctx);
+    let id = egui::Id::new("lyrics-scroll-reduced");
+    ctx.data_mut(|data| {
+        let previous = data.get_temp::<bool>(id).unwrap_or(reduced);
+        data.insert_temp(id, reduced);
+        reduced && !previous
+    })
+}
+
 pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     let fit = super::yielding_panel(
@@ -178,7 +189,8 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
     };
 
     let active = lyrics.active_line(now.position_ms);
-    let follow = app.lyrics_following && app.lyrics_line_shown != Some(active);
+    let just_reduced = motion_just_reduced(ui.ctx());
+    let follow = app.lyrics_following && (app.lyrics_line_shown != Some(active) || just_reduced);
     // The line being sung is bold and in the accent colour; every other
     // line is quiet, regular text, the same before and after it has been
     // sung. A line takes 220 ms to light up or fade, as in omarchy-lyrics.
@@ -192,6 +204,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
         ui,
         egui::ScrollArea::vertical()
             .id_salt("lyrics-scroll")
+            .animated(!super::motion::reduced(ui.ctx()))
             .auto_shrink([false, false]),
         egui::Vec2b::new(false, true),
         |ui| {
@@ -871,7 +884,8 @@ fn fullscreen_contents(app: &mut App, ui: &mut egui::Ui) {
                 || (input.pointer.primary_down() && input.pointer.delta().y != 0.0)
         });
     let following = app.lyrics_following && !manual_scroll;
-    let follow = following && app.lyrics_line_shown != Some(active);
+    let just_reduced = motion_just_reduced(ui.ctx());
+    let follow = following && (app.lyrics_line_shown != Some(active) || just_reduced);
     let animation = super::motion::scroll(
         ui.ctx(),
         egui::style::ScrollAnimation::duration(NEXT_LINE_SECONDS),
@@ -884,6 +898,7 @@ fn fullscreen_contents(app: &mut App, ui: &mut egui::Ui) {
     ui.spacing_mut().scroll.fade.strength = 0.0;
     egui::ScrollArea::vertical()
         .id_salt(("fullscreen-lyrics-scroll", &now.uri))
+        .animated(!super::motion::reduced(ui.ctx()))
         .auto_shrink([false, false])
         .show(ui, |ui| {
             // Before the first line there is nothing to highlight, so the

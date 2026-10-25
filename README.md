@@ -36,6 +36,9 @@ Reduce motion keeps the classic mini-player's paused time visible, without its
 usual blink. Turning the setting off restores the classic paused-clock behavior.
 See the [clock checks](docs/applifast/paused-clock-motion.md).
 
+Turning Reduce motion on also stops a lyric scroll already in progress, in the
+side panel and full-screen view. See the [lyrics checks](docs/applifast/lyrics-reduce-motion.md).
+
 Apple artwork offers smaller images for thumbnails while keeping large covers.
 Fixed library covers get locally resized thumbnails from their original artwork.
 Old metadata caches remain readable. See [artwork sizing](docs/applifast/artwork-sizes.md)
