@@ -256,6 +256,11 @@ recreation, and an hour of listening while gaming. Aggregate WebView2/helper
 memory and CPU separately from executable size. Existing local tests and
 read-only account diagnostics do not complete those gates.
 
+While another app has focus, decorative playback animations redraw at about
+8 frames per second instead of 30. This reduces background UI work; it does not
+change audio or playback timing. Confirm the effect on game hitches during the
+gaming session above, since automated checks cannot measure that interaction.
+
 ## Desktop checks and gaming
 
 Use the installed preview normally while gaming. Run window-opening screenshot,

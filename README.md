@@ -193,6 +193,10 @@ network/output recovery, aggregate performance, installers and signed releases
 remain acceptance work. The [tester guide](docs/applifast/testing.md) lists what
 to exercise and how to report a result without secrets.
 
+Decorative playback motion slows from 30 frames per second to 8 when its window
+is unfocused, to reduce redraw work while another app is in front. A real gaming
+session is still needed to tell whether this removes the reported hitch.
+
 The [Windows resource sampler](prototypes/apple-playback/README.md#resource-measurement)
 reports private memory for each app/helper process alongside the aggregate.
 Use the desktop app's PID to include egui and WebView2 together. Short tooling

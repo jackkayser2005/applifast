@@ -197,6 +197,17 @@ const BARS_CLOCK: &str = "playing-bars-clock";
 /// How often moving bars are redrawn: thirty times a second is smooth at
 /// their size.
 const BARS_FRAME: std::time::Duration = std::time::Duration::from_millis(33);
+/// Decorative playback motion backs off when another app has focus, which
+/// reduces redraw work while the listener is gaming or doing other work.
+const BACKGROUND_BARS_FRAME: std::time::Duration = std::time::Duration::from_millis(125);
+
+fn bars_frame(focused: Option<bool>) -> std::time::Duration {
+    if focused == Some(false) {
+        BACKGROUND_BARS_FRAME
+    } else {
+        BARS_FRAME
+    }
+}
 
 /// Each bar's height, from 0 to 1, `t` seconds into the song's dance.
 /// Every bar mixes two slow waves of its own, so they never move in step.
@@ -252,7 +263,8 @@ pub fn ambient_pulse(
         painter.rect_filled(bar, width.min(4.0), color.gamma_multiply(0.14));
     }
     if playing && !still {
-        ui.ctx().request_repaint_after(BARS_FRAME);
+        let ctx = ui.ctx();
+        ctx.request_repaint_after(ctx.input(|input| bars_frame(input.viewport().focused)));
     }
 }
 
@@ -276,7 +288,7 @@ pub fn playing_bars(ui: &egui::Ui, rect: egui::Rect, color: egui::Color32, movin
         let t = if moving {
             let now = ctx.input(|input| input.time);
             ctx.data_mut(|data| data.insert_temp(clock, now));
-            ctx.request_repaint_after(BARS_FRAME);
+            ctx.request_repaint_after(ctx.input(|input| bars_frame(input.viewport().focused)));
             now
         } else {
             ctx.data(|data| data.get_temp::<f64>(clock)).unwrap_or(0.0)
@@ -338,6 +350,14 @@ pub fn forced_hover(ctx: &Context, what: &'static str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn decorative_playback_motion_backs_off_without_window_focus() {
+        assert_eq!(bars_frame(Some(true)), BARS_FRAME);
+        assert_eq!(bars_frame(None), BARS_FRAME);
+        assert_eq!(bars_frame(Some(false)), BACKGROUND_BARS_FRAME);
+        assert!(BACKGROUND_BARS_FRAME > BARS_FRAME);
+    }
 
     #[test]
     fn ambient_pulse_follows_the_playhead_and_only_repaints_visible_playback() {
