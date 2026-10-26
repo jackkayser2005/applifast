@@ -35,7 +35,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, connecting: bool) {
                 .ctx()
                 .data(|data| data.get_temp::<bool>(proxy_id))
                 .unwrap_or(false);
-            let card_height: f32 = if !proxy_open {
+            let card_height: f32 = if let Some(apple) = &app.apple {
+                (if apple.error.is_some() || apple.token_request.is_some() { 480.0 } else { 400.0 })
+                    + if apple.error.is_some() { 80.0 } else { 0.0 }
+                    + if apple.loading { 80.0 } else { 0.0 }
+            } else if !proxy_open {
                 400.0
             } else if app.settings.proxy_mode.is_manual() {
                 720.0
@@ -70,9 +74,13 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, connecting: bool) {
                     let (logo, _) = ui.allocate_exact_size(Vec2::splat(72.0), egui::Sense::hover());
                     theme::logo(ui, logo.center(), 72.0);
                     ui.add_space(6.0);
-                    theme::text(ui, "Spotifast", theme::bold(30.0), palette.text);
-                    theme::text(ui, gettext(locale, "A native Spotify client."), theme::regular(14.5), palette.secondary);
+                    theme::text(ui, "Applifast", theme::bold(30.0), palette.text);
+                    theme::text(ui, if app.apple.is_some() { "A native Apple Music client.".into() } else { gettext(locale, "A native Spotify client.") }, theme::regular(14.5), palette.secondary);
                     ui.add_space(22.0);
+                    if app.apple.is_some() {
+                        super::apple::login_contents(app, ui);
+                        return;
+                    }
                     match &app.auth {
                         AuthStatus::WaitingForBrowser { url } => {
                             let url = url.clone();
@@ -131,7 +139,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, connecting: bool) {
                             ui.add_space(10.0);
                             ui.add(
                                 egui::Label::new(
-                                    egui::RichText::new(gettext(locale, "Sign in through your browser. Spotifast never sees your password. Local playback needs Spotify Premium."))
+                                    egui::RichText::new(gettext(locale, "Sign in through your browser. Applifast never sees your password. Local playback needs Spotify Premium."))
                                         .font(theme::regular(12.5))
                                         .color(palette.secondary),
                                 )
@@ -184,9 +192,14 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, connecting: bool) {
             ui.painter().text(
                 pos2(rect.center().x, rect.bottom() - 24.0),
                 egui::Align2::CENTER_BOTTOM,
-                // Translators: {version} is the app's version number, such as 1.2.0.
-                gettext(locale, "Spotifast {version} • not affiliated with Spotify")
-                    .replace("{version}", env!("CARGO_PKG_VERSION")),
+                (if app.apple.is_some() {
+                    // Translators: {version} is the app's version number, such as 1.2.0.
+                    gettext(locale, "Applifast {version} • not affiliated with Apple")
+                } else {
+                    // Translators: {version} is the app's version number, such as 1.2.0.
+                    gettext(locale, "Applifast {version} • not affiliated with Spotify")
+                })
+                .replace("{version}", env!("CARGO_PKG_VERSION")),
                 theme::regular(11.5),
                 palette.dim,
             );
@@ -262,7 +275,7 @@ fn proxy_fields(ui: &mut egui::Ui, app: &mut App) {
     }
 }
 
-fn big_button(ui: &mut egui::Ui, app: &App, label: &str) -> bool {
+pub(super) fn big_button(ui: &mut egui::Ui, app: &App, label: &str) -> bool {
     let palette = app.palette;
     let galley =
         ui.painter()
@@ -290,6 +303,70 @@ fn big_button(ui: &mut egui::Ui, app: &App, label: &str) -> bool {
 mod tests {
     use super::*;
     use crate::{app::AppOptions, backend::Waker, paths::AppDirs, settings::Settings};
+
+    #[test]
+    fn sign_in_footer_names_the_active_music_service() {
+        fn contains(shape: &egui::Shape, expected: &str) -> bool {
+            match shape {
+                egui::Shape::Text(text) => text.galley.text().contains(expected),
+                egui::Shape::Vec(shapes) => shapes.iter().any(|shape| contains(shape, expected)),
+                _ => false,
+            }
+        }
+        for apple in [false, true] {
+            let ctx = egui::Context::default();
+            theme::install(&ctx);
+            let root = std::env::temp_dir().join(format!(
+                "applifast-login-footer-{}-{apple}",
+                std::process::id()
+            ));
+            let mut app = App::new(
+                &Waker::default(),
+                AppDirs {
+                    config: root.join("config"),
+                    state: root.join("state"),
+                    cache: root.join("cache"),
+                },
+                Settings::default(),
+                AppOptions {
+                    media_controls: false,
+                    restore_sign_in: false,
+                    tray: false,
+                },
+            );
+            app.locale = crate::i18n::Locale::English;
+            app.apple = apple.then(crate::apple::State::default);
+            app.auth = AuthStatus::SignedOut;
+            let mut rendered = None;
+            for _ in 0..3 {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(760.0, 760.0),
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| show(&mut app, ui, false),
+                );
+                output.textures_delta.clear();
+                rendered = Some(output);
+            }
+            let output = rendered.unwrap();
+            app.backend.shutdown();
+            for (service, expected) in [("Apple", apple), ("Spotify", !apple)] {
+                let footer = format!("not affiliated with {service}");
+                assert_eq!(
+                    output
+                        .shapes
+                        .iter()
+                        .any(|shape| contains(&shape.shape, &footer)),
+                    expected,
+                    "{footer}, Apple mode: {apple}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn expanded_proxy_settings_remain_reachable_in_a_short_window() {

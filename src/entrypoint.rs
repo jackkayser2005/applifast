@@ -2,29 +2,28 @@ use spotifast::{app, backend, paths, settings, single_instance, util};
 
 use clap::{CommandFactory, FromArgMatches, Parser};
 
-/// A fast, native Spotify client.
+/// Apple Music for Windows, with a native Rust interface.
 #[derive(Debug, Parser)]
-#[command(name = env!("CARGO_BIN_NAME"), version, about)]
+#[command(name = "applifast", bin_name = "applifast", version, about)]
 struct Cli {
     /// A command for the running instance; without one, the app starts.
     #[command(subcommand)]
     control: Option<Control>,
 
-    /// A Spotify link to open: spotify:track:…, or an open.spotify.com
-    /// address. The running Spotifast opens it when there is one, which
-    /// is how the desktop hands links over.
+    /// An Apple Music share URL or apple:<kind>:catalog.<id> URI to open.
+    /// An existing instance opens it; otherwise it waits for Apple sign-in.
     #[arg(value_name = "LINK")]
     link: Option<String>,
 
     /// Spotify Connect device name for this session.
-    #[arg(long)]
+    #[arg(long, hide = true)]
     device_name: Option<String>,
 
-    /// Log more from librespot and the Web API client.
+    /// Enable detailed application logging. Credentials remain redacted.
     #[arg(short, long)]
     verbose: bool,
 
-    /// Start with sample data and no Spotify connection (for screenshots).
+    /// Start with sample data and no account connection (for screenshots).
     #[cfg(feature = "demo")]
     #[arg(long)]
     demo: bool,
@@ -70,6 +69,12 @@ struct Cli {
     #[cfg(feature = "demo")]
     #[arg(long, value_name = "MS", default_value_t = 6000)]
     demo_shot_delay: u64,
+
+    /// Capture this many live frames, 50 ms apart after each readback, instead
+    /// of one frozen still. Writes numbered PNGs and a JSON request-time log.
+    #[cfg(feature = "demo")]
+    #[arg(long, requires = "demo_shot", default_value_t = 1, value_parser = clap::value_parser!(u16).range(1..=120))]
+    demo_shot_frames: u16,
 
     /// Inner window size for `--demo-shot`, as `WIDTHxHEIGHT`.
     #[cfg(feature = "demo")]
@@ -126,16 +131,19 @@ enum Control {
     /// Cycle the repeat mode, or set it outright
     Repeat { mode: Option<Repeat> },
     /// Save the playing track to your library, or take it back out
+    #[command(hide = true)]
     Like,
-    /// Play a Spotify URI: a track, album, playlist, artist, or show
+    /// Play an Apple Music share URL or internal song/album/playlist/artist URI
     PlayUri { uri: String },
     /// List the Spotify Connect devices
+    #[command(hide = true)]
     Devices {
         /// Print the JSON the running instance sent instead.
         #[arg(long)]
         raw: bool,
     },
     /// Move playback to a device, by the id `devices` prints
+    #[command(hide = true)]
     Transfer { device_id: String },
     /// Print the playing track
     NowPlaying {
@@ -170,6 +178,13 @@ enum Repeat {
 /// Sends one control verb to the running instance over the
 /// single-instance channel.
 fn run_control(control: Control) -> i32 {
+    if matches!(
+        control,
+        Control::Like | Control::Devices { .. } | Control::Transfer { .. }
+    ) {
+        eprintln!("this control is not supported in the Apple Music preview");
+        return 2;
+    }
     let raw = matches!(
         control,
         Control::NowPlaying { raw: true } | Control::Devices { raw: true }
@@ -204,7 +219,13 @@ fn run_control(control: Control) -> i32 {
             format!("repeat-set {mode}")
         }
         Control::Like => "save-toggle".to_owned(),
-        Control::PlayUri { uri } => format!("play-uri {uri}"),
+        Control::PlayUri { uri } => {
+            let Some(uri) = spotifast::link::parse_apple(&uri) else {
+                eprintln!("not a supported Apple Music link");
+                return 2;
+            };
+            format!("play-uri {uri}")
+        }
         Control::Devices { .. } => "devices".to_owned(),
         Control::Transfer { device_id } => format!("transfer {device_id}"),
         Control::NowPlaying { .. } => "nowplaying".to_owned(),
@@ -228,7 +249,7 @@ fn run_control(control: Control) -> i32 {
             }
         }
         Err(error) => {
-            eprintln!("Spotifast is not running or does not support remote control: {error}");
+            eprintln!("Applifast is not running or does not support remote control: {error}");
             return 1;
         }
     };
@@ -352,6 +373,10 @@ pub(crate) fn run() -> eframe::Result<()> {
 
     let cli = Cli::from_arg_matches(&Cli::command().get_matches_from(&launch.arguments))
         .unwrap_or_else(|error| error.exit());
+    if cli.device_name.is_some() {
+        eprintln!("this control is not supported in the Apple Music preview");
+        std::process::exit(2);
+    }
     // Demo mode invents plays, settings, and a signed-in account. Without a
     // folder of its own it would write them into the real profile, where
     // they would pass for the user's history.
@@ -371,15 +396,15 @@ pub(crate) fn run() -> eframe::Result<()> {
     if let Some(control) = cli.control {
         std::process::exit(run_control(control));
     }
-    // A link is read before anything starts: one that is not a Spotify
+    // A link is read before anything starts: one that is not an Apple Music
     // link ends the launch here rather than reaching the running instance.
     let link = cli
         .link
         .as_deref()
-        .map(|text| match spotifast::link::parse(text) {
+        .map(|text| match spotifast::link::parse_apple(text) {
             Some(uri) => uri,
             None => {
-                eprintln!("not a Spotify link: {text}");
+                eprintln!("not a supported Apple Music link");
                 std::process::exit(2);
             }
         });
@@ -401,7 +426,7 @@ pub(crate) fn run() -> eframe::Result<()> {
         match single_instance::acquire(&waker, link.as_deref()) {
             single_instance::Outcome::Only(guard) => Some(guard),
             single_instance::Outcome::Surfaced => {
-                log::info!("Spotifast is already running; asked it to show its window");
+                log::info!("Applifast is already running; asked it to show its window");
                 return Ok(());
             }
         }
@@ -413,7 +438,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     } else {
         // Which system face draws each script the interface font lacks,
         // one line per script at startup, for reports of odd-looking text.
-        "warn,spotifast=info,fastframe_fonts=info"
+        "warn,applifast=info,spotifast=info,fastframe_fonts=info"
     };
     let dirs = paths::AppDirs::discover();
     #[cfg(feature = "demo")]
@@ -430,7 +455,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     // Launched from a desktop, stderr goes nowhere; keep the run's log where
     // a bug report can find it, and a line per panic in the panic log (with
     // any link in its message removed: a URL can carry a token).
-    if let Err(error) = fastframe_log::Logging::new("spotifast", env!("CARGO_PKG_VERSION"))
+    if let Err(error) = fastframe_log::Logging::new("applifast", env!("CARGO_PKG_VERSION"))
         .filter(default_filter)
         .file(dirs.log_file())
         .panic_log(dirs.panic_log())
@@ -444,10 +469,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     if let Err(error) = dirs_ready {
         log::warn!("unable to create the application directories: {error}");
     }
-    let mut settings = settings::Settings::load(&dirs.settings_file());
-    if let Some(name) = cli.device_name {
-        settings.device_name = name;
-    }
+    let settings = settings::Settings::load(&dirs.settings_file());
     spotifast::window::set_custom_titlebar(settings.custom_titlebar);
     // Colour emoji: the fonts are found off this thread. A demo capture
     // draws every picture in the frame that shows it.
@@ -461,21 +483,21 @@ pub(crate) fn run() -> eframe::Result<()> {
         spotifast::mac_links::install(guard.commands(), waker.clone());
     }
 
-    // A capture run is a throwaway process next to the real one: no tray
+    // A demo is a throwaway process next to the real one: no tray
     // icon of its own, and no second MPRIS service to fight over media keys.
     #[allow(unused_mut)]
     let mut options = app::AppOptions::default();
     #[cfg(feature = "demo")]
     if demo {
-        options.restore_sign_in = false;
-    }
-    #[cfg(feature = "demo")]
-    if cli.demo_shot.is_some() {
         options = app::AppOptions {
             media_controls: false,
             restore_sign_in: false,
             tray: false,
         };
+    }
+    #[cfg(feature = "demo")]
+    if cli.demo_shot.is_some() && cli.demo_shot_frames == 1 {
+        spotifast::ui::motion::hold_still();
     }
     #[cfg(windows)]
     let desktop_surfaces = options.media_controls;
@@ -527,10 +549,52 @@ pub(crate) fn run() -> eframe::Result<()> {
         }
     }
     #[cfg(feature = "demo")]
+    if demo
+        && !cli
+            .demo_show
+            .as_deref()
+            .is_some_and(|flags| flags.split(',').any(|flag| flag == "legacy"))
+    {
+        let mut apple = spotifast::apple::State::demo(&app.library.liked.items);
+        for flag in cli.demo_show.as_deref().unwrap_or("").split(',') {
+            match flag {
+                "signed-out" => apple.clear_account(),
+                "connecting" => { apple.clear_account(); apple.ready = false; apple.loading = true; },
+                "collection-loading" => apple.loading = true,
+                "apple-error" => apple.error = Some("Example playback error. Check connection or song availability. The queue is retained.".into()),
+                _ => {}
+            }
+        }
+        app.local = apple.local.clone();
+        app.local_ready = apple.authorized;
+        app.library.liked.items = apple
+            .songs
+            .iter()
+            .map(|song| spotifast::api::models::SavedTrack {
+                added_at: None,
+                track: song.track(),
+            })
+            .collect();
+        app.library.liked.loading = apple.loading;
+        app.library.liked.revision += 1;
+        for saved in &app.library.liked.items {
+            if let Some(id) = &saved.track.id {
+                app.track_cache.insert(id.clone(), saved.track.clone());
+            }
+        }
+        if let Some(error) = &apple.error {
+            app.toast_error(error.clone());
+        }
+        app.apple = Some(apple);
+        spotifast::demo::apply_apple_flags(&mut app, cli.demo_show.as_deref());
+    }
+    #[cfg(feature = "demo")]
     let shot = cli.demo_shot.clone().map(|path| Shot {
         path,
         due: std::time::Instant::now() + std::time::Duration::from_millis(cli.demo_shot_delay),
-        asked: false,
+        asked: None,
+        frames: cli.demo_shot_frames,
+        captured: Vec::new(),
     });
     #[cfg(feature = "demo")]
     let demo_drag = cli
@@ -574,7 +638,7 @@ pub(crate) fn run() -> eframe::Result<()> {
             #[cfg(target_os = "linux")]
             let hide_from_taskbar = options.viewport.taskbar == Some(false);
             eframe::run_native(
-                "Spotifast",
+                "Applifast",
                 options,
                 Box::new(move |cc| {
                     if let Some(gl) = &cc.gl {
@@ -763,7 +827,7 @@ fn native_options(
     #[cfg(target_os = "linux")]
     let app_id = desktop_entry();
     #[cfg(not(target_os = "linux"))]
-    let app_id = "spotifast";
+    let app_id = "applifast";
     let icon = if cfg!(target_os = "macos") {
         // macOS takes the dock icon from the bundle's .icns, which is the
         // 1024px drawing with the platform's rounding. Setting a window
@@ -773,7 +837,7 @@ fn native_options(
         app_icon()
     };
     let viewport = egui::ViewportBuilder::default()
-        .with_title("Spotifast")
+        .with_title("Applifast")
         .with_app_id(app_id)
         .with_taskbar(true)
         .with_icon(icon);
@@ -832,7 +896,8 @@ fn native_options(
 
 fn profile_options(mut options: eframe::NativeOptions) -> eframe::NativeOptions {
     if options.persist_window {
-        options.persistence_path = eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"));
+        // Keep window geometry and egui memory out of the upstream profile too.
+        options.persistence_path = Some(paths::AppDirs::discover().state.join("window.ron"));
     }
     options
 }
@@ -876,6 +941,10 @@ mod native_window_tests {
         let main = profile_options(native_options(false, None, None));
         assert_eq!(
             main.persistence_path,
+            Some(paths::AppDirs::discover().state.join("window.ron"))
+        );
+        assert_ne!(
+            main.persistence_path,
             eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"))
         );
         let demo_path = std::path::PathBuf::from("temporary/demo.ron");
@@ -884,6 +953,19 @@ mod native_window_tests {
             demo_path.clone(),
         ));
         assert_eq!(demo.persistence_path, Some(demo_path));
+        let mini_path = std::path::PathBuf::from("cache/winamp.ron");
+        let mini = profile_options(native_options(
+            false,
+            Some(MiniWindow {
+                size: egui::vec2(550.0, 232.0),
+                position: None,
+                on_top: false,
+                taskbar: true,
+                storage_path: mini_path.clone(),
+            }),
+            None,
+        ));
+        assert_eq!(mini.persistence_path, Some(mini_path));
     }
 
     #[test]
@@ -913,7 +995,7 @@ mod native_window_tests {
         }
         #[cfg(not(target_os = "linux"))]
         {
-            assert_eq!(main.viewport.app_id.as_deref(), Some("spotifast"));
+            assert_eq!(main.viewport.app_id.as_deref(), Some("applifast"));
             assert_eq!(mini.viewport.app_id, main.viewport.app_id);
             assert_eq!(main.persistence_path, None);
         }
@@ -1050,6 +1132,134 @@ mod native_window_tests {
         assert_eq!(frames.last().unwrap()[0], egui::Event::PointerMoved(to));
     }
 
+    #[cfg(feature = "demo")]
+    #[test]
+    fn live_demo_capture_is_bounded_and_requires_an_output_path() {
+        assert_eq!(
+            Cli::try_parse_from(["applifast"]).unwrap().demo_shot_frames,
+            1
+        );
+        for count in ["0", "121", "many"] {
+            assert!(
+                Cli::try_parse_from([
+                    "applifast",
+                    "--demo-shot",
+                    "capture.png",
+                    "--demo-shot-frames",
+                    count,
+                ])
+                .is_err()
+            );
+        }
+        assert!(Cli::try_parse_from(["applifast", "--demo-shot-frames", "2"]).is_err());
+        let cli = Cli::try_parse_from([
+            "applifast",
+            "--demo-shot",
+            "capture.png",
+            "--demo-shot-frames",
+            "120",
+        ])
+        .unwrap();
+        assert_eq!(cli.demo_shot_frames, 120);
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn demo_sequence_only_saves_its_own_readbacks_and_logs_actual_requests() {
+        let folder = std::env::temp_dir().join(format!("applifast-shot-{}", std::process::id()));
+        std::fs::create_dir(&folder).unwrap();
+        let request = ShotRequest {
+            index: 0,
+            time: 1.25,
+        };
+        let mut shot = Shot {
+            path: folder.join("motion.png"),
+            due: std::time::Instant::now(),
+            asked: Some(request),
+            frames: 2,
+            captured: Vec::new(),
+        };
+        let image = std::sync::Arc::new(egui::ColorImage::filled([2, 2], egui::Color32::RED));
+        let event = |viewport_id, user_data| egui::Event::Screenshot {
+            viewport_id,
+            user_data,
+            image: image.clone(),
+        };
+        assert!(
+            shot.readback(&event(egui::ViewportId::ROOT, egui::UserData::default()))
+                .is_none()
+        );
+        assert!(
+            shot.readback(&event(
+                egui::ViewportId::from_hash_of("other"),
+                egui::UserData::new(request)
+            ))
+            .is_none()
+        );
+        let stale = ShotRequest {
+            time: 1.0,
+            ..request
+        };
+        assert!(
+            shot.readback(&event(egui::ViewportId::ROOT, egui::UserData::new(stale)))
+                .is_none()
+        );
+        let matched = event(egui::ViewportId::ROOT, egui::UserData::new(request));
+        assert!(std::sync::Arc::ptr_eq(
+            &shot.readback(&matched).unwrap(),
+            &image
+        ));
+        assert!(!shot.save(&image).unwrap());
+        assert!(shot.asked.is_none());
+        assert!(
+            shot.readback(&matched).is_none(),
+            "a completed frame cannot be reused"
+        );
+        assert!(folder.join("motion-000.png").is_file());
+        assert!(
+            !folder.join("motion.json").exists(),
+            "incomplete sequence has no manifest"
+        );
+        shot.asked = Some(ShotRequest {
+            index: 1,
+            time: 1.37,
+        });
+        assert!(shot.save(&image).unwrap());
+        let manifest: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(folder.join("motion.json")).unwrap()).unwrap();
+        assert_eq!(manifest.as_array().unwrap().len(), 2);
+        assert_eq!(manifest[0]["file"], "motion-000.png");
+        assert_eq!(manifest[1]["requested_at_seconds"], 1.37);
+        assert_eq!(manifest[1]["width"], 2);
+        assert_eq!(
+            image::open(folder.join("motion-001.png")).unwrap().width(),
+            2
+        );
+        shot.frames = 1;
+        shot.path = folder.join("still.png");
+        shot.captured.clear();
+        shot.asked = Some(request);
+        assert!(shot.save(&image).unwrap());
+        assert!(
+            !folder.join("still.json").exists(),
+            "single-shot output stays compatible"
+        );
+        shot.path = folder.join("missing/output.png");
+        shot.captured.clear();
+        shot.asked = Some(request);
+        assert!(shot.save(&image).is_err());
+        assert!(shot.captured.is_empty());
+        for name in [
+            "motion-000.png",
+            "motion-001.png",
+            "motion.json",
+            "still.png",
+        ] {
+            std::fs::remove_file(folder.join(name)).unwrap();
+        }
+        std::fs::remove_dir(folder).unwrap();
+    }
+
     #[test]
     fn demo_size_parses_width_by_height() {
         assert_eq!(parse_demo_size("760x800").unwrap(), [760.0, 800.0]);
@@ -1167,7 +1377,86 @@ impl DemoDrag {
 struct Shot {
     path: std::path::PathBuf,
     due: std::time::Instant,
-    asked: bool,
+    asked: Option<ShotRequest>,
+    frames: u16,
+    captured: Vec<ShotFrame>,
+}
+
+#[cfg(feature = "demo")]
+#[derive(Clone, Copy, PartialEq)]
+struct ShotRequest {
+    index: usize,
+    time: f64,
+}
+
+#[cfg(feature = "demo")]
+#[derive(Clone, serde::Serialize)]
+struct ShotFrame {
+    file: std::path::PathBuf,
+    requested_at_seconds: f64,
+    width: u32,
+    height: u32,
+}
+
+#[cfg(feature = "demo")]
+impl Shot {
+    fn frame_path(&self) -> std::path::PathBuf {
+        if self.frames == 1 {
+            return self.path.clone();
+        }
+        let mut name = self.path.file_stem().unwrap_or_default().to_os_string();
+        name.push(format!("-{:03}.png", self.captured.len()));
+        self.path.with_file_name(name)
+    }
+
+    fn readback(&self, event: &egui::Event) -> Option<std::sync::Arc<egui::ColorImage>> {
+        let egui::Event::Screenshot {
+            viewport_id,
+            user_data,
+            image,
+        } = event
+        else {
+            return None;
+        };
+        let request = user_data.data.as_ref()?.downcast_ref::<ShotRequest>()?;
+        (*viewport_id == egui::ViewportId::ROOT && Some(*request) == self.asked)
+            .then(|| image.clone())
+    }
+
+    fn save(&mut self, image: &egui::ColorImage) -> anyhow::Result<bool> {
+        let path = self.frame_path();
+        let [width, height] = [image.size[0] as u32, image.size[1] as u32];
+        let pixels: Vec<u8> = image
+            .pixels
+            .iter()
+            .flat_map(|pixel| pixel.to_srgba_unmultiplied())
+            .collect();
+        let buffer = image::RgbaImage::from_raw(width, height, pixels)
+            .ok_or_else(|| anyhow::anyhow!("frame buffer did not match {width}x{height}"))?;
+        buffer.save(&path)?;
+        log::info!("wrote {}x{} to {}", width, height, path.display());
+        let request = self
+            .asked
+            .take()
+            .expect("only a requested readback is saved");
+        self.captured.push(ShotFrame {
+            file: path.file_name().unwrap_or_default().into(),
+            requested_at_seconds: request.time,
+            width,
+            height,
+        });
+        if self.captured.len() < usize::from(self.frames) {
+            self.due = std::time::Instant::now() + std::time::Duration::from_millis(50);
+            return Ok(false);
+        }
+        if self.frames > 1 {
+            std::fs::write(
+                self.path.with_extension("json"),
+                serde_json::to_vec_pretty(&self.captured)?,
+            )?;
+        }
+        Ok(true)
+    }
 }
 
 #[cfg(feature = "demo")]
@@ -1181,33 +1470,26 @@ impl Shell {
         // asked for: art still has to load and the request has to be issued.
         ctx.request_repaint();
 
-        if !shot.asked && std::time::Instant::now() >= shot.due {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
-            shot.asked = true;
+        if shot.asked.is_none() && std::time::Instant::now() >= shot.due {
+            let request = ShotRequest {
+                index: shot.captured.len(),
+                time: ctx.input(|input| input.time),
+            };
+            ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::new(
+                request,
+            )));
+            shot.asked = Some(request);
         }
 
-        let image = ctx.input(|input| {
-            input.events.iter().find_map(|event| match event {
-                egui::Event::Screenshot { image, .. } => Some(image.clone()),
-                _ => None,
-            })
-        });
+        let image = ctx.input(|input| input.events.iter().find_map(|event| shot.readback(event)));
         let Some(image) = image else {
             return;
         };
 
-        let [width, height] = [image.size[0] as u32, image.size[1] as u32];
-        let pixels: Vec<u8> = image
-            .pixels
-            .iter()
-            .flat_map(|pixel| pixel.to_srgba_unmultiplied())
-            .collect();
-        match image::RgbaImage::from_raw(width, height, pixels) {
-            Some(buffer) => match buffer.save(&shot.path) {
-                Ok(()) => log::info!("wrote {}x{} to {}", width, height, shot.path.display()),
-                Err(error) => log::error!("could not write {}: {error}", shot.path.display()),
-            },
-            None => log::error!("the frame buffer did not match {width}x{height}"),
+        match shot.save(&image) {
+            Ok(false) => return,
+            Ok(true) => {}
+            Err(error) => log::error!("could not write {}: {error}", shot.path.display()),
         }
         self.shot = None;
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -1384,17 +1666,14 @@ mod tests {
     #[test]
     fn a_link_and_a_verb_are_told_apart() {
         // #given / #when / #then
-        let launch = Cli::try_parse_from(["spotifast", "spotify:track:4uLU6hMCjMI75M1A2tKUQC"])
+        let launch = Cli::try_parse_from(["spotifast", "apple:track:library.i.upload"])
             .expect("a link parses");
-        assert_eq!(
-            launch.link.as_deref(),
-            Some("spotify:track:4uLU6hMCjMI75M1A2tKUQC")
-        );
+        assert_eq!(launch.link.as_deref(), Some("apple:track:library.i.upload"));
         assert!(launch.control.is_none());
 
         let launch = Cli::try_parse_from([
             "spotifast",
-            "https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3?si=x",
+            "https://music.apple.com/us/album/name/123?i=456",
             "--verbose",
         ])
         .expect("a web address parses");

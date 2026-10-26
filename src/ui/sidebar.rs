@@ -50,9 +50,7 @@ impl Entry {
 /// account's collection instead.
 fn entry_play_uri(app: &App, entry: &Entry) -> Option<String> {
     if entry.liked {
-        app.user
-            .as_ref()
-            .map(|user| format!("spotify:user:{}:collection", user.id))
+        app.songs_context_uri()
     } else if entry.uri.is_empty() {
         None
     } else {
@@ -248,7 +246,7 @@ fn finish_entry_interaction(
         );
     }
     if drop_allowed
-        && (entry.liked || entry.editable)
+        && ((entry.liked && app.apple.is_none()) || entry.editable)
         && egui::DragAndDrop::has_payload_of_type::<DragTrack>(ui.ctx())
         && let Some(track) = response.dnd_release_payload::<DragTrack>()
     {
@@ -307,7 +305,15 @@ fn liked_entry(app: &App) -> Entry {
     Entry {
         image: None,
         grid_image: None,
-        name: gettext(app.locale, "Liked Songs").into_owned(),
+        name: gettext(
+            app.locale,
+            if app.apple.is_some() {
+                "Songs"
+            } else {
+                "Liked Songs"
+            },
+        )
+        .into_owned(),
         subtitle,
         grid_subtitle,
         page: Page::LikedSongs,
@@ -326,6 +332,7 @@ fn liked_entry(app: &App) -> Entry {
 pub(crate) fn selected_sort(app: &App, shelf: Filter) -> LibrarySort {
     if let Some(sort) = app.settings.library_sort.get(&shelf).copied()
         && sort.supports(shelf)
+        && (app.apple.is_none() || sort != LibrarySort::Spotify)
     {
         return sort;
     }
@@ -333,10 +340,11 @@ pub(crate) fn selected_sort(app: &App, shelf: Filter) -> LibrarySort {
         LibrarySort::Library
     } else if !app.settings.sidebar_order.is_empty() {
         LibrarySort::Local
-    } else if app
-        .rootlist
-        .iter()
-        .any(|row| matches!(row, crate::player::RootlistEntry::FolderStart { .. }))
+    } else if app.apple.is_none()
+        && app
+            .rootlist
+            .iter()
+            .any(|row| matches!(row, crate::player::RootlistEntry::FolderStart { .. }))
     {
         LibrarySort::Spotify
     } else {
@@ -395,6 +403,7 @@ fn sort_menu(app: &mut App, ui: &mut egui::Ui, shelf: Filter, selected: LibraryS
             ui.set_width(width.min(ui.ctx().content_rect().width() - 24.0));
             for (sort, label) in &labels {
                 if !sort.supports(shelf)
+                    || (*sort == LibrarySort::Spotify && app.apple.is_some())
                     || (*sort == LibrarySort::Library && shelf == Filter::Playlists)
                     || (*sort == LibrarySort::Local && app.settings.sidebar_order.is_empty())
                 {
@@ -488,7 +497,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         "sidebar",
         super::SIDEBAR_MIN_WIDTH..=600.0,
         app.settings.sidebar_width,
-        ui.available_width() - super::topbar::least_width(ui.ctx()) - beside,
+        ui.available_width() - super::topbar::least_width(ui.ctx(), app.apple.is_some()) - beside,
     );
     let panel = egui::Panel::left("sidebar")
         .resizable(true)
@@ -712,7 +721,7 @@ fn folder_rows(app: &App, user_id: &str, entries: &mut Vec<Entry>) {
                     playlist,
                     *index,
                     user_id,
-                    app.can_edit_playlist(playlist),
+                    app.can_append_playlist(playlist),
                     depth,
                 ));
             }
@@ -727,7 +736,7 @@ fn folder_rows(app: &App, user_id: &str, entries: &mut Vec<Entry>) {
                 playlist,
                 index,
                 user_id,
-                app.can_edit_playlist(playlist),
+                app.can_append_playlist(playlist),
                 0,
             ));
         }
@@ -800,20 +809,26 @@ fn nav_row(
 ) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::click());
     if ui.is_rect_visible(rect) {
-        let color = if active || response.hovered() {
-            palette.text
+        let fill = if active {
+            Some(palette.surface_active)
+        } else if response.hovered() {
+            Some(palette.surface_hover)
         } else {
-            palette.secondary
+            None
         };
+        if let Some(fill) = fill {
+            ui.painter()
+                .rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
+        }
         let icon_rect =
             Rect::from_center_size(pos2(rect.left() + 22.0, rect.center().y), Vec2::splat(22.0));
-        icon.image(color, 22.0).paint_at(ui, icon_rect);
+        icon.image(palette.accent, 22.0).paint_at(ui, icon_rect);
         ui.painter().text(
             pos2(rect.left() + 46.0, rect.center().y),
             egui::Align2::LEFT_CENTER,
             label,
-            theme::bold(15.0),
-            color,
+            theme::semibold(15.0),
+            palette.text,
         );
     }
     response.widget_info(|| {
@@ -850,6 +865,20 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     {
         app.actions.push(Action::FocusSearch);
     }
+    if app.apple.is_some() {
+        if nav_row(
+            ui,
+            &palette,
+            Icon::HeartFilled,
+            &gettext(locale, "Favorites"),
+            page == Page::Favorites,
+        )
+        .clicked()
+        {
+            app.actions.push(Action::Open(Page::Favorites));
+        }
+        favorites_shelf(app, ui);
+    }
     ui.add_space(10.0);
     ui.painter().hline(
         ui.max_rect().x_range().shrink(4.0),
@@ -862,6 +891,9 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     let mut filter = ui
         .data(|data| data.get_temp::<Filter>(filter_id))
         .unwrap_or_default();
+    if app.apple.is_some() && filter == Filter::Podcasts {
+        filter = Filter::Playlists;
+    }
     let show_search_id = egui::Id::new("sidebar-show-search");
     let mut show_search = ui
         .data(|data| data.get_temp::<bool>(show_search_id))
@@ -964,6 +996,9 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
             (Filter::Artists, gettext(locale, "Artists")),
             (Filter::Podcasts, gettext(locale, "Podcasts")),
         ] {
+            if app.apple.is_some() && value == Filter::Podcasts {
+                continue;
+            }
             if theme::soft_button(ui, &palette, None, &label, filter == value).clicked() {
                 filter = value;
             }
@@ -1052,7 +1087,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                             playlist,
                             index,
                             &user_id,
-                            app.can_edit_playlist(playlist),
+                            app.can_append_playlist(playlist),
                             0,
                         ));
                     }
@@ -1249,7 +1284,9 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                 .map(|pos| ((pos.y - list_top) / row_height).floor())
                 .filter(|row| *row >= 0.0 && *row < entries.len() as f32)
                 .map(|row| row as usize)
-                .filter(|row| entries[*row].liked || entries[*row].editable);
+                .filter(|row| {
+                    (entries[*row].liked && app.apple.is_none()) || entries[*row].editable
+                });
             // Sidebar entries, including Liked Songs, drop between rows.
             let reordering = egui::DragAndDrop::has_payload_of_type::<DragEntry>(ui.ctx());
             let reorder_slot = reordering.then_some(pointer).flatten().map(|pos| {
@@ -1264,7 +1301,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                     // Prepare the enlarged preview before this row is opened.
                     app.softened_covers.texture(ui.ctx(), &art, image);
                 }
-                let droppable = entry.liked || entry.editable;
+                let droppable = (entry.liked && app.apple.is_none()) || entry.editable;
                 let drop_hover = drop_target == Some(index);
                 let active = entry.folder.is_none() && entry.page == current_page;
                 // Liked Songs has no URI of its own here; Spotify plays it
@@ -1293,7 +1330,8 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                     )
                 });
                 // Animate rows around the current track or entry drop target.
-                let shift = ui.ctx().animate_value_with_time(
+                let shift = super::motion::animate_value(
+                    ui.ctx(),
                     ui.id().with(("drop-shift", index)),
                     if let Some(slot) = reorder_slot {
                         if index < slot { -4.0 } else { 4.0 }
@@ -1525,6 +1563,117 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     );
 }
 
+fn favorites_shelf(app: &mut App, ui: &mut egui::Ui) {
+    let count = app.settings.favorite_shelf_count.min(10) as usize;
+    if count == 0 {
+        return;
+    }
+    let apple = app.apple.as_ref().unwrap();
+    let songs = apple
+        .songs
+        .iter()
+        .enumerate()
+        .filter(|(_, song)| apple.song_favorite(song) == Some(true))
+        .take(count)
+        .map(|(index, song)| (index, song.clone()))
+        .collect::<Vec<_>>();
+    let palette = app.palette;
+    let now = app.now_playing().map(|now| now.uri);
+    if songs.is_empty() {
+        theme::subtle(
+            ui,
+            &palette,
+            &gettext(app.locale, "No favorites in the loaded songs"),
+        );
+    } else {
+        egui::ScrollArea::vertical()
+            .id_salt("favorites-shelf")
+            .max_height((ui.available_height() * 0.3).max(32.0))
+            .auto_shrink([false, true])
+            .show(ui, |ui| {
+                for (index, song) in &songs {
+                    let (rect, response) =
+                        ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::click());
+                    let uri = song.uri();
+                    let active = now.as_deref() == Some(uri.as_str());
+                    if ui.is_rect_visible(rect) {
+                        if active || response.hovered() {
+                            ui.painter()
+                                .rect_filled(rect, theme::RADIUS, palette.surface_hover);
+                        }
+                        let color = if !song.available() {
+                            palette.secondary
+                        } else if active {
+                            palette.accent
+                        } else {
+                            palette.text
+                        };
+                        let galley = crate::bidi::layout(
+                            ui.painter(),
+                            &song.title,
+                            theme::medium(13.0),
+                            color,
+                            (rect.width() - 24.0).max(1.0),
+                            1,
+                            Some(crate::bidi::ELLIPSIS),
+                        );
+                        let text_rect = Rect::from_center_size(
+                            rect.center(),
+                            vec2((rect.width() - 24.0).max(1.0), galley.size().y),
+                        );
+                        let pos = crate::bidi::galley_pos(text_rect, &galley);
+                        ui.painter().galley(pos, galley, color);
+                    }
+                    response.widget_info(|| {
+                        egui::WidgetInfo::labeled(
+                            egui::WidgetType::Button,
+                            ui.is_enabled(),
+                            format!("{}: {}", song.title, song.artist),
+                        )
+                    });
+                    theme::focus_ring(ui, &response);
+                    if response.clicked() {
+                        let apple = app.apple.as_ref().unwrap();
+                        let (uris, position) = if song.available() {
+                            let position = apple.songs[..*index]
+                                .iter()
+                                .filter(|row| {
+                                    apple.song_favorite(row) == Some(true) && row.available()
+                                })
+                                .count();
+                            let uris = apple
+                                .songs
+                                .iter()
+                                .filter(|row| {
+                                    apple.song_favorite(row) == Some(true) && row.available()
+                                })
+                                .map(crate::apple::Song::uri)
+                                .collect();
+                            (uris, position)
+                        } else {
+                            (vec![uri], 0)
+                        };
+                        app.actions.push(Action::PlayUris {
+                            uris,
+                            index: position as u32,
+                        });
+                    }
+                    response.on_hover_text(format!("{}\n{}", song.title, song.artist));
+                }
+            });
+    }
+    if theme::link(
+        ui,
+        gettext(app.locale, "Show all favorites").into_owned(),
+        theme::medium(13.0),
+        palette.secondary,
+    )
+    .clicked()
+    {
+        app.actions.push(Action::Open(Page::Favorites));
+    }
+}
+
 const EXPANDED_ART_GAP: f32 = 10.0;
 const LIBRARY_ITEM_PADDING: f32 = 8.0;
 const GRID_MIN_CARD_WIDTH: f32 = 108.0;
@@ -1638,7 +1787,7 @@ fn library_grid(
                     let playing_here = entry_is_playing_context(entry, playing_context.as_deref());
                     let playing = context_playing && playing_here;
                     let pinned = pins.iter().any(|key| key == entry.ordering_key());
-                    let droppable = entry.liked || entry.editable;
+                    let droppable = (entry.liked && app.apple.is_none()) || entry.editable;
                     let (rect, response) = ui.allocate_exact_size(
                         vec2(layout.card_width, layout.card_height),
                         Sense::click_and_drag(),
@@ -1869,7 +2018,7 @@ fn entry_menu(app: &mut App, response: &egui::Response, entry: &Entry, custom_or
     }
 }
 
-fn pin_menu(app: &mut App, ui: &mut egui::Ui, key: &str) {
+pub(super) fn pin_menu(app: &mut App, ui: &mut egui::Ui, key: &str) {
     let mut pins = app.settings.library_pins();
     let pinned = pins.iter().any(|held| held == key);
     let label = if pinned {
@@ -2217,6 +2366,52 @@ mod ordering_tests {
     }
 
     #[test]
+    fn apple_playlist_pins_keep_their_order_after_refresh_and_settings_reload() {
+        let mut app = app("apple-pins");
+        app.apple = Some(crate::apple::State::default());
+        if let Loadable::Loaded(playlists) = &mut app.library.playlists {
+            for playlist in playlists {
+                playlist.id = format!("library.p.{}", playlist.id);
+                playlist.uri = format!("apple:playlist:{}", playlist.id);
+            }
+        }
+        app.settings.liked_songs_pinned = false;
+        let a = "apple:playlist:library.p.a".to_string();
+        let c = "apple:playlist:library.p.c".to_string();
+        app.actions.push(Action::ArrangeLibrary {
+            pinned: vec![a.clone(), c.clone()],
+            playlist_order: None,
+        });
+        apply_actions(&mut app);
+        let original = app.library.playlists.get().unwrap().clone();
+        for sort in [
+            LibrarySort::Name,
+            LibrarySort::RecentlyPlayed,
+            LibrarySort::Library,
+        ] {
+            let mut entries = rows(&app);
+            order_entries(&app, Filter::Playlists, sort, &mut entries);
+            assert_eq!([&entries[0].uri, &entries[1].uri], [&a, &c]);
+        }
+        let mut entries = rows(&app);
+        order_entries(&app, Filter::Playlists, LibrarySort::Name, &mut entries);
+        drop_row(&mut app, &entries, 2, 0, &c);
+        apply_actions(&mut app);
+        assert_eq!(app.settings.pinned_contexts, [c.clone(), a.clone()]);
+        assert!(app.settings.sidebar_order.is_empty());
+        app.settings.save(&app.dirs.settings_file());
+        app.settings = Settings::load(&app.dirs.settings_file());
+        app.library.playlists = Loadable::Loaded(original.into_iter().rev().collect());
+        let mut refreshed = rows(&app);
+        order_entries(&app, Filter::Playlists, LibrarySort::Name, &mut refreshed);
+        assert_eq!([&refreshed[0].uri, &refreshed[1].uri], [&c, &a]);
+        app.backend.shutdown();
+        let _ = std::fs::remove_dir_all(&app.dirs.config);
+        let _ = std::fs::remove_dir_all(&app.dirs.state);
+        let _ = std::fs::remove_dir_all(&app.dirs.cache);
+    }
+
+    #[test]
     fn switching_sort_and_filtered_drag_preserve_the_full_local_arrangement() {
         let mut app = app("saved");
         app.settings.sidebar_order = ["c", "a", "b", "d"].map(uri).to_vec();
@@ -2404,6 +2599,29 @@ mod ordering_tests {
         assert!(!LibrarySort::RecentlyAdded.supports(Filter::Playlists));
         assert!(!LibrarySort::RecentlyAdded.supports(Filter::Artists));
         assert!(LibrarySort::RecentlyAdded.supports(Filter::Podcasts));
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn apple_sort_ignores_spotify_order_without_destroying_the_preference() {
+        let mut app = app("apple-sort");
+        app.settings
+            .library_sort
+            .insert(Filter::Playlists, LibrarySort::Spotify);
+        assert_eq!(selected_sort(&app, Filter::Playlists), LibrarySort::Spotify);
+        app.apple = Some(crate::apple::State::default());
+        assert_eq!(
+            selected_sort(&app, Filter::Playlists),
+            LibrarySort::RecentlyPlayed
+        );
+        app.settings
+            .sidebar_order
+            .push("apple:playlist:library.p.test".into());
+        assert_eq!(selected_sort(&app, Filter::Playlists), LibrarySort::Local);
+        assert_eq!(
+            app.settings.library_sort[&Filter::Playlists],
+            LibrarySort::Spotify
+        );
         app.backend.shutdown();
     }
 

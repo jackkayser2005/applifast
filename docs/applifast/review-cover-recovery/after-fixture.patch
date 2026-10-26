@@ -1,0 +1,52 @@
+--- a/src/ui/player_bar.rs
++++ b/src/ui/player_bar.rs
+@@ -444,6 +444,20 @@
+     let mut fade = ctx
+         .data(|data| data.get_temp::<CoverFade>(id))
+         .unwrap_or_default();
++    #[cfg(feature = "demo")]
++    let url = {
++        let previous = "bytes://qa-previous-cover.svg";
++        let failed = "bytes://qa-failed-cover.png";
++        let marker = id.with("qa-cover-initialized");
++        if !ctx.data(|data| data.get_temp::<bool>(marker)).unwrap_or(false) {
++            ctx.include_bytes(previous, br##"<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#c83558"/><circle cx="32" cy="32" r="19" fill="#f4cbd5"/><circle cx="32" cy="32" r="5" fill="#c83558"/></svg>"##.as_slice());
++            ctx.include_bytes(failed, b"intentionally invalid PNG".as_slice());
++            fade.shown = Some(previous.into());
++            ctx.data_mut(|data| data.insert_temp(marker, true));
++        }
++        Some(failed)
++    };
++
+     let settled = |url: &str| {
+         !matches!(
+             egui::Image::new(url).load_for_size(ctx, rect.size()),
+--- a/src/demo.rs
++++ b/src/demo.rs
+@@ -19,25 +19,7 @@
+ use crate::backend::AuthStatus;
+ use crate::model::*;
+ 
+-fn image(seed: u32) -> Vec<Image> {
+-    vec![
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/640/640"),
+-            width: Some(640),
+-            height: Some(640),
+-        },
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/300/300"),
+-            width: Some(300),
+-            height: Some(300),
+-        },
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/64/64"),
+-            width: Some(64),
+-            height: Some(64),
+-        },
+-    ]
+-}
++fn image(_seed: u32) -> Vec<Image> { Vec::new() }
+ 
+ const ARTISTS: &[&str] = &[
+     "Bonobo",

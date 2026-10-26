@@ -341,6 +341,23 @@ mod tests {
         assert_eq!(Locale::from_tag("klingon"), None);
     }
 
+    /// Messages that name the app kept their translations through the
+    /// rename: each catalog answers the new source with the new name.
+    #[test]
+    fn messages_naming_the_app_stay_translated() {
+        for &locale in LOCALES.iter().filter(|&&locale| locale != Locale::English) {
+            for source in [
+                "Applifast is up to date",
+                "Applifast {version} is available",
+                "Update Applifast",
+            ] {
+                let translated = gettext(locale, source);
+                assert_ne!(translated, source, "{locale:?} lost {source:?}");
+                assert!(translated.contains("Applifast"), "{locale:?}: {translated}");
+            }
+        }
+    }
+
     #[test]
     fn contextual_messages_do_not_leak_into_other_meanings() {
         let source = "Follow";

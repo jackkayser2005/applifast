@@ -21,6 +21,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     quick_access(app, ui);
     ui.add_space(16.0);
 
+    if app.apple.is_some() {
+        apple_shelves(app, ui);
+        return;
+    }
+
     if app.settings.home.made_for_you.visible {
         made_for_you(app, ui);
     }
@@ -30,6 +35,111 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     top_tracks(app, ui);
     if app.settings.home.recommendations.visible {
         recommendations(app, ui);
+    }
+}
+
+fn apple_shelves(app: &mut App, ui: &mut egui::Ui) {
+    use crate::apple::{HomeShelf, Read};
+    let palette = app.palette;
+    for shelf in HomeShelf::ALL {
+        if shelf == HomeShelf::Recommendations && !app.settings.home.recommendations.visible {
+            continue;
+        }
+        let title = match shelf {
+            HomeShelf::Recent => gettext(app.locale, "Recently played"),
+            HomeShelf::Added => gettext(app.locale, "Recently added"),
+            HomeShelf::HeavyRotation => gettext(app.locale, "Heavy rotation"),
+            HomeShelf::Recommendations => gettext(app.locale, "Recommended for you"),
+        };
+        let state = app
+            .apple
+            .as_ref()
+            .unwrap()
+            .home
+            .get(&shelf)
+            .cloned()
+            .unwrap_or_default();
+        widgets::shelf(
+            ui,
+            &palette,
+            &format!("apple-home-{shelf:?}"),
+            &title,
+            |ui| match state {
+                Loadable::NotLoaded | Loadable::Loading => {
+                    widgets::loading_row(ui, &palette, app.locale)
+                }
+                Loadable::Failed(error) => widgets::error_row(ui, app, &error, Some(Page::Home)),
+                Loadable::Loaded(cards) if cards.is_empty() => {
+                    theme::subtle(
+                        ui,
+                        &palette,
+                        &gettext(app.locale, "No items in this shelf yet."),
+                    );
+                }
+                Loadable::Loaded(cards) => {
+                    for item in cards {
+                        let playing = app.believed_playing()
+                            && (app.playing_context_uri().as_deref() == Some(&item.uri)
+                                || app.now_playing().is_some_and(|now| now.uri == item.uri));
+                        let card = widgets::card(
+                            ui,
+                            app,
+                            item.image.as_deref(),
+                            &item.name,
+                            &item.subtitle,
+                            widgets::CardCover {
+                                playable: item.playable,
+                                playing,
+                                circular: matches!(item.page, Some(Page::Artist(_))),
+                            },
+                        );
+                        if card.play {
+                            app.actions.push(if playing {
+                                Action::TogglePlay
+                            } else if item.uri.starts_with("apple:track:") {
+                                Action::PlayUris {
+                                    uris: vec![item.uri.clone()],
+                                    index: 0,
+                                }
+                            } else {
+                                Action::PlayContext {
+                                    uri: item.uri.clone(),
+                                    offset_uri: None,
+                                    offset_index: None,
+                                }
+                            });
+                        }
+                        if card.clicked {
+                            if let Some(page) = item.page {
+                                app.actions.push(Action::Open(page));
+                            } else if item.uri.starts_with("apple:track:") {
+                                app.actions.push(Action::PlayUris {
+                                    uris: vec![item.uri],
+                                    index: 0,
+                                });
+                            }
+                        }
+                    }
+                }
+            },
+        );
+    }
+    let apple = app.apple.as_ref().unwrap();
+    if apple
+        .next_reads
+        .keys()
+        .any(|read| matches!(read, Read::Home(_)))
+    {
+        let loading = apple
+            .reads
+            .values()
+            .any(|(read, _)| matches!(read, Read::Home(_)));
+        ui.add_enabled_ui(!loading, |ui| {
+            if theme::pill_button(ui, &palette, &gettext(app.locale, "Load more"), false).clicked()
+            {
+                app.actions.push(Action::LoadMore(Page::Home));
+            }
+        });
     }
 }
 
@@ -46,12 +156,17 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     let mut tiles: Vec<Tile> = vec![Tile {
         image: None,
-        name: gettext(app.locale, "Liked Songs").into_owned(),
+        name: gettext(
+            app.locale,
+            if app.apple.is_some() {
+                "Songs"
+            } else {
+                "Liked Songs"
+            },
+        )
+        .into_owned(),
         page: Page::LikedSongs,
-        uri: app
-            .user
-            .as_ref()
-            .map(|user| format!("spotify:user:{}:collection", user.id)),
+        uri: app.songs_context_uri(),
         liked: true,
         owned_playlist: None,
     }];
@@ -603,7 +718,7 @@ fn track_list(
         Loadable::Loaded(tracks) => tracks,
         Loadable::Loading | Loadable::NotLoaded => {
             if let Some(page) = title_page {
-                if theme::link(ui, title, theme::bold(17.0), palette.text).clicked() {
+                if theme::link(ui, title, theme::section_font(), palette.text).clicked() {
                     app.actions.push(Action::Open(page));
                 }
             } else {
@@ -624,7 +739,7 @@ fn track_list(
         return;
     }
     if let Some(page) = title_page {
-        if theme::link(ui, title, theme::bold(17.0), palette.text).clicked() {
+        if theme::link(ui, title, theme::section_font(), palette.text).clicked() {
             app.actions.push(Action::Open(page));
         }
     } else {
@@ -657,6 +772,7 @@ fn track_list(
                 shift: 0.0,
                 picked: false,
                 picked_songs: &[],
+                striped: false,
             },
         );
     }

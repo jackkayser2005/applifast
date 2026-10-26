@@ -1,0 +1,78 @@
+name: Windows preview downloads
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      # Published test downloads build without a compiler cache or demo features.
+      - name: Build optimized Windows preview
+        shell: pwsh
+        run: |
+          cargo build --locked --release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:CARGO_TARGET_DIR = 'target/apple-probe'
+          cargo build --locked --manifest-path prototypes/apple-playback/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify executable and package fixtures
+        shell: pwsh
+        run: |
+          $binary = 'target/release/spotifast.exe'
+          $imports = & dumpbin /dependents $binary | Out-String
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($imports -match 'MSVCP[0-9_]*\.dll|VCRUNTIME[0-9_]*\.dll') { throw 'Preview requires a separate MSVC runtime.' }
+          $headers = & dumpbin /headers $binary | Out-String
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($headers -notmatch '8664 machine \(x64\)') { throw 'Expected a Windows x64 executable.' }
+          $version = (& $binary --version | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch '^applifast \d+\.\d+\.\d+$') { throw 'Unexpected preview identity.' }
+          $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          ./packaging/windows/test-preview.ps1 -Binary $binary
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./packaging/windows/test-installer.ps1 -Binary $binary -SetupCompiler $iscc
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Only this step receives the signed app JWT. Never supply the .p8 key.
+      - name: Package subscriber test downloads
+        shell: pwsh
+        env:
+          APPLE_MUSIC_DEVELOPER_TOKEN: ${{ secrets.APPLE_MUSIC_DEVELOPER_TOKEN }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:APPLE_MUSIC_DEVELOPER_TOKEN)) { throw 'Configure the APPLE_MUSIC_DEVELOPER_TOKEN Actions secret with a signed, origin-restricted developer JWT.' }
+          $tokenFile = Join-Path $env:RUNNER_TEMP ('applifast-token-' + [Guid]::NewGuid().ToString('N') + '.txt')
+          try {
+            [IO.File]::WriteAllText($tokenFile, $env:APPLE_MUSIC_DEVELOPER_TOKEN, [Text.UTF8Encoding]::new($false))
+            $env:APPLE_MUSIC_DEVELOPER_TOKEN = $null
+            $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
+            if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+            ./packaging/windows/applifast-preview.ps1 -DeveloperToken $tokenFile -Binary target/release/spotifast.exe -SetupCompiler $iscc -OutputDirectory dist/windows-preview
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            if (Test-Path -LiteralPath $tokenFile) { Remove-Item -LiteralPath $tokenFile -Force }
+          }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: applifast-windows-x64-${{ github.sha }}
+          path: |
+            dist/windows-preview/*.zip
+            dist/windows-preview/*-setup.exe
+            dist/windows-preview/*.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

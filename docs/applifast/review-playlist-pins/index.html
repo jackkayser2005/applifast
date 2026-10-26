@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast playlist pin comparison</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}</style>
+<h1>Local playlist pins in More</h1>
+<p>Baseline <code>abd1295</code>, candidate <code>feat/apple-playlist-pins</code>. A loaded Apple library playlist's More menu adds Pin to top or Unpin. Existing sidebar pins, navigation, controls and layout remain in place. The added menu item increases that popup's height.</p>
+<p>Matching native Windows captures use the same fake created Apple playlist, songs, settings, pinned state, pointer, zoom, Reduce motion and window size. The existing album-menu demo flag opens this playlist's shared More popup. The baseline sidebar already supports local pins. These fixtures do not create a real playlist or authorize an account.</p>
+<label>State <select id="view"><option value="pin">Unpinned playlist</option><option value="unpin">Pinned playlist</option></select></label>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Size <select id="size"><option value="normal">Normal</option><option value="narrow">Narrow</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Native Windows library playlist More menu pin comparison">
+<p>Input-driven tests verify actual Pin/Unpin clicks, exact identifiers, settings reload and local order. Browser rendering and fresh-PC Apple sign-in remain separate checks. See <a href="../playlist-pins.md">scope and verification</a>.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+(byId('size').value==='normal'?'1100x760':'760x760');byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['view','theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

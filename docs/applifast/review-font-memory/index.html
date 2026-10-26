@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast fallback-font storage comparison</title>
+<style>
+body { font: 16px system-ui; margin: 24px; background: #202022; color: #eee; }
+p { max-width: 1000px; line-height: 1.5; }
+select, button { font: inherit; padding: 8px; margin: 4px; }
+a { color: #ff7a80; }
+button[aria-pressed="true"] { outline: 2px solid #ff7a80; }
+img { display: block; max-width: 100%; height: auto; border: 1px solid #666; margin-top: 16px; }
+</style>
+<h1>Fallback-font storage</h1>
+<p>No layout or control change is intended. The candidate backports upstream's
+file-backed fallback fonts onto fastframe v0.4.1, with Windows read-handle
+lifetime protection. Both builds retain the same font selection and rendering
+rules. See the <a href="../font-memory.md">source and measurement report</a>.</p>
+<p>These are native Windows captures from the isolated demo allocation profiler,
+using the same cached sample artwork, Songs data, neutral pointer and twelve-second
+capture delay. Each pair shares its isolated data directory. No Apple account,
+playback host, audio or account write is involved. Main-window requests match
+1100 by 760 and 760 by 760 in both themes.</p>
+<p>The owned-font baseline executable is identified in the report by SHA256
+<code>96e6da1fbe8d9fb34cb40f4794045e7f311c93021e0dc0f9df376b149a5c0094</code>.
+The candidate pins all fastframe crates to
+<code>ba3db2d36f7b08f5d99e650c4adcaa05f90cda87</code>.
+The report identifies its frozen executable and exact comparison results.</p>
+<p>This checks appearance in the shown sample, not every script, interactive
+motion, optimized real-account playback or the complete-process resource budget.
+Static selector checks and native captures do not establish browser rendering
+of this comparison page. Those acceptance limits remain explicit.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal, 1100 by 760</option><option value="760x760">Narrow, 760 by 760</option></select></label>
+<button id="before" aria-pressed="true">Before</button>
+<button id="after" aria-pressed="false">After</button>
+<p id="caption" aria-live="polite"></p>
+<img id="capture" alt="Native fallback-font comparison">
+<script>
+const byId = id => document.getElementById(id);
+let phase = 'before';
+function draw() {
+ const theme = byId('theme').value, size = byId('size').value;
+ byId('capture').src = `${phase}-${theme}-${size}.png`;
+ byId('capture').alt = `${phase} Songs, ${theme}, ${size}`;
+ byId('caption').textContent = `${phase === 'before' ? 'Before: owned fallback files' : 'After: mapped fallback files'} · ${theme} · ${size}`;
+ byId('before').setAttribute('aria-pressed', String(phase === 'before'));
+ byId('after').setAttribute('aria-pressed', String(phase === 'after'));
+}
+byId('theme').onchange = draw;
+byId('size').onchange = draw;
+byId('before').onclick = () => { phase = 'before'; draw(); };
+byId('after').onclick = () => { phase = 'after'; draw(); };
+draw();
+</script>
+</html>

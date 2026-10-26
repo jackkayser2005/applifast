@@ -1,0 +1,289 @@
+{
+  "baseline": "8da79db02b980f7f12f57c99382ede50eaef87b9",
+  "candidate": "879d523724456f5f4df5c4ed68a6281cc19013fa",
+  "platform": "Windows native egui demo readbacks",
+  "captureCount": 16,
+  "sharedTemporaryFixture": true,
+  "otherDemoArtworkDisabled": true,
+  "actualImageError": "corrupt in-memory PNG, real egui asynchronous image loader",
+  "previousCoverSeededForBothVersions": true,
+  "normalAppleSessionUntouched": true,
+  "animationFrozenEndStatesOnly": true,
+  "nativeMotionTimingUnverified": true,
+  "binaries": {
+    "before": "6c525fdc56ae6001d03f33466078d75813360eec13df576ca60cbfa1f8a0b0c0",
+    "after": "b9e548258d30317acc2e882f7efc916900f6bcfe278ea57d37d0f426a7d8fe9c"
+  },
+  "checks": [
+    {
+      "name": "fmt",
+      "exitCode": 0,
+      "seconds": 1.466,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "clippy-default",
+      "exitCode": 0,
+      "seconds": 9.987,
+      "logSHA256": "b9ef2baa3b41c9730aecc95d4adb0023e100ff6a08dc1b68e4987789bd081c26"
+    },
+    {
+      "name": "clippy-demo",
+      "exitCode": 0,
+      "seconds": 6.759,
+      "logSHA256": "9236df12dda6ed1f6cbea7fb42bf51c6bb5362c6ea2e3000d0013d57694925a4"
+    },
+    {
+      "name": "tests-default",
+      "exitCode": 0,
+      "seconds": 37.931,
+      "logSHA256": "48416e436cce5edf0c0d08168e55210b1db7aae2325548220fe6d039e4859170"
+    },
+    {
+      "name": "tests-demo",
+      "exitCode": 0,
+      "seconds": 46.949,
+      "logSHA256": "d56b93450bf6b2723c8508392c15510eb99e8ebd20739ae7fa3b28758426f5ef"
+    },
+    {
+      "name": "doctests-demo",
+      "exitCode": 0,
+      "seconds": 2.277,
+      "logSHA256": "5b4a28d44fd9d3c3f0b0bdf0716babeeb012bd81a065364d2c231c5500178819"
+    },
+    {
+      "name": "rustdoc-demo",
+      "exitCode": 0,
+      "seconds": 12.124,
+      "logSHA256": "9eba0fa01e5c7b714592c9515dace93ff19009939e4325a19ffcc4626bcfcffa"
+    }
+  ],
+  "pairs": [
+    {
+      "theme": "dark",
+      "size": "1100x760",
+      "motion": "enabled",
+      "changedBounds": [
+        20,
+        688,
+        76,
+        744
+      ],
+      "otherPixelsIdentical": true
+    },
+    {
+      "theme": "dark",
+      "size": "1100x760",
+      "motion": "reduced",
+      "changedBounds": [
+        20,
+        688,
+        76,
+        744
+      ],
+      "otherPixelsIdentical": true
+    },
+    {
+      "theme": "dark",
+      "size": "760x760",
+      "motion": "enabled",
+      "changedBounds": [
+        20,
+        688,
+        76,
+        744
+      ],
+      "otherPixelsIdentical": true
+    },
+    {
+      "theme": "dark",
+      "size": "760x760",
+      "motion": "reduced",
+      "changedBounds": [
+        20,
+        688,
+        76,
+        744
+      ],
+      "otherPixelsIdentical": true
+    },
+    {
+      "theme": "light",
+      "size": "1100x760",
+      "motion": "enabled",
+      "changedBounds": [
+        20,
+        688,
+        76,
+        744
+      ],
+      "otherPixelsIdentical": true
+    },
+    {
+      "theme": "light",
+      "size": "1100x760",
+      "motion": "reduced",
+      "changedBounds": [
+        20,
+        688,
+        76,
+        744
+      ],
+      "otherPixelsIdentical": true
+    },
+    {
+      "theme": "light",
+      "size": "760x760",
+      "motion": "enabled",
+      "changedBounds": [
+        20,
+        688,
+        76,
+        744
+      ],
+      "otherPixelsIdentical": true
+    },
+    {
+      "theme": "light",
+      "size": "760x760",
+      "motion": "reduced",
+      "changedBounds": [
+        20,
+        688,
+        76,
+        744
+      ],
+      "otherPixelsIdentical": true
+    }
+  ],
+  "captures": [
+    {
+      "file": "before-enabled-dark-1100x760.png",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "sha256": "0e9c9cf91cc647a986cc7216fcc5638c323e54d075833841fa7b2f6e0df3b0a1"
+    },
+    {
+      "file": "after-enabled-dark-1100x760.png",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "sha256": "98de38b8491cb0d22a0600415da32c3ac01143d1564646c8b2131ea5b865f4e6"
+    },
+    {
+      "file": "before-reduced-dark-1100x760.png",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "sha256": "0e9c9cf91cc647a986cc7216fcc5638c323e54d075833841fa7b2f6e0df3b0a1"
+    },
+    {
+      "file": "after-reduced-dark-1100x760.png",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "sha256": "98de38b8491cb0d22a0600415da32c3ac01143d1564646c8b2131ea5b865f4e6"
+    },
+    {
+      "file": "before-enabled-dark-760x760.png",
+      "dimensions": [
+        760,
+        760
+      ],
+      "sha256": "82764cbf1c008449e85e430bcebd1c289530c560a49f5bd4129e44418d995278"
+    },
+    {
+      "file": "after-enabled-dark-760x760.png",
+      "dimensions": [
+        760,
+        760
+      ],
+      "sha256": "7ec25974e3bb8ab8839b729fcebaa66e1ce47a65eae9dcaf0b6fa95c20ce89e8"
+    },
+    {
+      "file": "before-reduced-dark-760x760.png",
+      "dimensions": [
+        760,
+        760
+      ],
+      "sha256": "82764cbf1c008449e85e430bcebd1c289530c560a49f5bd4129e44418d995278"
+    },
+    {
+      "file": "after-reduced-dark-760x760.png",
+      "dimensions": [
+        760,
+        760
+      ],
+      "sha256": "7ec25974e3bb8ab8839b729fcebaa66e1ce47a65eae9dcaf0b6fa95c20ce89e8"
+    },
+    {
+      "file": "before-enabled-light-1100x760.png",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "sha256": "d5c43f952a0c8d85e90f299cf793eccf6bc0ffa29d32d63234ceddb320b028a5"
+    },
+    {
+      "file": "after-enabled-light-1100x760.png",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "sha256": "8e4c05eeb2984d7b88d6bc049ca372042b3bf76850fab4cf55dbb84ba5572595"
+    },
+    {
+      "file": "before-reduced-light-1100x760.png",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "sha256": "d5c43f952a0c8d85e90f299cf793eccf6bc0ffa29d32d63234ceddb320b028a5"
+    },
+    {
+      "file": "after-reduced-light-1100x760.png",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "sha256": "8e4c05eeb2984d7b88d6bc049ca372042b3bf76850fab4cf55dbb84ba5572595"
+    },
+    {
+      "file": "before-enabled-light-760x760.png",
+      "dimensions": [
+        760,
+        760
+      ],
+      "sha256": "ca1acf02252bc136bd1f26f21cece4319cbc8376d17a1d2ae275eefb03aba9f6"
+    },
+    {
+      "file": "after-enabled-light-760x760.png",
+      "dimensions": [
+        760,
+        760
+      ],
+      "sha256": "a6245b98c9de7eaebe6ef2e5fcd7238b1d8d2fed2944b9da29a363457f64f7e3"
+    },
+    {
+      "file": "before-reduced-light-760x760.png",
+      "dimensions": [
+        760,
+        760
+      ],
+      "sha256": "ca1acf02252bc136bd1f26f21cece4319cbc8376d17a1d2ae275eefb03aba9f6"
+    },
+    {
+      "file": "after-reduced-light-760x760.png",
+      "dimensions": [
+        760,
+        760
+      ],
+      "sha256": "a6245b98c9de7eaebe6ef2e5fcd7238b1d8d2fed2944b9da29a363457f64f7e3"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+diff --git a/src/apple.rs b/src/apple.rs
+index d273509..bfa50ac 100644
+--- a/src/apple.rs
++++ b/src/apple.rs
+@@ -1150 +1150 @@ impl State {
+-            state.local.playback = Playback::Playing;
++            state.local.playback = Playback::Paused;
+diff --git a/src/demo.rs b/src/demo.rs
+index 0067c57..27ab07f 100644
+--- a/src/demo.rs
++++ b/src/demo.rs
+@@ -22,19 +22 @@ use crate::model::*;
+-fn image(seed: u32) -> Vec<Image> {
+-    vec![
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/640/640"),
+-            width: Some(640),
+-            height: Some(640),
+-        },
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/300/300"),
+-            width: Some(300),
+-            height: Some(300),
+-        },
+-        Image {
+-            url: format!("https://picsum.photos/seed/spotifast{seed}/64/64"),
+-            width: Some(64),
+-            height: Some(64),
+-        },
+-    ]
+-}
++fn image(_seed: u32) -> Vec<Image> { Vec::new() }
+diff --git a/src/entrypoint.rs b/src/entrypoint.rs
+index fe81a8e..e813412 100644
+--- a/src/entrypoint.rs
++++ b/src/entrypoint.rs
+@@ -1477,0 +1478 @@ impl Shell {
++            ctx.data_mut(|data| data.insert_temp(egui::Id::new("qa-hover-capture-index"), request.index));
+diff --git a/src/ui/motion.rs b/src/ui/motion.rs
+index a62970e..05a0610 100644
+--- a/src/ui/motion.rs
++++ b/src/ui/motion.rs
+@@ -321,0 +322,3 @@ pub fn forced_hover(ctx: &Context, what: &'static str) -> bool {
++        if ctx.data(|data| data.get_temp::<usize>(Id::new("qa-hover-capture-index"))).unwrap_or(0) == 0 {
++            return false;
++        }

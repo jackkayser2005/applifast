@@ -1,0 +1,467 @@
+{
+  "ValidatedSource": "50024ce10d12de39f9d589c5980155b98cde4588",
+  "BrowserChecks": [
+    {
+      "browser": "155.0.4283.62",
+      "url": "http://127.0.0.1:8765/reviews.html",
+      "checks": [
+        {
+          "view": "Songs",
+          "theme": "Dark",
+          "window": "Normal, 1100×760",
+          "phase": "Before",
+          "src": "before-songs-dark-1100x760.png",
+          "alt": "before songs, dark, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Songs",
+          "theme": "Dark",
+          "window": "Normal, 1100×760",
+          "phase": "After",
+          "src": "after-songs-dark-1100x760.png",
+          "alt": "after songs, dark, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Songs",
+          "theme": "Dark",
+          "window": "Narrow, 760×760",
+          "phase": "Before",
+          "src": "before-songs-dark-760x760.png",
+          "alt": "before songs, dark, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Songs",
+          "theme": "Dark",
+          "window": "Narrow, 760×760",
+          "phase": "After",
+          "src": "after-songs-dark-760x760.png",
+          "alt": "after songs, dark, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Songs",
+          "theme": "Light",
+          "window": "Normal, 1100×760",
+          "phase": "Before",
+          "src": "before-songs-light-1100x760.png",
+          "alt": "before songs, light, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Songs",
+          "theme": "Light",
+          "window": "Normal, 1100×760",
+          "phase": "After",
+          "src": "after-songs-light-1100x760.png",
+          "alt": "after songs, light, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Songs",
+          "theme": "Light",
+          "window": "Narrow, 760×760",
+          "phase": "Before",
+          "src": "before-songs-light-760x760.png",
+          "alt": "before songs, light, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Songs",
+          "theme": "Light",
+          "window": "Narrow, 760×760",
+          "phase": "After",
+          "src": "after-songs-light-760x760.png",
+          "alt": "after songs, light, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Songs and queue",
+          "theme": "Dark",
+          "window": "Normal, 1100×760",
+          "phase": "Before",
+          "src": "before-queue-dark-1100x760.png",
+          "alt": "before queue, dark, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Songs and queue",
+          "theme": "Dark",
+          "window": "Normal, 1100×760",
+          "phase": "After",
+          "src": "after-queue-dark-1100x760.png",
+          "alt": "after queue, dark, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Songs and queue",
+          "theme": "Dark",
+          "window": "Narrow, 760×760",
+          "phase": "Before",
+          "src": "before-queue-dark-760x760.png",
+          "alt": "before queue, dark, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Songs and queue",
+          "theme": "Dark",
+          "window": "Narrow, 760×760",
+          "phase": "After",
+          "src": "after-queue-dark-760x760.png",
+          "alt": "after queue, dark, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Songs and queue",
+          "theme": "Light",
+          "window": "Normal, 1100×760",
+          "phase": "Before",
+          "src": "before-queue-light-1100x760.png",
+          "alt": "before queue, light, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Songs and queue",
+          "theme": "Light",
+          "window": "Normal, 1100×760",
+          "phase": "After",
+          "src": "after-queue-light-1100x760.png",
+          "alt": "after queue, light, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Songs and queue",
+          "theme": "Light",
+          "window": "Narrow, 760×760",
+          "phase": "Before",
+          "src": "before-queue-light-760x760.png",
+          "alt": "before queue, light, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Songs and queue",
+          "theme": "Light",
+          "window": "Narrow, 760×760",
+          "phase": "After",
+          "src": "after-queue-light-760x760.png",
+          "alt": "after queue, light, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Settings",
+          "theme": "Dark",
+          "window": "Normal, 1100×760",
+          "phase": "Before",
+          "src": "before-settings-dark-1100x760.png",
+          "alt": "before settings, dark, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Settings",
+          "theme": "Dark",
+          "window": "Normal, 1100×760",
+          "phase": "After",
+          "src": "after-settings-dark-1100x760.png",
+          "alt": "after settings, dark, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Settings",
+          "theme": "Dark",
+          "window": "Narrow, 760×760",
+          "phase": "Before",
+          "src": "before-settings-dark-760x760.png",
+          "alt": "before settings, dark, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Settings",
+          "theme": "Dark",
+          "window": "Narrow, 760×760",
+          "phase": "After",
+          "src": "after-settings-dark-760x760.png",
+          "alt": "after settings, dark, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Settings",
+          "theme": "Light",
+          "window": "Normal, 1100×760",
+          "phase": "Before",
+          "src": "before-settings-light-1100x760.png",
+          "alt": "before settings, light, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Settings",
+          "theme": "Light",
+          "window": "Normal, 1100×760",
+          "phase": "After",
+          "src": "after-settings-light-1100x760.png",
+          "alt": "after settings, light, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "view": "Settings",
+          "theme": "Light",
+          "window": "Narrow, 760×760",
+          "phase": "Before",
+          "src": "before-settings-light-760x760.png",
+          "alt": "before settings, light, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Settings",
+          "theme": "Light",
+          "window": "Narrow, 760×760",
+          "phase": "After",
+          "src": "after-settings-light-760x760.png",
+          "alt": "after settings, light, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "view": "Mini-player (fixed 2×)",
+          "theme": "Dark",
+          "window": "fixed-size control disabled",
+          "phase": "Before",
+          "src": "before-mini-dark-1100x760.png",
+          "alt": "before mini, dark, 550×232 at 2×",
+          "width": 550,
+          "height": 232
+        },
+        {
+          "view": "Mini-player (fixed 2×)",
+          "theme": "Dark",
+          "window": "fixed-size control disabled",
+          "phase": "After",
+          "src": "after-mini-dark-1100x760.png",
+          "alt": "after mini, dark, 550×232 at 2×",
+          "width": 550,
+          "height": 232
+        },
+        {
+          "view": "Mini-player (fixed 2×)",
+          "theme": "Light",
+          "window": "fixed-size control disabled",
+          "phase": "Before",
+          "src": "before-mini-light-1100x760.png",
+          "alt": "before mini, light, 550×232 at 2×",
+          "width": 550,
+          "height": 232
+        },
+        {
+          "view": "Mini-player (fixed 2×)",
+          "theme": "Light",
+          "window": "fixed-size control disabled",
+          "phase": "After",
+          "src": "after-mini-light-1100x760.png",
+          "alt": "after mini, light, 550×232 at 2×",
+          "width": 550,
+          "height": 232
+        }
+      ],
+      "scope": "Rendered comparison controls and native sample images only; does not demonstrate native interactive motion or account behavior"
+    },
+    {
+      "kind": "font-memory",
+      "browser": "155.0.4283.62",
+      "url": "http://127.0.0.1:8765/review-font-memory/index.html",
+      "checks": [
+        {
+          "theme": "Dark",
+          "window": "Normal, 1100 by 760",
+          "phase": "Before",
+          "src": "before-dark-1100x760.png",
+          "alt": "before Songs, dark, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "theme": "Dark",
+          "window": "Normal, 1100 by 760",
+          "phase": "After",
+          "src": "after-dark-1100x760.png",
+          "alt": "after Songs, dark, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "theme": "Dark",
+          "window": "Narrow, 760 by 760",
+          "phase": "Before",
+          "src": "before-dark-760x760.png",
+          "alt": "before Songs, dark, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "theme": "Dark",
+          "window": "Narrow, 760 by 760",
+          "phase": "After",
+          "src": "after-dark-760x760.png",
+          "alt": "after Songs, dark, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "theme": "Light",
+          "window": "Normal, 1100 by 760",
+          "phase": "Before",
+          "src": "before-light-1100x760.png",
+          "alt": "before Songs, light, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "theme": "Light",
+          "window": "Normal, 1100 by 760",
+          "phase": "After",
+          "src": "after-light-1100x760.png",
+          "alt": "after Songs, light, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "theme": "Light",
+          "window": "Narrow, 760 by 760",
+          "phase": "Before",
+          "src": "before-light-760x760.png",
+          "alt": "before Songs, light, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "theme": "Light",
+          "window": "Narrow, 760 by 760",
+          "phase": "After",
+          "src": "after-light-760x760.png",
+          "alt": "after Songs, light, 760x760",
+          "width": 760,
+          "height": 760
+        }
+      ],
+      "scope": "Actual HTML controls and sample PNGs; not a native runtime or memory-budget test"
+    },
+    {
+      "kind": "apple-footer",
+      "browser": "155.0.4283.62",
+      "url": "http://127.0.0.1:8765/review-apple-footer/index.html",
+      "checks": [
+        {
+          "theme": "Dark",
+          "window": "Normal, 1100 by 760",
+          "phase": "Before",
+          "src": "before-dark-1100x760.png",
+          "alt": "before Apple sign-in, dark, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "theme": "Dark",
+          "window": "Normal, 1100 by 760",
+          "phase": "After",
+          "src": "after-dark-1100x760.png",
+          "alt": "after Apple sign-in, dark, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "theme": "Dark",
+          "window": "Narrow, 760 by 760",
+          "phase": "Before",
+          "src": "before-dark-760x760.png",
+          "alt": "before Apple sign-in, dark, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "theme": "Dark",
+          "window": "Narrow, 760 by 760",
+          "phase": "After",
+          "src": "after-dark-760x760.png",
+          "alt": "after Apple sign-in, dark, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "theme": "Light",
+          "window": "Normal, 1100 by 760",
+          "phase": "Before",
+          "src": "before-light-1100x760.png",
+          "alt": "before Apple sign-in, light, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "theme": "Light",
+          "window": "Normal, 1100 by 760",
+          "phase": "After",
+          "src": "after-light-1100x760.png",
+          "alt": "after Apple sign-in, light, 1100x760",
+          "width": 1100,
+          "height": 760
+        },
+        {
+          "theme": "Light",
+          "window": "Narrow, 760 by 760",
+          "phase": "Before",
+          "src": "before-light-760x760.png",
+          "alt": "before Apple sign-in, light, 760x760",
+          "width": 760,
+          "height": 760
+        },
+        {
+          "theme": "Light",
+          "window": "Narrow, 760 by 760",
+          "phase": "After",
+          "src": "after-light-760x760.png",
+          "alt": "after Apple sign-in, light, 760x760",
+          "width": 760,
+          "height": 760
+        }
+      ],
+      "scope": "Actual HTML controls and sample PNGs; not a native runtime or memory-budget test"
+    }
+  ],
+  "IndexNavigation": {
+    "browser": "155.0.4283.62",
+    "checked": [
+      "review-apple-footer/index.html",
+      "review-font-memory/index.html",
+      "review-apple-footer/index.html"
+    ],
+    "directLinksMatch": true,
+    "lastNextDisabled": true,
+    "scope": "Actual index Previous/Next and selected-review links"
+  },
+  "ObservedConsoleErrors": [
+    "Only /favicon.ico returned 404; no new recorded console errors"
+  ],
+  "Scope": "Owned isolated Edge session using loopback-served public sample comparison files; no signed-in browser, Apple account, audio or native motion interaction; browser and server closed after verification"
+}

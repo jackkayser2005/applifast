@@ -304,9 +304,11 @@ pub fn show<R>(
     let clip = ui.clip_rect();
     let output = area.show(ui, |ui| {
         if enabled {
+            // Shelves laid out past the bottom of the page can share `id`;
+            // `unique_id` stays distinct for each area.
             let background = ui.interact(
                 ui.clip_rect().intersect(ui.max_rect()),
-                ui.id().with("autoscroll-background"),
+                ui.unique_id().with("autoscroll-background"),
                 egui::Sense::click(),
             );
             row(ui, &background);

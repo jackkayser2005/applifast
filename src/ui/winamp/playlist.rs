@@ -310,7 +310,7 @@ fn rows(app: &App, now: Option<&NowPlaying>) -> (Vec<Row>, Vec<String>) {
         });
     }
     let queued: &[PlayableItem] = queue.map(|queue| queue.queue.as_slice()).unwrap_or(&[]);
-    let stale = current.is_none() && queue.is_some();
+    let stale = app.apple.is_none() && current.is_none() && queue.is_some();
     let mut skipped_playing = false;
     for (index, item) in queued.iter().enumerate() {
         if stale && !skipped_playing && now.is_some_and(|now| now.uri == item.uri()) {
@@ -618,53 +618,98 @@ fn times(app: &App, view: &mut View, now: Option<&NowPlaying>, rows: &[Row], hei
     }
 }
 
-/// Bottom menus adapted to supported Spotify actions.
+/// Bottom menus adapted to the active playback engine.
 fn menus(app: &mut App, view: &mut View, rows: &[Row], queue_uris: &[String], height: u32) {
     let bottom = height - layout::PLAYLIST_BOTTOM_HEIGHT;
     let unit = view.unit;
     for (name, x) in layout::PLAYLIST_MENUS {
         let area = Area::new(x, bottom + 8, 22, 18);
         let button = view.interact(area, &format!("playlist-menu-{name}"), Sense::click());
-        super::menu(
-            egui::Popup::menu(&button),
-            view.skin,
-            unit,
-            |ui| match name {
-                "add" => add_menu(app, ui),
-                "rem" => rem_menu(app, ui),
-                "sel" => sel_menu(app, ui, rows),
-                "misc" => misc_menu(app, ui, rows),
-                _ => list_menu(app, ui, rows, queue_uris),
-            },
-        );
+        let popup = egui::Popup::menu(&button);
+        #[cfg(feature = "demo")]
+        let popup = if app.winamp.demo_playlist_menu == Some(name) {
+            popup.open(true)
+        } else {
+            popup
+        };
+        super::menu(popup, view.skin, unit, |ui| match name {
+            "add" => add_menu(app, ui),
+            "rem" => rem_menu(app, ui, rows),
+            "sel" => sel_menu(app, ui, rows),
+            "misc" => misc_menu(app, ui, rows),
+            _ => list_menu(app, ui, rows, queue_uris),
+        });
     }
 }
 
-/// Where a song comes from here: the big window's search or Liked Songs.
+/// Open search or the active service's saved songs in the big window.
 fn add_menu(app: &mut App, ui: &mut egui::Ui) {
     let locale = app.locale;
     if ui
-        .button(gettext(locale, "Search Spotify").as_ref())
+        .button(
+            gettext(
+                locale,
+                if app.apple.is_some() {
+                    "Search Apple Music"
+                } else {
+                    "Search Spotify"
+                },
+            )
+            .as_ref(),
+        )
         .clicked()
     {
         app.actions.push(Action::FocusSearch);
         app.actions.push(Action::ToggleWinampWindow);
     }
-    if ui.button(gettext(locale, "Liked Songs").as_ref()).clicked() {
+    if ui
+        .button(
+            gettext(
+                locale,
+                if app.apple.is_some() {
+                    "Favorites"
+                } else {
+                    "Liked Songs"
+                },
+            )
+            .as_ref(),
+        )
+        .clicked()
+    {
         app.actions.push(Action::Open(Page::LikedSongs));
         app.actions.push(Action::ToggleWinampWindow);
     }
 }
 
-fn rem_menu(app: &mut App, ui: &mut egui::Ui) {
+fn rem_menu(app: &mut App, ui: &mut egui::Ui, rows: &[Row]) {
     let locale = app.locale;
-    ui.add_enabled(
-        false,
-        egui::Button::new(gettext(locale, "Remove selected").as_ref()),
-    )
-    .on_disabled_hover_text(
-        gettext(locale, "Spotify does not let apps remove one queued song.").as_ref(),
-    );
+    if app.apple.is_some() {
+        let indices = rows
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| app.winamp.playlist_selection.contains(index))
+            .filter_map(|(_, row)| row.queued)
+            .collect();
+        let action = app.queue_removal(indices);
+        if ui
+            .add_enabled(
+                action.is_some(),
+                egui::Button::new(gettext(locale, "Remove selected").as_ref()),
+            )
+            .clicked()
+            && let Some(action) = action
+        {
+            app.actions.push(action);
+        }
+    } else {
+        ui.add_enabled(
+            false,
+            egui::Button::new(gettext(locale, "Remove selected").as_ref()),
+        )
+        .on_disabled_hover_text(
+            gettext(locale, "Spotify does not let apps remove one queued song.").as_ref(),
+        );
+    }
     if ui
         .add_enabled(
             app.can_clear_queue(),

@@ -15,6 +15,10 @@ use crate::util;
 pub const CARD_WIDTH: f32 = 172.0;
 pub const CARD_GAP: f32 = 14.0;
 pub const PAGE_PADDING: f32 = 24.0;
+/// Leave room for names and controls beside both side panels.
+pub(super) const COMPACT_COLLECTION_WIDTH: f32 = 360.0;
+/// How far a hovered card's cover rises.
+const CARD_LIFT: f32 = 4.0;
 
 /// Draws an image (or a placeholder) in a square.
 pub fn cover(
@@ -575,6 +579,19 @@ pub fn picked_menu(
     });
     ui.add_space(4.0);
     menu_separator(ui, &palette);
+    if app.apple.is_some()
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::ListPlus),
+            &gettext(locale, "Play next"),
+        )
+    {
+        app.actions.push(Action::InsertInQueue {
+            items: songs.to_vec(),
+            position: 0,
+        });
+    }
     if menu_item(
         ui,
         &palette,
@@ -590,7 +607,9 @@ pub fn picked_menu(
     }
     // Set one explicit saved state for the full selection.
     let all_saved = uris.iter().all(|uri| app.is_saved(uri).unwrap_or(false));
-    let (icon, text) = if all_saved {
+    let (icon, text) = if app.apple.is_some() {
+        (Icon::Heart, gettext(locale, "Add to Favorites"))
+    } else if all_saved {
         (
             Icon::HeartFilled,
             gettext(locale, "Remove from Liked Songs"),
@@ -598,7 +617,7 @@ pub fn picked_menu(
     } else {
         (Icon::Heart, gettext(locale, "Save to Liked Songs"))
     };
-    if menu_item(ui, &palette, Some(icon), &text) {
+    if (app.apple.is_none() || !all_saved) && menu_item(ui, &palette, Some(icon), &text) {
         app.actions.push(Action::SetSavedMany {
             uris: uris.clone(),
             saved: !all_saved,
@@ -607,7 +626,8 @@ pub fn picked_menu(
     // Removal is URI-based, so one entry covers the whole selection on
     // both the unsorted context and a sorted or filtered view. The caller
     // only passes a playlist when every picked row shares it.
-    if let Some((playlist_id, _)) = editable_playlist
+    if app.apple.is_none()
+        && let Some((playlist_id, _)) = editable_playlist
         && menu_item(
             ui,
             &palette,
@@ -620,10 +640,15 @@ pub fn picked_menu(
             uris: uris.clone(),
         });
     }
-    add_to_playlist_menu(ui, app, songs);
+    add_to_playlist_menu(ui, app, songs, None);
 }
 
-fn add_to_playlist_menu(ui: &mut Ui, app: &mut App, items: &[PlayableItem]) {
+pub(crate) fn add_to_playlist_menu(
+    ui: &mut Ui,
+    app: &mut App,
+    items: &[PlayableItem],
+    album: Option<(&str, &str)>,
+) {
     let query_id = ui.make_persistent_id("add-to-playlist-query");
     let palette = app.palette;
     let opened = menu_submenu_with_field(
@@ -638,7 +663,7 @@ fn add_to_playlist_menu(ui: &mut Ui, app: &mut App, items: &[PlayableItem]) {
                 .filter(|(last_frame, _)| frame.saturating_sub(*last_frame) <= 1);
             let fresh = previous.is_none();
             let mut query = previous.map(|(_, query)| query).unwrap_or_default();
-            let field = playlist_picker(ui, app, items, &mut query);
+            let field = playlist_picker(ui, app, items, &mut query, album);
             if fresh {
                 field.request_focus();
             }
@@ -657,6 +682,7 @@ pub(crate) fn playlist_picker(
     app: &mut App,
     items: &[PlayableItem],
     query: &mut String,
+    album: Option<(&str, &str)>,
 ) -> egui::Response {
     let palette = app.palette;
     let locale = app.locale;
@@ -728,11 +754,19 @@ pub(crate) fn playlist_picker(
         Some(Icon::Plus),
         &gettext(locale, "New playlist"),
     ) {
-        app.actions.push(Action::ShowDialog(Dialog::CreatePlaylist {
-            name: String::new(),
-            public: false,
-            add_uris: items.iter().map(|item| item.uri().to_string()).collect(),
-        }));
+        app.actions.push(if let Some((uri, label)) = album {
+            Action::AddAlbumToPlaylist {
+                uri: uri.into(),
+                label: label.into(),
+                playlist: None,
+            }
+        } else {
+            Action::ShowDialog(Dialog::CreatePlaylist {
+                name: String::new(),
+                public: false,
+                add_uris: items.iter().map(|item| item.uri().to_string()).collect(),
+            })
+        });
     }
     menu_separator(ui, &palette);
     let needle = query.trim().to_lowercase();
@@ -743,10 +777,18 @@ pub(crate) fn playlist_picker(
     highlighted = highlighted.filter(|index| *index < matches.len());
     ui.data_mut(|data| data.insert_temp(highlight_id, (frame, highlighted, query.clone())));
     if enter && let Some((id, name)) = highlighted.and_then(|index| matches.get(index)) {
-        app.actions.push(Action::AddToPlaylist {
-            playlist_id: id.clone(),
-            playlist_name: name.clone(),
-            items: items.to_vec(),
+        app.actions.push(if let Some((uri, label)) = album {
+            Action::AddAlbumToPlaylist {
+                uri: uri.into(),
+                label: label.into(),
+                playlist: Some((id.clone(), name.clone())),
+            }
+        } else {
+            Action::AddToPlaylist {
+                playlist_id: id.clone(),
+                playlist_name: name.clone(),
+                items: items.to_vec(),
+            }
         });
         ui.close();
     }
@@ -782,10 +824,18 @@ pub(crate) fn playlist_picker(
                         row.scroll_to_me(None);
                     }
                     if clicked {
-                        app.actions.push(Action::AddToPlaylist {
-                            playlist_id: id.clone(),
-                            playlist_name: name.clone(),
-                            items: items.to_vec(),
+                        app.actions.push(if let Some((uri, label)) = album {
+                            Action::AddAlbumToPlaylist {
+                                uri: uri.into(),
+                                label: label.into(),
+                                playlist: Some((id.clone(), name.clone())),
+                            }
+                        } else {
+                            Action::AddToPlaylist {
+                                playlist_id: id.clone(),
+                                playlist_name: name.clone(),
+                                items: items.to_vec(),
+                            }
                         });
                     }
                 });
@@ -808,6 +858,21 @@ pub fn item_menu(
     ui.set_max_width(300.0);
     let uri = item.uri().to_string();
     let label = item.name().to_string();
+    if app.apple.is_some()
+        && item.is_track()
+        && !matches!(context, Some(RowContext::Queue))
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::ListPlus),
+            &gettext(locale, "Play next"),
+        )
+    {
+        app.actions.push(Action::PlayNext {
+            uri: uri.clone(),
+            label: label.clone(),
+        });
+    }
     if menu_item(
         ui,
         &palette,
@@ -819,9 +884,22 @@ pub fn item_menu(
             label: label.clone(),
         });
     }
+    if matches!(context, Some(RowContext::Queue))
+        && let Some(action) = index.and_then(|index| app.queue_removal(vec![index]))
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::Minus),
+            &gettext(locale, "Remove from queue"),
+        )
+    {
+        app.actions.push(action);
+    }
     if item.is_track() {
         let saved = app.is_saved(&uri).unwrap_or(false);
-        let (icon, text) = if saved {
+        let (icon, text) = if app.apple.is_some() {
+            (Icon::Heart, gettext(locale, "Add to Favorites"))
+        } else if saved {
             (
                 Icon::HeartFilled,
                 gettext(locale, "Remove from Liked Songs"),
@@ -829,16 +907,18 @@ pub fn item_menu(
         } else {
             (Icon::Heart, gettext(locale, "Save to Liked Songs"))
         };
-        if menu_item(ui, &palette, Some(icon), &text) {
+        if (app.apple.is_none() || !saved) && menu_item(ui, &palette, Some(icon), &text) {
             app.actions.push(Action::ToggleSaved(uri.clone()));
         }
-        add_to_playlist_menu(ui, app, std::slice::from_ref(item));
-    } else if menu_item(
-        ui,
-        &palette,
-        Some(Icon::Bookmark),
-        &gettext(locale, "Save episode"),
-    ) {
+        add_to_playlist_menu(ui, app, std::slice::from_ref(item), None);
+    } else if app.apple.is_none()
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::Bookmark),
+            &gettext(locale, "Save episode"),
+        )
+    {
         app.actions.push(Action::ToggleSaved(uri.clone()));
     }
     // Removal is URI-based, so it stays available on a sorted or
@@ -855,7 +935,9 @@ pub fn item_menu(
         }) => Some((playlist_id, false)),
         _ => None,
     };
-    if let Some((playlist_id, can_move)) = editable {
+    if app.apple.is_none()
+        && let Some((playlist_id, can_move)) = editable
+    {
         if can_move && let Some(index) = index {
             if index > 0
                 && menu_item(
@@ -899,12 +981,14 @@ pub fn item_menu(
     menu_separator(ui, &palette);
     match item {
         PlayableItem::Track(track) => {
-            if menu_item(
-                ui,
-                &palette,
-                Some(Icon::Radio),
-                &gettext(locale, "Go to song radio"),
-            ) {
+            if app.apple.is_none()
+                && menu_item(
+                    ui,
+                    &palette,
+                    Some(Icon::Radio),
+                    &gettext(locale, "Go to song radio"),
+                )
+            {
                 app.actions.push(Action::OpenSongRadio {
                     uri: uri.clone(),
                     track: Box::new(track.clone()),
@@ -966,22 +1050,17 @@ pub fn item_menu(
         }
     }
     menu_separator(ui, &palette);
-    if menu_item(
-        ui,
-        &palette,
-        Some(Icon::Copy),
-        &gettext(locale, "Copy link"),
-    ) {
+    if app.music_link(&uri).is_some()
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::Copy),
+            &gettext(locale, "Copy link"),
+        )
+    {
         app.actions.push(Action::CopyLink(uri.clone()));
     }
-    if menu_item(
-        ui,
-        &palette,
-        Some(Icon::ExternalLink),
-        &gettext(locale, "Open in Spotify"),
-    ) {
-        app.actions.push(Action::OpenInSpotify(uri));
-    }
+    external_link_menu(ui, app, &uri);
 }
 
 /// Menu for a context (playlist, album, artist, show).
@@ -1015,6 +1094,20 @@ pub fn context_menu_items(
         app.actions.push(Action::ShufflePlay(uri.to_string()));
     }
     if kind == "album"
+        && app.apple.is_some()
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::ListPlus),
+            &gettext(locale, "Play next"),
+        )
+    {
+        app.actions.push(Action::PlayNext {
+            uri: uri.to_string(),
+            label: name.to_string(),
+        });
+    }
+    if kind == "album"
         && menu_item(
             ui,
             &palette,
@@ -1027,6 +1120,9 @@ pub fn context_menu_items(
             label: name.to_string(),
         });
     }
+    if kind == "album" && app.apple.is_some() {
+        add_to_playlist_menu(ui, app, &[], Some((uri, name)));
+    }
     let saved = app.is_saved(uri).unwrap_or(false);
     let (icon, text) = match (kind, saved) {
         ("artist", true) => (Icon::CircleX, pgettext(locale, "artist", "Unfollow")),
@@ -1034,10 +1130,13 @@ pub fn context_menu_items(
         (_, true) => (Icon::CircleX, gettext(locale, "Remove from Your Library")),
         (_, false) => (Icon::CirclePlus, gettext(locale, "Add to Your Library")),
     };
-    if owned_playlist.is_none() && menu_item(ui, &palette, Some(icon), &text) {
+    if app.apple.is_none() && owned_playlist.is_none() && menu_item(ui, &palette, Some(icon), &text)
+    {
         app.actions.push(Action::ToggleSaved(uri.to_string()));
     }
-    if let Some(playlist) = owned_playlist {
+    if app.apple.is_none()
+        && let Some(playlist) = owned_playlist
+    {
         if menu_item(
             ui,
             &palette,
@@ -1072,26 +1171,35 @@ pub fn context_menu_items(
         "artist" => Some(gettext(locale, "Go to artist radio")),
         _ => None,
     };
-    if let Some(label) = radio
+    if app.apple.is_none()
+        && let Some(label) = radio
         && util::station_uri(uri).is_some()
         && menu_item(ui, &palette, Some(Icon::Radio), &label)
     {
         app.actions.push(Action::Open(Page::Radio(uri.to_string())));
     }
-    if menu_item(
-        ui,
-        &palette,
-        Some(Icon::Copy),
-        &gettext(locale, "Copy link"),
-    ) {
+    if app.music_link(uri).is_some()
+        && menu_item(
+            ui,
+            &palette,
+            Some(Icon::Copy),
+            &gettext(locale, "Copy link"),
+        )
+    {
         app.actions.push(Action::CopyLink(uri.to_string()));
     }
-    if menu_item(
-        ui,
-        &palette,
-        Some(Icon::ExternalLink),
-        &gettext(locale, "Open in Spotify"),
-    ) {
+    external_link_menu(ui, app, uri);
+}
+
+fn external_link_menu(ui: &mut Ui, app: &mut App, uri: &str) {
+    let label = if app.apple.is_some() {
+        gettext(app.locale, "Open in Apple Music")
+    } else {
+        gettext(app.locale, "Open in Spotify")
+    };
+    if app.external_music_url(uri).is_some()
+        && menu_item(ui, &app.palette, Some(Icon::ExternalLink), &label)
+    {
         app.actions.push(Action::OpenInSpotify(uri.to_string()));
     }
 }
@@ -1130,6 +1238,10 @@ pub struct TrackRow<'a> {
     /// the menu can update a destination playlist before Spotify answers.
     /// Empty where a list does not offer picking.
     pub picked_songs: &'a [PlayableItem],
+    /// Whether this row takes the list's faint alternate shade. Set from the
+    /// row's place in the whole list, never its place on screen, so the
+    /// stripes stay put while a virtual list scrolls.
+    pub striped: bool,
 }
 
 /// Draw each credited artist separately so its Spotify id remains clickable.
@@ -1208,6 +1320,12 @@ fn columns(width: f32, row: &TrackRow<'_>) -> Columns {
         duration: if row.compact { 44.0 } else { 56.0 },
         more: if row.compact { 0.0 } else { 36.0 },
     }
+}
+
+/// The alternate shade of a striped song list: half the way to `surface`,
+/// fainter than the hover and selection fills that replace it.
+pub(crate) fn stripe_fill(palette: &Palette) -> Color32 {
+    palette.surface.gamma_multiply(0.5)
 }
 
 /// Draws one song in a list.
@@ -1346,10 +1464,21 @@ fn track_row_contents(
                 .surface_hover
                 .gamma_multiply(if palette.dark { 0.7 } else { 1.0 }),
         );
+    } else if row.striped {
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(6), stripe_fill(&palette));
     }
     // The row highlight also shows keyboard focus. Do not add an outline
     // when a mouse click gives the row focus for arrow-key navigation.
-    let cols = columns(width, &row);
+    let narrow = app.apple.is_some() && !row.compact && width < COMPACT_COLLECTION_WIDTH;
+    let mut cols = columns(width, &row);
+    if narrow {
+        cols.number = 28.0;
+        cols.cover = 0.0;
+        cols.heart = 28.0;
+        cols.duration = 0.0;
+        cols.more = 32.0;
+    }
     let painter = ui.painter().clone();
     let mut x = rect.left() + 8.0;
 
@@ -1370,8 +1499,8 @@ fn track_row_contents(
                 Icon::PlayFilled
             };
             theme::paint_icon(ui, icon, cell, 14.0, palette.text);
-        } else if playing {
-            theme::paint_icon(ui, Icon::AudioLines, cell, 16.0, palette.accent);
+        } else if is_current {
+            super::motion::playing_bars(ui, cell, palette.accent, playing);
         } else {
             let color = if is_current {
                 palette.accent
@@ -1435,9 +1564,9 @@ fn track_row_contents(
                     Icon::PlayFilled
                 };
                 theme::paint_icon(ui, icon, cover_rect, 16.0, Color32::WHITE);
-            } else if playing {
+            } else if is_current {
                 scrim(110);
-                theme::paint_icon(ui, Icon::AudioLines, cover_rect, 16.0, palette.accent);
+                super::motion::playing_bars(ui, cover_rect, palette.accent, playing);
             }
         }
         x += cols.cover;
@@ -1566,7 +1695,10 @@ fn track_row_contents(
         child.add_space(vertical_pad);
         child.horizontal(|ui| {
             ui.set_max_width(title_rect.width());
-            theme::text(ui, row.item.name(), theme::medium(14.5), title_color);
+            let name = theme::text(ui, row.item.name(), theme::medium(14.5), title_color);
+            if narrow {
+                name.on_hover_text(row.item.name());
+            }
         });
         child.horizontal(|ui| {
             ui.set_max_width(title_rect.width());
@@ -1715,7 +1847,24 @@ fn track_row_contents(
     if cols.heart > 0.0 {
         let saved = app.is_saved(row.item.uri());
         let heart_rect = Rect::from_min_size(pos2(x, rect.top()), vec2(cols.heart, row_height));
-        if row.item.is_track() {
+        if app.apple.is_some() && row.item.is_track() && saved == Some(true) {
+            let mut child = ui.new_child(
+                UiBuilder::new()
+                    .max_rect(heart_rect)
+                    .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
+            );
+            let label = gettext(app.locale, "Favorites");
+            child
+                .add(
+                    Icon::HeartFilled
+                        .image(
+                            palette.accent,
+                            16.0 * super::motion::heart_scale(ui.ctx(), row.item.uri()),
+                        )
+                        .alt_text(label.as_ref()),
+                )
+                .on_hover_text(label.as_ref());
+        } else if row.item.is_track() {
             let mut child = ui.new_child(
                 UiBuilder::new()
                     .max_rect(heart_rect)
@@ -1732,12 +1881,28 @@ fn track_row_contents(
             } else {
                 (Icon::Heart, palette.secondary)
             };
-            let tooltip = if saved == Some(true) {
+            let tooltip = if app.apple.is_some() {
+                gettext(app.locale, "Add to Favorites")
+            } else if saved == Some(true) {
                 gettext(app.locale, "Remove from Liked Songs")
             } else {
                 gettext(app.locale, "Save to Liked Songs")
             };
-            if theme::icon_button(&mut child, icon, 16.0, color, palette.text, &tooltip).clicked() {
+            let scale = super::motion::heart_scale(ui.ctx(), row.item.uri());
+            if theme::icon_button_scaled(
+                &mut child,
+                icon,
+                16.0,
+                scale,
+                color,
+                palette.text,
+                &tooltip,
+            )
+            .clicked()
+            {
+                if saved != Some(true) {
+                    super::motion::pop_heart(ui.ctx(), row.item.uri());
+                }
                 app.actions
                     .push(Action::ToggleSaved(row.item.uri().to_string()));
             }
@@ -1746,14 +1911,17 @@ fn track_row_contents(
     }
 
     // Duration.
-    let duration_rect = Rect::from_min_size(pos2(x, rect.top()), vec2(cols.duration, row_height));
-    painter.text(
-        pos2(duration_rect.right() - 6.0, duration_rect.center().y),
-        egui::Align2::RIGHT_CENTER,
-        util::format_duration_ms(row.item.duration_ms()),
-        theme::regular(13.0),
-        palette.secondary,
-    );
+    if cols.duration > 0.0 {
+        let duration_rect =
+            Rect::from_min_size(pos2(x, rect.top()), vec2(cols.duration, row_height));
+        painter.text(
+            pos2(duration_rect.right() - 6.0, duration_rect.center().y),
+            egui::Align2::RIGHT_CENTER,
+            util::format_duration_ms(row.item.duration_ms()),
+            theme::regular(13.0),
+            palette.secondary,
+        );
+    }
     x += cols.duration;
 
     // More.
@@ -1836,32 +2004,42 @@ fn track_row_contents(
             });
         }
     }
-    egui::Popup::context_menu(&response)
-        .frame(menu_frame(&palette))
-        .show(|ui| {
-            // Right-clicking one of several picked rows acts on all of
-            // them; on anything else it is the ordinary single-song menu,
-            // including a picked row that is the only one picked.
-            if row.picked && row.picked_songs.len() > 1 {
-                // Every picked row shares this table's context, so one
-                // editable playlist covers the whole selection, including
-                // a sorted or filtered view where removal stays URI-based.
-                let editable = match row.context {
-                    RowContext::Context {
-                        editable_playlist: Some(playlist),
-                        ..
-                    }
-                    | RowContext::View {
-                        editable_playlist: Some(playlist),
-                        ..
-                    } => Some(playlist),
-                    _ => None,
-                };
-                picked_menu(ui, app, row.picked_songs, editable);
-            } else {
-                item_menu(ui, app, row.item, Some(row.context), Some(row.index));
-            }
-        });
+    let popup = egui::Popup::context_menu(&response);
+    #[cfg(feature = "demo")]
+    let popup = if row.index == 0
+        && (app.demo_queue_menu && matches!(row.context, RowContext::Queue)
+            || matches!(app.demo_play_next_menu, Some("song" | "selection"))
+                && !matches!(row.context, RowContext::Queue)
+                && !row.compact)
+    {
+        popup.open(true).at_position(response.rect.left_bottom())
+    } else {
+        popup
+    };
+    popup.frame(menu_frame(&palette)).show(|ui| {
+        // Right-clicking one of several picked rows acts on all of
+        // them; on anything else it is the ordinary single-song menu,
+        // including a picked row that is the only one picked.
+        if row.picked && row.picked_songs.len() > 1 {
+            // Every picked row shares this table's context, so one
+            // editable playlist covers the whole selection, including
+            // a sorted or filtered view where removal stays URI-based.
+            let editable = match row.context {
+                RowContext::Context {
+                    editable_playlist: Some(playlist),
+                    ..
+                }
+                | RowContext::View {
+                    editable_playlist: Some(playlist),
+                    ..
+                } => Some(playlist),
+                _ => None,
+            };
+            picked_menu(ui, app, row.picked_songs, editable);
+        } else {
+            item_menu(ui, app, row.item, Some(row.context), Some(row.index));
+        }
+    });
     crate::autoscroll::row(ui, &response);
     (response, pick)
 }
@@ -2003,6 +2181,7 @@ pub fn table_header(
     ui: &mut Ui,
     palette: &Palette,
     locale: Locale,
+    apple: bool,
     show_album: bool,
     show_added: bool,
     show_added_by: bool,
@@ -2011,6 +2190,8 @@ pub fn table_header(
 ) -> Option<crate::model::SortColumn> {
     use crate::model::SortColumn;
     let width = ui.available_width();
+    let narrow = apple && width < COMPACT_COLLECTION_WIDTH;
+    let number_width = if narrow { 28.0 } else { 44.0 };
     let (rect, _) = ui.allocate_exact_size(vec2(width, 34.0), Sense::hover());
     let font = theme::regular(12.0);
     let color = palette.secondary;
@@ -2073,7 +2254,10 @@ pub fn table_header(
     let mut number_clicked = false;
     let mut x = rect.left() + 8.0;
     {
-        let number = Rect::from_center_size(pos2(x + 22.0, rect.center().y), vec2(30.0, 22.0));
+        let number = Rect::from_center_size(
+            pos2(x + number_width / 2.0, rect.center().y),
+            vec2(number_width.min(30.0), 22.0),
+        );
         // With no sort chosen the list already plays its own order, and
         // the # says so: lit, arrow pointing down the list.
         let natural = sort.is_none();
@@ -2105,7 +2289,10 @@ pub fn table_header(
             .map(|sort| sort.ascending)
             .or(natural.then_some(true))
         {
-            let center = pos2(number.center().x + 12.0, rect.center().y);
+            let center = pos2(
+                number.center().x + if narrow { 8.0 } else { 12.0 },
+                rect.center().y,
+            );
             let (wing, tip) = if ascending { (2.8, -3.2) } else { (-2.8, 3.2) };
             ui.painter().add(egui::Shape::convex_polygon(
                 vec![
@@ -2124,8 +2311,8 @@ pub fn table_header(
             number_clicked = true;
         }
     }
-    x += 44.0;
-    if show_cover {
+    x += number_width;
+    if show_cover && !narrow {
         x += 52.0;
     }
     heading(
@@ -2148,7 +2335,11 @@ pub fn table_header(
     } else {
         0.0
     };
-    let right_fixed = 36.0 + 56.0 + 36.0 + 8.0;
+    let right_fixed = if narrow {
+        28.0 + 32.0 + 8.0
+    } else {
+        36.0 + 56.0 + 36.0 + 8.0
+    };
     let mut cx = rect.right() - right_fixed - added_width - added_by_width - album_width;
     if album_width > 0.0 {
         heading(
@@ -2180,7 +2371,15 @@ pub fn table_header(
         clicked = Some(SortColumn::Index);
     }
     let clock = Rect::from_center_size(
-        pos2(rect.right() - 36.0 - 56.0 / 2.0 - 6.0, rect.center().y),
+        pos2(
+            rect.right()
+                - if narrow {
+                    24.0
+                } else {
+                    36.0 + 56.0 / 2.0 + 6.0
+                },
+            rect.center().y,
+        ),
         Vec2::splat(15.0),
     );
     let duration_active = sort.is_some_and(|sort| sort.column == SortColumn::Duration);
@@ -2361,7 +2560,8 @@ pub fn card(
     }
     let mut play = false;
     if ui.is_rect_visible(rect) {
-        let hovered = ui.rect_contains_pointer(rect);
+        let hovered =
+            ui.rect_contains_pointer(rect) || super::motion::forced_hover(ui.ctx(), "card");
         if hovered {
             ui.painter().rect_filled(
                 rect,
@@ -2371,9 +2571,27 @@ pub fn card(
                     .gamma_multiply(if palette.dark { 0.8 } else { 1.0 }),
             );
         }
-        let image_rect = Rect::from_min_size(rect.min + vec2(PAD, PAD), Vec2::splat(image_size));
-        let radius = if circular { image_size / 2.0 } else { 6.0 };
+        let lift = super::motion::animate_bool(ui.ctx(), response.id.with("lift"), hovered, 0.16);
+        let image_rect = Rect::from_min_size(
+            rect.min + vec2(PAD, PAD - CARD_LIFT * lift),
+            Vec2::splat(image_size),
+        );
+        let radius = if circular {
+            image_size / 2.0
+        } else {
+            f32::from(theme::RADIUS)
+        };
         paint_shadow(ui, &palette, image_rect, radius);
+        if lift > 0.0 {
+            let shadow = egui::epaint::Shadow {
+                offset: [0, 8],
+                blur: 20,
+                spread: 0,
+                color: Color32::from_black_alpha((70.0 * lift) as u8),
+            };
+            ui.painter()
+                .add(shadow.as_shape(image_rect, CornerRadius::same(radius as u8)));
+        }
         paint_cover(
             ui,
             &palette,
@@ -2415,9 +2633,13 @@ pub fn card(
         ui.painter()
             .galley(subtitle_pos, subtitle_galley, palette.secondary);
 
-        if playable && hovered {
+        if playable && lift > 0.0 {
+            // It rises into place as it fades in.
             let button_rect = Rect::from_center_size(
-                pos2(image_rect.right() - 26.0, image_rect.bottom() - 26.0),
+                pos2(
+                    image_rect.right() - 26.0,
+                    image_rect.bottom() - 26.0 + 6.0 * (1.0 - lift),
+                ),
                 Vec2::splat(44.0),
             );
             let mut child = ui.new_child(
@@ -2425,6 +2647,7 @@ pub fn card(
                     .max_rect(button_rect)
                     .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
             );
+            child.multiply_opacity(lift);
             play = theme::circle_button(
                 &mut child,
                 if playing {
@@ -2493,19 +2716,35 @@ pub fn loading_row(ui: &mut Ui, palette: &Palette, locale: Locale) {
 
 pub fn error_row(ui: &mut Ui, app: &mut App, message: &str, retry: Option<Page>) {
     let palette = app.palette;
+    let retry_label = gettext(app.locale, "Retry");
     ui.horizontal(|ui| {
         ui.add_space(8.0);
         theme::icon(ui, Icon::CircleAlert, 16.0, palette.danger);
-        theme::text(ui, message, theme::regular(13.0), palette.secondary);
+        if app.apple.is_some() {
+            let reserved = retry.as_ref().map_or(0.0, |_| {
+                theme::soft_button_width(ui, &retry_label) + 21.0 + ui.spacing().item_spacing.x
+            });
+            ui.allocate_ui_with_layout(
+                vec2((ui.available_width() - reserved).max(1.0), 0.0),
+                egui::Layout::top_down(egui::Align::LEFT),
+                |ui| {
+                    let galley = crate::bidi::layout(
+                        ui.painter(),
+                        message,
+                        theme::regular(13.0),
+                        palette.secondary,
+                        ui.available_width(),
+                        usize::MAX,
+                        None,
+                    );
+                    ui.add(egui::Label::new(galley).selectable(false));
+                },
+            );
+        } else {
+            theme::text(ui, message, theme::regular(13.0), palette.secondary);
+        }
         if let Some(page) = retry
-            && theme::soft_button(
-                ui,
-                &palette,
-                Some(Icon::Refresh),
-                &gettext(app.locale, "Retry"),
-                false,
-            )
-            .clicked()
+            && theme::soft_button(ui, &palette, Some(Icon::Refresh), &retry_label, false).clicked()
         {
             app.actions.push(Action::Reload(page));
         }
@@ -2667,23 +2906,30 @@ pub fn thin_slider(
         let active = response.hovered()
             || response.has_focus()
             || response.dragged()
-            || dragging_value.is_some();
-        let bar = Rect::from_center_size(rect.center(), vec2(rect.width(), 4.0));
+            || dragging_value.is_some()
+            || super::motion::forced_hover(ui.ctx(), "slider");
+        // Under the pointer the bar fills out and its knob grows in.
+        let grown = super::motion::animate_bool(ui.ctx(), id.with("grown"), active, 0.15);
+        let thickness = 4.0 + 2.0 * grown;
+        let bar = Rect::from_center_size(rect.center(), vec2(rect.width(), thickness));
         let track_color = if palette.dark {
             Color32::from_white_alpha(50)
         } else {
             Color32::from_black_alpha(40)
         };
-        ui.painter().rect_filled(bar, 2.0, track_color);
+        ui.painter().rect_filled(bar, thickness / 2.0, track_color);
         let filled = Rect::from_min_max(
             bar.min,
             pos2(bar.left() + bar.width() * shown.clamp(0.0, 1.0), bar.max.y),
         );
-        let fill = if active { palette.accent } else { palette.text };
-        ui.painter().rect_filled(filled, 2.0, fill);
-        if active {
-            ui.painter()
-                .circle_filled(pos2(filled.right(), bar.center().y), 6.0, palette.text);
+        let fill = palette.text.lerp_to_gamma(palette.accent, grown);
+        ui.painter().rect_filled(filled, thickness / 2.0, fill);
+        if grown > 0.0 {
+            ui.painter().circle_filled(
+                pos2(filled.right(), bar.center().y),
+                6.0 * grown,
+                palette.text,
+            );
         }
     }
     event
@@ -2887,7 +3133,7 @@ pub fn switch(ui: &mut Ui, palette: &Palette, label: &str, on: &mut bool) -> egu
         response.mark_changed();
     }
     if ui.is_rect_visible(rect) {
-        let t = ui.ctx().animate_bool(response.id, *on);
+        let t = super::motion::animate_bool(ui.ctx(), response.id, *on, ui.style().animation_time);
         let fill = egui::lerp(
             egui::Rgba::from(palette.surface_active)..=egui::Rgba::from(palette.accent),
             t,
@@ -3146,6 +3392,72 @@ mod tests {
     use crate::model::{Action, Page};
     use crate::paths::AppDirs;
     use crate::settings::Settings;
+
+    #[test]
+    fn switches_finish_and_restart_motion_without_changing_click_behavior() {
+        for palette in [Palette::dark(), Palette::light()] {
+            let ctx = egui::Context::default();
+            let mut on = false;
+            let mut draw = |time, reduced, events| {
+                let mut response = None;
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(time),
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| {
+                        super::super::motion::set_reduced(ui.ctx(), reduced);
+                        response = Some(switch(ui, &palette, "Test switch", &mut on));
+                    },
+                );
+                output.textures_delta.clear();
+                let knob = output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::Shape::Circle(circle) if circle.radius == 8.0 => {
+                            Some(circle.center.x)
+                        }
+                        _ => None,
+                    })
+                    .expect("switch knob");
+                let response = response.unwrap();
+                (response.rect, knob, response.changed(), on)
+            };
+            let (rect, off, _, _) = draw(0.0, false, vec![]);
+            let click = || {
+                vec![
+                    egui::Event::PointerMoved(rect.center()),
+                    egui::Event::PointerButton {
+                        pos: rect.center(),
+                        button: egui::PointerButton::Primary,
+                        pressed: true,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                    egui::Event::PointerButton {
+                        pos: rect.center(),
+                        button: egui::PointerButton::Primary,
+                        pressed: false,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ]
+            };
+            let right = rect.right() - 11.0;
+            assert_eq!(off, rect.left() + 11.0);
+            let (_, moving, changed, selected) = draw(0.02, false, click());
+            assert!(changed && selected);
+            assert!(moving < right);
+            assert_eq!(draw(0.03, true, vec![]).1, right);
+            let (_, snapped, changed, selected) = draw(0.04, true, click());
+            assert!(changed && !selected);
+            assert_eq!(snapped, off);
+            let (_, moving, changed, selected) = draw(0.05, false, click());
+            assert!(changed && selected);
+            assert!(moving < right);
+            assert_eq!(draw(1.0, false, vec![]).1, right);
+        }
+    }
 
     #[test]
     fn editing_a_proxy_endpoint_clears_its_password_but_password_entry_is_preserved() {
@@ -3424,6 +3736,91 @@ mod tests {
                 tray: false,
             },
         )
+    }
+
+    #[test]
+    fn apple_menus_expose_supported_actions_and_keep_private_links_internal() {
+        let mut app = test_app();
+        app.apple = Some(crate::apple::State::default());
+        app.apple.as_mut().unwrap().storefront = "us".into();
+        for library in [false, true] {
+            let source = if library {
+                "library.i.upload"
+            } else {
+                "catalog.123"
+            };
+            let song = PlayableItem::Track(Track {
+                uri: format!("apple:track:{source}"),
+                ..Default::default()
+            });
+            let editable = ("library.p.test".into(), None);
+            let context = RowContext::Context {
+                uri: "apple:playlist:library.p.test".into(),
+                editable_playlist: Some(editable.clone()),
+            };
+            for surface in ["song", "selection", "playlist", "album", "artist"] {
+                let ctx = egui::Context::default();
+                ctx.enable_accesskit();
+                theme::install(&ctx);
+                let mut output = ctx.run_ui(egui::RawInput::default(), |ui| match surface {
+                    "song" => item_menu(ui, &mut app, &song, Some(&context), Some(0)),
+                    "selection" => {
+                        picked_menu(ui, &mut app, std::slice::from_ref(&song), Some(&editable))
+                    }
+                    kind => {
+                        let id = if library {
+                            "library.p.test"
+                        } else if kind == "playlist" {
+                            "catalog.pl.test"
+                        } else {
+                            "catalog.123"
+                        };
+                        context_menu_items(
+                            ui,
+                            &mut app,
+                            &format!("apple:{kind}:{id}"),
+                            "Example",
+                            (kind == "playlist").then_some(&Playlist::default()),
+                        );
+                    }
+                });
+                output.textures_delta.clear();
+                let tree = output.platform_output.accesskit_update.unwrap();
+                let labels: Vec<_> = tree
+                    .nodes
+                    .iter()
+                    .filter_map(|(_, node)| node.label())
+                    .collect();
+                for forbidden in [
+                    "Save to Liked Songs",
+                    "Remove from Liked Songs",
+                    "Remove from this playlist",
+                    "Add to Your Library",
+                    "Follow",
+                    "Edit details",
+                    "Delete",
+                    "Go to song radio",
+                    "Go to album radio",
+                    "Go to artist radio",
+                    "Go to playlist radio",
+                    "Open in Spotify",
+                ] {
+                    assert!(!labels.contains(&forbidden), "{surface}: {forbidden}");
+                }
+                if surface == "selection" {
+                    assert!(labels.contains(&"Add to queue"));
+                    assert!(labels.contains(&"Add to playlist"));
+                } else {
+                    assert!(labels.contains(&"Copy link"));
+                    assert_eq!(
+                        labels.contains(&"Open in Apple Music"),
+                        !library,
+                        "{surface}"
+                    );
+                }
+            }
+        }
+        app.backend.shutdown();
     }
 
     fn run_on(
@@ -3787,6 +4184,7 @@ mod tests {
                                     shift: 0.0,
                                     picked,
                                     picked_songs: &[],
+                                    striped: false,
                                 },
                             );
                             rect = response.rect;
@@ -3839,6 +4237,96 @@ mod tests {
                 );
                 assert_eq!(rect.height(), theme::ROW_HEIGHT);
                 assert!(app.actions.is_empty());
+            }
+        }
+    }
+
+    /// A striped row has one faint fill of its own; hover, focus and
+    /// selection replace it rather than stack on top of it.
+    #[test]
+    fn a_stripe_gives_way_to_hover_and_selection() {
+        for palette in [Palette::dark(), Palette::light()] {
+            for (striped, picked, focused) in [
+                (true, false, false),
+                (true, true, false),
+                (true, false, true),
+                (false, false, false),
+            ] {
+                let mut app = test_app();
+                app.backend.shutdown();
+                app.palette = palette;
+                let ctx = egui::Context::default();
+                theme::install(&ctx);
+                theme::apply(&ctx, &palette);
+                let item = song("spotify:track:striped");
+                let context = RowContext::Queue;
+                let mut rect = Rect::NOTHING;
+                let mut draw = || {
+                    let mut output = ctx.run_ui(
+                        egui::RawInput {
+                            screen_rect: Some(Rect::from_min_size(
+                                egui::Pos2::ZERO,
+                                vec2(760.0, 520.0),
+                            )),
+                            events: vec![egui::Event::PointerGone],
+                            ..Default::default()
+                        },
+                        |ui| {
+                            let (response, _) = track_row_response(
+                                ui,
+                                &mut app,
+                                TrackRow {
+                                    index: 1,
+                                    number: Some(2),
+                                    item: &item,
+                                    context: &context,
+                                    show_cover: false,
+                                    show_album: false,
+                                    added_at: None,
+                                    added_by: None,
+                                    show_added_by: false,
+                                    compact: false,
+                                    thin: false,
+                                    shift: 0.0,
+                                    picked,
+                                    picked_songs: &[],
+                                    striped,
+                                },
+                            );
+                            rect = response.rect;
+                            if focused {
+                                response.request_focus();
+                            }
+                        },
+                    );
+                    output.textures_delta.clear();
+                    output
+                };
+                draw();
+                let output = draw();
+                let fills: Vec<_> = output
+                    .shapes
+                    .iter()
+                    .filter_map(|shape| match &shape.shape {
+                        egui::epaint::Shape::Rect(shape) if shape.rect == rect => Some(shape.fill),
+                        _ => None,
+                    })
+                    .collect();
+                let expected = if picked {
+                    vec![palette.secondary.gamma_multiply(0.20)]
+                } else if focused {
+                    vec![
+                        palette
+                            .surface_hover
+                            .gamma_multiply(if palette.dark { 0.7 } else { 1.0 }),
+                    ]
+                } else if striped {
+                    vec![stripe_fill(&palette)]
+                } else {
+                    vec![]
+                };
+                assert_eq!(fills, expected, "striped {striped}, picked {picked}");
+                assert_ne!(stripe_fill(&palette), Color32::TRANSPARENT);
             }
         }
     }

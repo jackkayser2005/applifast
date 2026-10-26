@@ -1,0 +1,57 @@
+{
+  "BaselineSource": "3508c615f419e7551484458bb1cff51f5538c795",
+  "CandidateLoginSourceSHA256": "6fc96ed173cfca2a6550525d622804d25212631a33027e55ceccaeef31b46bf6",
+  "BaselineBinarySHA256": "f25070e9feab740ee7eb60b5a9e669f4bf20fbb9840433b5f14ed3b0d89f2ec1",
+  "CandidateBinarySHA256": "4b162878e1b23fdf9d784e1bb7f76f89a4082e4d94b170b1845b2ab3b0a5ae47",
+  "CapturePairs": [
+    {
+      "Theme": "dark",
+      "Size": "1100x760",
+      "ChangedBounds": [
+        433,
+        725,
+        668,
+        735
+      ],
+      "BeforeSHA256": "55a95b43fe08941c1c0fe74500627ad6ee9fb337ef3ccd0921edd58fd41fa4e2",
+      "AfterSHA256": "91262646cb9ff7b3431d5ab6f5ffce1904cdd702143bceaf9168fe68c1360aad"
+    },
+    {
+      "Theme": "dark",
+      "Size": "760x760",
+      "ChangedBounds": [
+        263,
+        725,
+        498,
+        735
+      ],
+      "BeforeSHA256": "0d0a593a042239ca5ad5ca27baabab1fe5c4fab062c6951586000642f5483ccd",
+      "AfterSHA256": "89761604153b08d035541948c262fa761cea8fbe279514cc46587b655b6b6f62"
+    },
+    {
+      "Theme": "light",
+      "Size": "1100x760",
+      "ChangedBounds": [
+        433,
+        725,
+        668,
+        735
+      ],
+      "BeforeSHA256": "8fff312a7b6a689abc745bba5818971c4b2df264bfc3c213fe5b77937294b76f",
+      "AfterSHA256": "756740c1a2ed7ef2a660f22ba73f3214384256d6dc291461db65dfbad1111512"
+    },
+    {
+      "Theme": "light",
+      "Size": "760x760",
+      "ChangedBounds": [
+        263,
+        725,
+        498,
+        735
+      ],
+      "BeforeSHA256": "7ed6b3b607b1374fc9f460b7fae6b11e1c5afb6caeffa73e24330db23d33c57e",
+      "AfterSHA256": "85f841254e1b90d79f1304cdf09e8eefb9fd0da015f42d0f3db968846d2d47c1"
+    }
+  ],
+  "Scope": "Native Windows signed-out demo; only footer pixels differ; no account access or audio; not browser-rendering or authorization acceptance"
+}

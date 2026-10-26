@@ -562,6 +562,32 @@ struct PlaylistCacheWrite {
 }
 
 pub enum Command {
+    AppleStart {
+        generation: u64,
+        token_file: Option<std::path::PathBuf>,
+    },
+    AppleSend(String),
+    CheckAppleToken {
+        generation: u64,
+        session: u64,
+        request: u64,
+        path: std::path::PathBuf,
+    },
+    ChooseAppleToken {
+        generation: u64,
+        session: u64,
+        request: u64,
+        selected:
+            std::pin::Pin<Box<dyn std::future::Future<Output = Option<rfd::FileHandle>> + Send>>,
+    },
+    LoadAppleCache {
+        generation: u64,
+        session: u64,
+        account_tag: String,
+        storefront: String,
+    },
+    SaveAppleCache(Box<crate::apple::cache::Snapshot>),
+    ClearAppleCache,
     OpenThemesFolder,
     ProxyRestored {
         lease: CredentialLease,
@@ -679,6 +705,7 @@ pub enum Command {
     },
     /// The words of a track, from LRCLIB.
     Lyrics(Box<LyricsRequest>),
+    CancelLyrics,
     /// The account's playlist tree, folders and all, from the session.
     Rootlist,
     /// Internal: a rootlist read completed for this signed-in session.
@@ -743,10 +770,26 @@ pub enum Command {
 pub struct LyricsRequest {
     /// The track the answer is for, so a stale one is ignored.
     pub uri: String,
+    pub generation: u64,
     pub query: crate::lyrics::Query,
 }
 
 pub enum Event {
+    AppleTokenSelected {
+        generation: u64,
+        session: u64,
+        request: u64,
+        result: Result<Option<std::path::PathBuf>, String>,
+    },
+    AppleCache {
+        generation: u64,
+        session: u64,
+        snapshot: Option<Box<crate::apple::cache::Snapshot>>,
+    },
+    Apple {
+        generation: u64,
+        value: serde_json::Value,
+    },
     ProxyRestored {
         config: ProxyConfig,
         password: Option<crate::credentials::ProxyPassword>,
@@ -799,6 +842,7 @@ pub enum Event {
     /// Track lyrics, or `None` when unavailable.
     Lyrics {
         uri: String,
+        generation: u64,
         result: Result<Option<crate::lyrics::Lyrics>, String>,
     },
     /// The account's playlist tree, folders and all, and which of its
@@ -1033,6 +1077,39 @@ impl Backend {
             request,
             selected: Box::pin(selected),
         });
+    }
+
+    /// The native picker is created on the UI thread, as for playlist covers.
+    /// Validation and file reads run on the runtime, never in the drawn view.
+    pub fn import_apple_token(
+        &self,
+        generation: u64,
+        session: u64,
+        request: u64,
+        path: std::path::PathBuf,
+    ) {
+        if self.offline {
+            return;
+        }
+        if path.as_os_str().is_empty() {
+            let selected = rfd::AsyncFileDialog::new()
+                .set_title("Import developer token")
+                .add_filter("MusicKit token file", &["txt"])
+                .pick_file();
+            self.send(Command::ChooseAppleToken {
+                generation,
+                session,
+                request,
+                selected: Box::pin(selected),
+            });
+        } else {
+            self.send(Command::CheckAppleToken {
+                generation,
+                session,
+                request,
+                path,
+            });
+        }
     }
 
     pub fn api(&self, request: ApiRequest) {
@@ -1312,6 +1389,7 @@ impl AlbumTypeLookup {
 }
 
 struct Worker {
+    apple: Option<crate::player::AppleHost>,
     dirs: AppDirs,
     credentials: CredentialStore,
     web_tokens: [Option<Arc<WebTokens>>; 2],
@@ -1352,6 +1430,7 @@ struct Worker {
     /// second attempt does not pile up.
     engine_busy: bool,
     search_tasks: Vec<tokio::task::AbortHandle>,
+    lyrics_task: Option<tokio::task::AbortHandle>,
     /// A user changed engine-affecting settings while the current connection
     /// attempt was in flight. Its result is stale and must not be installed.
     engine_restart_pending: bool,
@@ -1387,6 +1466,7 @@ impl Worker {
             credentials: CredentialStore::new(dirs.clone()),
             #[cfg(test)]
             credentials: CredentialStore::in_memory(dirs.clone()),
+            apple: None,
             web_tokens: [None, None],
             playback_grant: None,
             restore_pending: [false; 3],
@@ -1415,6 +1495,7 @@ impl Worker {
             radio_waiting: BTreeMap::new(),
             engine_busy: false,
             search_tasks: Vec::new(),
+            lyrics_task: None,
             engine_restart_pending: false,
             signed_in: false,
             premium: None,
@@ -1430,6 +1511,36 @@ impl Worker {
     fn emit(&self, event: Event) {
         let _ = self.events.send(event);
         self.waker.wake();
+    }
+
+    fn check_apple_token(
+        &self,
+        generation: u64,
+        session: u64,
+        request: u64,
+        selected: impl std::future::Future<Output = Option<std::path::PathBuf>> + Send + 'static,
+    ) {
+        let events = self.events.clone();
+        let waker = self.waker.clone();
+        tokio::spawn(async move {
+            let result = if let Some(path) = selected.await {
+                tokio::task::spawn_blocking(move || {
+                    applifast_playback_probe::protocol::read_developer_token_file(&path)
+                        .map(|_| Some(path))
+                })
+                .await
+                .unwrap_or_else(|_| Err("Cannot validate developer token file.".into()))
+            } else {
+                Ok(None)
+            };
+            let _ = events.send(Event::AppleTokenSelected {
+                generation,
+                session,
+                request,
+                result,
+            });
+            waker.wake();
+        });
     }
 
     /// Build before replacing either transport configuration. A rejected
@@ -1587,6 +1698,82 @@ impl Worker {
                 continue;
             }
             match command {
+                Command::AppleStart {
+                    generation,
+                    token_file,
+                } => {
+                    self.cancel_lyrics();
+                    if let Some(host) = self.apple.take() {
+                        let _ = tokio::task::spawn_blocking(move || host.shutdown()).await;
+                    }
+                    let events = self.events.clone();
+                    let waker = self.waker.clone();
+                    self.apple = Some(crate::player::AppleHost::start(token_file, move |value| {
+                        let _ = events.send(Event::Apple { generation, value });
+                        waker.wake();
+                    }));
+                }
+                Command::AppleSend(command) => {
+                    if let Some(host) = &self.apple {
+                        host.send(command);
+                    }
+                }
+                Command::CheckAppleToken {
+                    generation,
+                    session,
+                    request,
+                    path,
+                } => {
+                    self.check_apple_token(generation, session, request, async move { Some(path) });
+                }
+                Command::ChooseAppleToken {
+                    generation,
+                    session,
+                    request,
+                    selected,
+                } => {
+                    self.check_apple_token(generation, session, request, async move {
+                        selected.await.map(|file| file.path().to_path_buf())
+                    });
+                }
+                Command::LoadAppleCache {
+                    generation,
+                    session,
+                    account_tag,
+                    storefront,
+                } => {
+                    let path = self.dirs.state.join("apple-session.json");
+                    let snapshot = tokio::task::spawn_blocking(move || {
+                        crate::apple::cache::Snapshot::load(&path, &account_tag, &storefront)
+                    })
+                    .await
+                    .ok()
+                    .flatten()
+                    .map(Box::new);
+                    self.emit(Event::AppleCache {
+                        generation,
+                        session,
+                        snapshot,
+                    });
+                }
+                Command::SaveAppleCache(snapshot) => {
+                    let path = self.dirs.state.join("apple-session.json");
+                    if !matches!(
+                        tokio::task::spawn_blocking(move || snapshot.save(&path)).await,
+                        Ok(Ok(()))
+                    ) {
+                        self.emit(Event::Error("Could not save the Apple library and queue. Check available disk space and file permissions.".into()));
+                    }
+                }
+                Command::ClearAppleCache => {
+                    let path = self.dirs.state.join("apple-session.json");
+                    let result =
+                        tokio::task::spawn_blocking(move || crate::apple::cache::clear(&path))
+                            .await;
+                    if !matches!(result, Ok(Ok(()))) {
+                        self.emit(Event::Error("Could not remove the saved Apple library and queue. Check file permissions.".into()));
+                    }
+                }
                 Command::OpenThemesFolder => {
                     let directory = self.dirs.config.join("themes");
                     let events = self.events.clone();
@@ -1665,7 +1852,13 @@ impl Worker {
                         waker.wake();
                     });
                 }
-                Command::Shutdown => break,
+                Command::Shutdown => {
+                    self.cancel_lyrics();
+                    if let Some(host) = self.apple.take() {
+                        let _ = tokio::task::spawn_blocking(move || host.shutdown()).await;
+                    }
+                    break;
+                }
                 Command::SignIn { request, config } => self.change_proxy(request, config, true),
                 Command::CancelSignIn => {
                     self.authorization_attempt += 1;
@@ -1705,6 +1898,8 @@ impl Worker {
                         "Local playback isn't set up on this computer yet".into(),
                     )),
                 },
+                // Apple mode must never send a legacy screen's request to Spotify.
+                Command::Api(_) if self.apple.is_some() => {}
                 Command::Api(ApiRequest::Search { query, serial }) => self.search(query, serial),
                 Command::Api(request) => {
                     self.dispatch(request);
@@ -1888,6 +2083,7 @@ impl Worker {
                     });
                 }
                 Command::Lyrics(request) => self.fetch_lyrics(*request),
+                Command::CancelLyrics => self.cancel_lyrics(),
                 Command::Rootlist => self.fetch_rootlist(),
                 Command::RootlistFinished { generation, result } => {
                     self.on_rootlist_finished(generation, result);
@@ -2456,6 +2652,7 @@ impl Worker {
     }
 
     fn sign_out(&mut self) {
+        self.cancel_lyrics();
         self.spotify_restore_started = true;
         self.cancel_search();
         self.signed_in = false;
@@ -3136,31 +3333,42 @@ impl Worker {
         self.start_album_type_lookup();
     }
 
-    fn fetch_lyrics(&self, request: LyricsRequest) {
+    fn cancel_lyrics(&mut self) {
+        if let Some(task) = self.lyrics_task.take() {
+            task.abort();
+        }
+    }
+
+    fn fetch_lyrics(&mut self, request: LyricsRequest) {
+        self.cancel_lyrics();
         let http = self.http.client();
         let events = self.events.clone();
         let waker = self.waker.clone();
         let cache_dir = self.dirs.lyrics_cache_dir();
         let engine = self.engine.clone();
-        tokio::spawn(async move {
-            // Spotify's own words go first: they follow the recording
-            // exactly. Everything else, a signed-out session included,
-            // falls back to LRCLIB.
-            let result = match spotify_lyrics(engine, &request.uri, &cache_dir).await {
-                Some(found) => Ok(Some(found)),
-                None => match http {
-                    Ok(http) => crate::lyrics::fetch(&http, &cache_dir, &request.query)
-                        .await
-                        .map_err(|error| format!("{error:#}")),
-                    Err(error) => Err(error),
-                },
-            };
-            let _ = events.send(Event::Lyrics {
-                uri: request.uri,
-                result,
-            });
-            waker.wake();
-        });
+        self.lyrics_task = Some(
+            tokio::spawn(async move {
+                // Spotify's own words go first: they follow the recording
+                // exactly. Everything else, a signed-out session included,
+                // falls back to LRCLIB.
+                let result = match spotify_lyrics(engine, &request.uri, &cache_dir).await {
+                    Some(found) => Ok(Some(found)),
+                    None => match http {
+                        Ok(http) => crate::lyrics::fetch(&http, &cache_dir, &request.query)
+                            .await
+                            .map_err(|error| format!("{error:#}")),
+                        Err(error) => Err(error),
+                    },
+                };
+                let _ = events.send(Event::Lyrics {
+                    uri: request.uri,
+                    generation: request.generation,
+                    result,
+                });
+                waker.wake();
+            })
+            .abort_handle(),
+        );
     }
 
     /// Loads cached playlist items. The UI compares the cached snapshot with
@@ -4989,6 +5197,106 @@ mod authorization_tests {
     use super::*;
 
     #[test]
+    fn apple_token_picker_wait_does_not_block_other_preflight_results() {
+        let (runtime, worker, events) = worker("apple-token-preflight");
+        runtime.block_on(async {
+            worker.check_apple_token(7, 3, 1, std::future::pending());
+            worker.check_apple_token(7, 3, 2, async { None });
+            worker.check_apple_token(7, 3, 3, async { Some("missing-signing-key.P8".into()) });
+            let mut replies = Vec::new();
+            tokio::time::timeout(Duration::from_secs(2), async {
+                while replies.len() < 2 {
+                    replies.extend(events.try_iter());
+                    tokio::task::yield_now().await;
+                }
+            })
+            .await
+            .unwrap();
+            for event in replies {
+                let Event::AppleTokenSelected {
+                    generation,
+                    session,
+                    request,
+                    result,
+                } = event
+                else {
+                    panic!("unexpected preflight event")
+                };
+                assert_eq!((generation, session), (7, 3));
+                match request {
+                    2 => assert_eq!(result.unwrap(), None),
+                    3 => assert_eq!(
+                        result.unwrap_err(),
+                        "Expected a signed MusicKit developer JWT, not a .p8 signing key."
+                    ),
+                    _ => panic!("pending picker must not emit a result"),
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn apple_cache_writes_finish_before_signout_clear_and_shutdown() {
+        let (runtime, mut worker, events) = worker("apple-cache-lifecycle");
+        let root = worker.dirs.state.parent().unwrap().to_path_buf();
+        let path = worker.dirs.state.join("apple-session.json");
+        let snapshot = crate::apple::cache::Snapshot {
+            version: 1,
+            account_tag: "a".repeat(64),
+            storefront: "us".into(),
+            songs: Vec::new(),
+            next: None,
+            queue: Vec::new(),
+            order: Default::default(),
+            index: None,
+            position_ms: 0,
+            shuffle: false,
+            repeat: 0,
+        };
+        let (commands, receiver) = mpsc::unbounded_channel();
+        commands
+            .send(Command::SaveAppleCache(Box::new(snapshot)))
+            .unwrap();
+        commands
+            .send(Command::LoadAppleCache {
+                generation: 7,
+                session: 3,
+                account_tag: "a".repeat(64),
+                storefront: "us".into(),
+            })
+            .unwrap();
+        commands.send(Command::ClearAppleCache).unwrap();
+        commands
+            .send(Command::LoadAppleCache {
+                generation: 7,
+                session: 4,
+                account_tag: "a".repeat(64),
+                storefront: "us".into(),
+            })
+            .unwrap();
+        commands.send(Command::Shutdown).unwrap();
+        runtime.block_on(worker.run(receiver));
+        let results = events
+            .try_iter()
+            .filter_map(|event| match event {
+                Event::AppleCache {
+                    generation,
+                    session,
+                    snapshot,
+                } => Some((generation, session, snapshot.is_some())),
+                Event::Error(error) => panic!("{error}"),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(results, [(7, 3, true), (7, 4, false)]);
+        assert!(!path.exists());
+        std::fs::write(path.with_extension("json.tmp"), b"interrupted checkpoint").unwrap();
+        crate::apple::cache::clear(&path).unwrap();
+        assert!(!path.with_extension("json.tmp").exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn playlist_cache_store_does_not_hold_up_the_command_loop() {
         let (runtime, mut worker, events) = worker("playlist-cache-command-loop");
         worker
@@ -5796,6 +6104,42 @@ mod authorization_tests {
                 Operation::PlaylistSearch
             );
         }
+    }
+
+    #[test]
+    fn lyrics_abort_on_replacement_and_signout_without_spotify_requests_for_apple() {
+        let (runtime, mut worker, _) = worker("apple-lyrics-cancellation");
+        runtime.block_on(async {
+            assert!(
+                spotify_lyrics(
+                    None,
+                    "apple:track:library.i.example",
+                    &worker.dirs.lyrics_cache_dir()
+                )
+                .await
+                .is_none()
+            );
+            for signout in [false, true] {
+                let pending = tokio::spawn(std::future::pending::<()>());
+                worker.lyrics_task = Some(pending.abort_handle());
+                if signout {
+                    worker.sign_out();
+                } else {
+                    worker.fetch_lyrics(LyricsRequest {
+                        uri: "apple:track:library.i.example".into(),
+                        generation: 1,
+                        query: crate::lyrics::Query {
+                            artist: String::new(),
+                            title: String::new(),
+                            album: String::new(),
+                            duration_ms: 0,
+                        },
+                    });
+                }
+                assert!(pending.await.unwrap_err().is_cancelled());
+                worker.cancel_lyrics();
+            }
+        });
     }
 
     #[test]

@@ -1,0 +1,109 @@
+{
+  "staticSelections": 24,
+  "replays": 8,
+  "externalRequestsBlocked": true,
+  "errors": [],
+  "results": [
+    {
+      "name": "moving-dark-275x116",
+      "decodedPixelSHA256": [
+        "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d",
+        "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985",
+        "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+      ],
+      "pauseResumeEnd": true,
+      "normalBlinkMatchesBaseline": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "moving-dark-550x232",
+      "decodedPixelSHA256": [
+        "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a",
+        "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3",
+        "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+      ],
+      "pauseResumeEnd": true,
+      "normalBlinkMatchesBaseline": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "moving-light-275x116",
+      "decodedPixelSHA256": [
+        "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d",
+        "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d",
+        "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d"
+      ],
+      "pauseResumeEnd": true,
+      "normalBlinkMatchesBaseline": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "moving-light-550x232",
+      "decodedPixelSHA256": [
+        "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a",
+        "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a",
+        "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a"
+      ],
+      "pauseResumeEnd": true,
+      "normalBlinkMatchesBaseline": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "reduced-dark-275x116",
+      "decodedPixelSHA256": [
+        "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d",
+        "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985",
+        "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+      ],
+      "pauseResumeEnd": true,
+      "normalBlinkMatchesBaseline": null,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "reduced-dark-550x232",
+      "decodedPixelSHA256": [
+        "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a",
+        "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3",
+        "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+      ],
+      "pauseResumeEnd": true,
+      "normalBlinkMatchesBaseline": null,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "reduced-light-275x116",
+      "decodedPixelSHA256": [
+        "f78b3c0cc0b77116f029fe7e944ec0fdd4b542499f2a610c7c47bcc8378e702d",
+        "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985",
+        "9e601976f52940a5b9a76bc51f0150e46f0be8fb87ebc5bbbaedf62d45b22985"
+      ],
+      "pauseResumeEnd": true,
+      "normalBlinkMatchesBaseline": null,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "reduced-light-550x232",
+      "decodedPixelSHA256": [
+        "4298772bedc6fcbd5adb2a0f035892620dba3918a869368d8419520cb6eb8f6a",
+        "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3",
+        "ebe648c4488c67583782ebf106556163521d5dae15c99bb15745a60a3c62a3f3"
+      ],
+      "pauseResumeEnd": true,
+      "normalBlinkMatchesBaseline": null,
+      "renderedScreenshotUniqueStates": 2
+    }
+  ],
+  "reviewIndex": {
+    "indexLoadsSelectedReview": true,
+    "previousNext": true,
+    "pr": 94
+  },
+  "integrationReviewIndex": {
+    "indexLoadsBothReviews": true,
+    "previousNext": true,
+    "transitionPR": 93,
+    "clockPR": 95,
+    "externalRequestsBlocked": true,
+    "errors": []
+  }
+}

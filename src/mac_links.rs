@@ -68,8 +68,8 @@ mod mac_impl {
     );
 
     fn deliver(text: &str) {
-        let Some(uri) = crate::link::parse(text) else {
-            log::warn!("not a Spotify link: {text}");
+        let Some(uri) = crate::link::parse_apple(text).or_else(|| crate::link::parse(text)) else {
+            log::warn!("not a supported music link");
             return;
         };
         let Ok(sink) = SINK.lock() else {

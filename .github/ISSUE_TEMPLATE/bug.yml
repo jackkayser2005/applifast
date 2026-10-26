@@ -5,18 +5,21 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please include the log from Spotifast's last run:
+        Applifast's playback preview currently supports Windows x64.
+        Include the source revision from BUILD.txt and the relevant part of
+        applifast.log after reproducing and quitting the app:
 
-        - Linux: `~/.local/state/spotifast/spotifast.log`
-        - macOS: `~/Library/Application\ Support/me.paolino.spotifast/spotifast.log`
-        - Windows: `%LOCALAPPDATA%\paolino\spotifast\data\spotifast.log`
+        - Windows: `%LOCALAPPDATA%\paolino\applifast\data\applifast.log`
 
         If the app crashed or vanished, include `panic.log` from the same folder.
+        Older previews use spotifast.log in that Applifast data folder.
+        Redact account names, private paths and song titles you do not want public.
+        Never include tokens, passwords, signing keys, cookies or raw authorization responses.
   - type: input
     id: version
     attributes:
-      label: Spotifast version and how you installed it
-      placeholder: "0.5.0-rc1 from the AUR / the DMG / the Windows installer / Homebrew / the Flatpak bundle"
+      label: Applifast source revision and how you installed it
+      placeholder: "Source from BUILD.txt, portable preview ZIP / cargo run --locked"
     validations:
       required: true
   - type: dropdown
@@ -33,19 +36,15 @@ body:
     id: os_details
     attributes:
       label: System details
-      description: Distribution and desktop on Linux, or the OS version.
-      placeholder: "Arch, Hyprland, PipeWire / macOS 15.6 / Windows 11 24H2"
+      description: Include the OS version and WebView2 Runtime version if known.
+      placeholder: "Windows 11 24H2, WebView2 Runtime version"
     validations:
       required: true
-  - type: dropdown
+  - type: input
     id: plan
     attributes:
-      label: Spotify plan
-      options:
-        - Premium
-        - Free
-    validations:
-      required: true
+      label: Apple Music access (optional)
+      description: Subscription active, library visible, or sign-in failing. Do not include account identifiers.
   - type: textarea
     id: what
     attributes:
@@ -56,8 +55,8 @@ body:
   - type: textarea
     id: log
     attributes:
-      label: spotifast.log
-      description: Reproduce the problem, quit the app, then paste the whole file here (and panic.log, if there is one). Paths are above.
+      label: Redacted log excerpt
+      description: Include relevant diagnostic lines and panic.log if there is one. Review the text for private data before posting. Paths are above.
       render: text
     validations:
-      required: true
+      required: false

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast add-only favorites comparison</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
+<h1>Add-only Apple favorites</h1>
+<p>Baseline <code>01406e4</code> (PR #43), candidate <code>feat/apple-favorites-controls</code>. Hollow hearts add songs in the player and rows; song and selection menus gain Add to Favorites. Filled hearts stay read-only. Layout and navigation are unchanged. Implementation and visual approval remain separate gates.</p>
+<p>Matching native Windows captures use identical deterministic Apple demo data, theme, size, pointer position, zoom and Reduce motion. Songs shows a hovered row. The remaining states enable Favorites filtering: ready shows the new hollow player heart, pending fills immediately, confirmed retains it, and error restores the prior state with refresh guidance. The baseline lacks add controls and write fixtures, so those states show its unchanged prior view. All 40 captures were inspected; selector, path and dimension checks pass. Browser rendering of this HTML remains unchecked. No account data or playback is used.</p>
+<label>State <select id="view"><option value="rows">Songs and hovered row</option><option value="ready">Empty favorites, ready to add</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="error">Unconfirmed error</option></select></label>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Matching native Windows add-only favorites comparison">
+<p>Live-account writes, server propagation, restart acceptance, mini-player editing and gaming measurements remain unchecked. Open menus and live motion are not pictured. The automated UI checks exercise the add-only menu and accessible heart interaction separately.</p>
+<p><a href="../favorite-controls.md">Implementation scope and evidence limits</a></p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('view').value+'-'+byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['view','theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

@@ -1,0 +1,21 @@
+{
+  "base": "37647f594372b2c8932005e1d11105cfcdee06a5",
+  "fixture": "Demo paused, artwork URLs absent, no activation requested, real keyboard/text events dropped. No timing, layout, clock or screenshot cadence override.",
+  "files": [
+    {
+      "file": "src/entrypoint.rs",
+      "originalSHA256": "3846023ce621cedce7e42134299c0d250c7757c3ae716d3b138a6d47ff2e40e7",
+      "captureSHA256": "5634cf24cc1c35d5d7dde934d193d4b7c181c24d911726393b53b6bc14e86490"
+    },
+    {
+      "file": "src/demo.rs",
+      "originalSHA256": "2d0f782cde111b206ebbee6bf2ddb5755cc7079d64b5e0836b0c0fcf874be652",
+      "captureSHA256": "accebf50b636bf6a4b9250c0779a1f0c1678168967668743855d5930d177b246"
+    },
+    {
+      "file": "src/apple.rs",
+      "originalSHA256": "5dd1fb5e33e41ede382f8d57bb176f55d5f2d74ac55e63f6309ecdea2d665d41",
+      "captureSHA256": "10fdd6344aaa5d5b7f7d1ff9ac03e35760b007d45ea5a231c6d7b567d072e928"
+    }
+  ]
+}

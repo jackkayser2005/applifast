@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast Reduce motion comparison</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}</style>
+<h1>Reduce motion across shared controls</h1>
+<p>Baseline <code>6aa2340</code>, candidate <code>fix/reduce-motion-controls</code>. Settings switches, player-bar artwork tint and collection/sidebar drag feedback now honor Reduce motion. Switches use the existing shared easing at the style's duration when motion is enabled. No layout, control placement or preference changes.</p>
+<p>Matching native Windows captures use deterministic Apple data, Settings, the same prewarmed artwork cache, neutral pointer, Reduce motion, zoom and window size. Screenshot mode holds motion at its final state. These resting captures do not demonstrate transition timing or a drag in progress. Input-driven egui regressions separately check switch clicks and tint changes, including enabling Reduce motion during a transition and enabling animation again.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Size <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Native Windows Settings resting-state comparison">
+<p>Interactive desktop motion, real lyric timing, browser rendering of this HTML, fresh-PC sign-in and gaming acceptance remain separate checks. See <a href="../reduce-motion-controls.md">scope and validation</a>.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

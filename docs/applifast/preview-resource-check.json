@@ -1,0 +1,81 @@
+{
+  "Source": "8da79db02b980f7f12f57c99382ede50eaef87b9",
+  "ExecutableSHA256": "017d483c90c35adfdf4fdcd791d21c2c452c7a5802de632f09acb7542de48def",
+  "LogicalProcessors": 16,
+  "Cases": [
+    {
+      "RequestedState": "playing",
+      "WarmupSeconds": 120,
+      "MeasuredSeconds": 300.194,
+      "Samples": 288,
+      "PeakAggregatePrivateMiB": 534.82,
+      "AverageOverallCpuPercent": 0.03610943819864765,
+      "AccountingComplete": true,
+      "PeakProcessGroups": [
+        {
+          "Name": "Applifast",
+          "Count": 1,
+          "PrivateMiB": 278.004
+        },
+        {
+          "Name": "msedgewebview2",
+          "Count": 8,
+          "PrivateMiB": 256.816
+        }
+      ],
+      "ObservedStates": [
+        {
+          "StateAndBackground": "playing, True",
+          "Observations": 10
+        },
+        {
+          "StateAndBackground": "unreadable, False",
+          "Observations": 18
+        }
+      ],
+      "RawReportSHA256": "699e1298c2836ad185de3ab4acccd0b217d663a114489cda7207b781b704d78e",
+      "ObservationReportSHA256": "7111c6d9326c9c9950ff18bac774628b5ee6adf7e2be174438e978b10668c2bf",
+      "Limitation": "Playing/minimized initially. A QA helper whitelist mistakenly rejected paused labels after 151 seconds; remaining state/visibility is unverified. Raw evidence is preserved and not rewritten."
+    },
+    {
+      "RequestedState": "paused",
+      "WarmupSeconds": 120,
+      "MeasuredSeconds": 300.179,
+      "Samples": 284,
+      "PeakAggregatePrivateMiB": 531.008,
+      "AverageOverallCpuPercent": 0.04391915944573465,
+      "AccountingComplete": true,
+      "PeakProcessGroups": [
+        {
+          "Name": "Applifast",
+          "Count": 1,
+          "PrivateMiB": 278.086
+        },
+        {
+          "Name": "msedgewebview2",
+          "Count": 8,
+          "PrivateMiB": 252.922
+        }
+      ],
+      "ObservedStates": [
+        {
+          "StateAndBackground": "paused, True",
+          "Observations": 28
+        }
+      ],
+      "RawReportSHA256": "f7574d187131abc275df1cf72c692386984e955fd996562159e98a30d1d54f40",
+      "ObservationReportSHA256": "9cec451ab1fc4a599e3477f034d2c47059d9af8533429a7570f5fd952b97c7e8",
+      "Limitation": "Paused/minimized confirmed at 15-second observation intervals, not continuous SDK verification."
+    }
+  ],
+  "NoBuildsDuringSampling": true,
+  "PlayerCommands": "Read-only now-playing status; no playback, authorization or window mutation",
+  "PrivateMemoryLimitMiB": 250,
+  "MemoryGatePassed": false,
+  "PlayingCpuLimitPercent": 1,
+  "PausedCpuLimitPercent": 0.2,
+  "PlayingStateAcceptance": false,
+  "PausedObservedCpuAcceptance": true,
+  "GamingSoakAcceptance": false,
+  "SamplingLimitation": "Processes created and exited entirely between snapshots are unobservable. No continuous playback-state verification or one-hour gaming check."
+}

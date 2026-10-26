@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast window artwork comparison</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}</style>
+<h1>Artwork after window recreation</h1>
+<p>Baseline production code <code>9865001</code>, candidate <code>fix/window-artwork-lifetime</code>. Recreated windows discard old softened covers, lyrics backdrops and pending completions. The regression verifies texture-manager release and fresh texture ownership. No layout, controls or motion changes are intended.</p>
+<p>Matching native Windows captures use identical deterministic data, artwork cache, pointer, zoom, Reduce motion and window size. These fresh-window stills check appearance; they do not demonstrate interactive window recreation, live playback or a memory reduction. Now Playing remains dark in both themes. The mini-player retains its existing skin appearance.</p>
+<label>View <select id="view"><option value="lyrics">Lyrics panel</option><option value="now-playing">Now Playing</option><option value="mini">Mini-player playlist</option></select></label>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Size <select id="size"><option value="normal">Normal</option><option value="narrow">Narrow</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Native Windows artwork lifetime fresh-window comparison">
+<p>Native window recreation during audible listening, controlled performance and HTML browser rendering remain separate checks. See <a href="../window-artwork.md">scope and verification</a>.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const view=byId('view').value;const narrow=byId('size').value==='narrow';const size=view==='mini'?(narrow?'275x290':'550x580'):(narrow?'760x760':'1100x760');const suffix=view+'-'+byId('theme').value+'-'+size;byId('capture').src=phase+'-'+suffix+'.png';byId('label').textContent=phase+' / '+suffix;}
+for(const id of ['view','theme','size'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

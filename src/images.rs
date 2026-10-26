@@ -19,6 +19,19 @@ use crate::http::Http;
 /// Size-based eviction keeps visible images stable.
 const HELD_BYTES: usize = 64 * 1024 * 1024;
 const MAX_ART_BYTES: usize = 8 * 1024 * 1024;
+const THUMBNAIL_FRAGMENT: &str = "#applifast-thumb-160";
+
+/// A local cache identity, never an alternate URL sent to the artwork server.
+pub(crate) fn thumbnail_uri(url: &str) -> Option<String> {
+    let path = url.split('?').next().unwrap_or(url);
+    (is_http(url) && !url.contains('#') && !path.to_ascii_lowercase().ends_with(".svg"))
+        .then(|| format!("{url}{THUMBNAIL_FRAGMENT}"))
+}
+
+fn thumbnail_source(uri: &str) -> Option<&str> {
+    let source = uri.strip_suffix(THUMBNAIL_FRAGMENT)?;
+    thumbnail_uri(source).map(|_| source)
+}
 
 /// Decoded ColorImage plus the GPU texture, both RGBA.
 fn decoded_and_texture_bytes(width: usize, height: usize) -> usize {
@@ -47,6 +60,7 @@ struct Inner {
     http: Http,
     runtime: tokio::runtime::Handle,
     cache_dir: PathBuf,
+    thumbnail_workers: Arc<tokio::sync::Semaphore>,
 }
 
 #[derive(Clone)]
@@ -63,6 +77,7 @@ impl ArtLoader {
                 http: http.into(),
                 runtime,
                 cache_dir,
+                thumbnail_workers: Arc::new(tokio::sync::Semaphore::new(2)),
             }),
         }
     }
@@ -232,7 +247,7 @@ impl Inner {
         self.cache_dir.join(name)
     }
 
-    async fn fetch(self: &Arc<Self>, url: &str) -> Result<Arc<[u8]>, String> {
+    async fn cached_bytes(&self, url: &str) -> Option<Arc<[u8]>> {
         if let Some(Entry::Ready {
             bytes: Some(bytes), ..
         }) = self
@@ -241,46 +256,76 @@ impl Inner {
             .unwrap_or_else(|p| p.into_inner())
             .get(url)
         {
-            return Ok(Arc::clone(bytes));
+            return Some(Arc::clone(bytes));
         }
         let path = self.cache_path(url);
-        let cached = tokio::task::spawn_blocking({
+        tokio::task::spawn_blocking({
             let path = path.clone();
             move || std::fs::read(path).ok()
         })
         .await
         .ok()
-        .flatten();
-        let bytes: Arc<[u8]> = match cached {
-            Some(bytes) if !bytes.is_empty() => Arc::from(bytes),
-            _ => {
-                let response = self
-                    .http
-                    .client()?
-                    .get(url)
-                    .send()
-                    .await
-                    .map_err(|error| error.to_string())?;
-                if !response.status().is_success() {
-                    return Err(format!("artwork request failed: {}", response.status()));
-                }
-                let bytes = response.bytes().await.map_err(|error| error.to_string())?;
-                if bytes.len() > MAX_ART_BYTES {
-                    return Err("artwork is too large".to_string());
-                }
-                // The loader and file worker share one immutable payload.
-                let bytes: Arc<[u8]> = Arc::from(bytes.as_ref());
-                let write_path = path.clone();
-                let payload = Arc::clone(&bytes);
-                self.runtime.spawn_blocking(move || {
-                    let temporary = write_path.with_extension("part");
-                    if std::fs::write(&temporary, &payload).is_ok() {
-                        let _ = std::fs::rename(&temporary, &write_path);
-                    }
-                });
-                bytes
-            }
+        .flatten()
+        .filter(|bytes| !bytes.is_empty() && bytes.len() <= MAX_ART_BYTES)
+        .map(Arc::from)
+    }
+
+    async fn download(&self, url: &str) -> Result<Arc<[u8]>, String> {
+        let response = self
+            .http
+            .client()?
+            .get(url)
+            .send()
+            .await
+            .map_err(|error| error.without_url().to_string())?;
+        if !response.status().is_success() {
+            return Err(format!("artwork request failed: {}", response.status()));
+        }
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(|error| error.without_url().to_string())?;
+        if bytes.len() > MAX_ART_BYTES {
+            return Err("artwork is too large".to_string());
+        }
+        Ok(Arc::from(bytes.as_ref()))
+    }
+
+    async fn fetch(self: &Arc<Self>, url: &str) -> Result<Arc<[u8]>, String> {
+        if let Some(bytes) = self.cached_bytes(url).await {
+            return Ok(bytes);
+        }
+        let bytes = if let Some(source) = thumbnail_source(url) {
+            let permit = self
+                .thumbnail_workers
+                .clone()
+                .acquire_owned()
+                .await
+                .map_err(|_| "artwork worker stopped".to_string())?;
+            let original = match self.cached_bytes(source).await {
+                Some(bytes) => bytes,
+                None => self.download(source).await?,
+            };
+            self.runtime
+                .spawn_blocking(move || {
+                    let _permit = permit;
+                    thumbnail_bytes(&original)
+                        .map(Arc::from)
+                        .ok_or_else(|| "artwork thumbnail could not be decoded".to_string())
+                })
+                .await
+                .map_err(|_| "artwork worker stopped".to_string())??
+        } else {
+            self.download(url).await?
         };
+        let write_path = self.cache_path(url);
+        let payload = Arc::clone(&bytes);
+        self.runtime.spawn_blocking(move || {
+            let temporary = write_path.with_extension("part");
+            if std::fs::write(&temporary, &payload).is_ok() {
+                let _ = std::fs::rename(&temporary, &write_path);
+            }
+        });
         Ok(bytes)
     }
 
@@ -647,6 +692,22 @@ fn softened_background(image: &egui::ColorImage) -> Option<egui::ColorImage> {
 }
 
 fn blurred_background(bytes: &[u8], sigma: f32) -> Option<egui::ColorImage> {
+    Some(blurred_image(decode_artwork(bytes)?, sigma))
+}
+
+fn thumbnail_bytes(bytes: &[u8]) -> Option<Vec<u8>> {
+    let image = decode_artwork(bytes)?;
+    let image = if image.width() > 160 || image.height() > 160 {
+        image.thumbnail(160, 160)
+    } else {
+        image
+    };
+    let mut encoded = std::io::Cursor::new(Vec::new());
+    image.write_to(&mut encoded, image::ImageFormat::Png).ok()?;
+    Some(encoded.into_inner())
+}
+
+fn decode_artwork(bytes: &[u8]) -> Option<image::DynamicImage> {
     if bytes.len() > MAX_ART_BYTES {
         return None;
     }
@@ -658,7 +719,7 @@ fn blurred_background(bytes: &[u8], sigma: f32) -> Option<egui::ColorImage> {
     limits.max_image_height = Some(8192);
     limits.max_alloc = Some(64 * 1024 * 1024);
     reader.limits(limits);
-    Some(blurred_image(reader.decode().ok()?, sigma))
+    reader.decode().ok()
 }
 
 fn blurred_image(image: image::DynamicImage, sigma: f32) -> egui::ColorImage {
@@ -732,6 +793,133 @@ mod tests {
         })
         .await
         .expect("the background writer completes while its runtime is alive");
+    }
+
+    #[test]
+    fn thumbnail_identity_preserves_source_queries_and_skips_other_schemes_and_fragments() {
+        let source = "https://example.com/custom/cover.png?version=1&size=original";
+        let uri = thumbnail_uri(source).unwrap();
+        assert_eq!(thumbnail_source(&uri), Some(source));
+        for source in [
+            "file:///cover.png",
+            "https://example.com/cover#custom",
+            "https://example.com/cover.SVG?v=1",
+        ] {
+            assert!(thumbnail_uri(source).is_none());
+            assert!(thumbnail_source(source).is_none());
+        }
+    }
+
+    #[test]
+    fn local_thumbnail_reuses_original_disk_cache_without_upscaling_or_overwriting_it() {
+        let dir = std::env::temp_dir().join(format!(
+            "applifast-art-thumbnail-source-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        assert!(!dir.exists());
+        let runtime = artwork_test_runtime();
+        let loader = artwork_test_loader(&runtime, dir.clone());
+        let source = "http://127.0.0.1:9/custom.png?original=1";
+        cached_png(&loader, source, [10, 20, 30]);
+        let original = std::fs::read(loader.inner.cache_path(source)).unwrap();
+        let uri = thumbnail_uri(source).unwrap();
+        runtime.block_on(async {
+            let occupied = loader
+                .inner
+                .thumbnail_workers
+                .clone()
+                .acquire_many_owned(2)
+                .await
+                .unwrap();
+            assert!(
+                tokio::time::timeout(Duration::from_millis(50), loader.fetch(&uri))
+                    .await
+                    .is_err(),
+                "a third thumbnail must wait before reading or decoding its original"
+            );
+            drop(occupied);
+            let bytes = loader.fetch(&uri).await.unwrap();
+            assert_eq!(image::load_from_memory(&bytes).unwrap().width(), 64);
+            wait_for_artwork_file(&loader.inner.cache_path(&uri), &bytes).await;
+        });
+        assert_eq!(
+            std::fs::read(loader.inner.cache_path(source)).unwrap(),
+            original
+        );
+        drop(loader);
+        runtime.shutdown_timeout(Duration::from_secs(10));
+        assert!(
+            dir.canonicalize()
+                .unwrap()
+                .starts_with(std::env::temp_dir().canonicalize().unwrap())
+        );
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn fixed_artwork_thumbnail_is_small_and_reloads_without_network() {
+        let dir = std::env::temp_dir().join(format!(
+            "applifast-art-thumbnail-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        assert!(!dir.exists());
+        let runtime = artwork_test_runtime();
+        let loader = artwork_test_loader(&runtime, dir.clone());
+        let mut encoded = std::io::Cursor::new(Vec::new());
+        image::RgbaImage::from_pixel(640, 320, image::Rgba([200, 40, 40, 100]))
+            .write_to(&mut encoded, image::ImageFormat::Png)
+            .unwrap();
+        let (uri, expected) = runtime.block_on(async {
+            let (source, server) = serve_artwork("200 OK", encoded.into_inner()).await;
+            let uri = format!("{source}#applifast-thumb-160");
+            let bytes = loader.fetch(&uri).await.unwrap();
+            server.await.unwrap();
+            let decoded = image::load_from_memory(&bytes).unwrap().to_rgba8();
+            assert_eq!(decoded.dimensions(), (160, 80));
+            assert_eq!(decoded.get_pixel(0, 0).0, [200, 40, 40, 100]);
+            wait_for_artwork_file(&loader.inner.cache_path(&uri), &bytes).await;
+            let ctx = egui::Context::default();
+            egui_extras::install_image_loaders(&ctx);
+            ctx.add_bytes_loader(Arc::new(loader.clone()));
+            tokio::time::timeout(Duration::from_secs(10), async {
+                loop {
+                    match ctx
+                        .try_load_texture(&uri, Default::default(), Default::default())
+                        .unwrap()
+                    {
+                        egui::load::TexturePoll::Ready { texture } => {
+                            assert_eq!(texture.size, egui::vec2(160.0, 80.0));
+                            break;
+                        }
+                        egui::load::TexturePoll::Pending { .. } => {
+                            tokio::time::sleep(Duration::from_millis(1)).await
+                        }
+                    }
+                }
+            })
+            .await
+            .expect("the normal egui loader uploads the small texture");
+            (uri, bytes)
+        });
+        drop(loader);
+        let loader = artwork_test_loader(&runtime, dir.clone());
+        assert_eq!(runtime.block_on(loader.fetch(&uri)).unwrap(), expected);
+        drop(loader);
+        runtime.shutdown_timeout(Duration::from_secs(10));
+        assert!(
+            dir.canonicalize()
+                .unwrap()
+                .starts_with(std::env::temp_dir().canonicalize().unwrap())
+        );
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
@@ -1097,6 +1285,116 @@ mod tests {
         assert_eq!(covers.textures.len(), HELD_COVERS);
         assert!(!covers.textures.contains_key("cover-0"));
         assert!(covers.textures.contains_key("fresh"));
+    }
+
+    #[test]
+    fn recreated_windows_release_artwork_and_reject_old_completions() {
+        check_window_artwork_release(false);
+    }
+
+    #[test]
+    fn closing_to_tray_releases_artwork_before_another_window_opens() {
+        check_window_artwork_release(true);
+    }
+
+    fn check_window_artwork_release(close_before_reopen: bool) {
+        let root = std::env::temp_dir().join(format!(
+            "applifast-window-artwork-{}-{close_before_reopen}",
+            std::process::id()
+        ));
+        let mut app = crate::app::App::new(
+            &crate::backend::Waker::default(),
+            crate::paths::AppDirs {
+                config: root.join("config"),
+                state: root.join("state"),
+                cache: root.join("cache"),
+            },
+            crate::settings::Settings::default(),
+            crate::app::AppOptions {
+                media_controls: false,
+                restore_sign_in: false,
+                tray: false,
+            },
+        );
+        let mut ctx = egui::Context::default();
+        app.attach(&ctx);
+        for mini in [true, false, true] {
+            let old_manager = Arc::downgrade(&ctx.tex_manager());
+            let (old_backdrop_tx, old_backdrop_rx) = std::sync::mpsc::channel();
+            app.lyrics_backdrop = LyricsBackdrop {
+                uri: Some("https://example.invalid/cover".into()),
+                requested: true,
+                pending: Some(old_backdrop_rx),
+                texture: Some(ctx.load_texture(
+                    "old-backdrop",
+                    softened_test_image(),
+                    egui::TextureOptions::LINEAR,
+                )),
+                ..Default::default()
+            };
+            let old_cover_tx = app.softened_covers.ready_tx.clone();
+            old_cover_tx
+                .send(("cover".into(), Some(softened_test_image())))
+                .unwrap();
+            app.softened_covers.receive_ready(&ctx);
+            app.softened_covers.pending.insert("late".into());
+            app.softened_covers.failed.insert("failed".into());
+
+            ctx = egui::Context::default();
+            if close_before_reopen {
+                app.window_gone();
+                assert!(app.window_hidden);
+                assert!(
+                    old_manager.upgrade().is_none(),
+                    "closing to the tray must release artwork without waiting for reopen"
+                );
+                assert!(
+                    old_backdrop_tx
+                        .send(Ok(Some(softened_test_image())))
+                        .is_err()
+                );
+                assert!(
+                    old_cover_tx
+                        .send(("late".into(), Some(softened_test_image())))
+                        .is_err()
+                );
+            }
+            app.settings.winamp_window = mini;
+            app.attach(&ctx);
+
+            assert!(
+                old_manager.upgrade().is_none(),
+                "recreating a window must release its artwork texture manager"
+            );
+            assert!(app.lyrics_backdrop.texture.is_none());
+            assert!(app.lyrics_backdrop.uri.is_none());
+            assert!(app.lyrics_backdrop.pending.is_none());
+            assert!(!app.lyrics_backdrop.requested);
+            assert!(app.softened_covers.textures.is_empty());
+            assert!(app.softened_covers.pending.is_empty());
+            assert!(app.softened_covers.failed.is_empty());
+            assert!(
+                old_backdrop_tx
+                    .send(Ok(Some(softened_test_image())))
+                    .is_err()
+            );
+            assert!(
+                old_cover_tx
+                    .send(("late".into(), Some(softened_test_image())))
+                    .is_err()
+            );
+
+            app.softened_covers
+                .ready_tx
+                .send(("fresh".into(), Some(softened_test_image())))
+                .unwrap();
+            app.softened_covers.receive_ready(&ctx);
+            assert_eq!(app.softened_covers.textures.len(), 1);
+            let fresh = &app.softened_covers.textures["fresh"].texture;
+            assert!(ctx.tex_manager().read().meta(fresh.id()).is_some());
+        }
+        app.backend.shutdown();
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]

@@ -1,0 +1,393 @@
+{
+  "scope": "Sixty-four actual native demo readbacks; indicator crop only proves decorative playing-bar animation and Reduce motion. No account, audio, live controls, other motion, performance or other-platform acceptance.",
+  "sourceBase": "1078f85bd652f3f51eedc38c16ef362cb997191a",
+  "candidateBranch": "test/native-motion-frames",
+  "dirtyDuringCapture": true,
+  "timing": "Request timestamps include warm-up, readback and PNG-writing overhead; not a frame-rate or CPU/memory benchmark. WebP uses rounded request intervals without interpolation. Identical adjacent frames may merge.",
+  "cases": [
+    {
+      "name": "moving-dark-1100x760",
+      "nativeFrames": 8,
+      "uniqueIndicatorFrames": 8,
+      "indicatorBox": [
+        294,
+        428,
+        314,
+        447
+      ],
+      "redPixelsPerFrame": [
+        80,
+        72,
+        73,
+        82,
+        88,
+        93,
+        90,
+        82
+      ],
+      "requestTimesSeconds": [
+        2.2917529,
+        2.4236078,
+        2.5538395,
+        2.6841723,
+        2.8198249,
+        2.9517409,
+        3.0817184,
+        3.2142682
+      ],
+      "frameSHA256": [
+        "c94a047545e6acd81c57af10d0c8c12a4487eaec031e89dce5e6802191b78824",
+        "715bc92e67d0891e2eb2625d2fbf470863d09291a8b8fde667f79b05a1001c6c",
+        "608808a3979978c9c7d5f9d9d88b73c72cc3385c9a464a0967b36bdeaf808d86",
+        "770b66a61b764d5ead5d3397d020448b6e21102cff4541a789bec11569711dd7",
+        "4bb32810bff2eb8d7a662811f560e54fc57a1ecddaeb9cc86b0162f966077e90",
+        "370c6cb8b9e5e093219af73464e6a4bcfea35f746c254a2a6302050b21c109a0",
+        "014a1f82fd8a8b900598522d3cbcdd21cbdf3c7e9a4f0b5cf208b8f7991f6095",
+        "e2cbc8f9ee0a8f07d08667a232a489b33760034d4f1d7fae06ae4560849ccbbc"
+      ],
+      "binarySHA256": "e1568af917379b5c049b0f2704a5ad77b0c86c3f1ae9cbd302a25ff949471634",
+      "entrypointSHA256": "bca6e97af365c1fa934cef9e1cf3f4e9a7c7b34a2b76d8aa7714d74059b1d9de",
+      "clip": "moving-dark-1100x760.webp",
+      "still": "moving-dark-1100x760-still.png",
+      "context": "moving-dark-1100x760-context.png",
+      "clipSHA256": "f2401ef61f3c5b29f42e0bb88dfd8e95b9094004285ac0afb43942c9a7d9c517",
+      "clipDecodedFrames": 8
+    },
+    {
+      "name": "moving-dark-760x760",
+      "nativeFrames": 8,
+      "uniqueIndicatorFrames": 8,
+      "indicatorBox": [
+        246,
+        478,
+        266,
+        497
+      ],
+      "redPixelsPerFrame": [
+        81,
+        72,
+        73,
+        77,
+        88,
+        95,
+        95,
+        90
+      ],
+      "requestTimesSeconds": [
+        2.3129742,
+        2.4212695,
+        2.5276393,
+        2.6336285999999998,
+        2.741537,
+        2.8477852,
+        2.9558576,
+        3.0637328
+      ],
+      "frameSHA256": [
+        "7830e49b99097fe6ef4fd4cd931bdbc65ed69a037aee262e5dcac0ba272e0fb3",
+        "bf5dd4977b2e21094f3d9f47893023be177e7950fd76d368c5ceeb18f305bdaa",
+        "b51d8e2bfccffb2043f527ebf30afe698913ecf023ee1e25044efd514742c8a5",
+        "9a743be5b16641d905fbe78db747878099a540254c4e360b4a36cf86213f8671",
+        "f1a94bb1dc271e63db47e2247ef925d1a076f91ec1bbe9638bb399a39a32b9d0",
+        "00f76e1740cfac3a6b5c86bdf2c10173e417f61608140c2f6d35d1f483c605ab",
+        "01025b418e5d8412c9717cdab5e550a2f84fb513c2e8e5c8e664f3024cbcda80",
+        "03d92632702bffa643fb5de850280456820d9673a76c2b452ca28726dc8d8869"
+      ],
+      "binarySHA256": "e1568af917379b5c049b0f2704a5ad77b0c86c3f1ae9cbd302a25ff949471634",
+      "entrypointSHA256": "bca6e97af365c1fa934cef9e1cf3f4e9a7c7b34a2b76d8aa7714d74059b1d9de",
+      "clip": "moving-dark-760x760.webp",
+      "still": "moving-dark-760x760-still.png",
+      "context": "moving-dark-760x760-context.png",
+      "clipSHA256": "b464f3ac9e80a957e32a3fa1f841307cf035cf8dad7c600c7e3bf5f1fba49354",
+      "clipDecodedFrames": 8
+    },
+    {
+      "name": "moving-light-1100x760",
+      "nativeFrames": 8,
+      "uniqueIndicatorFrames": 8,
+      "indicatorBox": [
+        294,
+        428,
+        314,
+        447
+      ],
+      "redPixelsPerFrame": [
+        83,
+        72,
+        74,
+        84,
+        91,
+        95,
+        90,
+        82
+      ],
+      "requestTimesSeconds": [
+        2.3020674,
+        2.4396919,
+        2.5704257999999998,
+        2.7006226,
+        2.8315934,
+        2.9609386,
+        3.095432,
+        3.2273231
+      ],
+      "frameSHA256": [
+        "3e47d45c58c852be9a8f3bc3ef2148d4d2e05051dfb608d4f28154803c7bad64",
+        "51cf0e8259befb3046f62490114de6a51afbee7bd7e2de2681361c96755756e9",
+        "6336419a4dde89545956fe7194cffbd5a9368047b2791d9685afb299100542c4",
+        "da146c0d31346499b7c2703ac34a5143221cbf25c91d4fb6c7ae3209effddfd4",
+        "89e10ddba8957a3b11182b10b829000b9cb5da94a86ea92f460fa5c569137e75",
+        "14ef2922c2ea5a1299a380f3056d9860421754e67a97f52a3f0babdc639251d9",
+        "241eda84f913a267f5e3a3f6b8d6c8680320bfa3dc9b94e8478a85c12a02a5d2",
+        "4cd6a5136cf38ef08b02571798444aaaf914aa5a3b5fbcf3a0787aa5e30fadc8"
+      ],
+      "binarySHA256": "e1568af917379b5c049b0f2704a5ad77b0c86c3f1ae9cbd302a25ff949471634",
+      "entrypointSHA256": "bca6e97af365c1fa934cef9e1cf3f4e9a7c7b34a2b76d8aa7714d74059b1d9de",
+      "clip": "moving-light-1100x760.webp",
+      "still": "moving-light-1100x760-still.png",
+      "context": "moving-light-1100x760-context.png",
+      "clipSHA256": "877fe345395fb3e0e0166eefc2a9e2b2dcd03e2a46f6e0ca80edad6a1410b0ca",
+      "clipDecodedFrames": 8
+    },
+    {
+      "name": "moving-light-760x760",
+      "nativeFrames": 8,
+      "uniqueIndicatorFrames": 8,
+      "indicatorBox": [
+        246,
+        478,
+        266,
+        497
+      ],
+      "redPixelsPerFrame": [
+        81,
+        72,
+        73,
+        77,
+        88,
+        92,
+        95,
+        90
+      ],
+      "requestTimesSeconds": [
+        2.3125226,
+        2.4361408,
+        2.5435489000000002,
+        2.6504238,
+        2.7570185,
+        2.8635935999999997,
+        2.9705296,
+        3.0782369
+      ],
+      "frameSHA256": [
+        "4b35439f7101c11c216c59dfcc2379d54999f091de31f24a13f9605dcff108e7",
+        "87bf99af5a5181926c8a16def6c375bb6af441ac63869783fccaaed8e0a404d4",
+        "4309daf9406f32db8b031eca0c4fb3e1f39fc9153bfa5d18484e56a0f768bf1e",
+        "55d1438c8d2785dcca24756a33b47f401adf7c5af7421a7486bf547b05a47920",
+        "72237ae3e658be62fc9896ce0560c0f1f265546e1fa4694822ae9b5f35b0fc0d",
+        "407cd631085154f57701fa00cc127de6157a17309c88cea41b0b4c379f2bd3c9",
+        "9ec044eea308361df250618ce5fd5479cc155278e9d086087914ac5802efd0e1",
+        "ec87a4e466592849fda4635fa20b701366376f780ae3e7cb32215ea9f518f6be"
+      ],
+      "binarySHA256": "e1568af917379b5c049b0f2704a5ad77b0c86c3f1ae9cbd302a25ff949471634",
+      "entrypointSHA256": "bca6e97af365c1fa934cef9e1cf3f4e9a7c7b34a2b76d8aa7714d74059b1d9de",
+      "clip": "moving-light-760x760.webp",
+      "still": "moving-light-760x760-still.png",
+      "context": "moving-light-760x760-context.png",
+      "clipSHA256": "c4f6e8dcecb41be1a51abbf9dc5419900f21adb0f0a3b0babb20d06f9816f68b",
+      "clipDecodedFrames": 8
+    },
+    {
+      "name": "reduced-dark-1100x760",
+      "nativeFrames": 8,
+      "uniqueIndicatorFrames": 1,
+      "indicatorBox": [
+        294,
+        428,
+        314,
+        447
+      ],
+      "redPixelsPerFrame": [
+        88,
+        88,
+        88,
+        88,
+        88,
+        88,
+        88,
+        88
+      ],
+      "requestTimesSeconds": [
+        2.3055781,
+        2.4393105999999998,
+        2.5706629,
+        2.7021234,
+        2.8345366,
+        2.9691806,
+        3.1017854,
+        3.2360268
+      ],
+      "frameSHA256": [
+        "f7d15faa024d313a9187663360ccc9f942d10110156f9e02473e539f847b36f3",
+        "f7d15faa024d313a9187663360ccc9f942d10110156f9e02473e539f847b36f3",
+        "f7d15faa024d313a9187663360ccc9f942d10110156f9e02473e539f847b36f3",
+        "f7d15faa024d313a9187663360ccc9f942d10110156f9e02473e539f847b36f3",
+        "f7d15faa024d313a9187663360ccc9f942d10110156f9e02473e539f847b36f3",
+        "f7d15faa024d313a9187663360ccc9f942d10110156f9e02473e539f847b36f3",
+        "f7d15faa024d313a9187663360ccc9f942d10110156f9e02473e539f847b36f3",
+        "f7d15faa024d313a9187663360ccc9f942d10110156f9e02473e539f847b36f3"
+      ],
+      "binarySHA256": "e1568af917379b5c049b0f2704a5ad77b0c86c3f1ae9cbd302a25ff949471634",
+      "entrypointSHA256": "bca6e97af365c1fa934cef9e1cf3f4e9a7c7b34a2b76d8aa7714d74059b1d9de",
+      "clip": "reduced-dark-1100x760.webp",
+      "still": "reduced-dark-1100x760-still.png",
+      "context": "reduced-dark-1100x760-context.png",
+      "clipSHA256": "bfe93c422d73058ccf3751cb8555d7a64b2e9c90b7df149cf633d804b0358c5a",
+      "clipDecodedFrames": 1
+    },
+    {
+      "name": "reduced-dark-760x760",
+      "nativeFrames": 8,
+      "uniqueIndicatorFrames": 1,
+      "indicatorBox": [
+        246,
+        478,
+        266,
+        497
+      ],
+      "redPixelsPerFrame": [
+        88,
+        88,
+        88,
+        88,
+        88,
+        88,
+        88,
+        88
+      ],
+      "requestTimesSeconds": [
+        2.3129391999999998,
+        2.4226520000000002,
+        2.5312718,
+        2.6395542,
+        2.7475025,
+        2.8551039,
+        2.9640769000000002,
+        3.0719096
+      ],
+      "frameSHA256": [
+        "98f917cd6d0f4413e8549c64a8ef763d3985b670a04b5d5f055deefe066b63d1",
+        "98f917cd6d0f4413e8549c64a8ef763d3985b670a04b5d5f055deefe066b63d1",
+        "98f917cd6d0f4413e8549c64a8ef763d3985b670a04b5d5f055deefe066b63d1",
+        "98f917cd6d0f4413e8549c64a8ef763d3985b670a04b5d5f055deefe066b63d1",
+        "98f917cd6d0f4413e8549c64a8ef763d3985b670a04b5d5f055deefe066b63d1",
+        "98f917cd6d0f4413e8549c64a8ef763d3985b670a04b5d5f055deefe066b63d1",
+        "98f917cd6d0f4413e8549c64a8ef763d3985b670a04b5d5f055deefe066b63d1",
+        "98f917cd6d0f4413e8549c64a8ef763d3985b670a04b5d5f055deefe066b63d1"
+      ],
+      "binarySHA256": "e1568af917379b5c049b0f2704a5ad77b0c86c3f1ae9cbd302a25ff949471634",
+      "entrypointSHA256": "bca6e97af365c1fa934cef9e1cf3f4e9a7c7b34a2b76d8aa7714d74059b1d9de",
+      "clip": "reduced-dark-760x760.webp",
+      "still": "reduced-dark-760x760-still.png",
+      "context": "reduced-dark-760x760-context.png",
+      "clipSHA256": "8fac2badc1a06a6954aca917adc6faa93a2295657e311ea26e3c00af4cc660a5",
+      "clipDecodedFrames": 1
+    },
+    {
+      "name": "reduced-light-1100x760",
+      "nativeFrames": 8,
+      "uniqueIndicatorFrames": 1,
+      "indicatorBox": [
+        294,
+        428,
+        314,
+        447
+      ],
+      "redPixelsPerFrame": [
+        88,
+        88,
+        88,
+        88,
+        88,
+        88,
+        88,
+        88
+      ],
+      "requestTimesSeconds": [
+        2.3013272000000002,
+        2.432239,
+        2.56043,
+        2.6896295,
+        2.8185971,
+        2.9489425000000002,
+        3.078307,
+        3.2091352
+      ],
+      "frameSHA256": [
+        "471c96786d830b2c00f3cc37183a92c2a8242b5383a8b3bcb6435930816b8803",
+        "471c96786d830b2c00f3cc37183a92c2a8242b5383a8b3bcb6435930816b8803",
+        "471c96786d830b2c00f3cc37183a92c2a8242b5383a8b3bcb6435930816b8803",
+        "471c96786d830b2c00f3cc37183a92c2a8242b5383a8b3bcb6435930816b8803",
+        "471c96786d830b2c00f3cc37183a92c2a8242b5383a8b3bcb6435930816b8803",
+        "471c96786d830b2c00f3cc37183a92c2a8242b5383a8b3bcb6435930816b8803",
+        "471c96786d830b2c00f3cc37183a92c2a8242b5383a8b3bcb6435930816b8803",
+        "471c96786d830b2c00f3cc37183a92c2a8242b5383a8b3bcb6435930816b8803"
+      ],
+      "binarySHA256": "e1568af917379b5c049b0f2704a5ad77b0c86c3f1ae9cbd302a25ff949471634",
+      "entrypointSHA256": "bca6e97af365c1fa934cef9e1cf3f4e9a7c7b34a2b76d8aa7714d74059b1d9de",
+      "clip": "reduced-light-1100x760.webp",
+      "still": "reduced-light-1100x760-still.png",
+      "context": "reduced-light-1100x760-context.png",
+      "clipSHA256": "9705b95422cdf938e0d057f1a23a7bc749b19f85f8948d34a6b4aedcd77afe48",
+      "clipDecodedFrames": 1
+    },
+    {
+      "name": "reduced-light-760x760",
+      "nativeFrames": 8,
+      "uniqueIndicatorFrames": 1,
+      "indicatorBox": [
+        246,
+        478,
+        266,
+        497
+      ],
+      "redPixelsPerFrame": [
+        88,
+        88,
+        88,
+        88,
+        88,
+        88,
+        88,
+        88
+      ],
+      "requestTimesSeconds": [
+        2.307397,
+        2.4148489,
+        2.5223972,
+        2.6315909,
+        2.7377253,
+        2.8453144,
+        2.9536727000000003,
+        3.0606367
+      ],
+      "frameSHA256": [
+        "fbfdf745c448e8ba8d0163d1f2b958c9432d09d345c067466c126b7a7296635e",
+        "fbfdf745c448e8ba8d0163d1f2b958c9432d09d345c067466c126b7a7296635e",
+        "fbfdf745c448e8ba8d0163d1f2b958c9432d09d345c067466c126b7a7296635e",
+        "fbfdf745c448e8ba8d0163d1f2b958c9432d09d345c067466c126b7a7296635e",
+        "fbfdf745c448e8ba8d0163d1f2b958c9432d09d345c067466c126b7a7296635e",
+        "fbfdf745c448e8ba8d0163d1f2b958c9432d09d345c067466c126b7a7296635e",
+        "fbfdf745c448e8ba8d0163d1f2b958c9432d09d345c067466c126b7a7296635e",
+        "fbfdf745c448e8ba8d0163d1f2b958c9432d09d345c067466c126b7a7296635e"
+      ],
+      "binarySHA256": "e1568af917379b5c049b0f2704a5ad77b0c86c3f1ae9cbd302a25ff949471634",
+      "entrypointSHA256": "bca6e97af365c1fa934cef9e1cf3f4e9a7c7b34a2b76d8aa7714d74059b1d9de",
+      "clip": "reduced-light-760x760.webp",
+      "still": "reduced-light-760x760-still.png",
+      "context": "reduced-light-760x760-context.png",
+      "clipSHA256": "97ba9861b9cee3e4be8e3334e739607202f7a407e92802375695671643d5ac6d",
+      "clipDecodedFrames": 1
+    }
+  ]
+}

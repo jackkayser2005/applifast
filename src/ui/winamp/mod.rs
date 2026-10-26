@@ -299,6 +299,7 @@ impl View<'_> {
 /// The whole window, drawn into the root.
 pub fn show(app: &mut App, ui: &mut Ui) {
     let ctx = ui.ctx().clone();
+    super::motion::set_reduced(&ctx, app.settings.reduce_motion);
     let unit = unit(app, &ctx);
     fit_window(&ctx, &app.settings, unit);
     let origin = ui.max_rect().min;
@@ -346,7 +347,7 @@ pub fn show(app: &mut App, ui: &mut Ui) {
     } else {
         layout::WINDOW_HEIGHT
     };
-    if app.settings.eq_open {
+    if app.settings.eq_open && app.apple.is_none() {
         let eq_shaded = app.settings.eq_shaded;
         let mut below = View {
             ui: view.ui,
@@ -411,7 +412,7 @@ fn full_window(
     marquee(app, view, now);
     rates(app, view, now);
     sliders(app, view, now);
-    windows_buttons(app, view);
+    windows_buttons(app, view, now);
     transport(app, view, now);
     shuffle_repeat(app, view, now);
     if view
@@ -688,6 +689,19 @@ fn options_menu(app: &mut App, ui: &mut Ui, unit: f32) {
     let locale = app.locale;
     let font = menu_font(unit);
     ui.set_min_width(font * 11.0);
+    if app.apple.is_some()
+        && let Some(now) = app.now_playing().filter(|now| !now.is_episode)
+    {
+        if app.is_saved(&now.uri) == Some(true) {
+            ui.label(gettext(locale, "Favorites").as_ref());
+        } else if ui
+            .button(gettext(locale, "Add to Favorites").as_ref())
+            .clicked()
+        {
+            super::motion::pop_heart(ui.ctx(), &now.uri);
+            app.actions.push(Action::ToggleSaved(now.uri));
+        }
+    }
     let scale = WinampState::scale(&app.settings, ui.ctx().pixels_per_point());
     ui.horizontal(|ui| {
         ui.label(gettext(locale, "Size").as_ref());
@@ -720,10 +734,11 @@ fn options_menu(app: &mut App, ui: &mut Ui, unit: f32) {
         }
     }
     let mut milkdrop = app.settings.milkdrop_open;
-    if ui
-        .checkbox(&mut milkdrop, "MilkDrop")
-        .on_hover_text(super::keys::MILKDROP_SHORTCUT)
-        .clicked()
+    if app.apple.is_none()
+        && ui
+            .checkbox(&mut milkdrop, "MilkDrop")
+            .on_hover_text(super::keys::MILKDROP_SHORTCUT)
+            .clicked()
     {
         app.actions.push(Action::ToggleWinampMilkdrop);
     }
@@ -837,7 +852,14 @@ fn clutter_bar(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
         "clutter-o",
     );
     let unit = view.unit;
-    menu(egui::Popup::menu(&options), view.skin, unit, |ui| {
+    let popup = egui::Popup::menu(&options);
+    #[cfg(feature = "demo")]
+    let popup = if app.winamp.demo_options_open {
+        popup.open(true)
+    } else {
+        popup
+    };
+    menu(popup, view.skin, unit, |ui| {
         options_menu(app, ui, unit);
     });
     if view
@@ -904,12 +926,32 @@ fn clutter_bar(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
         .lamp_button(
             layout::CLUTTER_V,
             sprites::CLUTTER_V_LIT,
-            app.settings.milkdrop_open,
+            if app.apple.is_some() {
+                app.settings.ambient_pulse
+            } else {
+                app.settings.milkdrop_open
+            },
             "clutter-v",
         )
         .on_hover_text(gettext(app.locale, "Visualisation").as_ref());
     let locale = app.locale;
     menu(egui::Popup::menu(&vis), view.skin, unit, |ui| {
+        if app.apple.is_some() {
+            let mut enabled = app.settings.ambient_pulse;
+            if ui
+                .checkbox(&mut enabled, gettext(locale, "Ambient Pulse"))
+                .changed()
+            {
+                app.actions.push(Action::SetAmbientPulse(enabled));
+            }
+            if ui
+                .selectable_label(!enabled, gettext(locale, "Off"))
+                .clicked()
+            {
+                app.actions.push(Action::SetAmbientPulse(false));
+            }
+            return;
+        }
         for (mode, label) in [
             (VisMode::Bars, gettext(locale, "Spectrum analyser")),
             (VisMode::Scope, gettext(locale, "Oscilloscope")),
@@ -941,6 +983,25 @@ fn clutter_bar(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
 /// leaves the bars flat. Returns whether anything is still moving.
 fn visualiser(app: &mut App, view: &mut View, now: Option<&NowPlaying>) -> bool {
     let area = layout::VISUALIZER;
+    if app.apple.is_some() {
+        if view.interact(area, "visualiser", Sense::click()).clicked() {
+            app.actions
+                .push(Action::SetAmbientPulse(!app.settings.ambient_pulse));
+        }
+        if app.settings.ambient_pulse
+            && let Some(now) = now
+        {
+            let color = app.now_playing_tint().unwrap_or(app.palette.accent);
+            super::motion::ambient_pulse(
+                view.ui,
+                view.rect(area),
+                color,
+                now.position_ms,
+                now.playing,
+            );
+        }
+        return false;
+    }
     if view.interact(area, "visualiser", Sense::click()).clicked() {
         app.actions.push(Action::CycleVisualiser);
     }
@@ -1043,6 +1104,9 @@ fn status(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
     };
     view.sprite(stereo, layout::STEREO);
     view.sprite(mono_lamp, layout::MONO);
+    if app.apple.is_some() {
+        return;
+    }
     if view
         .interact(layout::MONO, "mono", Sense::click())
         .on_hover_text(gettext(app.locale, "Play in mono").as_ref())
@@ -1062,7 +1126,7 @@ fn status(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
 }
 
 /// The time in the skin's digits: elapsed, or remaining with a minus sign,
-/// blinking while paused, blank with nothing on.
+/// blinking while paused unless motion is reduced, blank with nothing on.
 fn time_display(app: &mut App, view: &mut View, now: Option<&NowPlaying>, time: f64) {
     let whole = Area::new(
         layout::MINUS_EX.x,
@@ -1095,7 +1159,7 @@ fn time_display(app: &mut App, view: &mut View, now: Option<&NowPlaying>, time: 
         return;
     };
     let paused = !now.playing && !now.loading;
-    if paused && (time * 2.0).floor() as i64 % 2 == 1 {
+    if paused && !super::motion::reduced(view.ui.ctx()) && (time * 2.0).floor() as i64 % 2 == 1 {
         blank(view);
         return;
     }
@@ -1166,7 +1230,7 @@ pub fn marquee_text(
         return notice.to_string();
     }
     let Some(now) = now else {
-        return "Spotifast".to_string();
+        return "Applifast".to_string();
     };
     if let Some(fraction) = seek_preview
         && now.duration_ms > 0
@@ -1297,6 +1361,9 @@ fn marquee_pixels(app: &mut App, view: &mut View, text: &str, offset: usize) {
 /// the one chosen for this computer, so a device across the room shows
 /// none.
 fn rates(app: &App, view: &mut View, now: Option<&NowPlaying>) {
+    if app.apple.is_some() {
+        return;
+    }
     let Some(now) = now.filter(|now| !stopped(Some(now))) else {
         return;
     };
@@ -1348,7 +1415,18 @@ fn sliders(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
 
     // Balance: the channels' gains in the sound path, with Winamp's snap
     // to the centre.
-    let (response, event) = view.slider(layout::BALANCE, "balance", 14);
+    let (response, event) = if app.apple.is_some() {
+        (
+            view.interact(layout::BALANCE, "balance", Sense::hover())
+                .on_hover_text(gettext(
+                    app.locale,
+                    "Channel balance is unavailable with MusicKit playback.",
+                )),
+            SliderEvent::None,
+        )
+    } else {
+        view.slider(layout::BALANCE, "balance", 14)
+    };
     match event {
         SliderEvent::Dragging(value) => {
             let balance = balance_of(value);
@@ -1361,7 +1439,11 @@ fn sliders(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
         }
         SliderEvent::None => {}
     }
-    let balance = app.winamp.balance_preview.unwrap_or(app.settings.balance);
+    let balance = if app.apple.is_some() {
+        0.0
+    } else {
+        app.winamp.balance_preview.unwrap_or(app.settings.balance)
+    };
     let frame = (balance.abs() * (sprites::SLIDER_FRAMES - 1) as f32).round() as u32;
     view.sprite(sprites::balance_frame(frame), layout::BALANCE);
     let thumb = if response.dragged() || response.is_pointer_button_down_on() {
@@ -1410,13 +1492,77 @@ fn balance_of(value: f32) -> f32 {
 }
 
 /// The EQ and PL toggles, each lit while its window hangs below.
-fn windows_buttons(app: &mut App, view: &mut View) {
+fn windows_buttons(app: &mut App, view: &mut View, now: Option<&NowPlaying>) {
     let (normal, pressed) = if app.settings.eq_open {
         (sprites::EQ_ON, sprites::EQ_ON_PRESSED)
     } else {
         (sprites::EQ_OFF, sprites::EQ_OFF_PRESSED)
     };
-    if view
+    if app.apple.is_some() {
+        // MusicKit has no EQ. Use its inactive slot without resizing the skin.
+        let area = layout::EQ_BUTTON;
+        let [r, g, b] = view.skin.playlist.normal_background;
+        view.fill(
+            area.x,
+            area.y,
+            area.width,
+            area.height,
+            Color32::from_rgb(r, g, b),
+        );
+        if let Some(now) = now.filter(|now| !now.is_episode) {
+            let saved = app.is_saved(&now.uri) == Some(true);
+            let label = gettext(
+                app.locale,
+                if saved {
+                    "Favorites"
+                } else {
+                    "Add to Favorites"
+                },
+            );
+            let response = view.interact(
+                layout::EQ_BUTTON,
+                "favorite",
+                if saved {
+                    Sense::hover()
+                } else {
+                    Sense::click()
+                },
+            );
+            response.widget_info(|| {
+                egui::WidgetInfo::labeled(
+                    if saved {
+                        egui::WidgetType::Image
+                    } else {
+                        egui::WidgetType::Button
+                    },
+                    true,
+                    label.as_ref(),
+                )
+            });
+            let color = if saved || response.hovered() || response.has_focus() {
+                view.skin.playlist.current
+            } else {
+                view.skin.playlist.normal
+            };
+            crate::theme::paint_icon(
+                view.ui,
+                if saved {
+                    crate::theme::Icon::HeartFilled
+                } else {
+                    crate::theme::Icon::Heart
+                },
+                response.rect,
+                (9.0 * view.unit * super::motion::heart_scale(view.ui.ctx(), &now.uri))
+                    .min(response.rect.height()),
+                Color32::from_rgb(color[0], color[1], color[2]),
+            );
+            crate::theme::focus_ring(view.ui, &response);
+            if response.on_hover_text(label.as_ref()).clicked() && !saved {
+                super::motion::pop_heart(view.ui.ctx(), &now.uri);
+                app.actions.push(Action::ToggleSaved(now.uri.clone()));
+            }
+        }
+    } else if view
         .button(layout::EQ_BUTTON, normal, pressed, "equalizer")
         .clicked()
     {
@@ -1585,7 +1731,7 @@ mod tests {
         );
         assert_eq!(
             marquee_text(Locale::English, None, None, None, None, None),
-            "Spotifast"
+            "Applifast"
         );
         let untitled = now("Episode 12", "", 0);
         assert_eq!(

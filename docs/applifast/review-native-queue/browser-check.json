@@ -1,0 +1,527 @@
+{
+  "staticSelections": 96,
+  "replays": 32,
+  "externalRequestsBlocked": true,
+  "errors": [],
+  "results": [
+    {
+      "name": "page-moving-dark-1100x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "0612cd7770a0e428891ccc79d508cb4630da980c632e01bcdc7be0f27ae388b8",
+        "a045c817fe4fa0468ff6bad21306468c7997f74b95068d19ed03f08e6a584f57",
+        "56618ae15289e3dc2b73b47913aaaa5294108eb2f9ec6c3d43c6af5f5b878262"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "page-moving-dark-1100x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "a56463f221d391e021443f9b833418bd5e2cf11d9aa3f2cef488e0f00241b7ad",
+        "a56463f221d391e021443f9b833418bd5e2cf11d9aa3f2cef488e0f00241b7ad",
+        "a56463f221d391e021443f9b833418bd5e2cf11d9aa3f2cef488e0f00241b7ad"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "page-moving-dark-760x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "85a1b747eb195971d570d2a7ee6fe542de19936300bb7393288af449ed2c8a46",
+        "a68118c839b5755f291a9a906777dc648f79ab667beee17b4f9084056477129e",
+        "e52656bd0efc7ff9f3fae60f98e4b463f1597035365c4bccf2d493db482e578c"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "page-moving-dark-760x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "c06f4b5069efd94a636fd1deb1d125f7e5fabcc9479d7f5d2a9beb4b62bd983f",
+        "c06f4b5069efd94a636fd1deb1d125f7e5fabcc9479d7f5d2a9beb4b62bd983f",
+        "c06f4b5069efd94a636fd1deb1d125f7e5fabcc9479d7f5d2a9beb4b62bd983f"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "page-moving-light-1100x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "675e0399d971de8352adbb20eb6cbe1e0311d014a8007b7430189c49ab04c7f0",
+        "d9503948f143cfee5b1ca2f2bdaba43a1d7993ac529abf7ea23a8ce92dd3e967",
+        "5a333bd7e223b1acac850fc41c2917e859dd8fb7f1525e47f67697b31f583316"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "page-moving-light-1100x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "f31386c92457301f3a9d59c804e00e8f7ce3e23b4c48ec5b4f9f112cbc918f7e",
+        "f31386c92457301f3a9d59c804e00e8f7ce3e23b4c48ec5b4f9f112cbc918f7e",
+        "f31386c92457301f3a9d59c804e00e8f7ce3e23b4c48ec5b4f9f112cbc918f7e"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "page-moving-light-760x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "d3b53569a346fd7caf7dd191f53444d2e996a372c784ce7b56e11aabd8cbae07",
+        "1ef6cabffce9a5b9a32fa59f0a8ca0d2fa9759a7f41a40f748a7c03670524fb6",
+        "f140234c0091e4d005968465e211dcdea8c96e2eb18e04492c7f2b401e667355"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "page-moving-light-760x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "85b8b4aba252b6ceb0dcf1bdccf23ce93af82d1f15f3343ed8fb688861eb4c24",
+        "85b8b4aba252b6ceb0dcf1bdccf23ce93af82d1f15f3343ed8fb688861eb4c24",
+        "85b8b4aba252b6ceb0dcf1bdccf23ce93af82d1f15f3343ed8fb688861eb4c24"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "page-reduced-dark-1100x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "0612cd7770a0e428891ccc79d508cb4630da980c632e01bcdc7be0f27ae388b8",
+        "56618ae15289e3dc2b73b47913aaaa5294108eb2f9ec6c3d43c6af5f5b878262",
+        "56618ae15289e3dc2b73b47913aaaa5294108eb2f9ec6c3d43c6af5f5b878262"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "page-reduced-dark-1100x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "a56463f221d391e021443f9b833418bd5e2cf11d9aa3f2cef488e0f00241b7ad",
+        "a56463f221d391e021443f9b833418bd5e2cf11d9aa3f2cef488e0f00241b7ad",
+        "a56463f221d391e021443f9b833418bd5e2cf11d9aa3f2cef488e0f00241b7ad"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "page-reduced-dark-760x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "85a1b747eb195971d570d2a7ee6fe542de19936300bb7393288af449ed2c8a46",
+        "e52656bd0efc7ff9f3fae60f98e4b463f1597035365c4bccf2d493db482e578c",
+        "e52656bd0efc7ff9f3fae60f98e4b463f1597035365c4bccf2d493db482e578c"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "page-reduced-dark-760x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "c06f4b5069efd94a636fd1deb1d125f7e5fabcc9479d7f5d2a9beb4b62bd983f",
+        "c06f4b5069efd94a636fd1deb1d125f7e5fabcc9479d7f5d2a9beb4b62bd983f",
+        "c06f4b5069efd94a636fd1deb1d125f7e5fabcc9479d7f5d2a9beb4b62bd983f"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "page-reduced-light-1100x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "675e0399d971de8352adbb20eb6cbe1e0311d014a8007b7430189c49ab04c7f0",
+        "5a333bd7e223b1acac850fc41c2917e859dd8fb7f1525e47f67697b31f583316",
+        "5a333bd7e223b1acac850fc41c2917e859dd8fb7f1525e47f67697b31f583316"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "page-reduced-light-1100x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "f31386c92457301f3a9d59c804e00e8f7ce3e23b4c48ec5b4f9f112cbc918f7e",
+        "f31386c92457301f3a9d59c804e00e8f7ce3e23b4c48ec5b4f9f112cbc918f7e",
+        "f31386c92457301f3a9d59c804e00e8f7ce3e23b4c48ec5b4f9f112cbc918f7e"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "page-reduced-light-760x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "d3b53569a346fd7caf7dd191f53444d2e996a372c784ce7b56e11aabd8cbae07",
+        "f140234c0091e4d005968465e211dcdea8c96e2eb18e04492c7f2b401e667355",
+        "f140234c0091e4d005968465e211dcdea8c96e2eb18e04492c7f2b401e667355"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "page-reduced-light-760x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "85b8b4aba252b6ceb0dcf1bdccf23ce93af82d1f15f3343ed8fb688861eb4c24",
+        "85b8b4aba252b6ceb0dcf1bdccf23ce93af82d1f15f3343ed8fb688861eb4c24",
+        "85b8b4aba252b6ceb0dcf1bdccf23ce93af82d1f15f3343ed8fb688861eb4c24"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "panel-moving-dark-1100x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "36829d100fa4d767dd5dc9b72fd84bb462592ba258d97ad2f261340adcc1019e",
+        "e716dbb9df9c3562da25cd9c09a954a88e4672b5082d0ba1426664c1a64839cc",
+        "18f9ad826305aef4afeec98f37bca22916d0976cd445c2e40ac6e8ebecf749a8"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "panel-moving-dark-1100x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "3bdb5309c9819e5d85f067c0d3d80c4fcb6e4016533fcede7ca9851055f8a660",
+        "3bdb5309c9819e5d85f067c0d3d80c4fcb6e4016533fcede7ca9851055f8a660",
+        "3bdb5309c9819e5d85f067c0d3d80c4fcb6e4016533fcede7ca9851055f8a660"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "panel-moving-dark-760x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "47495948f6e561155d7484508126b99eb4c60f67f74d0785615355a79fc0d19a",
+        "8633fa785bb20eb2af6f551e9b801bfd5712f1bf688c618937a0ec188df9d426",
+        "9c9d151137505e804d95a6541d553dc3888a057ced8b3a3a7b78b472eb681a34"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "panel-moving-dark-760x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "c4019bcddc69b05f84a64d811e138ad8a19a89fabffa2a8379a92cfae0e6d6bc",
+        "c4019bcddc69b05f84a64d811e138ad8a19a89fabffa2a8379a92cfae0e6d6bc",
+        "c4019bcddc69b05f84a64d811e138ad8a19a89fabffa2a8379a92cfae0e6d6bc"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "panel-moving-light-1100x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "c0b65035141a35bea68d4dbcfcdfb5e3dbe21254671997f39d40852f2f50fc03",
+        "8861573d79b315e6a036ab9bd41fd0619f976534380e1e73b56e4f68c541f7ff",
+        "fee767adcf8914e3197b7eb68fef456c45f262706beee28decdce4b8b81293b3"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "panel-moving-light-1100x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "7e2ae40127f0c0b4fe15e883aa84eb5456bbc616806448cea4f9b37a15a9138d",
+        "7e2ae40127f0c0b4fe15e883aa84eb5456bbc616806448cea4f9b37a15a9138d",
+        "7e2ae40127f0c0b4fe15e883aa84eb5456bbc616806448cea4f9b37a15a9138d"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "panel-moving-light-760x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "159e6604b9f60b1e8167157ce6589359ea2a2c9c2dd1916c8e8050925e2c6f40",
+        "712b937b5a2e310c47d814e6e05642c3779010bfbcf13f03b9d8fcabba3b2673",
+        "5b6f45e6e2a1b5c760ef2698b7fb223f123a52c925cd8aebd8cb3ead9d4af097"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 3
+    },
+    {
+      "name": "panel-moving-light-760x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "cfb3264dcb28aa7a76b3b76cd439a4c5cbb01a9949b7248916a9b34fee54d588",
+        "cfb3264dcb28aa7a76b3b76cd439a4c5cbb01a9949b7248916a9b34fee54d588",
+        "cfb3264dcb28aa7a76b3b76cd439a4c5cbb01a9949b7248916a9b34fee54d588"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "panel-reduced-dark-1100x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "36829d100fa4d767dd5dc9b72fd84bb462592ba258d97ad2f261340adcc1019e",
+        "18f9ad826305aef4afeec98f37bca22916d0976cd445c2e40ac6e8ebecf749a8",
+        "18f9ad826305aef4afeec98f37bca22916d0976cd445c2e40ac6e8ebecf749a8"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "panel-reduced-dark-1100x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "3bdb5309c9819e5d85f067c0d3d80c4fcb6e4016533fcede7ca9851055f8a660",
+        "3bdb5309c9819e5d85f067c0d3d80c4fcb6e4016533fcede7ca9851055f8a660",
+        "3bdb5309c9819e5d85f067c0d3d80c4fcb6e4016533fcede7ca9851055f8a660"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "panel-reduced-dark-760x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "47495948f6e561155d7484508126b99eb4c60f67f74d0785615355a79fc0d19a",
+        "9c9d151137505e804d95a6541d553dc3888a057ced8b3a3a7b78b472eb681a34",
+        "9c9d151137505e804d95a6541d553dc3888a057ced8b3a3a7b78b472eb681a34"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "panel-reduced-dark-760x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "c4019bcddc69b05f84a64d811e138ad8a19a89fabffa2a8379a92cfae0e6d6bc",
+        "c4019bcddc69b05f84a64d811e138ad8a19a89fabffa2a8379a92cfae0e6d6bc",
+        "c4019bcddc69b05f84a64d811e138ad8a19a89fabffa2a8379a92cfae0e6d6bc"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "panel-reduced-light-1100x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "c0b65035141a35bea68d4dbcfcdfb5e3dbe21254671997f39d40852f2f50fc03",
+        "fee767adcf8914e3197b7eb68fef456c45f262706beee28decdce4b8b81293b3",
+        "fee767adcf8914e3197b7eb68fef456c45f262706beee28decdce4b8b81293b3"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "panel-reduced-light-1100x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "7e2ae40127f0c0b4fe15e883aa84eb5456bbc616806448cea4f9b37a15a9138d",
+        "7e2ae40127f0c0b4fe15e883aa84eb5456bbc616806448cea4f9b37a15a9138d",
+        "7e2ae40127f0c0b4fe15e883aa84eb5456bbc616806448cea4f9b37a15a9138d"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    },
+    {
+      "name": "panel-reduced-light-760x760",
+      "component": "new",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "159e6604b9f60b1e8167157ce6589359ea2a2c9c2dd1916c8e8050925e2c6f40",
+        "5b6f45e6e2a1b5c760ef2698b7fb223f123a52c925cd8aebd8cb3ead9d4af097",
+        "5b6f45e6e2a1b5c760ef2698b7fb223f123a52c925cd8aebd8cb3ead9d4af097"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 2
+    },
+    {
+      "name": "panel-reduced-light-760x760",
+      "component": "existing",
+      "selectedFrames": [
+        0,
+        2,
+        15
+      ],
+      "decodedPixelSHA256": [
+        "cfb3264dcb28aa7a76b3b76cd439a4c5cbb01a9949b7248916a9b34fee54d588",
+        "cfb3264dcb28aa7a76b3b76cd439a4c5cbb01a9949b7248916a9b34fee54d588",
+        "cfb3264dcb28aa7a76b3b76cd439a4c5cbb01a9949b7248916a9b34fee54d588"
+      ],
+      "pauseResumeEnd": true,
+      "renderedScreenshotUniqueStates": 1
+    }
+  ],
+  "reviewIndex": {
+    "indexLoadsSelectedReview": true,
+    "previousNext": true,
+    "pr": 96,
+    "externalRequestsBlocked": true,
+    "errors": []
+  }
+}

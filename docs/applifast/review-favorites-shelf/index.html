@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applifast Favorites sidebar review</title>
+<style>body{font:16px system-ui;margin:24px;background:#202022;color:#eee}p{max-width:1000px;line-height:1.5}select,button{font:inherit;padding:8px;margin:4px}img{display:block;max-width:100%;height:auto;border:1px solid #666}a{color:#ff7a80}</style>
+<h1>Favorites in the left sidebar</h1>
+<p><a href="https://github.com/jackkayser2005/applifast/pull/20">PR #20</a>, source <code>36de358</code>, stacked on PR #19.</p>
+<p>Visible change: Apple navigation adds Favorites, a scrolling shelf of loaded favorite songs, and Show all favorites. The dedicated page reuses the existing table without changing the Songs checkbox. Appearance adds a zero-to-ten shelf count, default five; zero hides the shelf while retaining navigation.</p>
+<p>Baseline: Windows preview <code>2c6c576</code> (PR #19). Candidate: <code>feat/apple-favorites-shelf</code>. Captures match the same fourteen-song demo fixture, playing song, theme, zoom, window size and Reduce motion setting. The Favorites baseline is the existing filtered Songs view; the candidate is the deliberately separate Favorites page with the same five rows. Songs and Favorites use the same neutral pointer position. Settings uses the same scrollbar drag in each build; the added row changes its scroll extent.</p>
+<label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+<label>Window <select id="size"><option value="1100x760">Normal (1100 × 760)</option><option value="760x760">Narrow (760 × 760)</option></select></label>
+<label>Page <select id="page"><option value="songs">Songs</option><option value="favorites">Favorites</option><option value="settings">Appearance setting</option></select></label>
+<button id="before">Before</button><button id="after">After</button><p id="label"></p>
+<img id="capture" alt="Matching native Windows demo comparison">
+<h2>Candidate states</h2>
+<label>State <select id="state"><option value="empty">No loaded favorites, with Load more</option><option value="hidden">Shelf count zero, navigation retained</option></select></label>
+<img id="state-shot" alt="Empty favorites or hidden shelf state">
+<p>All 32 native Windows frames were inspected. Selector paths and image dimensions are checked separately. These fixtures establish layout and interaction regressions, not real-account favorite completeness, playback, Home API results or resource acceptance. Favorite writes remain pending. No additional network endpoint, credential store or cache is added.</p>
+<script>
+const byId=id=>document.getElementById(id);let phase='after';
+function draw(){const suffix=byId('theme').value+'-'+byId('size').value;byId('capture').src=phase+'-'+byId('page').value+'-'+suffix+'.png';byId('label').textContent=phase+' / '+byId('page').value+' / '+suffix;byId('state-shot').src=byId('state').value+'-'+suffix+'.png';}
+for(const id of ['theme','size','page','state'])byId(id).onchange=draw;
+byId('before').onclick=()=>{phase='before';draw()};byId('after').onclick=()=>{phase='after';draw()};draw();
+</script></html>

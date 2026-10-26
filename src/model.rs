@@ -112,6 +112,7 @@ pub enum Page {
     TopSongs,
     Search,
     LikedSongs,
+    Favorites,
     Albums,
     Artists,
     Podcasts,
@@ -134,6 +135,7 @@ impl Page {
             Page::TopSongs => "top-songs".into(),
             Page::Search => "search".into(),
             Page::LikedSongs => "liked".into(),
+            Page::Favorites => "favorites".into(),
             Page::Albums => "albums".into(),
             Page::Artists => "artists".into(),
             Page::Podcasts => "podcasts".into(),
@@ -154,6 +156,7 @@ impl Page {
             "top-songs" => Page::TopSongs,
             "search" => Page::Search,
             "liked" => Page::LikedSongs,
+            "favorites" => Page::Favorites,
             "albums" => Page::Albums,
             "artists" => Page::Artists,
             "podcasts" => Page::Podcasts,
@@ -176,6 +179,9 @@ impl Page {
 
     /// Opens whatever a Spotify URI points at.
     pub fn from_uri(uri: &str) -> Option<Self> {
+        if uri == "apple:collection:favorites" {
+            return Some(Page::Favorites);
+        }
         let mut parts = uri.split(':');
         let _ = parts.next()?;
         let kind = parts.next()?;
@@ -603,7 +609,7 @@ pub struct HomeData {
 
 pub const DISCOVER_TERMS: &[&str] = &["Discover Weekly", "Release Radar", "Daily Mix", "daylist"];
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum SearchFilter {
     #[default]
     All,
@@ -616,6 +622,16 @@ pub enum SearchFilter {
 }
 
 impl SearchFilter {
+    pub fn apple_kind(self) -> Option<&'static str> {
+        match self {
+            Self::Songs => Some("songs"),
+            Self::Artists => Some("artists"),
+            Self::Albums => Some("albums"),
+            Self::Playlists => Some("playlists"),
+            _ => None,
+        }
+    }
+
     pub const ALL: [SearchFilter; 7] = [
         Self::All,
         Self::Songs,
@@ -919,6 +935,17 @@ pub struct Toast {
 /// Actions emitted while drawing and applied afterward to avoid borrow conflicts.
 #[derive(Clone, Debug)]
 pub enum Action {
+    AppleImportToken(std::path::PathBuf),
+    AppleTokenReady {
+        generation: u64,
+        session: u64,
+        request: u64,
+        path: std::path::PathBuf,
+    },
+    AppleSend(serde_json::Value),
+    ApplePlaySong(usize),
+    AppleShowFavorites(bool),
+    SetFavoriteShelfCount(u8),
     Open(Page),
     /// Opens the radio of a song shown in a list, after caching the row's
     /// song so the page has its name and cover (#644).
@@ -973,6 +1000,10 @@ pub enum Action {
         uri: String,
         label: String,
     },
+    PlayNext {
+        uri: String,
+        label: String,
+    },
     ToggleSaved(String),
     /// Queue several songs in order and show one notification.
     QueueMany {
@@ -984,6 +1015,11 @@ pub enum Action {
     MoveInQueue {
         from: usize,
         to: usize,
+    },
+    /// Remove exact upcoming Apple rows, guarded by host, account and playback intent.
+    RemoveFromQueue {
+        indices: Vec<usize>,
+        generation: (u64, u64, u64),
     },
     /// Insert dragged songs into "Playing next" at a position, instead of
     /// always appending like `QueueMany`. Falls back to appending when the
@@ -1001,6 +1037,12 @@ pub enum Action {
         playlist_id: String,
         playlist_name: String,
         items: Vec<PlayableItem>,
+    },
+    /// Load every Apple album track before choosing a new or existing playlist.
+    AddAlbumToPlaylist {
+        uri: String,
+        label: String,
+        playlist: Option<(String, String)>,
     },
     /// Copy dragged songs into an open playlist at an absolute position.
     InsertInPlaylist {
@@ -1150,6 +1192,8 @@ pub enum Action {
     CycleVisualiser,
     /// A click on the player bar's empty space: spectrum, waveform, off.
     CyclePlayerBarVis,
+    /// Decorative Apple playback animation shared by both players.
+    SetAmbientPulse(bool),
     /// Set the visualizer mode directly.
     SetVisualiser(crate::settings::VisMode),
     /// Open or close the playlist window under the mini player.

@@ -217,26 +217,27 @@ impl Canvas {
         );
     }
 
-    /// The app's mark in pixels: the disc with a darker rim and a lit top,
-    /// and the play triangle.
-    fn logo(&mut self, cx: i64, cy: i64, radius: i64, disc: Rgb, glyph: Rgb) {
-        let shade = |c: Rgb, f: f32| c.map(|v| (f32::from(v) * f).round() as u8);
+    /// The app's mark in pixels, as `src/util.rs` draws the icon: a rounded
+    /// square lit at the top left, the play triangle, and speed lines
+    /// trailing it, the middle one longest.
+    fn logo(&mut self, cx: i64, cy: i64, radius: i64, tile: Rgb, glyph: Rgb) {
         let lift =
             |c: Rgb, f: f32| c.map(|v| (f32::from(v) + (255.0 - f32::from(v)) * f).round() as u8);
-        let outer = radius * radius + radius / 2;
-        let inner = (radius - 1) * (radius - 1) + (radius - 1) / 2;
+        // Corners rounded by half the radius.
+        let corner = radius / 2;
         for y in -radius..=radius {
             for x in -radius..=radius {
-                let d = x * x + y * y;
-                if d > outer {
+                let qx = (x.abs() - (radius - corner)).max(0);
+                let qy = (y.abs() - (radius - corner)).max(0);
+                if qx * qx + qy * qy > corner * corner + corner {
                     continue;
                 }
-                let colour = if d > inner {
-                    shade(disc, 0.7)
-                } else if y < 0 {
-                    lift(disc, 0.25)
+                let colour = if x + y < -radius {
+                    lift(tile, 0.25)
+                } else if x + y < 0 {
+                    lift(tile, 0.12)
                 } else {
-                    disc
+                    tile
                 };
                 self.set(cx + x, cy + y, colour);
             }
@@ -245,7 +246,12 @@ impl Canvas {
         for dy in -half..=half {
             let span = half - dy.abs();
             for dx in 0..=span {
-                self.set(cx - half / 2 + dx, cy + dy, glyph);
+                self.set(cx + dx, cy + dy, glyph);
+            }
+        }
+        for (dy, length) in [(-half, half - 1), (0, half), (half, half - 1)] {
+            for dx in 0..length.max(1) {
+                self.set(cx - 2 - dx, cy + dy, glyph);
             }
         }
     }
@@ -343,7 +349,7 @@ fn title_bar(c: &mut Canvas, x: i64, y: i64, active: bool, shade: bool) {
     c.frame((x, y, 275, 14), OUTLINE);
     let color = if active { TEXT } else { DIM };
     if shade {
-        c.text(x + 20, y + 4, "SPOTIFAST", color);
+        c.text(x + 20, y + 4, "APPLIFAST", color);
         // Shade mode's tiny transport lives in the bar itself.
         let glyphs: [(i64, i64, &str); 6] = [
             (169, 7, "#..#/#.##/####/#.##/#..#"),
@@ -360,7 +366,7 @@ fn title_bar(c: &mut Canvas, x: i64, y: i64, active: bool, shade: bool) {
         display(c, (x + 124, y + 2, 36, 10));
         display(c, (x + 226, y + 4, 17, 7));
     } else {
-        c.text_centred((x, y + 1, 275, 12), "SPOTIFAST", color);
+        c.text_centred((x, y + 1, 275, 12), "APPLIFAST", color);
         let width = 5 * 10 - 1;
         let start = x + (275 - width) / 2;
         title_lines(c, x + 18, start - 8, y + 5);
@@ -876,7 +882,7 @@ fn preview(skin: &Skin) -> image::RgbaImage {
             }
         }
     };
-    text("SPOTIFAST - A WINAMP SKIN *** ", layout::MARQUEE);
+    text("APPLIFAST - A WINAMP SKIN *** ", layout::MARQUEE);
     text("320", layout::KBPS);
     text("44", layout::KHZ);
     let volume = layout::VOLUME;

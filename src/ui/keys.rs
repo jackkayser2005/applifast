@@ -86,13 +86,36 @@ pub fn handle(app: &mut App, ctx: &egui::Context) {
         key(
             Modifiers::COMMAND | Modifiers::SHIFT,
             Key::K,
-            Action::ToggleWinampMilkdrop,
+            if app.apple.is_some() {
+                Action::SetLyricsFullscreen(true)
+            } else {
+                Action::ToggleWinampMilkdrop
+            },
         );
         key(
             Modifiers::COMMAND,
             Key::Slash,
             Action::ShowDialog(Dialog::Shortcuts),
         );
+        if app.apple.is_some() && !editing_text && app.dialog.is_none() {
+            for (number, page) in [
+                (Key::Num1, Page::Home),
+                (Key::Num2, Page::LikedSongs),
+                (Key::Num3, Page::Favorites),
+                (Key::Num4, Page::Albums),
+                (Key::Num5, Page::Artists),
+            ] {
+                key(Modifiers::ALT, number, Action::Open(page));
+            }
+            if !matches!(app.page(), Page::Settings | Page::Queue) {
+                key(Modifiers::NONE, Key::F5, Action::Reload(app.page().clone()));
+                key(
+                    Modifiers::COMMAND,
+                    Key::R,
+                    Action::Reload(app.page().clone()),
+                );
+            }
+        }
         // In a text field these keys move the caret: Ctrl or Alt by a word,
         // Cmd to the end of the line, Up and Down to the end of the text.
         // Taking them here skipped songs while a search was being typed.
@@ -124,15 +147,32 @@ pub fn handle(app: &mut App, ctx: &egui::Context) {
             key(Modifiers::NONE, Key::S, Action::ToggleShuffle);
             key(Modifiers::NONE, Key::R, Action::CycleRepeat);
             key(Modifiers::NONE, Key::Q, Action::ToggleQueuePanel);
-            key(Modifiers::NONE, Key::L, Action::ToggleLyricsPanel);
+            key(
+                Modifiers::NONE,
+                Key::L,
+                if app.apple.is_some() {
+                    Action::SetLyricsFullscreen(app.lyrics_fullscreen.is_none())
+                } else {
+                    Action::ToggleLyricsPanel
+                },
+            );
             key(Modifiers::NONE, Key::Slash, Action::FocusSearch);
         }
     });
     if !typing
+        && (app.apple.is_none() || app.dialog.is_none())
         && ctx.input_mut(|input| input.consume_key(Modifiers::NONE, Key::B))
         && let Some(now) = app.now_playing().filter(|now| !now.is_episode)
     {
-        actions.push(Action::ToggleSaved(now.uri));
+        if app.apple.is_none() {
+            actions.push(Action::ToggleSaved(now.uri));
+        } else if app.is_saved(&now.uri) != Some(true) {
+            super::motion::pop_heart(ctx, &now.uri);
+            actions.push(Action::SetSavedMany {
+                uris: vec![now.uri],
+                saved: true,
+            });
+        }
     }
     // Resolve the "open current artist/album" placeholders.
     for action in actions {
@@ -184,9 +224,9 @@ pub fn handle(app: &mut App, ctx: &egui::Context) {
 /// The rows of the keyboard shortcuts dialog: the keys, then what they do.
 /// Key names stay as the keyboard prints them; words around them, and
 /// every description, are translated.
-pub fn shortcuts(locale: Locale) -> Vec<(Cow<'static, str>, Cow<'static, str>)> {
+pub fn shortcuts(locale: Locale, apple: bool) -> Vec<(Cow<'static, str>, Cow<'static, str>)> {
     let keys = |text: &'static str| Cow::Borrowed(text);
-    vec![
+    let mut rows = vec![
         (
             pgettext(locale, "key", "Space"),
             gettext(locale, "Play or pause"),
@@ -206,13 +246,31 @@ pub fn shortcuts(locale: Locale) -> Vec<(Cow<'static, str>, Cow<'static, str>)> 
         (keys("M"), gettext(locale, "Mute or unmute")),
         (
             keys("B"),
-            gettext(locale, "Like or unlike the playing song"),
+            if apple {
+                gettext(locale, "Add to Favorites")
+            } else {
+                gettext(locale, "Like or unlike the playing song")
+            },
         ),
         (keys("S"), gettext(locale, "Toggle shuffle")),
         (keys("R"), gettext(locale, "Cycle repeat")),
         (keys("Q"), gettext(locale, "Show the queue")),
-        (keys("L"), gettext(locale, "Show the lyrics")),
-        (keys("Esc"), gettext(locale, "Lyrics: leave full screen")),
+        (
+            keys("L"),
+            if apple {
+                gettext(locale, "Show Now Playing")
+            } else {
+                gettext(locale, "Show the lyrics")
+            },
+        ),
+        (
+            keys("Esc"),
+            if apple {
+                gettext(locale, "Now Playing: leave full screen")
+            } else {
+                gettext(locale, "Lyrics: leave full screen")
+            },
+        ),
         (
             keys("Shift+↑  /  Shift+↓"),
             gettext(locale, "Song list: extend or shrink the selection"),
@@ -255,7 +313,11 @@ pub fn shortcuts(locale: Locale) -> Vec<(Cow<'static, str>, Cow<'static, str>)> 
         ),
         (
             keys(platform_shortcut("Ctrl+L", "Cmd+L")),
-            gettext(locale, "Liked Songs"),
+            if apple {
+                gettext(locale, "Songs")
+            } else {
+                gettext(locale, "Liked Songs")
+            },
         ),
         (
             keys(platform_shortcut("Ctrl+Shift+A", "Cmd+Shift+A")),
@@ -265,25 +327,13 @@ pub fn shortcuts(locale: Locale) -> Vec<(Cow<'static, str>, Cow<'static, str>)> 
             keys(platform_shortcut("Ctrl+Shift+B", "Cmd+Shift+B")),
             gettext(locale, "Go to the playing album"),
         ),
-        (keys(WINAMP_SHORTCUT), gettext(locale, "Winamp mini player")),
         (
-            keys(MILKDROP_SHORTCUT),
-            gettext(locale, "MilkDrop, under the mini player"),
-        ),
-        (
-            // Translators: Keep the key name F. Translate "or" and "double-click".
-            gettext(locale, "F  or  double-click"),
-            gettext(locale, "MilkDrop: fill the screen"),
-        ),
-        (keys("→  /  N"), gettext(locale, "MilkDrop: next preset")),
-        (
-            keys("←  /  P"),
-            gettext(locale, "MilkDrop: previous preset"),
-        ),
-        (keys("L"), gettext(locale, "MilkDrop: keep this preset")),
-        (
-            keys("Esc"),
-            gettext(locale, "MilkDrop: leave full screen, or close"),
+            keys(WINAMP_SHORTCUT),
+            if apple {
+                gettext(locale, "Mini player")
+            } else {
+                gettext(locale, "Winamp mini player")
+            },
         ),
         (
             keys(platform_shortcut("Ctrl+,", "Cmd+,")),
@@ -304,7 +354,54 @@ pub fn shortcuts(locale: Locale) -> Vec<(Cow<'static, str>, Cow<'static, str>)> 
             gettext(locale, "Close the window"),
         ),
         (keys(QUIT_SHORTCUT), gettext(locale, "Quit")),
-    ]
+    ];
+    rows.push((
+        keys(platform_shortcut("Ctrl+Shift+Q", "Cmd+U")),
+        gettext(locale, "Show the queue"),
+    ));
+    if apple {
+        rows.retain(|(key, _)| {
+            !matches!(
+                key.as_ref(),
+                "Delete" | "Ctrl+X" | "Cmd+X" | "Ctrl+V" | "Cmd+V"
+            )
+        });
+        rows.extend([
+            (keys("Alt+1"), gettext(locale, "Home")),
+            (keys("Alt+2"), gettext(locale, "Songs")),
+            (keys("Alt+3"), gettext(locale, "Favorites")),
+            (keys("Alt+4"), gettext(locale, "Albums")),
+            (keys("Alt+5"), gettext(locale, "Artists")),
+            (
+                keys(platform_shortcut("F5  /  Ctrl+R", "F5  /  Cmd+R")),
+                gettext(locale, "Refresh"),
+            ),
+        ]);
+        rows.push((keys(MILKDROP_SHORTCUT), gettext(locale, "Show Now Playing")));
+    } else {
+        rows.extend([
+            (
+                keys(MILKDROP_SHORTCUT),
+                gettext(locale, "MilkDrop, under the mini player"),
+            ),
+            (
+                // Translators: Keep the key name F. Translate "or" and "double-click".
+                gettext(locale, "F  or  double-click"),
+                gettext(locale, "MilkDrop: fill the screen"),
+            ),
+            (keys("→  /  N"), gettext(locale, "MilkDrop: next preset")),
+            (
+                keys("←  /  P"),
+                gettext(locale, "MilkDrop: previous preset"),
+            ),
+            (keys("L"), gettext(locale, "MilkDrop: keep this preset")),
+            (
+                keys("Esc"),
+                gettext(locale, "MilkDrop: leave full screen, or close"),
+            ),
+        ]);
+    }
+    rows
 }
 
 #[cfg(test)]
@@ -500,15 +597,141 @@ mod tests {
         } else {
             "Cmd+"
         };
-        for (keys, _) in shortcuts(Locale::English) {
+        for (keys, _) in shortcuts(Locale::English, false) {
             assert!(!keys.contains(other), "wrong modifier in {keys}");
         }
     }
 
     #[test]
+    fn apple_shortcuts_describe_now_playing_without_milkdrop() {
+        let rows = shortcuts(Locale::English, true);
+        assert!(
+            !rows
+                .iter()
+                .any(|(_, description)| description.contains("MilkDrop"))
+        );
+        assert!(
+            rows.iter()
+                .any(|(key, description)| key == "L" && description == "Show Now Playing")
+        );
+        assert!(rows.iter().any(
+            |(key, description)| key == MILKDROP_SHORTCUT && description == "Show Now Playing"
+        ));
+        assert!(
+            rows.iter()
+                .any(|(key, description)| key == "Alt+3" && description == "Favorites")
+        );
+        assert!(
+            rows.iter()
+                .any(|(key, description)| key == WINAMP_SHORTCUT && description == "Mini player")
+        );
+        assert!(!rows.iter().any(|(key, _)| matches!(
+            key.as_ref(),
+            "Delete" | "Ctrl+X" | "Cmd+X" | "Ctrl+V" | "Cmd+V"
+        )));
+        assert!(
+            rows.iter()
+                .any(|(key, description)| { key == "B" && description == "Add to Favorites" })
+        );
+    }
+
+    #[test]
+    fn apple_navigation_and_refresh_wait_for_text_and_dialogs() {
+        let root =
+            std::env::temp_dir().join(format!("applifast-navigation-keys-{}", std::process::id()));
+        let mut app = App::new(
+            &crate::backend::Waker::default(),
+            AppDirs {
+                config: root.join("config"),
+                state: root.join("state"),
+                cache: root.join("cache"),
+            },
+            Settings::default(),
+            AppOptions {
+                media_controls: false,
+                restore_sign_in: false,
+                tray: false,
+            },
+        );
+        crate::demo::populate(&mut app);
+        let ctx = egui::Context::default();
+        let field = egui::Id::new("navigation-test-field");
+        let mut text = String::new();
+        let press = |app: &mut App, text: &mut String, key, modifiers| {
+            app.actions.clear();
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    events: vec![egui::Event::Key {
+                        key,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers,
+                    }],
+                    ..Default::default()
+                },
+                |ui| {
+                    handle(app, ui.ctx());
+                    ui.add(egui::TextEdit::singleline(text).id(field));
+                },
+            );
+            output.textures_delta.clear();
+            format!("{:?}", app.actions)
+        };
+        assert_eq!(press(&mut app, &mut text, Key::Num3, Modifiers::ALT), "[]");
+        app.apple = Some(crate::apple::State::default());
+        let command = if cfg!(target_os = "macos") {
+            Modifiers::MAC_CMD | Modifiers::COMMAND
+        } else {
+            Modifiers::CTRL | Modifiers::COMMAND
+        };
+        for (key, page) in [
+            (Key::Num1, Page::Home),
+            (Key::Num2, Page::LikedSongs),
+            (Key::Num3, Page::Favorites),
+            (Key::Num4, Page::Albums),
+            (Key::Num5, Page::Artists),
+        ] {
+            assert_eq!(
+                press(&mut app, &mut text, key, Modifiers::ALT),
+                format!("{:?}", [Action::Open(page)])
+            );
+        }
+        for (key, modifiers) in [(Key::F5, Modifiers::NONE), (Key::R, command)] {
+            let page = app.page().clone();
+            assert_eq!(
+                press(&mut app, &mut text, key, modifiers),
+                format!("{:?}", [Action::Reload(page)])
+            );
+        }
+        app.dialog = Some(Dialog::Shortcuts);
+        for (key, modifiers) in [
+            (Key::Num3, Modifiers::ALT),
+            (Key::F5, Modifiers::NONE),
+            (Key::R, command),
+        ] {
+            assert_eq!(press(&mut app, &mut text, key, modifiers), "[]");
+        }
+        app.dialog = None;
+        ctx.memory_mut(|memory| memory.request_focus(field));
+        press(&mut app, &mut text, Key::F5, Modifiers::NONE);
+        assert!(ctx.text_edit_focused());
+        for (key, modifiers) in [
+            (Key::Num3, Modifiers::ALT),
+            (Key::F5, Modifiers::NONE),
+            (Key::R, command),
+        ] {
+            assert_eq!(press(&mut app, &mut text, key, modifiers), "[]");
+            assert!(ctx.text_edit_focused());
+        }
+        app.backend.shutdown();
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn shortcut_dialog_names_platform_reserved_alternatives() {
         let label = |description: &str| {
-            shortcuts(Locale::English)
+            shortcuts(Locale::English, false)
                 .into_iter()
                 .find(|(_, candidate)| candidate == description)
                 .map(|(keys, _)| keys)
@@ -564,6 +787,108 @@ mod tests {
             app.actions.as_slice(),
             [Action::ToggleSaved(uri)] if uri == "spotify:track:trk0"
         ));
+        app.backend.shutdown();
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[cfg(feature = "demo")]
+    #[test]
+    fn apple_b_adds_only_and_waits_for_text_dialogs_and_pending_writes() {
+        let root = std::env::temp_dir().join(format!(
+            "applifast-favorite-shortcut-test-{}",
+            std::process::id()
+        ));
+        let mut app = App::new(
+            &crate::backend::Waker::default(),
+            AppDirs {
+                config: root.join("config"),
+                state: root.join("state"),
+                cache: root.join("cache"),
+            },
+            Settings::default(),
+            AppOptions {
+                media_controls: false,
+                restore_sign_in: false,
+                tray: false,
+            },
+        );
+        crate::demo::populate(&mut app);
+        let apple = crate::apple::State::demo(&app.library.liked.items);
+        app.local = apple.local.clone();
+        app.apple = Some(apple);
+        app.remote = None;
+        let uri = app.now_playing().unwrap().uri;
+        assert_eq!(uri, "apple:track:library.i.demo0");
+        let ctx = egui::Context::default();
+        let field = egui::Id::new("favorite-shortcut-text");
+        let mut text = String::new();
+        let mut press = |app: &mut App| {
+            app.actions.clear();
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    events: vec![egui::Event::Key {
+                        key: Key::B,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers: Modifiers::NONE,
+                    }],
+                    ..Default::default()
+                },
+                |ui| {
+                    handle(app, ui.ctx());
+                    ui.add(egui::TextEdit::singleline(&mut text).id(field));
+                },
+            );
+            output.textures_delta.clear();
+            format!("{:?}", app.actions)
+        };
+        assert_eq!(press(&mut app), "[]", "existing favorites are read-only");
+        for state in [Some(false), None] {
+            app.apple.as_mut().unwrap().songs[0].in_favorites = state;
+            assert_eq!(
+                press(&mut app),
+                format!(
+                    "{:?}",
+                    [Action::SetSavedMany {
+                        uris: vec![uri.clone()],
+                        saved: true
+                    }]
+                )
+            );
+        }
+        app.dialog = Some(Dialog::Shortcuts);
+        assert_eq!(press(&mut app), "[]");
+        app.dialog = None;
+        ctx.memory_mut(|memory| memory.request_focus(field));
+        press(&mut app);
+        assert!(ctx.text_edit_focused());
+        assert_eq!(press(&mut app), "[]", "typing cannot favorite a song");
+        ctx.memory_mut(|memory| memory.surrender_focus(field));
+        app.local.track.as_mut().unwrap().is_episode = true;
+        assert_eq!(press(&mut app), "[]");
+        app.local.track.as_mut().unwrap().is_episode = false;
+        let command = app
+            .apple
+            .as_mut()
+            .unwrap()
+            .favorite_songs(std::slice::from_ref(&uri))
+            .unwrap()
+            .unwrap();
+        assert_eq!(press(&mut app), "[]", "pending writes cannot be duplicated");
+        let apple = app.apple.as_mut().unwrap();
+        assert_eq!(
+            apple.complete_favorites(&serde_json::json!({
+                "type":"response", "session":apple.session, "id":command["id"], "ok":false
+            })),
+            Some(false)
+        );
+        assert!(
+            press(&mut app).contains("SetSavedMany"),
+            "failed writes can be retried"
+        );
+        app.local.track = None;
+        assert_eq!(press(&mut app), "[]", "no song means no favorite request");
         app.backend.shutdown();
         let _ = std::fs::remove_dir_all(root);
     }

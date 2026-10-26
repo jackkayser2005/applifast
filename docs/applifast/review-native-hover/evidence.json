@@ -1,0 +1,3157 @@
+{
+  "sourceBase": "69b5b61d5d7ef819fe01a7484597359352348232",
+  "branch": "test/native-hover-motion",
+  "platform": "Windows native egui demo readbacks",
+  "dirtyDuringCapture": true,
+  "binarySHA256": "51c2bac05cba6e597ddab2fbe58a200417257f8794d50802a1d48035f63e6154",
+  "nativeFrames": 128,
+  "timing": "Actual screenshot request times; stock 50 ms post-readback delay unchanged. Not a frame-rate or resource benchmark.",
+  "fixture": "Existing forced card/slider hover delayed until capture index one. Demo paused, artwork URLs absent. All production sources restored.",
+  "scope": "Native card hover/lift and seek hover/fill/knob rendering and Reduce motion. No account, audio, pointer-click acceptance or other motion/release gate.",
+  "cases": [
+    {
+      "name": "moving-dark-1100x760",
+      "mode": "moving",
+      "theme": "dark",
+      "size": "1100x760",
+      "context": "moving-dark-1100x760-context.png",
+      "boxes": {
+        "card": [
+          264,
+          436,
+          456,
+          672
+        ],
+        "seek": [
+          360,
+          727,
+          738,
+          751
+        ]
+      },
+      "metrics": {
+        "card": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        },
+        "seek": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        },
+        "cardLiftStrip": {
+          "uniqueStates": 3,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2
+          ]
+        },
+        "seekFillPixel": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        }
+      },
+      "coverTopRows": [
+        460,
+        460,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456
+      ],
+      "solidSeekInteriorRows": [
+        4,
+        4,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      "knobPixelsAboveTrack": [
+        0,
+        0,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "sourceFrames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.577299,
+          "width": 1100,
+          "height": 760,
+          "sha256": "6a2fbc85f9e2ad5f733308b4e0962b069390fb381411db8381a7ca116b7bd6cd"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.6988777000000002,
+          "width": 1100,
+          "height": 760,
+          "sha256": "11afc18addd0f0f9a801cc9a396e98f450aca866d0ac491146863378536ae603"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.819428,
+          "width": 1100,
+          "height": 760,
+          "sha256": "a87b465561775f3d905be939ea62cd4e6d737b55c0bca785753af591ed88e841"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.9400290999999998,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 2.0607031,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 2.1828463,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 2.3043682,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.4261758,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.5461597,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.6670902,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.7907446,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.9142554,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 3.0353182,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 3.1567649,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 3.2782162,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 3.3997082,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        }
+      ],
+      "frames": [
+        {
+          "at": 1.577299,
+          "files": {
+            "card": "moving-dark-1100x760-card-00.png",
+            "seek": "moving-dark-1100x760-seek-00.png"
+          }
+        },
+        {
+          "at": 1.6988777000000002,
+          "files": {
+            "card": "moving-dark-1100x760-card-01.png",
+            "seek": "moving-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.819428,
+          "files": {
+            "card": "moving-dark-1100x760-card-02.png",
+            "seek": "moving-dark-1100x760-seek-02.png"
+          }
+        },
+        {
+          "at": 1.9400290999999998,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.0607031,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.1828463,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.3043682,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.4261758,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.5461597,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.6670902,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.7907446,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.9142554,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.0353182,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.1567649,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.2782162,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.3997082,
+          "files": {
+            "card": "moving-dark-1100x760-card-03.png",
+            "seek": "moving-dark-1100x760-seek-03.png"
+          }
+        }
+      ]
+    },
+    {
+      "name": "moving-dark-760x760",
+      "mode": "moving",
+      "theme": "dark",
+      "size": "760x760",
+      "context": "moving-dark-760x760-context.png",
+      "boxes": {
+        "card": [
+          264,
+          436,
+          456,
+          672
+        ],
+        "seek": [
+          258,
+          727,
+          498,
+          751
+        ]
+      },
+      "metrics": {
+        "card": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        },
+        "seek": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        },
+        "cardLiftStrip": {
+          "uniqueStates": 3,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2
+          ]
+        },
+        "seekFillPixel": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        }
+      },
+      "coverTopRows": [
+        460,
+        460,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456
+      ],
+      "solidSeekInteriorRows": [
+        3,
+        3,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "knobPixelsAboveTrack": [
+        0,
+        0,
+        18,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "sourceFrames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.5886315,
+          "width": 760,
+          "height": 760,
+          "sha256": "56fe88d5393f582e573883f4c65fb96255374ff8286c979e234b8ff889a5688e"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.6910154,
+          "width": 760,
+          "height": 760,
+          "sha256": "53f8fd592a11029559772a75fc8f13e17fc1a2c1f43096523c32404833ab3a1b"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.7941167999999998,
+          "width": 760,
+          "height": 760,
+          "sha256": "d837388b4e94e9c7b9948b9c0243103459591c0feb49d2f30aca742a18b9b1e4"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.8961046000000001,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 1.9974603,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 2.1001776,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 2.2028671,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.3053404,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.4074925,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.5106726999999998,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.6129867,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.7144973,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.8166545,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.9191941,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 3.0212649,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 3.1233688,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        }
+      ],
+      "frames": [
+        {
+          "at": 1.5886315,
+          "files": {
+            "card": "moving-dark-760x760-card-00.png",
+            "seek": "moving-dark-760x760-seek-00.png"
+          }
+        },
+        {
+          "at": 1.6910154,
+          "files": {
+            "card": "moving-dark-760x760-card-01.png",
+            "seek": "moving-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.7941167999999998,
+          "files": {
+            "card": "moving-dark-760x760-card-02.png",
+            "seek": "moving-dark-760x760-seek-02.png"
+          }
+        },
+        {
+          "at": 1.8961046000000001,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 1.9974603,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.1001776,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.2028671,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.3053404,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.4074925,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.5106726999999998,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.6129867,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.7144973,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.8166545,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.9191941,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.0212649,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.1233688,
+          "files": {
+            "card": "moving-dark-760x760-card-03.png",
+            "seek": "moving-dark-760x760-seek-03.png"
+          }
+        }
+      ]
+    },
+    {
+      "name": "moving-light-1100x760",
+      "mode": "moving",
+      "theme": "light",
+      "size": "1100x760",
+      "context": "moving-light-1100x760-context.png",
+      "boxes": {
+        "card": [
+          264,
+          436,
+          456,
+          672
+        ],
+        "seek": [
+          360,
+          727,
+          738,
+          751
+        ]
+      },
+      "metrics": {
+        "card": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        },
+        "seek": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        },
+        "cardLiftStrip": {
+          "uniqueStates": 3,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2
+          ]
+        },
+        "seekFillPixel": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        }
+      },
+      "coverTopRows": [
+        460,
+        460,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456
+      ],
+      "solidSeekInteriorRows": [
+        4,
+        4,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      "knobPixelsAboveTrack": [
+        0,
+        0,
+        17,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18
+      ],
+      "sourceFrames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.5976721999999999,
+          "width": 1100,
+          "height": 760,
+          "sha256": "fb1ded24a62090b968f3120bd6974fede20f347ac3371b07959209b9cfd2b0e8"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.7194612,
+          "width": 1100,
+          "height": 760,
+          "sha256": "e8bd76628a16fc1e3caf1c5aacfc27fb83d90f4535f84de97cdf6e310135fd81"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.8409279,
+          "width": 1100,
+          "height": 760,
+          "sha256": "7b54672e8877c96bed30bef2e43a1ec7315b6e0519b8d00622e8443acea5acdf"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.9636043,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 2.0857915,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 2.2077267,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 2.3294804,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.4513234,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.5728685000000002,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.6970855,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.8205102,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.9433129,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 3.0657781,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 3.1883095,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 3.3096975,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 3.4322084,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        }
+      ],
+      "frames": [
+        {
+          "at": 1.5976721999999999,
+          "files": {
+            "card": "moving-light-1100x760-card-00.png",
+            "seek": "moving-light-1100x760-seek-00.png"
+          }
+        },
+        {
+          "at": 1.7194612,
+          "files": {
+            "card": "moving-light-1100x760-card-01.png",
+            "seek": "moving-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.8409279,
+          "files": {
+            "card": "moving-light-1100x760-card-02.png",
+            "seek": "moving-light-1100x760-seek-02.png"
+          }
+        },
+        {
+          "at": 1.9636043,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.0857915,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.2077267,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.3294804,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.4513234,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.5728685000000002,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.6970855,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.8205102,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.9433129,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.0657781,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.1883095,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.3096975,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.4322084,
+          "files": {
+            "card": "moving-light-1100x760-card-03.png",
+            "seek": "moving-light-1100x760-seek-03.png"
+          }
+        }
+      ]
+    },
+    {
+      "name": "moving-light-760x760",
+      "mode": "moving",
+      "theme": "light",
+      "size": "760x760",
+      "context": "moving-light-760x760-context.png",
+      "boxes": {
+        "card": [
+          264,
+          436,
+          456,
+          672
+        ],
+        "seek": [
+          258,
+          727,
+          498,
+          751
+        ]
+      },
+      "metrics": {
+        "card": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        },
+        "seek": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        },
+        "cardLiftStrip": {
+          "uniqueStates": 3,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2
+          ]
+        },
+        "seekFillPixel": {
+          "uniqueStates": 4,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        }
+      },
+      "coverTopRows": [
+        460,
+        460,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456
+      ],
+      "solidSeekInteriorRows": [
+        3,
+        3,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "knobPixelsAboveTrack": [
+        0,
+        0,
+        15,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18
+      ],
+      "sourceFrames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.6031574,
+          "width": 760,
+          "height": 760,
+          "sha256": "6c937e8fc148b442cf1cac47830ee66be4764e6cb9b67daedb53a5f9b6be4db1"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.7047501999999999,
+          "width": 760,
+          "height": 760,
+          "sha256": "918560edeb10dd8f1b952f856408fcde809ab4408d278d5c23855d79f38a1e83"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.8074793,
+          "width": 760,
+          "height": 760,
+          "sha256": "c045ae943f5d0ac526bbb8b4b952eabc75d601e1c9f4b6e8f60d4dfbb255ab17"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.9082189999999999,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 2.0092573,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 2.1097275,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 2.2120875,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.3132118,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.4143964,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.5169756,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.6187892,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.7201984,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.823567,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.9249872,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 3.0268466,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 3.1289235,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        }
+      ],
+      "frames": [
+        {
+          "at": 1.6031574,
+          "files": {
+            "card": "moving-light-760x760-card-00.png",
+            "seek": "moving-light-760x760-seek-00.png"
+          }
+        },
+        {
+          "at": 1.7047501999999999,
+          "files": {
+            "card": "moving-light-760x760-card-01.png",
+            "seek": "moving-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.8074793,
+          "files": {
+            "card": "moving-light-760x760-card-02.png",
+            "seek": "moving-light-760x760-seek-02.png"
+          }
+        },
+        {
+          "at": 1.9082189999999999,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.0092573,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.1097275,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.2120875,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.3132118,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.4143964,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.5169756,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.6187892,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.7201984,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.823567,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 2.9249872,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.0268466,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        },
+        {
+          "at": 3.1289235,
+          "files": {
+            "card": "moving-light-760x760-card-03.png",
+            "seek": "moving-light-760x760-seek-03.png"
+          }
+        }
+      ]
+    },
+    {
+      "name": "reduced-dark-1100x760",
+      "mode": "reduced",
+      "theme": "dark",
+      "size": "1100x760",
+      "context": "reduced-dark-1100x760-context.png",
+      "boxes": {
+        "card": [
+          264,
+          436,
+          456,
+          672
+        ],
+        "seek": [
+          360,
+          727,
+          738,
+          751
+        ]
+      },
+      "metrics": {
+        "card": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "seek": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "cardLiftStrip": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "seekFillPixel": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "coverTopRows": [
+        460,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456
+      ],
+      "solidSeekInteriorRows": [
+        4,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      "knobPixelsAboveTrack": [
+        0,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "sourceFrames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.6147366,
+          "width": 1100,
+          "height": 760,
+          "sha256": "6a2fbc85f9e2ad5f733308b4e0962b069390fb381411db8381a7ca116b7bd6cd"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.7384612000000002,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.8620743,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.9844084,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 2.1067812,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 2.2289928,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 2.3517898,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.4744335,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.5973488,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.7200415,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.8437884,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.9673367,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 3.0898572,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 3.2115428,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 3.3344191,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 3.4563609,
+          "width": 1100,
+          "height": 760,
+          "sha256": "009eec0066569e8e9fdefb2b4c8ab1d46f7239775526f546057a6783b3fae2d9"
+        }
+      ],
+      "frames": [
+        {
+          "at": 1.6147366,
+          "files": {
+            "card": "reduced-dark-1100x760-card-00.png",
+            "seek": "reduced-dark-1100x760-seek-00.png"
+          }
+        },
+        {
+          "at": 1.7384612000000002,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.8620743,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.9844084,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.1067812,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.2289928,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.3517898,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.4744335,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.5973488,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.7200415,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.8437884,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.9673367,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.0898572,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.2115428,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.3344191,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.4563609,
+          "files": {
+            "card": "reduced-dark-1100x760-card-01.png",
+            "seek": "reduced-dark-1100x760-seek-01.png"
+          }
+        }
+      ]
+    },
+    {
+      "name": "reduced-dark-760x760",
+      "mode": "reduced",
+      "theme": "dark",
+      "size": "760x760",
+      "context": "reduced-dark-760x760-context.png",
+      "boxes": {
+        "card": [
+          264,
+          436,
+          456,
+          672
+        ],
+        "seek": [
+          258,
+          727,
+          498,
+          751
+        ]
+      },
+      "metrics": {
+        "card": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "seek": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "cardLiftStrip": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "seekFillPixel": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "coverTopRows": [
+        460,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456
+      ],
+      "solidSeekInteriorRows": [
+        3,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "knobPixelsAboveTrack": [
+        0,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "sourceFrames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.5983516,
+          "width": 760,
+          "height": 760,
+          "sha256": "56fe88d5393f582e573883f4c65fb96255374ff8286c979e234b8ff889a5688e"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.7005761000000001,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.8020499,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.9035895,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 2.0047493,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 2.107386,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 2.2090653,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.3109415,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.4114393,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.5125778,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.6143663,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.7164724,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.8190661,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.9205858,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 3.0230129,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 3.1246201,
+          "width": 760,
+          "height": 760,
+          "sha256": "c3943436d418271e09f920cbb96a0c24fb8bfd3c9dca71da1742c2da86a56776"
+        }
+      ],
+      "frames": [
+        {
+          "at": 1.5983516,
+          "files": {
+            "card": "reduced-dark-760x760-card-00.png",
+            "seek": "reduced-dark-760x760-seek-00.png"
+          }
+        },
+        {
+          "at": 1.7005761000000001,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.8020499,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.9035895,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.0047493,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.107386,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.2090653,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.3109415,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.4114393,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.5125778,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.6143663,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.7164724,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.8190661,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.9205858,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.0230129,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.1246201,
+          "files": {
+            "card": "reduced-dark-760x760-card-01.png",
+            "seek": "reduced-dark-760x760-seek-01.png"
+          }
+        }
+      ]
+    },
+    {
+      "name": "reduced-light-1100x760",
+      "mode": "reduced",
+      "theme": "light",
+      "size": "1100x760",
+      "context": "reduced-light-1100x760-context.png",
+      "boxes": {
+        "card": [
+          264,
+          436,
+          456,
+          672
+        ],
+        "seek": [
+          360,
+          727,
+          738,
+          751
+        ]
+      },
+      "metrics": {
+        "card": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "seek": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "cardLiftStrip": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "seekFillPixel": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "coverTopRows": [
+        460,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456
+      ],
+      "solidSeekInteriorRows": [
+        4,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      "knobPixelsAboveTrack": [
+        0,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18
+      ],
+      "sourceFrames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.5942923,
+          "width": 1100,
+          "height": 760,
+          "sha256": "fb1ded24a62090b968f3120bd6974fede20f347ac3371b07959209b9cfd2b0e8"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.7175235,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.8413913,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.9644347,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 2.0875093,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 2.2106258,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 2.3326196,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.4543918,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.577098,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.7001711,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.8235173,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.9462875,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 3.0705421,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 3.1940852,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 3.3182382,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 3.4419563,
+          "width": 1100,
+          "height": 760,
+          "sha256": "32947db08b5827903ee4044ae4faaaa89d1e3b08e3d17671144189ef3d9b4822"
+        }
+      ],
+      "frames": [
+        {
+          "at": 1.5942923,
+          "files": {
+            "card": "reduced-light-1100x760-card-00.png",
+            "seek": "reduced-light-1100x760-seek-00.png"
+          }
+        },
+        {
+          "at": 1.7175235,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.8413913,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.9644347,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.0875093,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.2106258,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.3326196,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.4543918,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.577098,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.7001711,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.8235173,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.9462875,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.0705421,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.1940852,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.3182382,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.4419563,
+          "files": {
+            "card": "reduced-light-1100x760-card-01.png",
+            "seek": "reduced-light-1100x760-seek-01.png"
+          }
+        }
+      ]
+    },
+    {
+      "name": "reduced-light-760x760",
+      "mode": "reduced",
+      "theme": "light",
+      "size": "760x760",
+      "context": "reduced-light-760x760-context.png",
+      "boxes": {
+        "card": [
+          264,
+          436,
+          456,
+          672
+        ],
+        "seek": [
+          258,
+          727,
+          498,
+          751
+        ]
+      },
+      "metrics": {
+        "card": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "seek": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "cardLiftStrip": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "seekFillPixel": {
+          "uniqueStates": 2,
+          "settledLastFiveFrames": true,
+          "stateIndices": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "coverTopRows": [
+        460,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456,
+        456
+      ],
+      "solidSeekInteriorRows": [
+        3,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "knobPixelsAboveTrack": [
+        0,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18
+      ],
+      "sourceFrames": [
+        {
+          "file": "capture-000.png",
+          "requested_at_seconds": 1.6063787,
+          "width": 760,
+          "height": 760,
+          "sha256": "6c937e8fc148b442cf1cac47830ee66be4764e6cb9b67daedb53a5f9b6be4db1"
+        },
+        {
+          "file": "capture-001.png",
+          "requested_at_seconds": 1.7088472000000001,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-002.png",
+          "requested_at_seconds": 1.8100977999999999,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-003.png",
+          "requested_at_seconds": 1.9108178,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-004.png",
+          "requested_at_seconds": 2.0115442,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-005.png",
+          "requested_at_seconds": 2.1130726,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-006.png",
+          "requested_at_seconds": 2.2150484,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-007.png",
+          "requested_at_seconds": 2.3164149,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-008.png",
+          "requested_at_seconds": 2.4175025,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-009.png",
+          "requested_at_seconds": 2.5195893,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-010.png",
+          "requested_at_seconds": 2.6214034,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-011.png",
+          "requested_at_seconds": 2.7227924,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-012.png",
+          "requested_at_seconds": 2.8252107,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-013.png",
+          "requested_at_seconds": 2.9273289,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-014.png",
+          "requested_at_seconds": 3.0290017,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        },
+        {
+          "file": "capture-015.png",
+          "requested_at_seconds": 3.1312271,
+          "width": 760,
+          "height": 760,
+          "sha256": "c99606b10879cc219a8836537c8392fade1a8294473a89badfc1d65749967d57"
+        }
+      ],
+      "frames": [
+        {
+          "at": 1.6063787,
+          "files": {
+            "card": "reduced-light-760x760-card-00.png",
+            "seek": "reduced-light-760x760-seek-00.png"
+          }
+        },
+        {
+          "at": 1.7088472000000001,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.8100977999999999,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 1.9108178,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.0115442,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.1130726,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.2150484,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.3164149,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.4175025,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.5195893,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.6214034,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.7227924,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.8252107,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 2.9273289,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.0290017,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        },
+        {
+          "at": 3.1312271,
+          "files": {
+            "card": "reduced-light-760x760-card-01.png",
+            "seek": "reduced-light-760x760-seek-01.png"
+          }
+        }
+      ]
+    }
+  ]
+}
