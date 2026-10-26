@@ -134,6 +134,12 @@ ask again only if the resulting scope goes beyond what was approved or requested
 
 Run the same checks CI runs before submitting:
 
+For interactive Windows QA, use an idle desktop. Native screenshot, account and
+playback tests open real windows and can take focus or use the GPU even when
+they request no activation. Do not run them while the maintainer is gaming.
+Stop the controller and its owned test processes immediately when asked; code,
+documentation and remote CI review can continue without desktop automation.
+
 ```sh
 ruby packaging/test-fork-workflows.rb
 python3 packaging/test-launchers.py

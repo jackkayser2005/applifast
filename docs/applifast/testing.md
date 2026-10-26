@@ -11,6 +11,12 @@ help and `--version` identify `applifast`; older previews can report
 `spotifast 0.12.0`. Use the `BUILD.txt` source revision and file version when
 reporting a problem. The original Spotifast downloads are a different product.
 
+The latest qualified private package is `59062de`. It includes the paused-clock
+Reduce motion fix. Later queue-motion evidence adds no app behavior; the draft
+lyric-glide fix in PR #97 is not in that package. Get the complete installer or
+ZIP from the maintainer. A passing PR check does not automatically update an
+installed preview or create a new download.
+
 ## Open shared music
 
 Paste an Apple Music song, album, artist or playlist share URL into Search and
@@ -249,3 +255,24 @@ seek, network recovery, output changes, restart restoration, tray/main/mini
 recreation, and an hour of listening while gaming. Aggregate WebView2/helper
 memory and CPU separately from executable size. Existing local tests and
 read-only account diagnostics do not complete those gates.
+
+## Desktop checks and gaming
+
+Use the installed preview normally while gaming. Run window-opening screenshot,
+authorization and playback automation separately when the PC is idle.
+Even a capture that requests no activation can open a real window, take focus
+or compete for graphics resources. Closing the window is not a reliable way to
+stop a script that can launch the next case. Stop its controller and its owned
+test processes instead. Never stop an unrelated game or the normal player to
+clean up a test.
+
+A passive resource sample during gaming is a separate, agreed check. It must
+not launch windows or control playback.
+
+Task Manager's main-process memory number is not the whole player. Include
+WebView2 and helper processes, and distinguish resident working set from private
+committed memory. The October 23 `8da79db` snapshot has a 5.438 MiB main private
+working set but 278.055 MiB main private bytes, plus helper allocations. See the
+[counter snapshot](preview-working-set-check.json) and
+[resource acceptance](preview-resource-check.json). Small resident memory alone
+does not pass the 250 MiB aggregate private-memory gate.
